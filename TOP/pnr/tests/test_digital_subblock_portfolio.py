@@ -52,7 +52,10 @@ class DigitalSubblockPortfolioTest(unittest.TestCase):
             position["current_gate"],
             "PVS_BASE_ZERO_DENSITY_FOUR_RULES_LVS_MATCH_ACCEPTED",
         )
-        self.assertEqual(event["current_gate"], "GENUS_TC_READY_INNOVUS_NOT_RUN")
+        self.assertEqual(
+            event["current_gate"],
+            "INNOVUS_ATTRIBUTABLE_ABSTRACT_READY_HANDOFF_STAGING_NEXT",
+        )
 
     def test_position_and_event_ooc_plans_use_reserved_geometry_and_exact_pg(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

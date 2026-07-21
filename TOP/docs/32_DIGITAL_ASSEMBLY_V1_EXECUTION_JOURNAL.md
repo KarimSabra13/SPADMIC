@@ -4526,3 +4526,162 @@ The four TX implementation children (`event_bundle_tx`, `output_fifo`,
 `ddr16_pairer`, and `ddrs2_adapter`) remain abstract-ready supporting evidence,
 not additional top-level macros to duplicate in the assembly. Full-top Genus
 and Innovus remain unauthorized.
+
+### P10-R03 Event Innovus OOC Accepted
+
+The hash-bound Event Innovus transaction ran in the foreground on 2026-07-20
+from exact commit `1b922f0723112e5916107775069c767388ec500e`. Its immutable
+roots are:
+
+```text
+EVENT_INNOVUS_RUN=innovus_ooc_harden_event_coordinator_20260720_173527
+EVENT_INNOVUS_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_event_coordinator_20260720_173527/blocks/event_coordinator
+DIAGNOSTIC_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/event_innovus_execution_20260720_173527
+```
+
+The driver rechecked the exact P10-R01 Genus run, source commit, netlist and
+SDC hashes, TC status, 30-port/63-bit boundary, full source manifest, and
+digital portfolio before launching one fresh Innovus process. It rechecked
+the complete Genus source manifest after Innovus. All transaction-level gates
+passed:
+
+```text
+EVENT_DRIVER_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+STATUS_CONTRACT_RC=0
+STATUS=PASS
+RESULT=EVENT_INNOVUS_OOC_ABSTRACT_READY_FOR_TOP_REVIEW
+OUTCOME_CLASS=ATTRIBUTABLE_ABSTRACT_READY
+EVENT_INNOVUS_RC=0
+EVENT_CONSOLE_TEE_RC=0
+RUN_FILE_GATE_RC=0
+RUN_STATUS_GATE_RC=0
+RUN_GDS_GATE_RC=0
+RUN_ARTIFACT_HASH_GATE_RC=0
+SOURCE_POST_RECHECK_RC=0
+DIAGNOSTIC_COPY_GATE_RC=0
+EVENT_INNOVUS_TRANSACTION_STATUS=PASS
+```
+
+The accepted physical result is:
+
+```text
+ACTUAL_DIE_WIDTH_UM=237.440
+ACTUAL_DIE_HEIGHT_UM=219.520
+TOP_RESERVATION_WIDTH_UM=237.460
+TOP_RESERVATION_HEIGHT_UM=220.000
+TOP_RESERVATION_WIDTH_MARGIN_UM=0.020
+TOP_RESERVATION_HEIGHT_MARGIN_UM=0.480
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+MET1_MIN_AREA_MARKER_COUNT=0
+ANTENNA_MARKER_COUNT=0
+OTHER_MARKER_COUNT=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_STATUS=PASS
+POSTROUTE_SETUP_TIMING=PASS
+POSTROUTE_HOLD_TIMING=PASS
+ROUTE_PROFILE=met1_effort
+SIGNAL_ROUTE_LAYERS=MET1-MET3
+PG_LOCAL_ROUTE_MODE=EXPLICIT_EXACT
+PG_ROUTE_STRATEGY=EXPLICIT_EXACT
+```
+
+The raw regular and VDD/VSS special-connectivity reports each record zero
+violations and zero warnings. Innovus `verify_drc` records zero violations.
+The returned setup report contains 50 met paths; the worst reported setup
+slack is `1.837 ns`. Hold is accepted by the independent generated status
+gate, but no numeric hold summary was returned, so no hold value is invented.
+This remains typical-only, non-OCV evidence.
+
+The mapped and standard-cell-merged GDS audit and exact artifact identities
+are:
+
+```text
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS_BYTES=549128
+GDS_SHA256=837538f219dacc9521f02bc58b3e2e5e587f859b4e70b69a1ca4a3e5fe7b6857
+ABSTRACT_LEF_SHA256=56345986a887317f0374984b1ea8b3442ea482aeec0572614e9fd2c0b6732a14
+DEF_SHA256=f9d6a927c7cecad40916cac67b8142f6fb6c6b013e3d57ab779889fd0ab21a68
+ROUTED_PG_NETLIST_SHA256=0ecc571317f6beaa13c7f006ac3ecc4f1ff2a72b9655a176c0fa21e3c0a07398
+```
+
+Compact tracked evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/innovus/innovus_ooc_harden_event_coordinator_20260720_173527/
+```
+
+The accepted boundary remains explicit:
+
+```text
+EVENT_HANDOFF_STAGE_AUTHORIZED=YES
+EVENT_PVS_BASE_DRC_STATUS=NOT_RUN
+EVENT_PVS_DENSITY_DRC_STATUS=NOT_RUN
+EVENT_PVS_LVS_STATUS=NOT_RUN
+ASSEMBLY_INSERTION_AUTHORIZED=NO
+ASSEMBLY_BLOCKED_BY=p00_tx,p01_position
+FULL_TOP_PNR_AUTHORIZED=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=REVIEW_AND_STAGE_IMMUTABLE_EVENT_HANDOFF
+```
+
+Do not rerun Event Innovus. The next execution must preserve this run and
+stage only its exact outputs.
+
+### P10-R04 Immutable Event Handoff Staging Prepared
+
+`TOP/ci/server_stage_event_coordinator_handoff.sh` is the only authorized next
+server transaction. It is pinned to the P10-R03 diagnostic, Event Innovus
+run, source commit, Genus commit, all four physical-output hashes, Genus
+netlist and SDC hashes, and standard-cell CDL hash.
+
+Before package creation it requires:
+
+```text
+SOURCE_DIAGNOSTIC_MANIFEST_RC=0
+SOURCE_STATUS_GATE_RC=0
+SOURCE_COPY_IDENTITY_GATE_RC=0
+SOURCE_HASH_GATE_RC=0
+PACKAGE_ABSENCE_RC=0
+```
+
+It refuses an existing package version and stages exactly:
+
+```text
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527
+```
+
+The package transaction copies the mapped/merged GDS, abstract LEF, DEF, raw
+PG netlist, accepted physical reports, Genus TC gate, run manifests, and logs.
+It derives a package-local canonical LVS source only by removing official
+standard-cell definitions represented by the copied JIHD CDL. It then checks
+source/LEF pin parity, audits the package manifest and SHA-256 inventory, and
+rechecks every immutable source after staging.
+
+An accepted staging status authorizes only preparation of a strict Event PVS
+base-DRC dry-run:
+
+```text
+EVENT_IMMUTABLE_HANDOFF_STAGING_STATUS=PASS
+OUTCOME_CLASS=ATTRIBUTABLE_CANDIDATE_PACKAGE
+EVENT_PVS_PREFLIGHT_AUTHORIZED=YES
+EVENT_PVS_BASE_DRC_STATUS=NOT_RUN
+EVENT_PVS_DENSITY_DRC_STATUS=NOT_RUN
+EVENT_PVS_LVS_STATUS=NOT_RUN
+PVS_EXECUTED=NO
+ASSEMBLY_INSERTION_AUTHORIZED=NO
+FULL_TOP_PNR_AUTHORIZED=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=PREPARE_EVENT_PVS_BASE_DRC_STRICT_PREFLIGHT
+```
+
+The assembly-critical order is unchanged: TX packet-core DRC and TX-strip
+PG/PVS closure must promote `p00_tx`; Position density disposition must then
+permit `p01_position`; only after that can the independently qualified Event
+macro and central-control soft region enter `p02_event_control`. Matrix,
+MPTDC, and CSR/I2C remain later ordered phases. OOC progress is retained as
+reusable evidence but does not bypass parent checkpoint promotion.
