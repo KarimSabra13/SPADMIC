@@ -176,6 +176,37 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("SPADMIC_OA_AUDIT_PROGRESS=WRITE_SPADMIC2_TOP_CONTRACT", audit)
         self.assertIn("SPADMIC_OA_AUDIT_PROGRESS=WRITE_MATRICE5_TOP_TERMINALS", audit)
 
+    def test_oa_audit_uses_xfab_project_launch_context_and_completion_gate(self) -> None:
+        wrapper = (
+            REPO / "TOP" / "ci" / "server_audit_spadmic2_assembly_contract.sh"
+        ).read_text()
+        audit = (
+            REPO / "TOP" / "pnr" / "scripts" / "audit_spadmic2_assembly_contract.il"
+        ).read_text()
+        self.assertIn(
+            "SPADMIC_CADENCE_LAUNCH_DIR:-/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0",
+            wrapper,
+        )
+        self.assertIn('CADENCE_CDS_LIB="$CADENCE_LAUNCH_DIR/cds.lib"', wrapper)
+        self.assertIn('cd "$CADENCE_LAUNCH_DIR"', wrapper)
+        self.assertIn(
+            '-restore "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il"',
+            wrapper,
+        )
+        self.assertIn("</dev/null", wrapper)
+        self.assertIn(
+            "EXPECTED_XFAB_COMMAND=xfab -p Prj_xh018 -t xh018 -m 1131 -y 2023 -v",
+            wrapper,
+        )
+        self.assertIn('"$RAW_ROOT/virtuoso_export_status.rpt"', wrapper)
+        self.assertIn("grep -Fxq 'STATUS=PASS'", wrapper)
+        self.assertIn("runResult = errset(spadmicAuditAssemblyMain() t)", audit)
+        self.assertIn('fprintf(statusFp "STATUS=FAIL\\n")', audit)
+        self.assertIn("SPADMIC_OA_AUDIT_COMPLETION_STATUS=PASS", audit)
+        self.assertNotIn("dbSave(", audit)
+        self.assertNotIn("dbCreate", audit)
+        self.assertNotIn("dbDelete", audit)
+
     def test_innovus_flow_rejects_child_macro_implementation(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.tcl").read_text()
         wrapper = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.sh").read_text()

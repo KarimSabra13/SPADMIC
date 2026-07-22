@@ -10,6 +10,8 @@ set +e
 REPO="${SPADMIC_REPO:-/home/validmgr/ksabra/2026_SPAD/SPADMIC}"
 EXPECTED_HEAD="${1:-MISSING}"
 WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
+CADENCE_LAUNCH_DIR="${SPADMIC_CADENCE_LAUNCH_DIR:-/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0}"
+CADENCE_CDS_LIB="$CADENCE_LAUNCH_DIR/cds.lib"
 TOP_OA_PATH=/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC2/layout
 MATRIX_OA_PATH=/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice5
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
@@ -25,7 +27,9 @@ ACTUAL_HEAD=UNKNOWN
 TRACKED_DIFF_RC=NOT_RUN
 STAGED_DIFF_RC=NOT_RUN
 SOURCE_FILE_GATE_RC=NOT_RUN
+CADENCE_LAUNCH_GATE_RC=NOT_RUN
 VIRTUOSO_RC=NOT_RUN
+OA_EXPORT_GATE_RC=NOT_RUN
 PROCESS_RC=NOT_RUN
 SOURCE_STABILITY_RC=NOT_RUN
 MANIFEST_RC=NOT_RUN
@@ -79,10 +83,10 @@ SOURCE_FILE_GATE_RC=0
 for REQUIRED in \
     "$TOP_OA_PATH" \
     "$MATRIX_OA_PATH" \
-    TOP/pnr/scripts/audit_spadmic2_assembly_contract.il \
-    TOP/pnr/scripts/process_spadmic2_assembly_audit.py \
-    TOP/pnr/assembly/spadmic_digital_assembly_contract.json \
-    TOP/pnr/assembly/matrice5_unknown_family_policy.csv
+    "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il" \
+    "$REPO/TOP/pnr/scripts/process_spadmic2_assembly_audit.py" \
+    "$REPO/TOP/pnr/assembly/spadmic_digital_assembly_contract.json" \
+    "$REPO/TOP/pnr/assembly/matrice5_unknown_family_policy.csv"
 do
     if [ ! -e "$REQUIRED" ]; then
         echo "MISSING_REQUIRED_SOURCE=$REQUIRED"
@@ -93,8 +97,40 @@ if [ "$SOURCE_FILE_GATE_RC" != "0" ]; then
     RUN_OK=0
 fi
 
+CADENCE_LAUNCH_GATE_RC=0
+if [ ! -d "$CADENCE_LAUNCH_DIR" ]; then
+    echo "MISSING_CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
+    CADENCE_LAUNCH_GATE_RC=1
+fi
+for REQUIRED_CADENCE_FILE in \
+    "$CADENCE_CDS_LIB" \
+    "$CADENCE_LAUNCH_DIR/.cdsinit"
+do
+    if [ ! -r "$REQUIRED_CADENCE_FILE" ]; then
+        echo "MISSING_CADENCE_LAUNCH_FILE=$REQUIRED_CADENCE_FILE"
+        CADENCE_LAUNCH_GATE_RC=1
+    fi
+done
+VIRTUOSO_BIN="$(command -v virtuoso 2>/dev/null)"
+if [ -z "$VIRTUOSO_BIN" ]; then
+    echo "MISSING_CADENCE_EXECUTABLE=virtuoso"
+    CADENCE_LAUNCH_GATE_RC=1
+fi
+if [ "$CADENCE_LAUNCH_GATE_RC" != "0" ]; then
+    RUN_OK=0
+fi
+
 if [ "$RUN_OK" = "1" ]; then
     mkdir -p "$RAW_ROOT" "$PROCESSED_ROOT"
+    {
+        echo "LABEL=SPADMIC_XFAB_CADENCE_LAUNCH_CONTRACT"
+        echo "STATUS=PASS"
+        echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
+        echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
+        echo "CADENCE_CDS_LIB_SHA256=$(sha256sum "$CADENCE_CDS_LIB" | awk '{print $1}')"
+        echo "VIRTUOSO_BIN=$VIRTUOSO_BIN"
+        echo "EXPECTED_XFAB_COMMAND=xfab -p Prj_xh018 -t xh018 -m 1131 -y 2023 -v"
+    } > "$DIAGNOSTIC_ROOT/cadence_launch_contract.rpt"
     inventory_tree "$TOP_OA_PATH" "$DIAGNOSTIC_ROOT/spadmic2_source.pre.sha256"
     TOP_PRE_RC=$?
     inventory_tree "$MATRIX_OA_PATH" "$DIAGNOSTIC_ROOT/matrice5_source.pre.sha256"
@@ -115,19 +151,50 @@ if [ "$RUN_OK" = "1" ]; then
     export SPADMIC_OA_MATRIX_VIEW=layout
     export SPADMIC_OA_MATRIX_PATH="$MATRIX_OA_PATH"
 
-    virtuoso -nograph \
-        -restore TOP/pnr/scripts/audit_spadmic2_assembly_contract.il \
-        -log "$DIAGNOSTIC_ROOT/virtuoso_assembly_audit.log"
+    (
+        cd "$CADENCE_LAUNCH_DIR"
+        CADENCE_CD_RC=$?
+        if [ "$CADENCE_CD_RC" = "0" ]; then
+            "$VIRTUOSO_BIN" -nograph \
+                -restore "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il" \
+                -log "$DIAGNOSTIC_ROOT/virtuoso_assembly_audit.log" \
+                </dev/null
+        else
+            false
+        fi
+    )
     VIRTUOSO_RC=$?
-    if [ "$VIRTUOSO_RC" != "0" ]; then
+
+    OA_EXPORT_GATE_RC=0
+    for REQUIRED_EXPORT in \
+        "$RAW_ROOT/virtuoso_export_status.rpt" \
+        "$RAW_ROOT/source_identity.tsv" \
+        "$RAW_ROOT/spadmic2_instances.tsv" \
+        "$RAW_ROOT/spadmic2_instance_pins.tsv" \
+        "$RAW_ROOT/spadmic2_top_shapes.tsv" \
+        "$RAW_ROOT/matrice5_top_terminals.tsv"
+    do
+        if [ ! -s "$REQUIRED_EXPORT" ]; then
+            echo "MISSING_OA_AUDIT_EXPORT=$REQUIRED_EXPORT"
+            OA_EXPORT_GATE_RC=1
+        fi
+    done
+    grep -Fxq 'STATUS=PASS' "$RAW_ROOT/virtuoso_export_status.rpt" 2>/dev/null
+    if [ "$?" != "0" ]; then
+        echo "OA_AUDIT_EXPORT_STATUS_NOT_PASS=$RAW_ROOT/virtuoso_export_status.rpt"
+        OA_EXPORT_GATE_RC=1
+    fi
+    if [ "$VIRTUOSO_RC" != "0" ] || [ "$OA_EXPORT_GATE_RC" != "0" ]; then
         RUN_OK=0
     fi
 fi
 
 if [ "$RUN_OK" = "1" ]; then
-    python3 TOP/pnr/scripts/process_spadmic2_assembly_audit.py \
+    python3 "$REPO/TOP/pnr/scripts/process_spadmic2_assembly_audit.py" \
         --audit-root "$RAW_ROOT" \
-        --out "$PROCESSED_ROOT"
+        --out "$PROCESSED_ROOT" \
+        --contract "$REPO/TOP/pnr/assembly/spadmic_digital_assembly_contract.json" \
+        --unknown-family-policy "$REPO/TOP/pnr/assembly/matrice5_unknown_family_policy.csv"
     PROCESS_RC=$?
     if [ "$PROCESS_RC" != "0" ]; then
         RUN_OK=0
@@ -179,7 +246,11 @@ echo "PULL_RC=$PULL_RC"
 echo "EXPECTED_HEAD=$EXPECTED_HEAD"
 echo "ACTUAL_HEAD=$ACTUAL_HEAD"
 echo "SOURCE_FILE_GATE_RC=$SOURCE_FILE_GATE_RC"
+echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
+echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
+echo "CADENCE_LAUNCH_GATE_RC=$CADENCE_LAUNCH_GATE_RC"
 echo "VIRTUOSO_RC=$VIRTUOSO_RC"
+echo "OA_EXPORT_GATE_RC=$OA_EXPORT_GATE_RC"
 echo "PROCESS_RC=$PROCESS_RC"
 echo "SOURCE_STABILITY_RC=$SOURCE_STABILITY_RC"
 echo "MANIFEST_RC=$MANIFEST_RC"

@@ -5267,3 +5267,37 @@ its top terminals. The follow-up implementation restricts SPADMIC2 instance-pin
 collection to the exact `TOPLEVEL/matrice5/layout` instance, collects only
 SPADMIC2 top-level data required by the processor, and collects only matrice5
 top terminals. Foreground progress markers identify each read-only stage.
+
+### P11-R02 X-FAB Audit Launch-Directory Failure Classified
+
+The bounded-audit retry at commit
+`b037a1efa65131dcc78c78af55c8de470083ecde` entered the X-FAB `1131`
+environment, but the audit wrapper changed to the Git repository before
+starting Virtuoso. Virtuoso therefore loaded `/home/validmgr/ksabra/cds.lib`
+instead of the generated project file under
+`/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0`. The decisive evidence was:
+
+```text
+SPADMIC_OA_AUDIT_PROGRESS=OPEN_spadmic2
+*WARNING* (DB-270210): dbOpenCellViewByType: library 'SPADMIC' does not exist
+*Error* SPADMIC_ASSEMBLY_OA_OPEN_FAILED SPADMIC/SPADMIC2/layout
+VIRTUOSO_RC=0
+PROCESS_RC=2
+SOURCE_STABILITY_RC=0
+MANIFEST_RC=0
+```
+
+The failed diagnostic root is
+`/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260722_131943`.
+It is not accepted assembly evidence. Shell inspection text was subsequently
+sent to the still-open Virtuoso SKILL prompt, producing parser warnings; none
+of that input modified OA, and source pre/post identity remained unchanged.
+
+The corrected contract uses
+`xfab -p Prj_xh018 -t xh018 -m 1131 -y 2023 -v`, where `-v` prepares the
+X-FAB shell without automatically starting Virtuoso. The wrapper now launches
+its single foreground Virtuoso process from the generated `cds_V0` directory,
+uses an absolute restore path, disconnects stdin, and requires an explicit
+`virtuoso_export_status.rpt` `STATUS=PASS` plus every expected raw export before
+running the processor. A zero Virtuoso process return code alone is no longer
+accepted.

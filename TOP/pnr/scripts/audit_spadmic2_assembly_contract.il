@@ -231,5 +231,25 @@ procedure(spadmicAuditAssemblyMain()
   )
 )
 
-spadmicAuditAssemblyMain()
-exit()
+let((outRoot runResult statusFp)
+  outRoot = getShellEnvVar("SPADMIC_OA_ASSEMBLY_AUDIT_ROOT")
+  runResult = errset(spadmicAuditAssemblyMain() t)
+  when(outRoot
+    statusFp = outfile(strcat(outRoot "/virtuoso_export_status.rpt") "w")
+    when(statusFp
+      fprintf(statusFp "LABEL=SPADMIC2_MATRICE5_VIRTUOSO_EXPORT\n")
+      if(runResult then
+        fprintf(statusFp "STATUS=PASS\n")
+      else
+        fprintf(statusFp "STATUS=FAIL\n")
+      )
+      close(statusFp)
+    )
+  )
+  if(runResult then
+    printf("SPADMIC_OA_AUDIT_COMPLETION_STATUS=PASS\n")
+  else
+    printf("SPADMIC_OA_AUDIT_COMPLETION_STATUS=FAIL\n")
+  )
+  exit()
+)
