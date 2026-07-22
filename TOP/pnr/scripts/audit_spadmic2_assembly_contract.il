@@ -67,36 +67,42 @@ procedure(spadmicAuditWriteInstances(cv path)
   )
 )
 
-procedure(spadmicAuditWriteInstancePins(cv path)
-  let((fp inst instTerm term pin fig transformed emitted)
+procedure(spadmicAuditWriteInstancePins(cv path targetLib targetCell targetView)
+  let((fp inst master instTerm term pin fig transformed emitted)
     fp = outfile(path "w")
     fprintf(fp "instance\tterminal\tdirection\tnet\tlayer\tpurpose\tllx\tlly\turx\tury\n")
     foreach(inst cv~>instances
-      foreach(instTerm inst~>instTerms
-        term = instTerm~>term
-        emitted = nil
-        when(term
-          foreach(pin term~>pins
-            foreach(fig pin~>figs
-              transformed = dbTransformBBox(fig~>bBox inst~>transform)
-              fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
-                spadmicAuditText(inst~>name)
-                spadmicAuditText(term~>name)
-                spadmicAuditText(term~>direction)
-                spadmicAuditNetName(instTerm)
-                spadmicAuditLayer(fig)
-                spadmicAuditPurpose(fig)
-                spadmicAuditBox(transformed))
-              emitted = t
+      master = inst~>master
+      when(master &&
+           master~>libName == targetLib &&
+           master~>cellName == targetCell &&
+           master~>viewName == targetView
+        foreach(instTerm inst~>instTerms
+          term = instTerm~>term
+          emitted = nil
+          when(term
+            foreach(pin term~>pins
+              foreach(fig pin~>figs
+                transformed = dbTransformBBox(fig~>bBox inst~>transform)
+                fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
+                  spadmicAuditText(inst~>name)
+                  spadmicAuditText(term~>name)
+                  spadmicAuditText(term~>direction)
+                  spadmicAuditNetName(instTerm)
+                  spadmicAuditLayer(fig)
+                  spadmicAuditPurpose(fig)
+                  spadmicAuditBox(transformed))
+                emitted = t
+              )
             )
           )
-        )
-        unless(emitted
-          fprintf(fp "%s\t%s\t%s\t%s\tABSENT\tABSENT\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\n"
-            spadmicAuditText(inst~>name)
-            if(term then spadmicAuditText(term~>name) else "ABSENT")
-            if(term then spadmicAuditText(term~>direction) else "ABSENT")
-            spadmicAuditNetName(instTerm))
+          unless(emitted
+            fprintf(fp "%s\t%s\t%s\t%s\tABSENT\tABSENT\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\n"
+              spadmicAuditText(inst~>name)
+              if(term then spadmicAuditText(term~>name) else "ABSENT")
+              if(term then spadmicAuditText(term~>direction) else "ABSENT")
+              spadmicAuditNetName(instTerm))
+          )
         )
       )
     )
@@ -165,6 +171,7 @@ procedure(spadmicAuditWriteNets(cv path)
 
 procedure(spadmicAuditOne(role libName cellName viewName filesystemPath outRoot identityFp)
   let((cv prefix)
+    printf("SPADMIC_OA_AUDIT_PROGRESS=OPEN_%s\n" role)
     cv = dbOpenCellViewByType(libName cellName viewName "" "r")
     unless(cv
       fprintf(identityFp "%s\t%s\t%s\t%s\t%s\tFAIL\tUNKNOWN\n"
@@ -173,12 +180,24 @@ procedure(spadmicAuditOne(role libName cellName viewName filesystemPath outRoot 
     )
     spadmicAuditWriteIdentity(identityFp role libName cellName viewName filesystemPath cv)
     prefix = strcat(outRoot "/" role)
-    spadmicAuditWriteInstances(cv strcat(prefix "_instances.tsv"))
-    spadmicAuditWriteInstancePins(cv strcat(prefix "_instance_pins.tsv"))
-    spadmicAuditWriteTopTerminals(cv strcat(prefix "_top_terminals.tsv"))
-    spadmicAuditWriteTopShapes(cv strcat(prefix "_top_shapes.tsv"))
-    spadmicAuditWriteNets(cv strcat(prefix "_nets.tsv"))
+    if(role == "spadmic2" then
+      printf("SPADMIC_OA_AUDIT_PROGRESS=WRITE_SPADMIC2_TOP_CONTRACT\n")
+      spadmicAuditWriteInstances(cv strcat(prefix "_instances.tsv"))
+      spadmicAuditWriteInstancePins(
+        cv strcat(prefix "_instance_pins.tsv")
+        getShellEnvVar("SPADMIC_OA_MATRIX_LIBRARY")
+        getShellEnvVar("SPADMIC_OA_MATRIX_CELL")
+        getShellEnvVar("SPADMIC_OA_MATRIX_VIEW"))
+      spadmicAuditWriteTopShapes(cv strcat(prefix "_top_shapes.tsv"))
+    else
+      unless(role == "matrice5"
+        dbClose(cv)
+        error("SPADMIC_ASSEMBLY_OA_UNKNOWN_AUDIT_ROLE %s\n" role))
+      printf("SPADMIC_OA_AUDIT_PROGRESS=WRITE_MATRICE5_TOP_TERMINALS\n")
+      spadmicAuditWriteTopTerminals(cv strcat(prefix "_top_terminals.tsv"))
+    )
     dbClose(cv)
+    printf("SPADMIC_OA_AUDIT_PROGRESS=COMPLETE_%s\n" role)
   )
 )
 

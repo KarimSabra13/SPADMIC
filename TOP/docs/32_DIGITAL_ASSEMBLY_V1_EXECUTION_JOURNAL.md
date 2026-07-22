@@ -5240,3 +5240,30 @@ validation, independent Innovus gates, exact-name assembly handoff staging,
 base/density/LVS classification, density-debt non-promotion, OA bbox/pin
 parity, and insertion allowlisting. No Cadence executable was invoked while
 preparing this record.
+
+### P11-R01 First Read-Only OA Audit Interrupted Before Extraction
+
+The first server attempt at commit
+`675e6ea379a0317f788e83d878b6ea19f941cc0c` was interrupted manually during
+Virtuoso startup/read-only traversal. The attributable failed root is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260722_125442
+VIRTUOSO_RC=1
+PROCESS_RC=NOT_RUN
+SOURCE_STABILITY_RC=0
+MANIFEST_RC=0
+SPADMIC2_MATRICE5_ASSEMBLY_AUDIT_TRANSACTION_STATUS=FAIL
+```
+
+The console contained the standard unsupported-OS/glibc startup warnings and
+context loading, followed by operator `Ctrl-C`; it did not contain processed
+assembly evidence. No OA mutation was authorized, and pre/post source identity
+remained unchanged. Do not use this root as an accepted audit.
+
+Static review found that the initial SKILL extractor traversed every internal
+instance and pin in `matrice5`, although the contract processor consumes only
+its top terminals. The follow-up implementation restricts SPADMIC2 instance-pin
+collection to the exact `TOPLEVEL/matrice5/layout` instance, collects only
+SPADMIC2 top-level data required by the processor, and collects only matrice5
+top terminals. Foreground progress markers identify each read-only stage.

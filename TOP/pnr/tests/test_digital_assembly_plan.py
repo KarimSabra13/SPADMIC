@@ -164,6 +164,18 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("density is authorized only for p03_matrix_interface", pvs)
         self.assertIn("DO_NOT_START_NEXT_PVS_MODE_UNTIL_REVIEWED", pvs)
 
+    def test_oa_audit_avoids_unneeded_matrice5_internal_traversal(self) -> None:
+        audit = (REPO / "TOP" / "pnr" / "scripts" / "audit_spadmic2_assembly_contract.il").read_text()
+        self.assertIn(
+            "procedure(spadmicAuditWriteInstancePins(cv path targetLib targetCell targetView)",
+            audit,
+        )
+        self.assertIn("master~>libName == targetLib", audit)
+        self.assertIn("master~>cellName == targetCell", audit)
+        self.assertIn('if(role == "spadmic2" then', audit)
+        self.assertIn("SPADMIC_OA_AUDIT_PROGRESS=WRITE_SPADMIC2_TOP_CONTRACT", audit)
+        self.assertIn("SPADMIC_OA_AUDIT_PROGRESS=WRITE_MATRICE5_TOP_TERMINALS", audit)
+
     def test_innovus_flow_rejects_child_macro_implementation(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.tcl").read_text()
         wrapper = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.sh").read_text()
