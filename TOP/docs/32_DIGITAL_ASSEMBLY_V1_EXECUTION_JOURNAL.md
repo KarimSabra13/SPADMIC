@@ -5153,3 +5153,90 @@ retained under:
 ```text
 TOP/docs/server_snapshots/pvs_lvs/event_lvs_match_20260721_121034/
 ```
+
+## P11 Cumulative Soft Digital Assembly
+
+### P11-R00 Local Flow Implementation Prepared
+
+The p00-p03 assembly path was replaced locally on 2026-07-21 with four
+cumulative fresh-from-RTL tops. This is a flow implementation record, not an
+EDA result. Genus, Innovus, assembly PVS, OA insertion, and full-top PVS all
+remain `NOT_RUN` for these new tops.
+
+The canonical order is:
+
+```text
+p00_tx              spadmic_digital_assembly_v1_p00_tx
+p01_position        spadmic_digital_assembly_v1_p01_position
+p02_event_control   spadmic_digital_assembly_v1_p02_event_control
+p03_matrix_interface spadmic_digital_assembly_v1_p03_matrix_interface
+```
+
+The implementation deliberately removes child hard-macro LEF/GDS reuse from
+the p00-p03 critical path. Each phase carries the preceding RTL logic and adds
+one reviewed group. p03 includes matrix OR trees, snapshot/reset controls, CFG
+controls, and explicit matrix, CSR-side, and MPTDC-side boundary signals. p04
+MPTDC and p05 CSR/I2C remain deferred and are not silently synthesized into
+p03.
+
+The checked-in contracts and generators are:
+
+```text
+TOP/pnr/assembly/spadmic_digital_assembly_contract.json
+TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
+TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
+TOP/pnr/assembly/matrice5_unknown_family_policy.csv
+TOP/pnr/assembly/spadmic_digital_assembly_v1.sv
+TOP/pnr/scripts/process_spadmic2_assembly_audit.py
+TOP/pnr/scripts/gen_spadmic_digital_assembly_v1.py
+TOP/syn/scripts/collect_verilator_boundary.py
+TOP/syn/scripts/validate_genus_digital_assembly_phase.py
+TOP/pnr/scripts/validate_innovus_digital_assembly_phase.py
+TOP/pnr/scripts/validate_digital_assembly_pvs_phase.py
+TOP/pnr/scripts/validate_digital_assembly_oa_candidate.py
+```
+
+The physical contract is fixed at target utilization `0.60`, maximum local
+density `0.70`, ordinary signal routing on MET1-MET3, and METTP restricted to
+PG plus bounded pin access. Timing is TC-only with `clk_sys`, `clk_cfg_40m`,
+and `clk_ref_40m` related to the 160 MHz root. There are no asynchronous clock
+groups and no automated CDC/RDC claim.
+
+The server sequence is split into attributable, review-stopped transactions:
+
+```text
+TOP/ci/server_audit_spadmic2_assembly_contract.sh
+TOP/ci/server_preflight_digital_assembly_phase.sh
+TOP/ci/server_run_digital_assembly_phase_genus.sh
+TOP/ci/server_run_digital_assembly_phase_innovus.sh
+TOP/ci/server_stage_digital_assembly_phase_handoff.sh
+TOP/ci/server_preflight_digital_assembly_phase_pvs.sh
+TOP/ci/server_run_digital_assembly_phase_pvs.sh
+TOP/ci/server_prepare_digital_assembly_p03_oa_insertion.sh
+TOP/ci/server_insert_digital_assembly_p03_into_spadmic2.sh
+```
+
+Each executable EDA driver launches one foreground tool action. Every accepted
+root carries a SHA-256 manifest, exact source/status identity, independent
+timing/connectivity/DRC/export gates, and a stop before the next action.
+
+p00-p02 use base DRC then exact-GDS LVS; density is
+`NOT_RUN_BY_POLICY`. p03 uses base DRC, density DRC, then exact-GDS LVS. A p03
+density nonzero result is attributable only for the exact whole-extent set
+`R1M1`, `R1M2`, `R1M3`, and `R1MT`; it remains physical debt and keeps
+`OA_INSERTION_AUTHORIZED=NO`. OA preparation requires p03 base DRC `PASS`,
+density DRC `PASS`, and LVS `MATCH`.
+
+The OA path is intentionally two-stage. The first transaction opens the p03
+candidate and SPADMIC2 read-only, checks candidate LEF bbox/pin parity and
+full-target bbox parity, verifies unchanged source evidence, and writes
+immutable backups. The second transaction may remove at most one allowlisted
+p00-p03 assembly instance and create exactly one p03 instance at `(0,0) R0`.
+It reports full-top GDS, base DRC, density DRC, and LVS as `NOT_RUN`; the OA
+edit is only a candidate integration state.
+
+Local unit coverage now exercises cumulative phase generation, portfolio
+validation, independent Innovus gates, exact-name assembly handoff staging,
+base/density/LVS classification, density-debt non-promotion, OA bbox/pin
+parity, and insertion allowlisting. No Cadence executable was invoked while
+preparing this record.

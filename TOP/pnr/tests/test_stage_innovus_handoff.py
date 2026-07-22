@@ -16,6 +16,95 @@ AUDIT = REPO / "TOP" / "pnr" / "scripts" / "audit_innovus_handoff.py"
 
 
 class StageInnovusHandoffTest(unittest.TestCase):
+    def test_stage_and_audit_exact_cumulative_assembly_package(self) -> None:
+        top = "spadmic_digital_assembly_v1_p03_matrix_interface"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_root = root / "innovus"
+            source_root.mkdir()
+            gds = source_root / f"{top}.gds"
+            gds.write_bytes(b"exact-p03-gds")
+            netlist = source_root / f"{top}.pg.v"
+            netlist.write_text(
+                f"module {top} (VDD, VSS, a, y);\n"
+                "  inout VDD, VSS; input a; output y;\n"
+                "endmodule\n",
+                encoding="utf-8",
+            )
+            lef = source_root / f"{top}.lef"
+            lef.write_text(
+                f"MACRO {top}\n"
+                "  PIN VDD\n  END VDD\n"
+                "  PIN VSS\n  END VSS\n"
+                "  PIN a\n  END a\n"
+                "  PIN y\n  END y\n"
+                f"END {top}\n",
+                encoding="utf-8",
+            )
+            def_file = source_root / f"{top}.def"
+            def_file.write_text(f"DESIGN {top} ;\n", encoding="utf-8")
+            cdl = root / "xh018_D_CELLS_JIHD.cdl"
+            cdl.write_text(".SUBCKT FILL1JIHDX0 vddi gndi\n.ENDS\n", encoding="utf-8")
+            gate = source_root / "digital_assembly_innovus_gate.rpt"
+            gate_values = {
+                "STATUS": "PASS", "RESULT": "INNOVUS_HANDOFF_READY",
+                "PHASE": "p03_matrix_interface", "TOP_MODULE": top,
+                "SOURCE_TOP": top, "LAYOUT_TOP": top,
+                "IMPLEMENTATION": "CUMULATIVE_SOFT_LOGIC",
+                "HARD_MACRO_COUNT": "0", "CHILD_GDS_MERGE_COUNT": "0",
+                "FLOORPLAN_GEOMETRY_STATUS": "PASS", "TC_SETUP_STATUS": "PASS",
+                "TC_HOLD_STATUS": "PASS", "POSTROUTE_DESIGN_RULE_STATUS": "PASS",
+                "INNOVUS_DRC_STATUS": "PASS", "REGULAR_CONNECTIVITY_STATUS": "PASS",
+                "PG_CONNECTIVITY_STATUS": "PASS", "GDS_EXPORT_AUDIT_STATUS": "PASS",
+                "GDS_SHA256": hashlib.sha256(gds.read_bytes()).hexdigest(),
+                "PVS_BASE_DRC_STATUS": "NOT_RUN", "PVS_DENSITY_DRC_STATUS": "NOT_RUN",
+                "PVS_LVS_STATUS": "NOT_RUN", "SIGNOFF_READY": "NO",
+            }
+            gate.write_text(
+                "".join(f"{key}={value}\n" for key, value in gate_values.items()),
+                encoding="utf-8",
+            )
+            gds_audit = source_root / "gds_export_audit.rpt"
+            gds_audit.write_text(
+                "STATUS=PASS\nGDS_FILE_STATUS=PASS\nGDS_LAYER_MAP_STATUS=PASS\n"
+                "GDS_MERGE_STATUS=PASS\nERROR_COUNT=0\n",
+                encoding="utf-8",
+            )
+            handoff = root / "handoff"
+            result = subprocess.run(
+                [
+                    "python3", str(STAGE), "--kind", "assembly", "--name", top,
+                    "--version", "p03_unit", "--source-root", str(source_root),
+                    "--gds", str(gds), "--layout-top", top,
+                    "--netlist", str(netlist), "--source-top", top,
+                    "--lef", str(lef), "--def-file", str(def_file),
+                    "--handoff-root", str(handoff), "--repo-root", str(REPO),
+                    "--stdcell-cdl", str(cdl), "--report", str(gate),
+                    "--report", str(gds_audit),
+                    "--qualification-profile", "digital_assembly_tc",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            package = handoff / "assemblies" / top / "p03_unit"
+            manifest = json.loads((package / "manifests/package.json").read_text())
+            self.assertEqual(manifest["kind"], "assembly")
+            self.assertEqual(manifest["name"], top)
+            self.assertEqual(manifest["digital_assembly_tc_gate"]["phase"], "p03_matrix_interface")
+            self.assertEqual(manifest["digital_assembly_tc_gate"]["hard_macro_count"], 0)
+
+            audit = subprocess.run(
+                ["python3", str(AUDIT), str(package)],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(audit.returncode, 0, audit.stdout + audit.stderr)
+            self.assertIn("DIGITAL_ASSEMBLY_TC_GATE_STATUS=PASS", audit.stdout)
+            self.assertIn("QUALIFICATION_PROFILE=digital_assembly_tc", audit.stdout)
+
     def test_stage_preserves_raw_source_and_builds_cdl_filtered_source(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

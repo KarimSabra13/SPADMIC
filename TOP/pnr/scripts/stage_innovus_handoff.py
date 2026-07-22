@@ -51,6 +51,13 @@ RULE_REFERENCES = [
     Path("/eda/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_HD_1131"),
 ]
 
+ASSEMBLY_TOP_TO_PHASE = {
+    "spadmic_digital_assembly_v1_p00_tx": "p00_tx",
+    "spadmic_digital_assembly_v1_p01_position": "p01_position",
+    "spadmic_digital_assembly_v1_p02_event_control": "p02_event_control",
+    "spadmic_digital_assembly_v1_p03_matrix_interface": "p03_matrix_interface",
+}
+
 
 def digest(path: Path) -> str:
     sha = hashlib.sha256()
@@ -121,21 +128,21 @@ def main() -> None:
     parser.add_argument("--stdcell-cdl", type=Path)
     parser.add_argument(
         "--qualification-profile",
-        choices=["basic", "canonical_tx", "canonical_tx_lvs_waiver"],
+        choices=[
+            "basic",
+            "canonical_tx",
+            "canonical_tx_lvs_waiver",
+            "digital_assembly_tc",
+        ],
         default="basic",
     )
     args = parser.parse_args()
 
-    if args.kind == "block":
-        canonical_ok = args.layout_top == args.name and args.source_top == args.name
-        canonical_note = "block layout/source/package names are identical"
-    else:
-        canonical_ok = args.layout_top == args.name and args.source_top == "spadmic_digital_assembly_v1"
-        canonical_note = "phase-suffixed layout top with stable logical assembly source top"
+    canonical_ok = args.layout_top == args.name and args.source_top == args.name
+    canonical_note = f"{args.kind} layout/source/package names are identical"
     if not canonical_ok:
         raise SystemExit(
-            "CANONICAL_TOP_GATE_FAIL: blocks require identical names; assemblies require "
-            "layout-top=name and source-top=spadmic_digital_assembly_v1"
+            "CANONICAL_TOP_GATE_FAIL: layout top, source top, and package name must be identical"
         )
 
     source_root = args.source_root.resolve()
@@ -151,6 +158,8 @@ def main() -> None:
     waiver_gate: Path | None = None
     waiver_report: Path | None = None
     waiver_gds_audit: Path | None = None
+    assembly_gate: Path | None = None
+    assembly_gds_audit: Path | None = None
     if args.qualification_profile == "canonical_tx":
         if args.kind != "block" or args.name not in {"spadmic_tx_packet_core", "spadmic_tx_ddr_strip"}:
             raise SystemExit("canonical_tx qualification is valid only for the two canonical TX blocks")
@@ -244,6 +253,67 @@ def main() -> None:
             raise SystemExit(
                 "CANONICAL_TX_WAIVER_GATE_FAIL: mapped/merged GDS audit did not pass"
             )
+    elif args.qualification_profile == "digital_assembly_tc":
+        if args.kind != "assembly" or args.name not in ASSEMBLY_TOP_TO_PHASE:
+            raise SystemExit(
+                "DIGITAL_ASSEMBLY_GATE_FAIL: profile requires an implemented p00-p03 assembly top"
+            )
+        gate_reports = [
+            path for path in reports if path.name == "digital_assembly_innovus_gate.rpt"
+        ]
+        audit_reports = [path for path in reports if path.name == "gds_export_audit.rpt"]
+        if len(gate_reports) != 1 or len(audit_reports) != 1:
+            raise SystemExit(
+                "DIGITAL_ASSEMBLY_GATE_FAIL: exactly one Innovus gate and GDS export audit are required"
+            )
+        assembly_gate = gate_reports[0]
+        assembly_gds_audit = audit_reports[0]
+        gate = key_values(assembly_gate)
+        gds_audit = key_values(assembly_gds_audit)
+        expected_gate = {
+            "STATUS": "PASS",
+            "RESULT": "INNOVUS_HANDOFF_READY",
+            "PHASE": ASSEMBLY_TOP_TO_PHASE[args.name],
+            "TOP_MODULE": args.name,
+            "SOURCE_TOP": args.name,
+            "LAYOUT_TOP": args.name,
+            "IMPLEMENTATION": "CUMULATIVE_SOFT_LOGIC",
+            "HARD_MACRO_COUNT": "0",
+            "CHILD_GDS_MERGE_COUNT": "0",
+            "FLOORPLAN_GEOMETRY_STATUS": "PASS",
+            "TC_SETUP_STATUS": "PASS",
+            "TC_HOLD_STATUS": "PASS",
+            "POSTROUTE_DESIGN_RULE_STATUS": "PASS",
+            "INNOVUS_DRC_STATUS": "PASS",
+            "REGULAR_CONNECTIVITY_STATUS": "PASS",
+            "PG_CONNECTIVITY_STATUS": "PASS",
+            "GDS_EXPORT_AUDIT_STATUS": "PASS",
+            "PVS_BASE_DRC_STATUS": "NOT_RUN",
+            "PVS_DENSITY_DRC_STATUS": "NOT_RUN",
+            "PVS_LVS_STATUS": "NOT_RUN",
+            "SIGNOFF_READY": "NO",
+        }
+        for key, expected in expected_gate.items():
+            if gate.get(key) != expected:
+                raise SystemExit(
+                    f"DIGITAL_ASSEMBLY_GATE_FAIL: {key}={gate.get(key, 'MISSING')} "
+                    f"expected={expected}"
+                )
+        expected_gds_audit = {
+            "STATUS": "PASS",
+            "GDS_FILE_STATUS": "PASS",
+            "GDS_LAYER_MAP_STATUS": "PASS",
+            "GDS_MERGE_STATUS": "PASS",
+            "ERROR_COUNT": "0",
+        }
+        for key, expected in expected_gds_audit.items():
+            if gds_audit.get(key) != expected:
+                raise SystemExit(
+                    f"DIGITAL_ASSEMBLY_GATE_FAIL: GDS audit {key}="
+                    f"{gds_audit.get(key, 'MISSING')} expected={expected}"
+                )
+        if gate.get("GDS_SHA256") != digest(gds):
+            raise SystemExit("DIGITAL_ASSEMBLY_GATE_FAIL: gate GDS hash does not match staged GDS")
 
     handoff_root = args.handoff_root.resolve()
     category = "blocks" if args.kind == "block" else "assemblies"
@@ -374,9 +444,21 @@ def main() -> None:
             "gds_audit_report": f"reports/{waiver_gds_audit.name}",
             "gds_audit_report_sha256": digest(waiver_gds_audit),
         }
+    if assembly_gate and assembly_gds_audit:
+        manifest["digital_assembly_tc_gate"] = {
+            "status": "PASS",
+            "phase": ASSEMBLY_TOP_TO_PHASE[args.name],
+            "hard_macro_count": 0,
+            "child_gds_merge_count": 0,
+            "gate_report": f"reports/{assembly_gate.name}",
+            "gate_report_sha256": digest(assembly_gate),
+            "gds_audit_report": f"reports/{assembly_gds_audit.name}",
+            "gds_audit_report_sha256": digest(assembly_gds_audit),
+        }
     (package / "manifests" / "package.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
     waiver_profile = args.qualification_profile == "canonical_tx_lvs_waiver"
+    assembly_profile = args.qualification_profile == "digital_assembly_tc"
     (package / "status" / "qualification.rpt").write_text(
         "LABEL=SPADMIC_INNOVUS_HANDOFF\n"
         "PACKAGE_STATUS=CANDIDATE\n"
@@ -392,11 +474,14 @@ def main() -> None:
         "LVS_SOURCE_PREPARATION_STATUS=PASS\n"
         "PIN_PARITY_STATUS=PASS\n"
         "STDCELL_CDL_STATUS=PASS\n"
-        "BBOX_PARITY_STATUS=UNKNOWN\n"
-        f"GDS_LAYER_MAP_STATUS={'PASS' if waiver_profile else 'UNKNOWN'}\n"
-        f"GDS_MERGE_STATUS={'PASS' if waiver_profile else 'UNKNOWN'}\n"
-        "INTERNAL_PG_STATUS=UNKNOWN\n"
-        "TC_TIMING_STATUS=NOT_RUN\n"
+        f"DIGITAL_ASSEMBLY_TC_GATE_STATUS={'PASS' if assembly_profile else 'NOT_APPLICABLE'}\n"
+        f"HARD_MACRO_COUNT={'0' if assembly_profile else 'UNKNOWN'}\n"
+        f"CHILD_GDS_MERGE_COUNT={'0' if assembly_profile else 'UNKNOWN'}\n"
+        f"BBOX_PARITY_STATUS={'PASS' if assembly_profile else 'UNKNOWN'}\n"
+        f"GDS_LAYER_MAP_STATUS={'PASS' if waiver_profile or assembly_profile else 'UNKNOWN'}\n"
+        f"GDS_MERGE_STATUS={'PASS' if waiver_profile or assembly_profile else 'UNKNOWN'}\n"
+        f"INTERNAL_PG_STATUS={'PASS' if assembly_profile else 'UNKNOWN'}\n"
+        f"TC_TIMING_STATUS={'PASS' if assembly_profile else 'NOT_RUN'}\n"
         "PVS_BASE_DRC_STATUS=NOT_RUN\n"
         "PVS_DENSITY_DRC_STATUS=NOT_RUN\n"
         "PVS_LVS_STATUS=NOT_RUN\n"

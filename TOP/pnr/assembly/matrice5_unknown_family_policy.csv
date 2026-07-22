@@ -1,0 +1,3 @@
+family,disposition,reviewer,reason
+VDD,IGNORE_NON_DIGITAL,,Power terminal; handled by the explicit PG contract
+VSS,IGNORE_NON_DIGITAL,,Ground terminal; handled by the explicit PG contract

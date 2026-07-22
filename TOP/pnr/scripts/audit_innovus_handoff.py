@@ -40,6 +40,11 @@ def main() -> None:
     qualification_profile = manifest.get("qualification_profile", "basic")
     errors: list[str] = []
 
+    if name != layout_top or name != source_top:
+        errors.append(
+            f"canonical_name_mismatch=name:{name},layout_top:{layout_top},source_top:{source_top}"
+        )
+
     required = [
         package / "gds" / f"{layout_top}.gds",
         package / "netlist" / f"{source_top}.lvs.pg.v",
@@ -59,7 +64,7 @@ def main() -> None:
     else:
         text = lefs[0].read_text(errors="replace")
         macro = re.search(r"^\s*MACRO\s+(\S+)", text, re.M)
-        if manifest["kind"] == "block" and (not macro or macro.group(1) != name):
+        if not macro or macro.group(1) != name:
             errors.append(f"lef_macro={macro.group(1) if macro else 'MISSING'} expected={name}")
 
     netlist = package / "netlist" / f"{source_top}.lvs.pg.v"
@@ -193,6 +198,95 @@ def main() -> None:
         if not errors:
             waiver_status = "PASS"
 
+    assembly_gate_status = "NOT_APPLICABLE"
+    if qualification_profile == "digital_assembly_tc":
+        assembly_gate_status = "FAIL"
+        gate_manifest = manifest.get("digital_assembly_tc_gate")
+        gate_report = package / "reports" / "digital_assembly_innovus_gate.rpt"
+        gds_audit = package / "reports" / "gds_export_audit.rpt"
+        for path in (gate_report, gds_audit):
+            if not path.is_file() or path.stat().st_size == 0:
+                errors.append(f"missing_or_empty={path}")
+        if not isinstance(gate_manifest, dict):
+            errors.append("digital_assembly_tc_gate_manifest_missing")
+        elif gate_report.is_file() and gds_audit.is_file():
+            expected_manifest = {
+                "status": "PASS",
+                "hard_macro_count": 0,
+                "child_gds_merge_count": 0,
+                "gate_report_sha256": digest(gate_report),
+                "gds_audit_report_sha256": digest(gds_audit),
+            }
+            for key, expected in expected_manifest.items():
+                if gate_manifest.get(key) != expected:
+                    errors.append(
+                        f"digital_assembly_tc_manifest_{key}="
+                        f"{gate_manifest.get(key, 'MISSING')} expected={expected}"
+                    )
+            gate_values = key_values(gate_report)
+            audit_values = key_values(gds_audit)
+            expected_gate = {
+                "STATUS": "PASS",
+                "RESULT": "INNOVUS_HANDOFF_READY",
+                "TOP_MODULE": name,
+                "SOURCE_TOP": name,
+                "LAYOUT_TOP": name,
+                "IMPLEMENTATION": "CUMULATIVE_SOFT_LOGIC",
+                "HARD_MACRO_COUNT": "0",
+                "CHILD_GDS_MERGE_COUNT": "0",
+                "FLOORPLAN_GEOMETRY_STATUS": "PASS",
+                "TC_SETUP_STATUS": "PASS",
+                "TC_HOLD_STATUS": "PASS",
+                "POSTROUTE_DESIGN_RULE_STATUS": "PASS",
+                "INNOVUS_DRC_STATUS": "PASS",
+                "REGULAR_CONNECTIVITY_STATUS": "PASS",
+                "PG_CONNECTIVITY_STATUS": "PASS",
+                "GDS_EXPORT_AUDIT_STATUS": "PASS",
+                "PVS_BASE_DRC_STATUS": "NOT_RUN",
+                "PVS_DENSITY_DRC_STATUS": "NOT_RUN",
+                "PVS_LVS_STATUS": "NOT_RUN",
+                "SIGNOFF_READY": "NO",
+            }
+            for key, expected in expected_gate.items():
+                if gate_values.get(key) != expected:
+                    errors.append(
+                        f"digital_assembly_tc_gate_{key}="
+                        f"{gate_values.get(key, 'MISSING')} expected={expected}"
+                    )
+            for key in (
+                "STATUS",
+                "GDS_FILE_STATUS",
+                "GDS_LAYER_MAP_STATUS",
+                "GDS_MERGE_STATUS",
+            ):
+                if audit_values.get(key) != "PASS":
+                    errors.append(
+                        f"digital_assembly_gds_audit_{key}="
+                        f"{audit_values.get(key, 'MISSING')} expected=PASS"
+                    )
+        expected_qualification = {
+            "DIGITAL_ASSEMBLY_TC_GATE_STATUS": "PASS",
+            "HARD_MACRO_COUNT": "0",
+            "CHILD_GDS_MERGE_COUNT": "0",
+            "BBOX_PARITY_STATUS": "PASS",
+            "GDS_LAYER_MAP_STATUS": "PASS",
+            "GDS_MERGE_STATUS": "PASS",
+            "INTERNAL_PG_STATUS": "PASS",
+            "TC_TIMING_STATUS": "PASS",
+            "PVS_BASE_DRC_STATUS": "NOT_RUN",
+            "PVS_DENSITY_DRC_STATUS": "NOT_RUN",
+            "PVS_LVS_STATUS": "NOT_RUN",
+            "SIGNOFF_READY": "NO",
+        }
+        for key, expected in expected_qualification.items():
+            if qualification_values.get(key) != expected:
+                errors.append(
+                    f"qualification_{key}="
+                    f"{qualification_values.get(key, 'MISSING')} expected={expected}"
+                )
+        if not errors:
+            assembly_gate_status = "PASS"
+
     sums = package / "manifests" / "SHA256SUMS"
     if sums.is_file():
         for line in sums.read_text().splitlines():
@@ -213,6 +307,7 @@ def main() -> None:
         f"PIN_PARITY_STATUS={prep_values.get('PIN_PARITY_STATUS', 'MISSING')}\n"
         f"STDCELL_CDL_STATUS={'PASS' if package_cdl.is_file() else 'FAIL'}\n"
         f"QUALIFICATION_PROFILE={qualification_profile}\n"
+        f"DIGITAL_ASSEMBLY_TC_GATE_STATUS={assembly_gate_status}\n"
         f"TEMPORARY_DRC_WAIVER_STATUS={waiver_status}\n"
         f"PVS_DRC_WAIVER={qualification_values.get('PVS_DRC_WAIVER', 'MISSING')}\n"
         f"LVS_DIAGNOSTIC_ONLY={qualification_values.get('LVS_DIAGNOSTIC_ONLY', 'MISSING')}\n"

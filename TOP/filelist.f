@@ -28,6 +28,7 @@ rtl/spadmic_tx_packet_core.sv
 rtl/spadmic_tx_ddr_strip.sv
 rtl/spadmic_tx_egress_cluster.sv
 rtl/spadmic_tx_egress_core.sv
+pnr/assembly/spadmic_digital_assembly_v1.sv
 
 // ── I2C control plane (from I2C/) ────────────────────────────────
 ../I2C/rtl/spadmic_i2c_slave.sv

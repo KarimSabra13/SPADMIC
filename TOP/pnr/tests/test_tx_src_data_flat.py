@@ -16,7 +16,7 @@ ACTIVE_MODULES = {
     ROOT / "TOP/rtl/spadmic_tx_egress_core.sv": "spadmic_tx_egress_core",
     ROOT / "TOP/rtl/spadmic_tx_egress_cluster.sv": "spadmic_tx_egress_cluster",
     ROOT / "TOP/rtl/spadmic_tx_packet_core.sv": "spadmic_tx_packet_core",
-    ROOT / "TOP/pnr/assembly/spadmic_digital_assembly_v1.sv": "spadmic_digital_assembly_v1",
+    ROOT / "TOP/pnr/assembly/spadmic_digital_assembly_v1.sv": "spadmic_digital_assembly_v1_p00_tx",
 }
 
 

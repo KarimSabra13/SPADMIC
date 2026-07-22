@@ -99,6 +99,20 @@ def render(kind: str, arg: str | None, indent: str, pins: list[Pin]) -> list[str
             f"{indent}assign {arg}[{pin.source}][{pin.bit}] = {pin.name};"
             for pin in pins
         ]
+    if kind == "FLAT_CONNECTIONS":
+        if not arg:
+            raise ValueError("FLAT_CONNECTIONS marker requires a packed vector name")
+        return [
+            f"{indent}.{pin.name:<21} ({arg}[{pin.source * DATA_WIDTH + pin.bit}]),"
+            for pin in pins
+        ]
+    if kind == "FLAT_ASSIGNMENTS":
+        if not arg:
+            raise ValueError("FLAT_ASSIGNMENTS marker requires a packed vector name")
+        return [
+            f"{indent}assign {arg}[{pin.source * DATA_WIDTH + pin.bit}] = {pin.name};"
+            for pin in pins
+        ]
     raise ValueError(f"unsupported generated-region kind: {kind}")
 
 

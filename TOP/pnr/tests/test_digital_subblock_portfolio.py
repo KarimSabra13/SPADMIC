@@ -27,35 +27,40 @@ OOC_SPEC.loader.exec_module(ooc)
 
 
 class DigitalSubblockPortfolioTest(unittest.TestCase):
-    def test_portfolio_and_floorplan_validate_against_audit(self) -> None:
+    def test_portfolio_and_phase_contract_validate(self) -> None:
         errors = portfolio.validate(
             portfolio.DEFAULT_PORTFOLIO,
-            portfolio.DEFAULT_REGIONS,
-            portfolio.DEFAULT_AUDIT,
+            portfolio.DEFAULT_PHASES,
+            portfolio.DEFAULT_CONTRACT,
         )
         self.assertEqual(errors, [])
 
-    def test_hard_macro_order_and_blocked_mptdc_policy(self) -> None:
+    def test_soft_phase_order_and_deferred_boundary_policy(self) -> None:
         with portfolio.DEFAULT_PORTFOLIO.open(newline="") as handle:
             rows = list(csv.DictReader(handle))
-        hard = [row["block"] for row in rows if row["implementation"] == "HARD_MACRO"]
+        active = [row for row in rows if row["phase"].startswith(("p00", "p01", "p02", "p03"))]
+        self.assertTrue(active)
+        self.assertTrue(all(row["implementation"] == "SOFT_SYNTHESIZED" for row in active))
+        self.assertFalse(any("HARD" in row["promotion_policy"] for row in active))
         self.assertEqual(
-            hard,
-            ["tx_packet_core", "tx_ddr_strip", "position_core", "event_coordinator"],
+            {row["reservation"] for row in active},
+            {"tx_packet", "tx_ddr_strip", "position", "event", "matrix_or", "matrix_snapshot_reset", "matrix_cfg"},
+        )
+        self.assertEqual(
+            [row["phase"] for row in active],
+            [
+                "p00_tx", "p00_tx", "p01_position", "p02_event_control",
+                "p03_matrix_interface", "p03_matrix_interface",
+                "p03_matrix_interface", "p03_matrix_interface",
+            ],
         )
         mptdc = next(row for row in rows if row["block"] == "mptdc_frontend")
+        self.assertEqual(mptdc["implementation"], "DEFERRED")
         self.assertEqual(mptdc["current_gate"], "BLOCKED_ABSTRACT_MISSING")
         self.assertEqual(mptdc["promotion_policy"], "NO_PROMOTION_WHILE_BLOCKED")
-        position = next(row for row in rows if row["block"] == "position_core")
-        event = next(row for row in rows if row["block"] == "event_coordinator")
-        self.assertEqual(
-            position["current_gate"],
-            "PVS_BASE_ZERO_DENSITY_FOUR_RULES_LVS_MATCH_ACCEPTED",
-        )
-        self.assertEqual(
-            event["current_gate"],
-            "PVS_BASE_ZERO_DENSITY_FOUR_RULES_LVS_MATCH_ACCEPTED",
-        )
+        csr = next(row for row in rows if row["block"] == "csr_i2c")
+        self.assertEqual(csr["implementation"], "DEFERRED")
+        self.assertEqual(csr["promotion_policy"], "NO_PROMOTION_WHILE_DEFERRED")
 
     def test_position_and_event_ooc_plans_use_reserved_geometry_and_exact_pg(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

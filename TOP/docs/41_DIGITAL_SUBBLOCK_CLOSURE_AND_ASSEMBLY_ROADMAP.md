@@ -1,17 +1,115 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active. Position and Event each have
-attributable base DRC zero, accepted exact-GDS LVS `MATCH`, and four-rule
-whole-extent density debt still open. Neither block is promoted, and no
-assembly phase is promoted.
+Status: cumulative soft-assembly flow implemented locally; server execution
+has not started. Position and Event OOC results remain immutable supporting
+evidence, but they are not child hard macros on the p00-p03 implementation
+path. No assembly phase is promoted.
 
 Date: 2026-07-21.
 
-This document is the execution authority for converting the remaining
-matrix-top digital logic into reusable hard macros or controlled soft regions.
-It preserves the TX closure lessons, the audited full-chip floorplan, and the
-evidence required before one block can be inserted into the next assembly
-phase.
+This document is the execution authority for building the matrix-top digital
+logic as four cumulative fresh-from-RTL phases. It preserves the TX, Position,
+and Event closure evidence as diagnostics while avoiding child LEF/GDS reuse
+in the p00-p03 physical implementation.
+
+## 0. Cumulative Soft Assembly Authority
+
+This section supersedes the hard-macro integration language in Sections 3-5
+for phases p00-p03. Those sections remain historical OOC closure context.
+
+The exact phase order is:
+
+| Phase | Canonical source/layout top | Cumulative groups | Density gate |
+| --- | --- | --- | --- |
+| `p00_tx` | `spadmic_digital_assembly_v1_p00_tx` | TX packet + TX DDR strip | `NOT_RUN` |
+| `p01_position` | `spadmic_digital_assembly_v1_p01_position` | p00 + Position | `NOT_RUN` |
+| `p02_event_control` | `spadmic_digital_assembly_v1_p02_event_control` | p01 + Event | `NOT_RUN` |
+| `p03_matrix_interface` | `spadmic_digital_assembly_v1_p03_matrix_interface` | p02 + matrix OR, snapshot/reset, and CFG | exact whole-extent density set |
+
+Every phase is independently synthesized and implemented from RTL. The
+critical-path contract is:
+
+```text
+IMPLEMENTATION=CUMULATIVE_SOFT_LOGIC
+BUILD_MODE=FRESH_FROM_RTL
+HARD_MACRO_COUNT=0
+CHILD_GDS_MERGE_COUNT=0
+TARGET_UTILIZATION=0.60
+MAX_LOCAL_DENSITY=0.70
+SIGNAL_ROUTE_LAYERS=MET1-MET3
+METTP_POLICY=PG_AND_BOUNDED_PIN_ACCESS_ONLY
+TIMING_CORNER=TC
+ROOT_CLOCK=clk_160m_i
+AUTOMATED_CDC_RDC_GATE=NO
+```
+
+`clk_sys`, `clk_cfg_40m`, and `clk_ref_40m` are related generated clocks from
+the 160 MHz root. No asynchronous clock groups may be introduced to suppress
+timing paths. Setup and hold WNS must be nonnegative, TNS and violating-path
+counts must be zero, and design-rule constraints must be clean before Innovus.
+
+The immutable read-only OA audit of `SPADMIC/SPADMIC2/layout` and
+`TOPLEVEL/matrice5/layout` is a prerequisite. It emits fixed obstacles, soft
+group guides, exact matrix proxy pin access, and METTP VDD/VSS overlap anchors.
+Unknown matrix terminal families block p03 only; they do not invalidate a
+reviewed p00-p02 contract.
+
+### Per-Phase Transaction Order
+
+For each phase, use one foreground EDA action and stop for review after every
+transaction:
+
+```text
+1. server_audit_spadmic2_assembly_contract.sh       # once, read-only OA
+2. server_preflight_digital_assembly_phase.sh       # phase contract + RTL checks
+3. server_run_digital_assembly_phase_genus.sh       # exactly one Genus action
+4. server_run_digital_assembly_phase_innovus.sh     # exactly one Innovus action
+5. server_stage_digital_assembly_phase_handoff.sh   # immutable exact-name package
+6. server_preflight_digital_assembly_phase_pvs.sh   # controls only; PVS not executed
+7. server_run_digital_assembly_phase_pvs.sh ... base
+8. p03 only: server_run_digital_assembly_phase_pvs.sh ... density
+9. server_run_digital_assembly_phase_pvs.sh ... lvs
+10. review the phase gate before starting the next phase
+```
+
+p00-p02 deliberately skip density. Their accepted physical tuple is base DRC
+`PASS` plus exact-GDS LVS `MATCH`, with density recorded as
+`NOT_RUN_BY_POLICY`. p03 must run density. A nonzero p03 density transaction is
+classifiable only when every result belongs to `R1M1`, `R1M2`, `R1M3`, or
+`R1MT`, every marker spans the exact assembly extent, and count reconciliation
+passes. Classified debt remains a physical density failure and does not
+authorize OA insertion.
+
+### OA Insertion Boundary
+
+Insertion into `SPADMIC2/layout` is authorized only after p03 has this exact
+tuple:
+
+```text
+PVS_BASE_DRC_STATUS=PASS
+PVS_DENSITY_DRC_STATUS=PASS
+PVS_LVS_STATUS=MATCH
+ASSEMBLY_PHASE_ACCEPTED=YES
+OA_INSERTION_AUTHORIZED=YES
+```
+
+Then run the read-only candidate gate and immutable backup transaction before
+the write transaction:
+
+```text
+server_prepare_digital_assembly_p03_oa_insertion.sh
+server_insert_digital_assembly_p03_into_spadmic2.sh
+```
+
+The write script may replace at most one allowlisted p00-p03 assembly instance
+and inserts exactly one p03 instance at `(0,0) R0`. It cannot remove an
+unrelated instance. OA bbox and boundary-pin parity prove only the integration
+contract, not logical equivalence or full-chip signoff. After insertion, full
+top GDS export, base DRC, density DRC, and LVS are separate mandatory gates and
+remain `NOT_RUN` until explicitly executed.
+
+p04 MPTDC remains blocked on final abstracts and an exact pin contract. p05
+CSR/I2C remains deferred. Neither is inferred into p03.
 
 ## 1. Current Milestone
 
@@ -65,13 +163,25 @@ TOP/docs/server_snapshots/pvs_lvs/event_lvs_match_20260721_121034/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
+TOP/pnr/assembly/spadmic_digital_assembly_contract.json
+TOP/pnr/assembly/matrice5_unknown_family_policy.csv
+TOP/pnr/assembly/spadmic_digital_assembly_v1.sv
+TOP/ci/server_audit_spadmic2_assembly_contract.sh
+TOP/ci/server_preflight_digital_assembly_phase.sh
+TOP/ci/server_run_digital_assembly_phase_genus.sh
+TOP/ci/server_run_digital_assembly_phase_innovus.sh
+TOP/ci/server_stage_digital_assembly_phase_handoff.sh
+TOP/ci/server_preflight_digital_assembly_phase_pvs.sh
+TOP/ci/server_run_digital_assembly_phase_pvs.sh
+TOP/ci/server_prepare_digital_assembly_p03_oa_insertion.sh
+TOP/ci/server_insert_digital_assembly_p03_into_spadmic2.sh
 TOP/docs/34_INNOVUS_22_33_PG_ROUTING_COMMAND_NOTES.md
 TOP/docs/38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md
 TOP/docs/39_TX_PACKET_CORE_PVS_BASE_DRC_NON_ANTENNA_ANALYSIS.md
 TOP/docs/40_TX_PACKET_CORE_VIRTUOSO_IMPORT_HANDOFF.md
 ```
 
-Run the floorplan gate before generating any new hard macro:
+Run the portfolio/phase gate before generating any cumulative phase contract:
 
 ```bash
 python3 TOP/pnr/scripts/validate_digital_subblock_portfolio.py
@@ -84,9 +194,9 @@ STATUS=PASS
 ERROR_COUNT=0
 ```
 
-Do not move a reservation by inspection alone. Update the CSV contract, rerun
-the audit-backed validator, review clearances, and commit the new contract
-before launching Cadence.
+Do not move a reservation by inspection alone. Update the JSON/CSV contract,
+rerun the read-only OA audit and validator, review clearances, and bind the
+result to the release commit before launching Cadence.
 
 ## 3. Portfolio and Order
 

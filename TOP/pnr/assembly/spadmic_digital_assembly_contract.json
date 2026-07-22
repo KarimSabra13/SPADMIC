@@ -1,0 +1,98 @@
+{
+  "schema": "spadmic.digital_assembly.contract.v2",
+  "source_layouts": {
+    "spadmic2": {
+      "filesystem_path": "/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC2/layout",
+      "library": "SPADMIC",
+      "cell": "SPADMIC2",
+      "view": "layout",
+      "access": "read_only"
+    },
+    "matrice5": {
+      "filesystem_path": "/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice5",
+      "library": "TOPLEVEL",
+      "cell": "matrice5",
+      "view": "layout",
+      "access": "read_only"
+    }
+  },
+  "matrix_terminal_families": {
+    "R": {"width": 64, "direction": "OUTPUT"},
+    "Y": {"width": 64, "direction": "OUTPUT"},
+    "B": {"width": 64, "direction": "OUTPUT"},
+    "Rz": {"width": 64, "direction": "INPUT"},
+    "Yz": {"width": 64, "direction": "INPUT"},
+    "Bz": {"width": 64, "direction": "INPUT"},
+    "Din": {"width": 44, "direction": "INPUT"},
+    "Cin": {"width": 44, "direction": "INPUT"},
+    "Dout": {"width": 44, "direction": "OUTPUT"},
+    "Cout": {"width": 44, "direction": "OUTPUT"}
+  },
+  "phases": {
+    "p00_tx": {
+      "top": "spadmic_digital_assembly_v1_p00_tx",
+      "groups": ["tx_packet", "tx_ddr_strip"],
+      "density_gate": "NOT_RUN"
+    },
+    "p01_position": {
+      "top": "spadmic_digital_assembly_v1_p01_position",
+      "groups": ["tx_packet", "tx_ddr_strip", "position"],
+      "density_gate": "NOT_RUN"
+    },
+    "p02_event_control": {
+      "top": "spadmic_digital_assembly_v1_p02_event_control",
+      "groups": ["tx_packet", "tx_ddr_strip", "position", "event"],
+      "density_gate": "NOT_RUN"
+    },
+    "p03_matrix_interface": {
+      "top": "spadmic_digital_assembly_v1_p03_matrix_interface",
+      "groups": [
+        "tx_packet",
+        "tx_ddr_strip",
+        "position",
+        "event",
+        "matrix_or",
+        "matrix_snapshot_reset",
+        "matrix_cfg"
+      ],
+      "density_gate": "EXACT_WHOLE_EXTENT_RULE_SET",
+      "allowed_density_rules": ["R1M1", "R1M2", "R1M3", "R1MT"]
+    }
+  },
+  "physical_policy": {
+    "implementation": "CUMULATIVE_SOFT_LOGIC",
+    "target_utilization": 0.60,
+    "max_local_density": 0.70,
+    "ordinary_signal_layers": ["MET1", "MET2", "MET3"],
+    "mettp_policy": "PG_AND_BOUNDED_PIN_ACCESS_ONLY",
+    "power_nets": ["VDD", "VSS"],
+    "standard_cell_fill": "REQUIRED",
+    "metal_fill": "DEFER_TO_FINAL_CHIP_INTEGRATION"
+  },
+  "timing_policy": {
+    "corner": "TC",
+    "root_clock": "clk_160m_i",
+    "root_period_ns": 6.25,
+    "related_clocks": {
+      "clk_sys": 1,
+      "clk_cfg_40m": 4,
+      "clk_ref_40m": 4
+    },
+    "clock_uncertainty_ns": 0.10,
+    "io_delay_ns": 1.00,
+    "ddr_output_max_ns": 1.00,
+    "ddr_output_min_ns": -0.25,
+    "require_setup_hold_wns_nonnegative": true,
+    "require_tns_zero": true,
+    "require_zero_violating_paths": true,
+    "require_clean_design_rules": true,
+    "automated_cdc_rdc_gate": false
+  },
+  "deferred": {
+    "p04_mptdc_frontend": "BLOCKED_ON_FINAL_MPTDC_ABSTRACTS_AND_PIN_CONTRACT",
+    "p05_csr_i2c": "DEFERRED",
+    "mmmc": "OUT_OF_CURRENT_HORIZON",
+    "pex": "OUT_OF_CURRENT_HORIZON",
+    "full_chip_pvs": "AFTER_TOP_INTEGRATION"
+  }
+}

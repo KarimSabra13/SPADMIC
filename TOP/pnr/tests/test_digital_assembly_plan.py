@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -13,12 +14,9 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[3]
-MODULE_PATH = REPO / "TOP" / "pnr" / "scripts" / "gen_spadmic_digital_assembly_v1.py"
-SPEC = importlib.util.spec_from_file_location("digital_assembly_plan", MODULE_PATH)
-assert SPEC and SPEC.loader
-plan = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = plan
-SPEC.loader.exec_module(plan)
+GENERATOR = REPO / "TOP" / "pnr" / "scripts" / "gen_spadmic_digital_assembly_v1.py"
+CONTRACT = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_contract.json"
+RTL = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_v1.sv"
 
 OOC_MODULE_PATH = REPO / "TOP" / "pnr" / "scripts" / "gen_ooc_block_harden_plan.py"
 OOC_SPEC = importlib.util.spec_from_file_location("ooc_harden_plan", OOC_MODULE_PATH)
@@ -29,119 +27,152 @@ OOC_SPEC.loader.exec_module(ooc)
 
 
 class DigitalAssemblyPlanTest(unittest.TestCase):
-    def test_my_mirrors_packet_north_pin(self) -> None:
-        macro = plan.Macro("m", 100.0, 20.0, {"Y"}, {}, Path("m.lef"))
-        original = plan.Rect("MET3", 9.0, 19.0, 11.0, 20.0)
-        mirrored = plan.transform_rect(original, macro, (50.0, 200.0), "MY")
-        self.assertEqual((mirrored.llx, mirrored.urx), (139.0, 141.0))
-        self.assertEqual((mirrored.lly, mirrored.ury), (219.0, 220.0))
+    @staticmethod
+    def _write_tsv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames, delimiter="\t", lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(rows)
 
-    def test_approved_strip_overlaps_txrx4tdc2(self) -> None:
-        audit = REPO / "TOP" / "docs" / "layout_audits" / "SPADMIC2_20260709_072331"
-        obstacles = plan.load_obstacles(audit)
-        packet_box = (61.980, 2689.624, 2128.940, 3056.424)
-        strip_box = (61.980, 3061.110, 3584.940, 3241.990)
-        with tempfile.TemporaryDirectory() as tmp:
-            report = Path(tmp) / "conflicts.csv"
-            rows = plan.write_geometry_conflicts(report, packet_box, strip_box, obstacles)
-            txrx = [row for row in rows if row["obstacle"].endswith("TXRX4TDC2")]
-            self.assertEqual(len(txrx), 1)
-            self.assertEqual(txrx[0]["digital_instance"], "u_tx_ddr_strip")
-            self.assertEqual(txrx[0]["overlap_bbox_um"], "3505.519 3061.110 3584.940 3241.990")
-            self.assertEqual(txrx[0]["overlap_width_um"], "79.421")
-            self.assertEqual(txrx[0]["overlap_height_um"], "180.880")
-            with report.open(newline="") as fh:
-                self.assertGreaterEqual(len(list(csv.DictReader(fh))), 1)
+    def _make_audit(self, root: Path) -> Path:
+        audit = root / "audit"
+        audit.mkdir()
+        (audit / "assembly_audit_status.rpt").write_text(
+            "STATUS=PASS\n"
+            "P00_P02_IMPLEMENTATION_AUTHORIZED=YES\n"
+            "P03_IMPLEMENTATION_AUTHORIZED=YES\n"
+            "SPADMIC2_DIE_BBOX_UM=0.000 0.000 400.000 400.000\n",
+            encoding="utf-8",
+        )
+        self._write_tsv(
+            audit / "fixed_obstacles.tsv",
+            ["instance", "llx", "lly", "urx", "ury"],
+            [{"instance": "analog_fixed", "llx": "300", "lly": "0", "urx": "400", "ury": "400"}],
+        )
+        groups = [
+            "tx_packet", "tx_ddr_strip", "position", "event", "matrix_or",
+            "matrix_snapshot_reset", "matrix_cfg",
+        ]
+        self._write_tsv(
+            audit / "soft_group_guides.tsv",
+            ["group", "llx", "lly", "urx", "ury"],
+            [
+                {"group": group, "llx": str(index * 10), "lly": "10", "urx": str(index * 10 + 8), "ury": "80"}
+                for index, group in enumerate(groups)
+            ],
+        )
+        self._write_tsv(
+            audit / "pg_overlap_anchors.tsv",
+            ["net", "layer", "llx", "lly", "urx", "ury"],
+            [
+                {"net": "VDD", "layer": "METTP", "llx": "20", "lly": "0", "urx": "24", "ury": "400"},
+                {"net": "VSS", "layer": "METTP", "llx": "40", "lly": "0", "urx": "44", "ury": "400"},
+            ],
+        )
+        self._write_tsv(
+            audit / "matrice5_proxy_pin_access.tsv",
+            ["terminal", "family", "index", "direction", "layer", "purpose", "llx", "lly", "urx", "ury"],
+            [
+                {"terminal": "R<0>", "family": "R", "index": "0", "direction": "OUTPUT", "layer": "MET3", "purpose": "drawing", "llx": "1", "lly": "2", "urx": "3", "ury": "4"},
+                {"terminal": "Din<0>", "family": "Din", "index": "0", "direction": "INPUT", "layer": "MET2", "purpose": "drawing", "llx": "5", "lly": "6", "urx": "7", "ury": "8"},
+            ],
+        )
+        return audit
 
-    def test_tx_contract_is_exactly_nineteen_nets(self) -> None:
-        self.assertEqual(len(plan.TX_CONNECTIONS), 19)
-        self.assertEqual(sum(name.startswith("tx_data_") for name, _, _ in plan.TX_CONNECTIONS), 16)
+    def test_contract_defines_exact_cumulative_soft_phase_order(self) -> None:
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        self.assertEqual(contract["schema"], "spadmic.digital_assembly.contract.v2")
+        self.assertEqual(list(contract["phases"]), ["p00_tx", "p01_position", "p02_event_control", "p03_matrix_interface"])
+        self.assertEqual(
+            [contract["phases"][phase]["top"] for phase in contract["phases"]],
+            [
+                "spadmic_digital_assembly_v1_p00_tx",
+                "spadmic_digital_assembly_v1_p01_position",
+                "spadmic_digital_assembly_v1_p02_event_control",
+                "spadmic_digital_assembly_v1_p03_matrix_interface",
+            ],
+        )
+        self.assertEqual(contract["physical_policy"]["implementation"], "CUMULATIVE_SOFT_LOGIC")
+        self.assertEqual(contract["physical_policy"]["ordinary_signal_layers"], ["MET1", "MET2", "MET3"])
+        self.assertEqual(contract["physical_policy"]["target_utilization"], 0.60)
+        self.assertEqual(contract["physical_policy"]["max_local_density"], 0.70)
+        self.assertEqual(contract["phases"]["p03_matrix_interface"]["allowed_density_rules"], ["R1M1", "R1M2", "R1M3", "R1MT"])
+        for phase in ("p00_tx", "p01_position", "p02_event_control"):
+            self.assertEqual(contract["phases"][phase]["density_gate"], "NOT_RUN")
+        self.assertIn("BLOCKED", contract["deferred"]["p04_mptdc_frontend"])
+        self.assertEqual(contract["deferred"]["p05_csr_i2c"], "DEFERRED")
 
-    def test_tx_contract_has_exact_shared_x_coordinates(self) -> None:
-        rows = ooc.read_tx_stream_pin_contract()
-        self.assertEqual(len(rows), 19)
-        for order, row in enumerate(rows):
-            self.assertEqual(int(row["order"]), order)
-            self.assertEqual(row["packet_side"], "NORTH")
-            self.assertEqual(row["strip_side"], "SOUTH")
-            self.assertEqual(row["pin_layer"], "MET3")
-            self.assertEqual(row["assembly_route_layer"], "MET2")
-            self.assertAlmostEqual(
-                float(row["packet_local_x_um"]),
-                float(row["strip_local_x_um"]),
-                places=6,
-            )
-            self.assertAlmostEqual(
-                float(row["assembly_x_um"]),
-                plan.PACKET_ORIGIN[0] + float(row["packet_local_x_um"]),
-                places=6,
-            )
+    def test_rtl_contains_exact_cumulative_tops_and_matrix_boundary(self) -> None:
+        rtl = RTL.read_text(encoding="utf-8")
+        for top in json.loads(CONTRACT.read_text(encoding="utf-8"))["phases"].values():
+            self.assertEqual(rtl.count(f"module {top['top']} ("), 1)
+        self.assertIn("spadmic_digital_assembly_v1_p01_position u_phase_p01", rtl)
+        self.assertIn("spadmic_digital_assembly_v1_p02_event_control u_phase_p02", rtl)
+        self.assertIn("spadmic_matrix_or_tree u_matrix_or_r", rtl)
+        self.assertIn("spadmic_matrix_snapshot_frontend u_matrix_snapshot", rtl)
+        self.assertIn("spadmic_matrix_reset_ctrl u_matrix_reset", rtl)
+        self.assertIn("spadmic_matrix_cfg_ctrl u_matrix_cfg", rtl)
+        self.assertIn("input  logic [2:0]                                  mptdc_ready_i", rtl)
+        self.assertIn("input  logic                                        matrix_cfg_cmd_start_i", rtl)
+        self.assertNotIn("spadmic_digital_assembly_v1_sequencer", rtl)
 
-    def test_orientation_selection_prefers_r0_for_exact_contract(self) -> None:
-        packet_pins: dict[str, plan.Pin] = {}
-        strip_pins: dict[str, plan.Pin] = {}
-        rows = ooc.read_tx_stream_pin_contract()
-        for row in rows:
-            packet_x = float(row["packet_local_x_um"])
-            strip_x = float(row["strip_local_x_um"])
-            packet_pins[row["packet_pin"]] = plan.Pin(
-                row["packet_pin"], rects=[plan.Rect("MET3", packet_x - 0.2, 366.0, packet_x + 0.2, 366.8)]
-            )
-            strip_pins[row["strip_pin"]] = plan.Pin(
-                row["strip_pin"], rects=[plan.Rect("MET3", strip_x - 0.2, 0.0, strip_x + 0.2, 0.8)]
-            )
-        packet = plan.Macro(plan.PACKET_MACRO, 2066.96, 366.8, {"Y"}, packet_pins, Path("packet.lef"))
-        strip = plan.Macro(plan.STRIP_MACRO, 3433.36, 180.88, {"Y"}, strip_pins, Path("strip.lef"))
-
-        packet_orient, strip_orient, score = plan.choose_tx_orientations(packet, strip)
-        self.assertEqual((packet_orient, strip_orient), ("R0", "R0"))
-        self.assertEqual(score, (0, 0.0, 0.0))
-        self.assertEqual(plan.tx_orientation_score(packet, strip, "MY")[0], 171)
-
-    def test_packet_and_strip_plans_share_contract_and_packet_is_scalar(self) -> None:
-        audit = REPO / "TOP" / "docs" / "layout_audits" / "SPADMIC2_20260709_072331"
+    def test_phase_generator_is_audit_bound_and_has_no_child_macros(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            packet_root = root / "packet"
-            strip_root = root / "strip"
-            ooc.generate_tx_packet_core(audit, packet_root)
-            ooc.generate_tx_ddr_strip(audit, strip_root)
+            audit = self._make_audit(root)
+            for phase, expected_proxy_rows in (("p00_tx", 0), ("p03_matrix_interface", 2)):
+                output = root / phase
+                result = subprocess.run(
+                    [sys.executable, str(GENERATOR), "--phase", phase, "--audit-root", str(audit), "--out", str(output)],
+                    cwd=REPO,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout)
+                status = (output / "assembly_phase_contract_status.rpt").read_text()
+                config = (output / "assembly_phase_config.tcl").read_text()
+                self.assertIn("IMPLEMENTATION=CUMULATIVE_SOFT_LOGIC", status)
+                self.assertIn("HARD_MACRO_COUNT=0", status)
+                self.assertIn("CHILD_GDS_MERGE_COUNT=0", status)
+                self.assertIn("SIGNAL_ROUTE_LAYERS=MET1-MET3", status)
+                self.assertIn("variable hard_macro_count 0", config)
+                self.assertIn("variable child_gds_merge_count 0", config)
+                self.assertIn("set pg_anchors(VDD)", config)
+                self.assertIn("set pg_anchors(VSS)", config)
+                with (output / "matrix_proxy_pin_plan.tsv").open(newline="") as handle:
+                    proxy_rows = list(csv.DictReader(handle, delimiter="\t"))
+                self.assertEqual(len(proxy_rows), expected_proxy_rows)
+                manifest = subprocess.run(
+                    ["sha256sum", "-c", "SHA256SUMS"], cwd=output, text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
+                )
+                self.assertEqual(manifest.returncode, 0, manifest.stdout)
+            p03_proxy = (root / "p03_matrix_interface" / "matrix_proxy_pin_plan.tsv").read_text()
+            self.assertIn("R_i[0]\tR<0>", p03_proxy)
+            self.assertIn("matrix_din_o[0]\tDin<0>", p03_proxy)
 
-            with (packet_root / "ooc_block_pin_plan.csv").open(newline="") as fh:
-                packet_rows = list(csv.DictReader(fh))
-            with (strip_root / "ooc_block_pin_plan.csv").open(newline="") as fh:
-                strip_rows = list(csv.DictReader(fh))
-            packet_ports = {row["port"] for row in packet_rows}
-            self.assertTrue({f"src_data_i_s3_b{bit}" for bit in range(16)} <= packet_ports)
-            self.assertFalse(any(port.startswith("src_data_i[") for port in packet_ports))
+    def test_server_flow_keeps_one_eda_action_per_review_gate(self) -> None:
+        genus = (REPO / "TOP" / "ci" / "server_run_digital_assembly_phase_genus.sh").read_text()
+        innovus = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.sh").read_text()
+        pvs = (REPO / "TOP" / "ci" / "server_run_digital_assembly_phase_pvs.sh").read_text()
+        self.assertEqual(genus.count("genus -files TOP/syn/scripts/run_genus_matrix_block.tcl"), 1)
+        self.assertEqual(innovus.count("innovus -nowin -init"), 1)
+        self.assertEqual(pvs.count("bash TOP/pnr/scripts/run_pvs_drc_handoff.sh"), 1)
+        self.assertEqual(pvs.count("bash TOP/pnr/scripts/run_pvs_lvs_handoff.sh"), 1)
+        self.assertIn("density is authorized only for p03_matrix_interface", pvs)
+        self.assertIn("DO_NOT_START_NEXT_PVS_MODE_UNTIL_REVIEWED", pvs)
 
-            canonical = plan.TX_PIN_CONTRACT.read_text()
-            self.assertEqual((packet_root / "tx_packet_strip_pin_contract.csv").read_text(), canonical)
-            self.assertEqual((strip_root / "tx_packet_strip_pin_contract.csv").read_text(), canonical)
-            packet_config = (packet_root / "ooc_block_harden_config.tcl").read_text()
-            strip_config = (strip_root / "ooc_block_harden_config.tcl").read_text()
-            for config in (packet_config, strip_config):
-                self.assertIn("variable enable_pg_sroute {1}", config)
-                self.assertIn("variable enable_pre_cts_pg_direct_vias {0}", config)
-                self.assertIn("variable pg_route_strategy {explicit_exact}", config)
-                self.assertIn("variable route_profile {met1_effort}", config)
-                self.assertIn("variable tx_stream_editpin_x_compensation_um {0.000}", config)
-            self.assertIn("variable core_width_um {3413.000}", strip_config)
-            self.assertIn("-side NORTH -layer MET3 -assign {100.800 366.400}", (packet_root / "ooc_block_pin_assignments.tcl").read_text())
-            self.assertIn("-side SOUTH -layer MET3 -assign {100.800 0.400}", (strip_root / "ooc_block_pin_assignments.tcl").read_text())
-            first_packet_stream = next(row for row in packet_rows if row["port"] == "tx_valid_o")
-            self.assertEqual(first_packet_stream["target_x_um"], "100.800")
-            self.assertEqual(first_packet_stream["assign_x_um"], "100.800")
-            packet_stream_rows = [
-                row for row in packet_rows if row["source_inst"] == "u_tx_ddr_strip"
-            ]
-            strip_stream_rows = [
-                row for row in strip_rows if row["source_inst"] == "u_tx_packet_core"
-            ]
-            self.assertEqual(len(packet_stream_rows), 19)
-            self.assertEqual(len(strip_stream_rows), 19)
-            for row in packet_stream_rows + strip_stream_rows:
-                self.assertEqual(row["assign_x_um"], row["target_x_um"])
+    def test_innovus_flow_rejects_child_macro_implementation(self) -> None:
+        tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.tcl").read_text()
+        wrapper = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.sh").read_text()
+        self.assertIn("SPADMIC_DA_HARD_MACRO_GATE_FAILED", tcl)
+        self.assertIn("HARD_MACRO_COUNT", tcl)
+        self.assertIn("CHILD_GDS_MERGE_COUNT=0", wrapper)
+        self.assertIn("setNanoRouteMode -routeBottomRoutingLayer 1", tcl)
+        self.assertIn("setNanoRouteMode -routeTopRoutingLayer 3", tcl)
+        self.assertIn("METTP_POLICY PG_AND_BOUNDED_PIN_ACCESS_ONLY", tcl)
 
     def test_clean_ooc_pg_uses_exact_geometry_before_signal_route(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_harden_block.tcl").read_text()
@@ -188,23 +219,6 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn('echo "- OOC route profile: \\`$summary_route_profile\\`"', wrapper)
         self.assertIn('echo "- Local PG route mode: \\`$summary_pg_local_route_mode\\`"', wrapper)
         self.assertNotIn('echo "- OOC route profile: \\`${SPADMIC_OOC_ROUTE_PROFILE:-default}\\`"', wrapper)
-
-    def test_narrow_strip_clears_txrx_with_ten_um_margin(self) -> None:
-        txrx = (3505.519, 464.920, 3638.910, 3265.795)
-        narrow_strip = (61.980, 3061.110, 61.980 + 3433.000, 3241.990)
-        self.assertFalse(plan.intersects(narrow_strip, txrx))
-        self.assertAlmostEqual(txrx[0] - narrow_strip[2], 10.539, places=3)
-
-    def test_strip_width_contract_accepts_narrow_candidate(self) -> None:
-        macro = plan.Macro(
-            plan.STRIP_MACRO,
-            plan.MIN_STRIP_WIDTH_UM,
-            plan.EXPECTED_STRIP_SIZE[1],
-            set(),
-            {},
-            Path("strip.lef"),
-        )
-        plan.validate_strip_macro(macro)
 
     def test_pg_geometry_fix_preserves_signal_implementation(self) -> None:
         script = (

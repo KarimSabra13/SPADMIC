@@ -85,6 +85,54 @@ proc configure_scan_cell_policy {report_dir} {
   puts "INFO: scan-capable library cells avoided for prototype OOC synthesis: count=$count failures=$avoid_failures"
 }
 
+proc configure_physical_hierarchy_policy {report_dir} {
+  set out_file [file join $report_dir messages physical_hierarchy_policy.rpt]
+  file mkdir [file dirname $out_file]
+  set fh [open $out_file w]
+  puts $fh "LABEL=PHYSICAL_HIERARCHY_POLICY"
+  if {![info exists ::env(GENUS_PRESERVE_HIER_PATTERNS)] ||
+      [string trim $::env(GENUS_PRESERVE_HIER_PATTERNS)] eq ""} {
+    puts $fh "STATUS=NOT_REQUESTED"
+    puts $fh "PATTERN_COUNT=0"
+    close $fh
+    return
+  }
+  set pattern_count 0
+  set matched_count 0
+  set failure_count 0
+  foreach pattern $::env(GENUS_PRESERVE_HIER_PATTERNS) {
+    incr pattern_count
+    set cells [list]
+    if {[catch {set cells [get_cells -quiet -hierarchical $pattern]} err]} {
+      incr failure_count
+      puts $fh "PATTERN=$pattern|STATUS=QUERY_FAIL|ERROR=[compact_report_value $err]"
+      continue
+    }
+    set count [llength $cells]
+    incr matched_count $count
+    if {$count == 0} {
+      incr failure_count
+      puts $fh "PATTERN=$pattern|STATUS=NO_MATCH|COUNT=0"
+      continue
+    }
+    if {[catch {set_db $cells .ungroup_ok false} err]} {
+      incr failure_count
+      puts $fh "PATTERN=$pattern|STATUS=PRESERVE_FAIL|COUNT=$count|ERROR=[compact_report_value $err]"
+    } else {
+      puts $fh "PATTERN=$pattern|STATUS=PASS|COUNT=$count"
+    }
+  }
+  puts $fh "PATTERN_COUNT=$pattern_count"
+  puts $fh "MATCHED_INSTANCE_COUNT=$matched_count"
+  puts $fh "FAILURE_COUNT=$failure_count"
+  puts $fh "STATUS=[expr {$failure_count == 0 ? {PASS} : {FAIL}}]"
+  close $fh
+  if {$failure_count != 0} {
+    puts stderr "ERROR: physical hierarchy preservation contract failed"
+    exit 13
+  }
+}
+
 proc maybe_run_clock_report {from_clock to_clock out_file} {
   if {[llength [get_clocks $from_clock -quiet]] == 0} {
     return
@@ -262,6 +310,8 @@ if {[catch {elaborate $TOP_MODULE} elab_err]} {
 
 current_design $TOP_MODULE
 
+configure_physical_hierarchy_policy $REPORT_DIR
+
 puts "INFO: reading SDC $COMMON_SDC"
 if {[catch {read_sdc $COMMON_SDC} sdc_err]} {
   puts stderr "ERROR: read_sdc failed: $sdc_err"
@@ -309,6 +359,8 @@ if {[catch {syn_opt} opt_err]} {
   exit 9
 }
 run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_post_opt.rpt]
+run_report {report_timing -late -max_paths 50} [file join $REPORT_DIR timing report_timing_post_opt_setup.rpt]
+run_report {report_timing -early -max_paths 50} [file join $REPORT_DIR timing report_timing_post_opt_hold.rpt]
 
 run_report {report_qor} [file join $REPORT_DIR qor report_qor.rpt]
 run_report {report_area} [file join $REPORT_DIR qor report_area.rpt]
@@ -359,11 +411,14 @@ foreach rel {
   reports/timing/report_timing_post_generic.rpt
   reports/timing/report_timing_post_map.rpt
   reports/timing/report_timing_post_opt.rpt
+  reports/timing/report_timing_post_opt_setup.rpt
+  reports/timing/report_timing_post_opt_hold.rpt
   reports/qor/report_qor.rpt
   reports/qor/report_area.rpt
   reports/qor/report_area_hierarchy.rpt
   reports/qor/report_design_rules.rpt
   reports/messages/scan_cell_policy.rpt
+  reports/messages/physical_hierarchy_policy.rpt
   reports/messages/report_messages.rpt
   reports/messages/warning_classification.rpt
 } {
