@@ -5517,3 +5517,66 @@ only the basename exclusion `*.oa.*.oacache`. It does not exclude arbitrary
 thumbnail, and any unrecognized sidecar remains hash-bound. Exact pre/post
 delta reports remain mandatory, and any nonexcluded change still fails the
 transaction.
+
+### P11-R09 Process-Isolated Export Passed; P03 Reconciled, PG Still Blocked
+
+The hash-bound foreground retry at exact commit
+`37db9def5d486083172d5a0731032e231f002b7d` produced the first complete,
+process-isolated OA evidence set:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260723_135705
+MATRICE5_EXPORT_GATE_RC=0
+SPADMIC2_EXPORT_GATE_RC=0
+SOURCE_STABILITY_RC=0
+OUTER_MANIFEST_RC=0
+PROCESSED_MANIFEST_RC=0
+```
+
+The source identity gate and exact-instance gate passed. `M182` is the only
+`SPADMIC/matrice5/layout` instance. Its placed bbox is the source bbox
+translated by exactly `(77.065000, 632.040000)` micrometers, with unchanged
+width and height. The source and placed bboxes are:
+
+```text
+source=-51.390000 -143.716000 2035.579000 1754.869000
+placed=25.675000 488.324000 2112.644000 2386.909000
+```
+
+All ten required digital families have exact index parity: 64 each for
+`R/Y/B/Rz/Yz/Bz` and 44 each for `Din/Cin/Dout/Cout`. Their exported OA
+direction is uniformly `inputOutput`, while the assembly JSON defines the
+logical input/output direction. The processor therefore records
+`OA_INPUTOUTPUT_WITH_CONTRACT_LOGICAL_DIRECTION`; this does not rewrite OA.
+The same rows must remain real `PIN` geometry on the contract's ordinary
+signal layers.
+
+Process isolation necessarily leaves `spadmic2_instance_pins.tsv` empty:
+logical library `SPADMIC` points to a different physical root in each
+Virtuoso process. The processor now derives the 560 proxy pin shapes from the
+matrix top-terminal geometry only when the exact source and placed bboxes
+prove a translation-only mapping. Any nontranslation orientation, bbox
+dimension mismatch, missing family, or nonpositive shape fails closed.
+
+The 1,413 non-digital terminal names are classified by reviewed physical
+evidence, not by name alone. `AVDD/DVDD/VSS` are supply drawings on
+`MET2/MET3`; `SUB` and `VTUNE` are macro-owned non-digital drawings; and
+`STI<0:1407>` is `PHODEF/VERIFICATION` geometry. The policy rejects those
+families if their observed layers or purposes change.
+
+P00-P02 remains independently blocked. The SPADMIC2 top contains exactly
+three direct `METTP/drawing` path segments, all with `net=ABSENT`:
+
+```text
+1923.210000 166.235000 2739.435000 166.675000
+314.855000 281.660000 324.855000 579.685000
+198.375000 282.155000 208.375000 579.685000
+```
+
+Geometric overlaps with netted hierarchical shapes are emitted to
+`mettp_overlap_candidates.tsv` as
+`REVIEW_ONLY_NOT_A_PG_ANCHOR`. They do not prove VDD or VSS ownership.
+`mettp_top_shape_attribution.tsv` keeps every unattributed direct METTP shape
+blocking, even if other exact VDD/VSS shapes are later found. No Cadence
+rerun, OA edit, Genus run, or implementation authorization follows from this
+reconciliation. The next gate is exact PG-anchor attribution.

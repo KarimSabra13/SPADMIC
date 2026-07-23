@@ -15,7 +15,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 GENERATOR = REPO / "TOP" / "pnr" / "scripts" / "gen_spadmic_digital_assembly_v1.py"
+PROCESSOR = REPO / "TOP" / "pnr" / "scripts" / "process_spadmic2_assembly_audit.py"
 CONTRACT = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_contract.json"
+UNKNOWN_POLICY = REPO / "TOP" / "pnr" / "assembly" / "matrice5_unknown_family_policy.csv"
 RTL = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_v1.sv"
 
 OOC_MODULE_PATH = REPO / "TOP" / "pnr" / "scripts" / "gen_ooc_block_harden_plan.py"
@@ -33,6 +35,14 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             writer = csv.DictWriter(handle, fieldnames, delimiter="\t", lineterminator="\n")
             writer.writeheader()
             writer.writerows(rows)
+
+    @staticmethod
+    def _read_kv(path: Path) -> dict[str, str]:
+        return dict(
+            line.split("=", 1)
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if "=" in line
+        )
 
     def _make_audit(self, root: Path) -> Path:
         audit = root / "audit"
@@ -79,6 +89,176 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         )
         return audit
 
+    def _make_processor_audit(self, root: Path, include_exact_pg: bool) -> Path:
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        audit = root / "raw_audit"
+        audit.mkdir()
+        self._write_tsv(
+            audit / "source_identity.tsv",
+            ["role", "library", "cell", "view", "filesystem_path", "open_status", "bbox"],
+            [
+                {
+                    "role": "spadmic2",
+                    "library": "SPADMIC",
+                    "cell": "SPADMIC2",
+                    "view": "layout",
+                    "filesystem_path": contract["source_layouts"]["spadmic2"]["filesystem_path"],
+                    "open_status": "PASS",
+                    "bbox": "0 0 100 100",
+                },
+                {
+                    "role": "matrice5",
+                    "library": "SPADMIC",
+                    "cell": "matrice5",
+                    "view": "layout",
+                    "filesystem_path": contract["source_layouts"]["matrice5"]["filesystem_path"],
+                    "open_status": "PASS",
+                    "bbox": "-10 -20 10 20",
+                },
+            ],
+        )
+        self._write_tsv(
+            audit / "spadmic2_instances.tsv",
+            [
+                "instance", "master_library", "master_cell", "master_view",
+                "orient", "llx", "lly", "urx", "ury",
+            ],
+            [
+                {
+                    "instance": "M182",
+                    "master_library": "SPADMIC",
+                    "master_cell": "matrice5",
+                    "master_view": "layout",
+                    "orient": "ABSENT",
+                    "llx": "30",
+                    "lly": "40",
+                    "urx": "50",
+                    "ury": "80",
+                }
+            ],
+        )
+
+        terminal_fields = [
+            "terminal", "direction", "net", "layer", "purpose",
+            "llx", "lly", "urx", "ury",
+        ]
+        terminal_rows: list[dict[str, str]] = []
+        ordinal = 0
+        for family, expected in contract["matrix_terminal_families"].items():
+            for index in range(int(expected["width"])):
+                x = -9.0 + float(ordinal % 18)
+                y = -19.0 + float((ordinal // 18) % 38)
+                terminal_rows.append(
+                    {
+                        "terminal": f"{family}<{index}>",
+                        "direction": "inputOutput",
+                        "net": "ABSENT",
+                        "layer": "MET2",
+                        "purpose": "pin",
+                        "llx": f"{x:.3f}",
+                        "lly": f"{y:.3f}",
+                        "urx": f"{x + 0.1:.3f}",
+                        "ury": f"{y + 0.1:.3f}",
+                    }
+                )
+                ordinal += 1
+        for terminal, layer, purpose in (
+            ("AVDD", "MET3", "drawing"),
+            ("DVDD", "MET3", "drawing"),
+            ("VSS", "MET3", "drawing"),
+            ("SUB", "MET2", "drawing"),
+            ("VTUNE", "MET3", "drawing"),
+            ("STI<0>", "PHODEF", "VERIFICATION"),
+            ("STI<1>", "PHODEF", "VERIFICATION"),
+        ):
+            terminal_rows.append(
+                {
+                    "terminal": terminal,
+                    "direction": "inputOutput",
+                    "net": "ABSENT",
+                    "layer": layer,
+                    "purpose": purpose,
+                    "llx": "-1",
+                    "lly": "-1",
+                    "urx": "1",
+                    "ury": "1",
+                }
+            )
+        self._write_tsv(
+            audit / "matrice5_top_terminals.tsv",
+            terminal_fields,
+            terminal_rows,
+        )
+        self._write_tsv(
+            audit / "spadmic2_instance_pins.tsv",
+            [
+                "instance", "terminal", "direction", "net", "layer",
+                "purpose", "llx", "lly", "urx", "ury",
+            ],
+            [],
+        )
+
+        top_shapes = [
+            {
+                "shape_type": "rect",
+                "net": "DVDD",
+                "layer": "METTPL",
+                "purpose": "pin",
+                "llx": "12",
+                "lly": "10",
+                "urx": "18",
+                "ury": "12",
+            },
+        ]
+        if include_exact_pg:
+            top_shapes.extend(
+                [
+                    {
+                        "shape_type": "pathSeg",
+                        "net": "VDD",
+                        "layer": "METTP",
+                        "purpose": "drawing",
+                        "llx": "2",
+                        "lly": "0",
+                        "urx": "4",
+                        "ury": "100",
+                    },
+                    {
+                        "shape_type": "pathSeg",
+                        "net": "VSS",
+                        "layer": "METTP",
+                        "purpose": "drawing",
+                        "llx": "6",
+                        "lly": "0",
+                        "urx": "8",
+                        "ury": "100",
+                    },
+                ]
+            )
+        else:
+            top_shapes.insert(
+                0,
+                {
+                    "shape_type": "pathSeg",
+                    "net": "ABSENT",
+                    "layer": "METTP",
+                    "purpose": "drawing",
+                    "llx": "10",
+                    "lly": "10",
+                    "urx": "20",
+                    "ury": "12",
+                },
+            )
+        self._write_tsv(
+            audit / "spadmic2_top_shapes.tsv",
+            [
+                "shape_type", "net", "layer", "purpose",
+                "llx", "lly", "urx", "ury",
+            ],
+            top_shapes,
+        )
+        return audit
+
     def test_contract_defines_exact_cumulative_soft_phase_order(self) -> None:
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(contract["schema"], "spadmic.digital_assembly.contract.v2")
@@ -106,6 +286,287 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             self.assertEqual(contract["phases"][phase]["density_gate"], "NOT_RUN")
         self.assertIn("BLOCKED", contract["deferred"]["p04_mptdc_frontend"])
         self.assertEqual(contract["deferred"]["p05_csr_i2c"], "DEFERRED")
+
+    def test_oa_processor_reconciles_physical_inputoutput_and_isolated_matrix_pins(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=False)
+            output = root / "processed"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, result.stdout)
+            status = self._read_kv(output / "assembly_audit_status.rpt")
+            self.assertEqual(status["SOURCE_IDENTITY_GATE_STATUS"], "PASS")
+            self.assertEqual(status["EXACT_MATRICE5_INSTANCE_GATE_STATUS"], "PASS")
+            self.assertEqual(status["MATRIX_TERMINAL_PARITY_STATUS"], "PASS")
+            self.assertEqual(status["UNKNOWN_FAMILY_GATE_STATUS"], "PASS")
+            self.assertEqual(status["MATRIX_PROXY_PIN_ACCESS_STATUS"], "PASS")
+            self.assertEqual(status["MATRIX_PROXY_PIN_SHAPE_COUNT"], "560")
+            self.assertEqual(status["P03_INTERFACE_CONTRACT_STATUS"], "PASS")
+            self.assertEqual(
+                status["MATRIX_PROXY_COORDINATE_SOURCE"],
+                "MATRICE5_TOP_TERMINALS_PLUS_R0_BBOX_TRANSLATION",
+            )
+            self.assertEqual(status["MATRIX_PROXY_TRANSFORM_STATUS"], "PASS")
+            self.assertEqual(status["MATRIX_PROXY_TRANSLATION_UM"], "40.000000 60.000000")
+            self.assertEqual(status["MATRICE5_INSTANCE_ORIENT"], "ABSENT")
+            self.assertEqual(
+                status["AUDIT_SCOPE"],
+                "P00_P02_ENTRY_GATE_WITH_P03_PRECLASSIFICATION",
+            )
+            self.assertEqual(status["PG_ANCHOR_GATE_STATUS"], "FAIL")
+            self.assertEqual(status["DIRECT_METTP_ATTRIBUTION_STATUS"], "FAIL")
+            self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "NO")
+            self.assertEqual(status["P03_IMPLEMENTATION_AUTHORIZED"], "NO")
+            self.assertEqual(status["NEXT_GATE"], "STOP_AND_RECONCILE_PG_ANCHORS")
+
+            with (output / "matrice5_terminal_family_contract.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                family_rows = list(csv.DictReader(handle, delimiter="\t"))
+            self.assertTrue(all(row["index_status"] == "PASS" for row in family_rows))
+            self.assertTrue(all(row["direction_status"] == "PASS" for row in family_rows))
+            self.assertTrue(all(row["physical_pin_status"] == "PASS" for row in family_rows))
+            self.assertEqual(
+                {row["direction_evidence"] for row in family_rows},
+                {"OA_INPUTOUTPUT_WITH_CONTRACT_LOGICAL_DIRECTION"},
+            )
+
+            with (output / "matrice5_proxy_pin_access.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                proxy_rows = list(csv.DictReader(handle, delimiter="\t"))
+            r_zero = next(row for row in proxy_rows if row["terminal"] == "R<0>")
+            self.assertEqual(r_zero["direction"], "OUTPUT")
+            self.assertEqual(r_zero["oa_direction"], "inputOutput")
+            self.assertEqual(
+                (r_zero["llx"], r_zero["lly"], r_zero["urx"], r_zero["ury"]),
+                ("31.000000", "41.000000", "31.100000", "41.100000"),
+            )
+
+            with (output / "matrice5_unknown_families.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                unknown_rows = list(csv.DictReader(handle, delimiter="\t"))
+            self.assertTrue(all(row["p03_status"] == "PASS" for row in unknown_rows))
+            sti = next(row for row in unknown_rows if row["terminal"] == "STI<0>")
+            self.assertEqual(sti["family"], "STI")
+            self.assertEqual(sti["layers"], "PHODEF")
+            self.assertEqual(sti["purposes"], "VERIFICATION")
+
+            overlap_text = (output / "mettp_overlap_candidates.tsv").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("DVDD\tMETTPL\tpin", overlap_text)
+            self.assertIn("REVIEW_ONLY_NOT_A_PG_ANCHOR", overlap_text)
+            manifest = subprocess.run(
+                ["sha256sum", "-c", "SHA256SUMS"],
+                cwd=output,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(manifest.returncode, 0, manifest.stdout)
+
+    def test_oa_processor_requires_exact_pg_even_when_p03_interface_is_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=True)
+            output = root / "processed"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "assembly_audit_status.rpt")
+            self.assertEqual(status["PG_ANCHOR_GATE_STATUS"], "PASS")
+            self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "YES")
+            self.assertEqual(status["P03_INTERFACE_CONTRACT_STATUS"], "PASS")
+            self.assertEqual(status["P03_IMPLEMENTATION_AUTHORIZED"], "YES")
+            self.assertEqual(status["UNATTRIBUTED_METTP_SHAPE_COUNT"], "0")
+            self.assertEqual(status["DIRECT_METTP_ATTRIBUTION_STATUS"], "PASS")
+
+    def test_oa_processor_rejects_unattributed_mettp_even_with_exact_pg(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=True)
+            with (audit / "spadmic2_top_shapes.tsv").open(
+                "a",
+                encoding="utf-8",
+            ) as handle:
+                handle.write(
+                    "pathSeg\tABSENT\tMETTP\tdrawing\t10\t10\t20\t12\n"
+                )
+            output = root / "processed"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, result.stdout)
+            status = self._read_kv(output / "assembly_audit_status.rpt")
+            self.assertEqual(status["VDD_METTP_ANCHOR_COUNT"], "1")
+            self.assertEqual(status["VSS_METTP_ANCHOR_COUNT"], "1")
+            self.assertEqual(status["UNATTRIBUTED_METTP_SHAPE_COUNT"], "1")
+            self.assertEqual(status["PG_ANCHOR_GATE_STATUS"], "FAIL")
+
+    def test_oa_processor_rejects_non_translation_matrix_transform(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=True)
+            instance_path = audit / "spadmic2_instances.tsv"
+            instance_text = instance_path.read_text(encoding="utf-8")
+            instance_path.write_text(
+                instance_text.replace("\tABSENT\t30\t40\t", "\tR90\t30\t40\t"),
+                encoding="utf-8",
+            )
+            output = root / "processed"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "assembly_audit_status.rpt")
+            self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "YES")
+            self.assertEqual(status["MATRIX_PROXY_PIN_ACCESS_STATUS"], "FAIL")
+            self.assertEqual(status["MATRIX_PROXY_COORDINATE_SOURCE"], "UNAVAILABLE")
+            self.assertEqual(status["MATRIX_PROXY_TRANSFORM_STATUS"], "FAIL")
+            self.assertEqual(status["P03_INTERFACE_CONTRACT_STATUS"], "FAIL")
+            self.assertEqual(status["P03_IMPLEMENTATION_AUTHORIZED"], "NO")
+
+    def test_oa_processor_rejects_unknown_family_outside_reviewed_geometry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=True)
+            terminal_path = audit / "matrice5_top_terminals.tsv"
+            terminal_text = terminal_path.read_text(encoding="utf-8")
+            terminal_path.write_text(
+                terminal_text.replace(
+                    "STI<0>\tinputOutput\tABSENT\tPHODEF\tVERIFICATION",
+                    "STI<0>\tinputOutput\tABSENT\tMET3\tpin",
+                ),
+                encoding="utf-8",
+            )
+            output = root / "processed"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "assembly_audit_status.rpt")
+            self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "YES")
+            self.assertEqual(status["UNKNOWN_FAMILY_GATE_STATUS"], "FAIL")
+            self.assertEqual(status["P03_INTERFACE_CONTRACT_STATUS"], "FAIL")
+            self.assertEqual(status["P03_IMPLEMENTATION_AUTHORIZED"], "NO")
+            with (output / "matrice5_unknown_families.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                unknown_rows = list(csv.DictReader(handle, delimiter="\t"))
+            sti = next(row for row in unknown_rows if row["terminal"] == "STI<0>")
+            self.assertEqual(sti["policy_evidence_status"], "FAIL")
+            self.assertEqual(sti["p03_status"], "BLOCK")
+
+    def test_matrice5_unknown_policy_matches_normalized_oa_families(self) -> None:
+        with UNKNOWN_POLICY.open(newline="", encoding="utf-8") as handle:
+            policy = {
+                row["family"]: (
+                    row["disposition"],
+                    row["allowed_directions"],
+                    row["allowed_layers"],
+                    row["allowed_purposes"],
+                )
+                for row in csv.DictReader(handle)
+            }
+        self.assertEqual(
+            policy,
+            {
+                "SUPPLY": (
+                    "IGNORE_NON_DIGITAL",
+                    "INPUTOUTPUT",
+                    "MET2;MET3",
+                    "DRAWING",
+                ),
+                "SUB": (
+                    "IGNORE_NON_DIGITAL",
+                    "INPUTOUTPUT",
+                    "MET2;MET3",
+                    "DRAWING",
+                ),
+                "VTUNE": (
+                    "IGNORE_NON_DIGITAL",
+                    "INPUTOUTPUT",
+                    "MET2;MET3",
+                    "DRAWING",
+                ),
+                "STI": (
+                    "IGNORE_NON_DIGITAL",
+                    "INPUTOUTPUT",
+                    "PHODEF",
+                    "VERIFICATION",
+                ),
+            },
+        )
 
     def test_rtl_contains_exact_cumulative_tops_and_matrix_boundary(self) -> None:
         rtl = RTL.read_text(encoding="utf-8")

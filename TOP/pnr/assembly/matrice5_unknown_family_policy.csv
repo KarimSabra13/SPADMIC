@@ -1,3 +1,5 @@
-family,disposition,reviewer,reason
-VDD,IGNORE_NON_DIGITAL,,Power terminal; handled by the explicit PG contract
-VSS,IGNORE_NON_DIGITAL,,Ground terminal; handled by the explicit PG contract
+family,disposition,allowed_directions,allowed_layers,allowed_purposes,reviewer,reason
+SUPPLY,IGNORE_NON_DIGITAL,INPUTOUTPUT,MET2;MET3,DRAWING,,AVDD/DVDD/VSS are matrix-macro supplies; excluded from digital-signal parity and handled by the separate PG contract
+SUB,IGNORE_NON_DIGITAL,INPUTOUTPUT,MET2;MET3,DRAWING,,Substrate geometry is matrix-macro-owned and is not a routable digital interface family
+VTUNE,IGNORE_NON_DIGITAL,INPUTOUTPUT,MET2;MET3,DRAWING,,Analog tuning geometry is matrix-macro-owned and remains outside digital routing
+STI,IGNORE_NON_DIGITAL,INPUTOUTPUT,PHODEF,VERIFICATION,,Observed only as PHODEF/VERIFICATION geometry; not a routable digital pin family

@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -56,6 +57,14 @@ class Rect:
     def format(self) -> str:
         return f"{self.llx:.6f} {self.lly:.6f} {self.urx:.6f} {self.ury:.6f}"
 
+    def translate(self, dx: float, dy: float) -> "Rect":
+        return Rect(
+            self.llx + dx,
+            self.lly + dy,
+            self.urx + dx,
+            self.ury + dy,
+        )
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -88,6 +97,49 @@ def write_tsv(path: Path, fields: list[str], rows: Iterable[dict[str, object]]) 
 
 def rect_from_row(row: dict[str, str]) -> Rect:
     return Rect(*(float(row[key]) for key in ("llx", "lly", "urx", "ury")))
+
+
+def rect_from_bbox(value: str, role: str) -> Rect:
+    tokens = value.split()
+    if len(tokens) != 4:
+        raise ValueError(f"{role} source bbox is missing or malformed")
+    return Rect(*(float(token) for token in tokens))
+
+
+def same_dimension(left: float, right: float) -> bool:
+    return math.isclose(left, right, rel_tol=0.0, abs_tol=1e-6)
+
+
+def infer_r0_translation(source: Rect, placed: Rect, orient: str) -> tuple[float, float] | None:
+    normalized_orient = orient.strip().upper()
+    if normalized_orient not in {"", "ABSENT", "R0"}:
+        return None
+    if not (
+        same_dimension(source.width, placed.width)
+        and same_dimension(source.height, placed.height)
+    ):
+        return None
+    dx = placed.llx - source.llx
+    dy = placed.lly - source.lly
+    translated = source.translate(dx, dy)
+    if not all(
+        same_dimension(actual, expected)
+        for actual, expected in zip(
+            (translated.llx, translated.lly, translated.urx, translated.ury),
+            (placed.llx, placed.lly, placed.urx, placed.ury),
+        )
+    ):
+        return None
+    return dx, dy
+
+
+def direction_policy(observed: set[str], expected: str) -> tuple[str, str]:
+    expected_upper = expected.strip().upper()
+    if observed == {expected_upper}:
+        return "PASS", "EXACT_LOGICAL_DIRECTION"
+    if observed == {"INPUTOUTPUT"}:
+        return "PASS", "OA_INPUTOUTPUT_WITH_CONTRACT_LOGICAL_DIRECTION"
+    return "FAIL", "DIRECTION_MISMATCH"
 
 
 def subtract_rect(source: Rect, obstacle: Rect) -> list[Rect]:
@@ -133,14 +185,22 @@ def canonical_family(name: str) -> tuple[str | None, set[int]]:
     return family, set(range(start, stop + step, step))
 
 
-def load_policy(path: Path) -> dict[str, str]:
+def policy_values(value: str | None) -> set[str]:
+    return {
+        token.strip().upper()
+        for token in (value or "").split(";")
+        if token.strip()
+    }
+
+
+def load_policy(path: Path) -> dict[str, dict[str, object]]:
     rows = read_tsv(path, []) if path.suffix == ".tsv" else []
     if path.suffix != ".tsv":
         if not path.is_file():
             return {}
         with path.open(newline="", encoding="utf-8") as handle:
             rows = list(csv.DictReader(handle))
-    policy: dict[str, str] = {}
+    policy: dict[str, dict[str, object]] = {}
     for row in rows:
         family = row.get("family", "").strip()
         disposition = row.get("disposition", "").strip().upper()
@@ -148,7 +208,12 @@ def load_policy(path: Path) -> dict[str, str]:
             continue
         if disposition not in ALLOWED_UNKNOWN_DISPOSITIONS:
             raise ValueError(f"invalid disposition for {family}: {disposition}")
-        policy[family] = disposition
+        policy[family.upper()] = {
+            "disposition": disposition,
+            "allowed_directions": policy_values(row.get("allowed_directions", "")),
+            "allowed_layers": policy_values(row.get("allowed_layers", "")),
+            "allowed_purposes": policy_values(row.get("allowed_purposes", "")),
+        }
     return policy
 
 
@@ -251,20 +316,31 @@ def main() -> int:
         matrix_instance = matrix_instances[0] if exact_matrix_gate else None
 
         expected_families = contract["matrix_terminal_families"]
+        ordinary_signal_layers = {
+            layer.upper()
+            for layer in contract["physical_policy"]["ordinary_signal_layers"]
+        }
         observed_indices: dict[str, set[int]] = {name: set() for name in expected_families}
         observed_unindexed: Counter[str] = Counter()
         observed_directions: dict[str, set[str]] = {name: set() for name in expected_families}
+        observed_layers: dict[str, set[str]] = {name: set() for name in expected_families}
+        observed_purposes: dict[str, set[str]] = {name: set() for name in expected_families}
         unknown_names: set[str] = set()
+        unknown_term_rows: dict[str, list[dict[str, str]]] = {}
         for row in matrix_terms:
             family, indices = canonical_family(row["terminal"])
             if family is None:
-                unknown_names.add(row["terminal"].strip())
+                unknown_name = row["terminal"].strip()
+                unknown_names.add(unknown_name)
+                unknown_term_rows.setdefault(unknown_name, []).append(row)
                 continue
             if indices:
                 observed_indices[family].update(indices)
             else:
                 observed_unindexed[family] += 1
             observed_directions[family].add(row["direction"].strip().upper())
+            observed_layers[family].add(row["layer"].strip().upper())
+            observed_purposes[family].add(row["purpose"].strip().upper())
 
         family_rows: list[dict[str, object]] = []
         parity_gate = True
@@ -274,10 +350,22 @@ def main() -> int:
             if not actual_set and observed_unindexed[family] == int(expected["width"]):
                 actual_set = expected_set
             index_status = "PASS" if actual_set == expected_set else "FAIL"
-            direction_status = (
-                "PASS" if observed_directions[family] == {expected["direction"]} else "FAIL"
+            direction_status, direction_evidence = direction_policy(
+                observed_directions[family],
+                str(expected["direction"]),
             )
-            parity_gate &= index_status == "PASS" and direction_status == "PASS"
+            physical_pin_status = (
+                "PASS"
+                if observed_layers[family]
+                and observed_layers[family].issubset(ordinary_signal_layers)
+                and observed_purposes[family] == {"PIN"}
+                else "FAIL"
+            )
+            parity_gate &= (
+                index_status == "PASS"
+                and direction_status == "PASS"
+                and physical_pin_status == "PASS"
+            )
             family_rows.append(
                 {
                     "family": family,
@@ -288,11 +376,21 @@ def main() -> int:
                     "observed_directions": ",".join(sorted(observed_directions[family])) or "ABSENT",
                     "index_status": index_status,
                     "direction_status": direction_status,
+                    "direction_evidence": direction_evidence,
+                    "observed_layers": ",".join(sorted(observed_layers[family])) or "ABSENT",
+                    "observed_purposes": ",".join(sorted(observed_purposes[family])) or "ABSENT",
+                    "physical_pin_status": physical_pin_status,
                 }
             )
         write_tsv(
             out / "matrice5_terminal_family_contract.tsv",
-            ["family", "expected_width", "observed_index_count", "unindexed_terminal_count", "expected_direction", "observed_directions", "index_status", "direction_status"],
+            [
+                "family", "expected_width", "observed_index_count",
+                "unindexed_terminal_count", "expected_direction",
+                "observed_directions", "index_status", "direction_status",
+                "direction_evidence", "observed_layers",
+                "observed_purposes", "physical_pin_status",
+            ],
             family_rows,
         )
 
@@ -301,18 +399,79 @@ def main() -> int:
         unknown_gate = True
         for name in sorted(unknown_names):
             family = "SUPPLY" if SUPPLY_RE.match(name) else name.split("<", 1)[0].split("[", 1)[0]
-            disposition = policy.get(family, "UNCLASSIFIED")
-            if disposition not in {"ALLOW_P03", "IGNORE_NON_DIGITAL"}:
+            evidence_rows = unknown_term_rows[name]
+            observed_unknown_layers = {
+                row["layer"].strip().upper() for row in evidence_rows
+            }
+            observed_unknown_purposes = {
+                row["purpose"].strip().upper() for row in evidence_rows
+            }
+            observed_unknown_directions = {
+                row["direction"].strip().upper() for row in evidence_rows
+            }
+            policy_entry = policy.get(family.upper())
+            disposition = (
+                str(policy_entry["disposition"])
+                if policy_entry
+                else "UNCLASSIFIED"
+            )
+            allowed_layers = (
+                policy_entry["allowed_layers"] if policy_entry else set()
+            )
+            allowed_purposes = (
+                policy_entry["allowed_purposes"] if policy_entry else set()
+            )
+            allowed_directions = (
+                policy_entry["allowed_directions"] if policy_entry else set()
+            )
+            physical_evidence_gate = bool(
+                policy_entry
+                and allowed_directions
+                and allowed_layers
+                and allowed_purposes
+            )
+            physical_evidence_gate &= observed_unknown_directions.issubset(
+                allowed_directions
+            )
+            physical_evidence_gate &= observed_unknown_layers.issubset(
+                allowed_layers
+            )
+            physical_evidence_gate &= observed_unknown_purposes.issubset(
+                allowed_purposes
+            )
+            accepted = (
+                disposition in {"ALLOW_P03", "IGNORE_NON_DIGITAL"}
+                and physical_evidence_gate
+            )
+            if not accepted:
                 unknown_gate = False
             unknown_rows.append(
-                {"terminal": name, "family": family, "disposition": disposition, "p03_status": "PASS" if disposition in {"ALLOW_P03", "IGNORE_NON_DIGITAL"} else "BLOCK"}
+                {
+                    "terminal": name,
+                    "family": family,
+                    "directions": ",".join(sorted(observed_unknown_directions)),
+                    "layers": ",".join(sorted(observed_unknown_layers)),
+                    "purposes": ",".join(sorted(observed_unknown_purposes)),
+                    "disposition": disposition,
+                    "policy_evidence_status": (
+                        "PASS" if physical_evidence_gate else "FAIL"
+                    ),
+                    "p03_status": "PASS" if accepted else "BLOCK",
+                }
             )
-        write_tsv(out / "matrice5_unknown_families.tsv", ["terminal", "family", "disposition", "p03_status"], unknown_rows)
+        write_tsv(
+            out / "matrice5_unknown_families.tsv",
+            [
+                "terminal", "family", "directions", "layers", "purposes",
+                "disposition", "policy_evidence_status", "p03_status",
+            ],
+            unknown_rows,
+        )
 
-        bbox_tokens = by_role.get("spadmic2", {}).get("bbox", "").split()
-        if len(bbox_tokens) != 4:
-            raise ValueError("SPADMIC2 source bbox is missing or malformed")
-        die = Rect(*(float(value) for value in bbox_tokens))
+        die = rect_from_bbox(
+            by_role.get("spadmic2", {}).get("bbox", ""),
+            "SPADMIC2",
+        )
         obstacle_rows = []
         obstacles: list[Rect] = []
         for row in instances:
@@ -356,13 +515,22 @@ def main() -> int:
             handle.write("}\n")
 
         matrix_name = matrix_instance["instance"] if matrix_instance else "ABSENT"
-        proxy_rows = []
+        proxy_rows: list[dict[str, object]] = []
         proxy_indices: dict[str, set[int]] = {name: set() for name in expected_families}
+        proxy_coordinate_source = "NONE"
+        proxy_transform_status = "NOT_RUN"
+        proxy_translation = "UNKNOWN"
         for row in instance_pins:
             if row["instance"] != matrix_name:
                 continue
             family, indices = canonical_family(row["terminal"])
             if family in expected_families:
+                try:
+                    pin_rect = rect_from_row(row)
+                except ValueError:
+                    continue
+                if pin_rect.area <= 0.0:
+                    continue
                 for index in sorted(indices):
                     proxy_indices[family].add(index)
                     proxy_rows.append(
@@ -370,12 +538,82 @@ def main() -> int:
                             **row,
                             "family": family,
                             "index": index,
+                            "direction": expected_families[family]["direction"],
+                            "oa_direction": row["direction"],
                             "access_policy": "EXACT_AUDITED_TOP_COORDINATE",
                         }
                     )
+        direct_proxy_gate = all(
+            proxy_indices[family] == set(range(int(expected["width"])))
+            for family, expected in expected_families.items()
+        )
+        if direct_proxy_gate:
+            proxy_coordinate_source = "SPADMIC2_INSTANCE_PIN_EXPORT"
+            proxy_transform_status = "NOT_REQUIRED"
+        else:
+            proxy_rows = []
+            proxy_indices = {name: set() for name in expected_families}
+            matrix_source = rect_from_bbox(
+                by_role.get("matrice5", {}).get("bbox", ""),
+                "matrice5",
+            )
+            translation = (
+                infer_r0_translation(
+                    matrix_source,
+                    rect_from_row(matrix_instance),
+                    matrix_instance["orient"],
+                )
+                if matrix_instance
+                else None
+            )
+            if translation is not None:
+                dx, dy = translation
+                proxy_coordinate_source = "MATRICE5_TOP_TERMINALS_PLUS_R0_BBOX_TRANSLATION"
+                proxy_transform_status = "PASS"
+                proxy_translation = f"{dx:.6f} {dy:.6f}"
+                for row in matrix_terms:
+                    family, indices = canonical_family(row["terminal"])
+                    if family not in expected_families:
+                        continue
+                    try:
+                        pin_rect = rect_from_row(row)
+                    except ValueError:
+                        continue
+                    transformed = pin_rect.translate(dx, dy)
+                    if transformed.area <= 0.0:
+                        continue
+                    for index in sorted(indices):
+                        proxy_indices[family].add(index)
+                        proxy_rows.append(
+                            {
+                                "instance": matrix_name,
+                                "terminal": row["terminal"],
+                                "family": family,
+                                "index": index,
+                                "direction": expected_families[family]["direction"],
+                                "oa_direction": row["direction"],
+                                "net": row["net"],
+                                "layer": row["layer"],
+                                "purpose": row["purpose"],
+                                "llx": f"{transformed.llx:.6f}",
+                                "lly": f"{transformed.lly:.6f}",
+                                "urx": f"{transformed.urx:.6f}",
+                                "ury": f"{transformed.ury:.6f}",
+                                "access_policy": (
+                                    "MATRIX_SOURCE_PIN_PLUS_EXACT_R0_BBOX_TRANSLATION"
+                                ),
+                            }
+                        )
+            else:
+                proxy_coordinate_source = "UNAVAILABLE"
+                proxy_transform_status = "FAIL"
         write_tsv(
             out / "matrice5_proxy_pin_access.tsv",
-            ["instance", "terminal", "family", "index", "direction", "net", "layer", "purpose", "llx", "lly", "urx", "ury", "access_policy"],
+            [
+                "instance", "terminal", "family", "index", "direction",
+                "oa_direction", "net", "layer", "purpose", "llx", "lly",
+                "urx", "ury", "access_policy",
+            ],
             proxy_rows,
         )
         proxy_gate = all(
@@ -398,25 +636,135 @@ def main() -> int:
             if row["layer"].strip().upper() == "METTP"
             and rect_from_row(row).area > 0.0
         ]
-        pg_gate = {row["net"].upper() for row in mettp_pg_rows} == {"VDD", "VSS"}
+        mettp_rows: list[dict[str, object]] = []
+        unattributed_mettp: list[tuple[int, dict[str, str], Rect]] = []
+        for row in top_shapes:
+            if row["layer"].strip().upper() != "METTP":
+                continue
+            try:
+                shape_rect = rect_from_row(row)
+            except ValueError:
+                continue
+            if shape_rect.area <= 0.0:
+                continue
+            anchor_index = len(mettp_rows) + 1
+            net = row["net"].strip()
+            attributed = net.upper() in {"VDD", "VSS"}
+            mettp_rows.append(
+                {
+                    "anchor_index": anchor_index,
+                    **row,
+                    "attribution_status": (
+                        "PASS_EXACT_VDD_VSS_NET"
+                        if attributed
+                        else "FAIL_UNATTRIBUTED_TO_DIGITAL_PG"
+                    ),
+                }
+            )
+            if not attributed:
+                unattributed_mettp.append((anchor_index, row, shape_rect))
+        write_tsv(
+            out / "mettp_top_shape_attribution.tsv",
+            [
+                "anchor_index", "shape_type", "net", "layer", "purpose",
+                "llx", "lly", "urx", "ury", "attribution_status",
+            ],
+            mettp_rows,
+        )
 
+        overlap_candidates: list[dict[str, object]] = []
+        for anchor_index, anchor_row, anchor_rect in unattributed_mettp:
+            for candidate in top_shapes:
+                candidate_net = candidate["net"].strip()
+                if not candidate_net or candidate_net.upper() == "ABSENT":
+                    continue
+                try:
+                    candidate_rect = rect_from_row(candidate)
+                except ValueError:
+                    continue
+                overlap = anchor_rect.intersect(candidate_rect)
+                if overlap is None:
+                    continue
+                overlap_candidates.append(
+                    {
+                        "anchor_index": anchor_index,
+                        "mettp_llx": anchor_row["llx"],
+                        "mettp_lly": anchor_row["lly"],
+                        "mettp_urx": anchor_row["urx"],
+                        "mettp_ury": anchor_row["ury"],
+                        "candidate_net": candidate_net,
+                        "candidate_layer": candidate["layer"],
+                        "candidate_purpose": candidate["purpose"],
+                        "candidate_llx": candidate["llx"],
+                        "candidate_lly": candidate["lly"],
+                        "candidate_urx": candidate["urx"],
+                        "candidate_ury": candidate["ury"],
+                        "overlap_llx": f"{overlap.llx:.6f}",
+                        "overlap_lly": f"{overlap.lly:.6f}",
+                        "overlap_urx": f"{overlap.urx:.6f}",
+                        "overlap_ury": f"{overlap.ury:.6f}",
+                        "overlap_area_um2": f"{overlap.area:.6f}",
+                        "authorization": "REVIEW_ONLY_NOT_A_PG_ANCHOR",
+                    }
+                )
+        write_tsv(
+            out / "mettp_overlap_candidates.tsv",
+            [
+                "anchor_index", "mettp_llx", "mettp_lly", "mettp_urx",
+                "mettp_ury", "candidate_net", "candidate_layer",
+                "candidate_purpose", "candidate_llx", "candidate_lly",
+                "candidate_urx", "candidate_ury", "overlap_llx",
+                "overlap_lly", "overlap_urx", "overlap_ury",
+                "overlap_area_um2", "authorization",
+            ],
+            overlap_candidates,
+        )
+
+        pg_gate = (
+            {row["net"].upper() for row in mettp_pg_rows} == {"VDD", "VSS"}
+            and not unattributed_mettp
+        )
         p00_p02_gate = source_gate and exact_matrix_gate and pg_gate
-        p03_gate = p00_p02_gate and parity_gate and unknown_gate and proxy_gate
+        p03_interface_gate = parity_gate and unknown_gate and proxy_gate
+        p03_gate = p00_p02_gate and p03_interface_gate
+        if not p00_p02_gate:
+            next_gate = "STOP_AND_RECONCILE_PG_ANCHORS"
+        elif not p03_interface_gate:
+            next_gate = "RUN_P00_THROUGH_P02_THEN_RECONCILE_P03_INTERFACE"
+        else:
+            next_gate = "REVIEW_AUDIT_THEN_RUN_P00"
         status.update(
             {
                 "STATUS": "PASS" if p00_p02_gate else "FAIL",
                 "RESULT": "AUDIT_CONTRACT_ACCEPTED" if p00_p02_gate else "AUDIT_CONTRACT_REJECTED",
+                "AUDIT_SCOPE": "P00_P02_ENTRY_GATE_WITH_P03_PRECLASSIFICATION",
                 "CONTRACT_SCHEMA": contract["schema"],
                 "CONTRACT_SHA256": sha256(args.contract),
                 "SOURCE_IDENTITY_GATE_STATUS": "PASS" if source_gate else "FAIL",
                 "EXACT_MATRICE5_INSTANCE_GATE_STATUS": "PASS" if exact_matrix_gate else "FAIL",
                 "MATRICE5_INSTANCE": matrix_name,
                 "MATRICE5_INSTANCE_COUNT": len(matrix_instances),
+                "MATRICE5_INSTANCE_ORIENT": (
+                    matrix_instance["orient"] if matrix_instance else "ABSENT"
+                ),
                 "MATRIX_TERMINAL_PARITY_STATUS": "PASS" if parity_gate else "FAIL",
+                "MATRIX_TERMINAL_DIRECTION_POLICY": (
+                    "CONTRACT_LOGICAL_DIRECTION_OR_OA_INPUTOUTPUT"
+                ),
                 "UNKNOWN_FAMILY_GATE_STATUS": "PASS" if unknown_gate else "FAIL",
                 "UNKNOWN_TERMINAL_COUNT": len(unknown_names),
+                "UNKNOWN_FAMILY_POLICY_SHA256": sha256(args.unknown_family_policy),
                 "MATRIX_PROXY_PIN_SHAPE_COUNT": len(proxy_rows),
                 "MATRIX_PROXY_PIN_ACCESS_STATUS": "PASS" if proxy_gate else "FAIL",
+                "MATRIX_PROXY_COORDINATE_SOURCE": proxy_coordinate_source,
+                "MATRIX_PROXY_TRANSFORM_STATUS": proxy_transform_status,
+                "MATRIX_PROXY_TRANSFORM_POLICY": (
+                    "TRANSLATION_ONLY_FOR_R0_OR_OA_ABSENT_ORIENT_WITH_EXACT_BBOX"
+                ),
+                "MATRIX_PROXY_TRANSLATION_UM": proxy_translation,
+                "P03_INTERFACE_CONTRACT_STATUS": (
+                    "PASS" if p03_interface_gate else "FAIL"
+                ),
                 "PG_ANCHOR_GATE_STATUS": "PASS" if pg_gate else "FAIL",
                 "VDD_ANCHOR_COUNT": sum(row["net"].upper() == "VDD" for row in pg_rows),
                 "VSS_ANCHOR_COUNT": sum(row["net"].upper() == "VSS" for row in pg_rows),
@@ -426,12 +774,19 @@ def main() -> int:
                 "VSS_METTP_ANCHOR_COUNT": sum(
                     row["net"].upper() == "VSS" for row in mettp_pg_rows
                 ),
+                "METTP_TOP_SHAPE_COUNT": len(mettp_rows),
+                "UNATTRIBUTED_METTP_SHAPE_COUNT": len(unattributed_mettp),
+                "DIRECT_METTP_ATTRIBUTION_STATUS": (
+                    "PASS" if not unattributed_mettp else "FAIL"
+                ),
+                "METTP_OVERLAP_CANDIDATE_COUNT": len(overlap_candidates),
                 "VERIFIED_WHITESPACE_RECT_COUNT": len(free),
                 "SPADMIC2_DIE_BBOX_UM": die.format(),
                 "GUIDE_SOURCE_RECT": free[0].format(),
+                "P00_P02_CONTRACT_STATUS": "PASS" if p00_p02_gate else "FAIL",
                 "P00_P02_IMPLEMENTATION_AUTHORIZED": "YES" if p00_p02_gate else "NO",
                 "P03_IMPLEMENTATION_AUTHORIZED": "YES" if p03_gate else "NO",
-                "NEXT_GATE": "REVIEW_AUDIT_THEN_RUN_P00" if p00_p02_gate else "STOP_AND_RECONCILE_OA_AUDIT",
+                "NEXT_GATE": next_gate,
             }
         )
         if p00_p02_gate and not p03_gate:
