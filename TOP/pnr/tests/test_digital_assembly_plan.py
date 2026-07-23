@@ -221,6 +221,11 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         wrapper = (
             REPO / "TOP" / "ci" / "server_audit_spadmic2_assembly_contract.sh"
         ).read_text()
+        self.assertIn("! -name '.nfs*'", wrapper)
+        self.assertIn("! -name '*.cdslck'", wrapper)
+        self.assertIn("! -name '*.cdslck.*'", wrapper)
+        self.assertIn("POLICY=CANONICAL_OA_CONTENT_V1", wrapper)
+        self.assertIn('source_inventory_policy.rpt"', wrapper)
         self.assertIn('> "$DIAGNOSTIC_ROOT/spadmic2_source_delta.rpt"', wrapper)
         self.assertIn('> "$DIAGNOSTIC_ROOT/matrice5_source_delta.rpt"', wrapper)
         self.assertIn("SPADMIC2_SOURCE_DELTA_REPORT=", wrapper)

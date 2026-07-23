@@ -5352,3 +5352,28 @@ That delta is not waived or assumed to be harmless. The wrapper now writes
 pre/post hash inventories. Any nonempty or unreadable delta still fails the
 source-stability gate, but future evidence identifies the exact changed files
 for classification.
+
+### P11-R04 Matrice5 Identity Delta Classified as Transient Locks
+
+The pre/post inventories from failed root
+`spadmic2_matrice5_assembly_audit_20260723_094851` were compared before any
+additional Cadence run. `SPADMIC2_SOURCE_DELTA_RC=0`. The only `matrice5`
+differences were removal of:
+
+```text
+layout/layout.oa.cdslck
+layout/layout.oa.cdslck.RHEL30.lyoelectrosrv01.in2p3.fr.1263877
+```
+
+The hashes for `layout.oa`, `data.dm`, `master.tag`, the layout thumbnail, and
+all other inventoried files were unchanged. This proves that the reported
+identity failure was caused by Cadence lock cleanup, not an OA design-content
+change.
+
+Canonical source inventory policy `CANONICAL_OA_CONTENT_V1` therefore excludes
+only basenames matching `.nfs*`, `*.cdslck`, and `*.cdslck.*`. These are NFS
+temporary files and Cadence process-lock artifacts rather than persistent OA
+source content. Every other file remains hash-bound before and after the
+read-only transaction. The policy is emitted in
+`source_inventory_policy.rpt`; exact pre/post delta reports remain mandatory,
+and any canonical-content difference still fails the transaction.

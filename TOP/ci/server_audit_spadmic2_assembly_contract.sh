@@ -40,7 +40,13 @@ inventory_tree() {
     if [ ! -d "$source_root" ]; then
         return 1
     fi
-    find "$source_root" -type f -print0 2>/dev/null |
+    # Process locks and NFS silly-renames are not persistent OA source content.
+    find "$source_root" \
+        -type f \
+        ! -name '.nfs*' \
+        ! -name '*.cdslck' \
+        ! -name '*.cdslck.*' \
+        -print0 2>/dev/null |
         sort -z |
         xargs -0 -r sha256sum > "$output_file"
 }
@@ -131,6 +137,15 @@ if [ "$RUN_OK" = "1" ]; then
         echo "VIRTUOSO_BIN=$VIRTUOSO_BIN"
         echo "EXPECTED_XFAB_COMMAND=xfab -p Prj_xh018 -t xh018 -m 1131 -y 2023 -v"
     } > "$DIAGNOSTIC_ROOT/cadence_launch_contract.rpt"
+    {
+        echo "LABEL=SPADMIC_OA_CANONICAL_SOURCE_INVENTORY_POLICY"
+        echo "STATUS=PASS"
+        echo "POLICY=CANONICAL_OA_CONTENT_V1"
+        echo "SOURCE_MUTATION_AUTHORIZED=NO"
+        echo "EXCLUDED_BASENAME_PATTERN=.nfs*"
+        echo "EXCLUDED_BASENAME_PATTERN=*.cdslck"
+        echo "EXCLUDED_BASENAME_PATTERN=*.cdslck.*"
+    } > "$DIAGNOSTIC_ROOT/source_inventory_policy.rpt"
     inventory_tree "$TOP_OA_PATH" "$DIAGNOSTIC_ROOT/spadmic2_source.pre.sha256"
     TOP_PRE_RC=$?
     inventory_tree "$MATRIX_OA_PATH" "$DIAGNOSTIC_ROOT/matrice5_source.pre.sha256"
@@ -228,6 +243,8 @@ if [ -d "$DIAGNOSTIC_ROOT" ]; then
         echo "LABEL=SPADMIC2_MATRICE5_SOURCE_STABILITY"
         echo "STATUS=$([ "$SOURCE_STABILITY_RC" = "0" ] && echo PASS || echo FAIL)"
         echo "SOURCE_MUTATION_AUTHORIZED=NO"
+        echo "SOURCE_INVENTORY_POLICY=CANONICAL_OA_CONTENT_V1"
+        echo "SOURCE_INVENTORY_POLICY_REPORT=$DIAGNOSTIC_ROOT/source_inventory_policy.rpt"
         echo "SPADMIC2_PRE_POST_IDENTITY_RC=$TOP_STABLE_RC"
         echo "MATRICE5_PRE_POST_IDENTITY_RC=$MATRIX_STABLE_RC"
         echo "SPADMIC2_SOURCE_DELTA_REPORT=$DIAGNOSTIC_ROOT/spadmic2_source_delta.rpt"
