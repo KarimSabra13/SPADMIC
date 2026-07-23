@@ -207,6 +207,25 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertNotIn("dbCreate", audit)
         self.assertNotIn("dbDelete", audit)
 
+    def test_oa_skill_text_sanitizers_use_ic23_rex_contract(self) -> None:
+        for relative_path in (
+            "audit_spadmic2_assembly_contract.il",
+            "insert_digital_assembly_p03_into_spadmic2.il",
+        ):
+            skill = (REPO / "TOP" / "pnr" / "scripts" / relative_path).read_text()
+            self.assertIn('rexCompile("[\\t\\n\\r]")', skill)
+            self.assertIn('rexReplace(text " " 0)', skill)
+            self.assertNotIn('rexReplace(text "[\\t\\n\\r]" " " 0)', skill)
+
+    def test_oa_audit_preserves_exact_source_stability_deltas(self) -> None:
+        wrapper = (
+            REPO / "TOP" / "ci" / "server_audit_spadmic2_assembly_contract.sh"
+        ).read_text()
+        self.assertIn('> "$DIAGNOSTIC_ROOT/spadmic2_source_delta.rpt"', wrapper)
+        self.assertIn('> "$DIAGNOSTIC_ROOT/matrice5_source_delta.rpt"', wrapper)
+        self.assertIn("SPADMIC2_SOURCE_DELTA_REPORT=", wrapper)
+        self.assertIn("MATRICE5_SOURCE_DELTA_REPORT=", wrapper)
+
     def test_innovus_flow_rejects_child_macro_implementation(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.tcl").read_text()
         wrapper = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.sh").read_text()

@@ -206,9 +206,15 @@ if [ -d "$DIAGNOSTIC_ROOT" ]; then
     TOP_POST_RC=$?
     inventory_tree "$MATRIX_OA_PATH" "$DIAGNOSTIC_ROOT/matrice5_source.post.sha256"
     MATRIX_POST_RC=$?
-    cmp -s "$DIAGNOSTIC_ROOT/spadmic2_source.pre.sha256" "$DIAGNOSTIC_ROOT/spadmic2_source.post.sha256"
+    diff -u \
+        "$DIAGNOSTIC_ROOT/spadmic2_source.pre.sha256" \
+        "$DIAGNOSTIC_ROOT/spadmic2_source.post.sha256" \
+        > "$DIAGNOSTIC_ROOT/spadmic2_source_delta.rpt"
     TOP_STABLE_RC=$?
-    cmp -s "$DIAGNOSTIC_ROOT/matrice5_source.pre.sha256" "$DIAGNOSTIC_ROOT/matrice5_source.post.sha256"
+    diff -u \
+        "$DIAGNOSTIC_ROOT/matrice5_source.pre.sha256" \
+        "$DIAGNOSTIC_ROOT/matrice5_source.post.sha256" \
+        > "$DIAGNOSTIC_ROOT/matrice5_source_delta.rpt"
     MATRIX_STABLE_RC=$?
     if [ "$TOP_POST_RC" = "0" ] && [ "$MATRIX_POST_RC" = "0" ] && \
        [ "$TOP_STABLE_RC" = "0" ] && [ "$MATRIX_STABLE_RC" = "0" ]; then
@@ -224,6 +230,8 @@ if [ -d "$DIAGNOSTIC_ROOT" ]; then
         echo "SOURCE_MUTATION_AUTHORIZED=NO"
         echo "SPADMIC2_PRE_POST_IDENTITY_RC=$TOP_STABLE_RC"
         echo "MATRICE5_PRE_POST_IDENTITY_RC=$MATRIX_STABLE_RC"
+        echo "SPADMIC2_SOURCE_DELTA_REPORT=$DIAGNOSTIC_ROOT/spadmic2_source_delta.rpt"
+        echo "MATRICE5_SOURCE_DELTA_REPORT=$DIAGNOSTIC_ROOT/matrice5_source_delta.rpt"
     } > "$DIAGNOSTIC_ROOT/source_stability_status.rpt"
 
     (

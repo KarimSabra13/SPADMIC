@@ -5,7 +5,8 @@ procedure(spadmicAuditText(value)
   if(value then
     let((text)
       text = if(stringp(value) then value else sprintf(nil "%L" value))
-      text = rexReplace(text "[\t\n\r]" " " 0)
+      rexCompile("[\t\n\r]")
+      text = rexReplace(text " " 0)
       text
     )
   else

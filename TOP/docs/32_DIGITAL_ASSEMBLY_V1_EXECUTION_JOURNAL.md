@@ -5301,3 +5301,54 @@ uses an absolute restore path, disconnects stdin, and requires an explicit
 `virtuoso_export_status.rpt` `STATUS=PASS` plus every expected raw export before
 running the processor. A zero Virtuoso process return code alone is no longer
 accepted.
+
+### P11-R03 X-FAB Launch Passed; IC23 SKILL Regex Call Rejected
+
+The retry from exact commit
+`ae90a1e0183e75e9eb4b3e5007493ec3825d1740` proved that the corrected X-FAB
+launch contract works. Virtuoso started from
+`/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0`, loaded the XH018 `1131` PDK,
+resolved the `SPADMIC` OA library, opened `SPADMIC2/layout` read-only, and
+reached the first export stage. The failed diagnostic root is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260723_094851
+CADENCE_LAUNCH_GATE_RC=0
+SPADMIC_OA_AUDIT_PROGRESS=OPEN_spadmic2
+SPADMIC_OA_AUDIT_PROGRESS=WRITE_SPADMIC2_TOP_CONTRACT
+```
+
+The export then stopped on an IC23 SKILL API error:
+
+```text
+*Error* rexReplace: too many arguments (3 expected, 4 given) - ("I89" "[\t\n\r]" " " 0)
+SPADMIC_OA_AUDIT_COMPLETION_STATUS=FAIL
+OA_EXPORT_GATE_RC=1
+PROCESS_RC=NOT_RUN
+SPADMIC2_MATRICE5_ASSEMBLY_AUDIT_TRANSACTION_STATUS=FAIL
+```
+
+Only `spadmic2_instances.tsv` was partially emitted. The other required raw
+exports were absent, the processor was correctly not started, and this root is
+not accepted assembly evidence. The X-FAB/CDS setup warnings are not the
+decisive blocker in this run.
+
+IC23 uses a compiled regular expression followed by the three-argument
+replacement call. Both the read-only audit helper and the later authorized OA
+insertion helper now call `rexCompile("[\t\n\r]")` before
+`rexReplace(text " " 0)`. This is a compatibility repair only; it does not
+change traversal scope or authorize any OA write.
+
+The same failed run reported unchanged `SPADMIC2` source identity but changed
+`matrice5` source identity:
+
+```text
+SPADMIC2_PRE_POST_IDENTITY_RC=0
+MATRICE5_PRE_POST_IDENTITY_RC=1
+```
+
+That delta is not waived or assumed to be harmless. The wrapper now writes
+`spadmic2_source_delta.rpt` and `matrice5_source_delta.rpt` from the complete
+pre/post hash inventories. Any nonempty or unreadable delta still fails the
+source-stability gate, but future evidence identifies the exact changed files
+for classification.
