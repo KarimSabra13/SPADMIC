@@ -13,11 +13,13 @@ WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 CADENCE_LAUNCH_DIR="${SPADMIC_CADENCE_LAUNCH_DIR:-/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0}"
 CADENCE_CDS_LIB="$CADENCE_LAUNCH_DIR/cds.lib"
 TOP_OA_PATH=/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC2/layout
-MATRIX_OA_PATH=/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice5
+MATRIX_OA_LIBRARY_PATH=/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL
+MATRIX_OA_PATH="$MATRIX_OA_LIBRARY_PATH/matrice5"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DIAGNOSTIC_ROOT="$WORK_ROOT/diagnostics/spadmic2_matrice5_assembly_audit_$TIMESTAMP"
 RAW_ROOT="$DIAGNOSTIC_ROOT/raw_oa_export"
 PROCESSED_ROOT="$DIAGNOSTIC_ROOT/processed_contract"
+SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/audit_session.cds.lib"
 
 RUN_OK=1
 CD_RC=NOT_RUN
@@ -28,6 +30,8 @@ TRACKED_DIFF_RC=NOT_RUN
 STAGED_DIFF_RC=NOT_RUN
 SOURCE_FILE_GATE_RC=NOT_RUN
 CADENCE_LAUNCH_GATE_RC=NOT_RUN
+DIAGNOSTIC_CREATE_RC=NOT_RUN
+SESSION_CDS_LIB_CREATE_RC=NOT_RUN
 VIRTUOSO_RC=NOT_RUN
 OA_EXPORT_GATE_RC=NOT_RUN
 PROCESS_RC=NOT_RUN
@@ -88,6 +92,7 @@ fi
 SOURCE_FILE_GATE_RC=0
 for REQUIRED in \
     "$TOP_OA_PATH" \
+    "$MATRIX_OA_LIBRARY_PATH" \
     "$MATRIX_OA_PATH" \
     "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il" \
     "$REPO/TOP/pnr/scripts/process_spadmic2_assembly_audit.py" \
@@ -128,12 +133,32 @@ fi
 
 if [ "$RUN_OK" = "1" ]; then
     mkdir -p "$RAW_ROOT" "$PROCESSED_ROOT"
+    DIAGNOSTIC_CREATE_RC=$?
+    if [ "$DIAGNOSTIC_CREATE_RC" = "0" ]; then
+        {
+            echo "INCLUDE $CADENCE_CDS_LIB"
+            echo "DEFINE TOPLEVEL $MATRIX_OA_LIBRARY_PATH"
+        } > "$SESSION_CDS_LIB"
+        SESSION_CDS_LIB_CREATE_RC=$?
+    fi
+    if [ "$DIAGNOSTIC_CREATE_RC" != "0" ] || \
+       [ "$SESSION_CDS_LIB_CREATE_RC" != "0" ]; then
+        RUN_OK=0
+    fi
+fi
+
+if [ "$RUN_OK" = "1" ]; then
     {
         echo "LABEL=SPADMIC_XFAB_CADENCE_LAUNCH_CONTRACT"
         echo "STATUS=PASS"
         echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
         echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
         echo "CADENCE_CDS_LIB_SHA256=$(sha256sum "$CADENCE_CDS_LIB" | awk '{print $1}')"
+        echo "CADENCE_SESSION_CDS_LIB=$SESSION_CDS_LIB"
+        echo "CADENCE_SESSION_CDS_LIB_SHA256=$(sha256sum "$SESSION_CDS_LIB" | awk '{print $1}')"
+        echo "CADENCE_SESSION_CDS_LIB_MODE=RUN_LOCAL_OVERLAY"
+        echo "MATRIX_LIBRARY_BINDING=TOPLEVEL:$MATRIX_OA_LIBRARY_PATH"
+        echo "SOURCE_CDS_LIB_MUTATION_AUTHORIZED=NO"
         echo "VIRTUOSO_BIN=$VIRTUOSO_BIN"
         echo "EXPECTED_XFAB_COMMAND=xfab -p Prj_xh018 -t xh018 -m 1131 -y 2023 -v"
     } > "$DIAGNOSTIC_ROOT/cadence_launch_contract.rpt"
@@ -171,6 +196,7 @@ if [ "$RUN_OK" = "1" ]; then
         CADENCE_CD_RC=$?
         if [ "$CADENCE_CD_RC" = "0" ]; then
             "$VIRTUOSO_BIN" -nograph \
+                -cdslib "$SESSION_CDS_LIB" \
                 -restore "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il" \
                 -log "$DIAGNOSTIC_ROOT/virtuoso_assembly_audit.log" \
                 </dev/null
@@ -274,6 +300,9 @@ echo "SOURCE_FILE_GATE_RC=$SOURCE_FILE_GATE_RC"
 echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
 echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
 echo "CADENCE_LAUNCH_GATE_RC=$CADENCE_LAUNCH_GATE_RC"
+echo "DIAGNOSTIC_CREATE_RC=$DIAGNOSTIC_CREATE_RC"
+echo "SESSION_CDS_LIB=$SESSION_CDS_LIB"
+echo "SESSION_CDS_LIB_CREATE_RC=$SESSION_CDS_LIB_CREATE_RC"
 echo "VIRTUOSO_RC=$VIRTUOSO_RC"
 echo "OA_EXPORT_GATE_RC=$OA_EXPORT_GATE_RC"
 echo "PROCESS_RC=$PROCESS_RC"

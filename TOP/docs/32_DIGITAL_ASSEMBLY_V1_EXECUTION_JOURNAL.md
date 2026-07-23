@@ -5377,3 +5377,40 @@ source content. Every other file remains hash-bound before and after the
 read-only transaction. The policy is emitted in
 `source_inventory_policy.rpt`; exact pre/post delta reports remain mandatory,
 and any canonical-content difference still fails the transaction.
+
+### P11-R05 SPADMIC2 Export Passed; TOPLEVEL Library Binding Missing
+
+The foreground retry from exact commit
+`507e8e4fb916366d6caeec3512cb73dc668ddc9a` completed the bounded SPADMIC2
+export, including its instance, matrix-instance-pin, and top-shape reports.
+Canonical source stability also passed with both exact delta reports empty.
+The attributable failed root is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260723_110753
+SPADMIC_OA_AUDIT_PROGRESS=COMPLETE_spadmic2
+SPADMIC2_PRE_POST_IDENTITY_RC=0
+MATRICE5_PRE_POST_IDENTITY_RC=0
+```
+
+The next read-only open failed because the active X-FAB `cds.lib` did not
+define library `TOPLEVEL`:
+
+```text
+SPADMIC_OA_AUDIT_PROGRESS=OPEN_matrice5
+*WARNING* (DB-270210): dbOpenCellViewByType: library 'TOPLEVEL' does not exist
+*Error* SPADMIC_ASSEMBLY_OA_OPEN_FAILED TOPLEVEL/matrice5/layout
+OA_EXPORT_GATE_RC=1
+PROCESS_RC=NOT_RUN
+```
+
+The on-disk library root and `matrice5` cell passed the wrapper source-file
+gate, so this is a session library-definition failure rather than missing OA
+content. The repeated missing `MPTDC_AXIS_CORE_V1_EB/.../abstract` warnings did
+not stop the SPADMIC2 export and are retained for later contract review.
+
+The corrected wrapper creates `audit_session.cds.lib` inside the fresh
+diagnostic root. It includes the immutable X-FAB project `cds.lib` and defines
+`TOPLEVEL` at `/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL`. Virtuoso is
+launched with `-cdslib` pointing to this run-local overlay. The shared project
+library file and both OA sources remain mutation-forbidden and hash-checked.

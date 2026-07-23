@@ -188,7 +188,14 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             wrapper,
         )
         self.assertIn('CADENCE_CDS_LIB="$CADENCE_LAUNCH_DIR/cds.lib"', wrapper)
+        self.assertIn('SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/audit_session.cds.lib"', wrapper)
+        self.assertIn('echo "INCLUDE $CADENCE_CDS_LIB"', wrapper)
+        self.assertIn(
+            'echo "DEFINE TOPLEVEL $MATRIX_OA_LIBRARY_PATH"',
+            wrapper,
+        )
         self.assertIn('cd "$CADENCE_LAUNCH_DIR"', wrapper)
+        self.assertIn('-cdslib "$SESSION_CDS_LIB"', wrapper)
         self.assertIn(
             '-restore "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il"',
             wrapper,
@@ -200,6 +207,8 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         )
         self.assertIn('"$RAW_ROOT/virtuoso_export_status.rpt"', wrapper)
         self.assertIn("grep -Fxq 'STATUS=PASS'", wrapper)
+        self.assertIn("CADENCE_SESSION_CDS_LIB_MODE=RUN_LOCAL_OVERLAY", wrapper)
+        self.assertIn("SOURCE_CDS_LIB_MUTATION_AUTHORIZED=NO", wrapper)
         self.assertIn("runResult = errset(spadmicAuditAssemblyMain() t)", audit)
         self.assertIn('fprintf(statusFp "STATUS=FAIL\\n")', audit)
         self.assertIn("SPADMIC_OA_AUDIT_COMPLETION_STATUS=PASS", audit)
