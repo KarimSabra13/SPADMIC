@@ -10,7 +10,7 @@
     },
     "matrice5": {
       "filesystem_path": "/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice5",
-      "library": "TOPLEVEL",
+      "library": "SPADMIC",
       "cell": "matrice5",
       "view": "layout",
       "access": "read_only"

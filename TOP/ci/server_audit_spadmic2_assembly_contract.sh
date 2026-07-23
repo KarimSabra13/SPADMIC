@@ -19,7 +19,8 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DIAGNOSTIC_ROOT="$WORK_ROOT/diagnostics/spadmic2_matrice5_assembly_audit_$TIMESTAMP"
 RAW_ROOT="$DIAGNOSTIC_ROOT/raw_oa_export"
 PROCESSED_ROOT="$DIAGNOSTIC_ROOT/processed_contract"
-SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/audit_session.cds.lib"
+SPADMIC2_SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/spadmic2_session.cds.lib"
+MATRICE5_SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/matrice5_session.cds.lib"
 
 RUN_OK=1
 CD_RC=NOT_RUN
@@ -34,8 +35,13 @@ STAGED_DIFF_RC=NOT_RUN
 SOURCE_FILE_GATE_RC=NOT_RUN
 CADENCE_LAUNCH_GATE_RC=NOT_RUN
 DIAGNOSTIC_CREATE_RC=NOT_RUN
-SESSION_CDS_LIB_CREATE_RC=NOT_RUN
-VIRTUOSO_RC=NOT_RUN
+SPADMIC2_SESSION_CDS_LIB_CREATE_RC=NOT_RUN
+MATRICE5_SESSION_CDS_LIB_CREATE_RC=NOT_RUN
+SPADMIC2_VIRTUOSO_RC=NOT_RUN
+MATRICE5_VIRTUOSO_RC=NOT_RUN
+SPADMIC2_EXPORT_GATE_RC=NOT_RUN
+MATRICE5_EXPORT_GATE_RC=NOT_RUN
+SOURCE_IDENTITY_COMBINE_RC=NOT_RUN
 OA_EXPORT_GATE_RC=NOT_RUN
 PROCESS_RC=NOT_RUN
 SOURCE_STABILITY_RC=NOT_RUN
@@ -56,6 +62,26 @@ inventory_tree() {
         -print0 2>/dev/null |
         sort -z |
         xargs -0 -r sha256sum > "$output_file"
+}
+
+run_oa_role() {
+    local role="$1"
+    local session_cds_lib="$2"
+    local log_file="$3"
+    (
+        cd "$CADENCE_LAUNCH_DIR"
+        CADENCE_CD_RC=$?
+        if [ "$CADENCE_CD_RC" = "0" ]; then
+            SPADMIC_OA_AUDIT_ROLE="$role" \
+                "$VIRTUOSO_BIN" -nograph \
+                -cdslib "$session_cds_lib" \
+                -restore "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il" \
+                -log "$log_file" \
+                </dev/null
+        else
+            false
+        fi
+    )
 }
 
 if [ "$EXPECTED_HEAD" = "MISSING" ]; then
@@ -157,14 +183,18 @@ if [ "$RUN_OK" = "1" ]; then
     mkdir -p "$RAW_ROOT" "$PROCESSED_ROOT"
     DIAGNOSTIC_CREATE_RC=$?
     if [ "$DIAGNOSTIC_CREATE_RC" = "0" ]; then
+        echo "INCLUDE $CADENCE_CDS_LIB" > "$SPADMIC2_SESSION_CDS_LIB"
+        SPADMIC2_SESSION_CDS_LIB_CREATE_RC=$?
         {
             echo "INCLUDE $CADENCE_CDS_LIB"
-            echo "DEFINE TOPLEVEL $MATRIX_OA_LIBRARY_PATH"
-        } > "$SESSION_CDS_LIB"
-        SESSION_CDS_LIB_CREATE_RC=$?
+            echo "UNDEFINE SPADMIC"
+            echo "DEFINE SPADMIC $MATRIX_OA_LIBRARY_PATH"
+        } > "$MATRICE5_SESSION_CDS_LIB"
+        MATRICE5_SESSION_CDS_LIB_CREATE_RC=$?
     fi
     if [ "$DIAGNOSTIC_CREATE_RC" != "0" ] || \
-       [ "$SESSION_CDS_LIB_CREATE_RC" != "0" ]; then
+       [ "$SPADMIC2_SESSION_CDS_LIB_CREATE_RC" != "0" ] || \
+       [ "$MATRICE5_SESSION_CDS_LIB_CREATE_RC" != "0" ]; then
         RUN_OK=0
     fi
 fi
@@ -176,10 +206,15 @@ if [ "$RUN_OK" = "1" ]; then
         echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
         echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
         echo "CADENCE_CDS_LIB_SHA256=$(sha256sum "$CADENCE_CDS_LIB" | awk '{print $1}')"
-        echo "CADENCE_SESSION_CDS_LIB=$SESSION_CDS_LIB"
-        echo "CADENCE_SESSION_CDS_LIB_SHA256=$(sha256sum "$SESSION_CDS_LIB" | awk '{print $1}')"
-        echo "CADENCE_SESSION_CDS_LIB_MODE=RUN_LOCAL_OVERLAY"
-        echo "MATRIX_LIBRARY_BINDING=TOPLEVEL:$MATRIX_OA_LIBRARY_PATH"
+        echo "CADENCE_SESSION_CDS_LIB_MODE=PROCESS_ISOLATED_SOURCE_BINDINGS"
+        echo "SPADMIC2_SESSION_CDS_LIB=$SPADMIC2_SESSION_CDS_LIB"
+        echo "SPADMIC2_SESSION_CDS_LIB_SHA256=$(sha256sum "$SPADMIC2_SESSION_CDS_LIB" | awk '{print $1}')"
+        echo "SPADMIC2_LIBRARY_BINDING=SPADMIC:XFAB_PROJECT_CDS_LIB"
+        echo "MATRICE5_SESSION_CDS_LIB=$MATRICE5_SESSION_CDS_LIB"
+        echo "MATRICE5_SESSION_CDS_LIB_SHA256=$(sha256sum "$MATRICE5_SESSION_CDS_LIB" | awk '{print $1}')"
+        echo "MATRICE5_LIBRARY_BINDING=SPADMIC:$MATRIX_OA_LIBRARY_PATH"
+        echo "OA_EXTRACTION_PROCESS_COUNT=2"
+        echo "OA_EXTRACTION_PROCESS_ORDER=matrice5,spadmic2"
         echo "SOURCE_CDS_LIB_MUTATION_AUTHORIZED=NO"
         echo "VIRTUOSO_BIN=$VIRTUOSO_BIN"
         echo "EXPECTED_XFAB_COMMAND=xfab -p Prj_xh018 -t xh018 -m 1131 -y 2023 -v"
@@ -208,48 +243,103 @@ if [ "$RUN_OK" = "1" ]; then
     export SPADMIC_OA_TOP_CELL=SPADMIC2
     export SPADMIC_OA_TOP_VIEW=layout
     export SPADMIC_OA_TOP_PATH="$TOP_OA_PATH"
-    export SPADMIC_OA_MATRIX_LIBRARY=TOPLEVEL
+    export SPADMIC_OA_MATRIX_LIBRARY=SPADMIC
     export SPADMIC_OA_MATRIX_CELL=matrice5
     export SPADMIC_OA_MATRIX_VIEW=layout
     export SPADMIC_OA_MATRIX_PATH="$MATRIX_OA_PATH"
 
-    (
-        cd "$CADENCE_LAUNCH_DIR"
-        CADENCE_CD_RC=$?
-        if [ "$CADENCE_CD_RC" = "0" ]; then
-            "$VIRTUOSO_BIN" -nograph \
-                -cdslib "$SESSION_CDS_LIB" \
-                -restore "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il" \
-                -log "$DIAGNOSTIC_ROOT/virtuoso_assembly_audit.log" \
-                </dev/null
-        else
-            false
-        fi
-    )
-    VIRTUOSO_RC=$?
+    run_oa_role \
+        matrice5 \
+        "$MATRICE5_SESSION_CDS_LIB" \
+        "$DIAGNOSTIC_ROOT/virtuoso_matrice5_audit.log"
+    MATRICE5_VIRTUOSO_RC=$?
 
-    OA_EXPORT_GATE_RC=0
+    MATRICE5_EXPORT_GATE_RC=0
     for REQUIRED_EXPORT in \
-        "$RAW_ROOT/virtuoso_export_status.rpt" \
-        "$RAW_ROOT/source_identity.tsv" \
-        "$RAW_ROOT/spadmic2_instances.tsv" \
-        "$RAW_ROOT/spadmic2_instance_pins.tsv" \
-        "$RAW_ROOT/spadmic2_top_shapes.tsv" \
+        "$RAW_ROOT/matrice5_virtuoso_export_status.rpt" \
+        "$RAW_ROOT/matrice5_source_identity.tsv" \
         "$RAW_ROOT/matrice5_top_terminals.tsv"
     do
         if [ ! -s "$REQUIRED_EXPORT" ]; then
-            echo "MISSING_OA_AUDIT_EXPORT=$REQUIRED_EXPORT"
-            OA_EXPORT_GATE_RC=1
+            echo "MISSING_MATRICE5_OA_AUDIT_EXPORT=$REQUIRED_EXPORT"
+            MATRICE5_EXPORT_GATE_RC=1
         fi
     done
-    grep -Fxq 'STATUS=PASS' "$RAW_ROOT/virtuoso_export_status.rpt" 2>/dev/null
+    grep -Fxq 'STATUS=PASS' \
+        "$RAW_ROOT/matrice5_virtuoso_export_status.rpt" 2>/dev/null
     if [ "$?" != "0" ]; then
-        echo "OA_AUDIT_EXPORT_STATUS_NOT_PASS=$RAW_ROOT/virtuoso_export_status.rpt"
-        OA_EXPORT_GATE_RC=1
+        echo "MATRICE5_OA_AUDIT_EXPORT_STATUS_NOT_PASS=$RAW_ROOT/matrice5_virtuoso_export_status.rpt"
+        MATRICE5_EXPORT_GATE_RC=1
     fi
-    if [ "$VIRTUOSO_RC" != "0" ] || [ "$OA_EXPORT_GATE_RC" != "0" ]; then
+    if [ "$MATRICE5_VIRTUOSO_RC" != "0" ] || \
+       [ "$MATRICE5_EXPORT_GATE_RC" != "0" ]; then
         RUN_OK=0
     fi
+fi
+
+if [ "$RUN_OK" = "1" ]; then
+    run_oa_role \
+        spadmic2 \
+        "$SPADMIC2_SESSION_CDS_LIB" \
+        "$DIAGNOSTIC_ROOT/virtuoso_spadmic2_audit.log"
+    SPADMIC2_VIRTUOSO_RC=$?
+
+    SPADMIC2_EXPORT_GATE_RC=0
+    for REQUIRED_EXPORT in \
+        "$RAW_ROOT/spadmic2_virtuoso_export_status.rpt" \
+        "$RAW_ROOT/spadmic2_source_identity.tsv" \
+        "$RAW_ROOT/spadmic2_instances.tsv" \
+        "$RAW_ROOT/spadmic2_instance_pins.tsv" \
+        "$RAW_ROOT/spadmic2_top_shapes.tsv"
+    do
+        if [ ! -s "$REQUIRED_EXPORT" ]; then
+            echo "MISSING_SPADMIC2_OA_AUDIT_EXPORT=$REQUIRED_EXPORT"
+            SPADMIC2_EXPORT_GATE_RC=1
+        fi
+    done
+    grep -Fxq 'STATUS=PASS' \
+        "$RAW_ROOT/spadmic2_virtuoso_export_status.rpt" 2>/dev/null
+    if [ "$?" != "0" ]; then
+        echo "SPADMIC2_OA_AUDIT_EXPORT_STATUS_NOT_PASS=$RAW_ROOT/spadmic2_virtuoso_export_status.rpt"
+        SPADMIC2_EXPORT_GATE_RC=1
+    fi
+    if [ "$SPADMIC2_VIRTUOSO_RC" != "0" ] || \
+       [ "$SPADMIC2_EXPORT_GATE_RC" != "0" ]; then
+        RUN_OK=0
+    fi
+fi
+
+if [ -d "$RAW_ROOT" ]; then
+    SOURCE_IDENTITY_COMBINE_RC=1
+    if [ "$MATRICE5_EXPORT_GATE_RC" = "0" ] && \
+       [ "$SPADMIC2_EXPORT_GATE_RC" = "0" ]; then
+        awk 'FNR == 1 && NR != 1 {next} {print}' \
+            "$RAW_ROOT/spadmic2_source_identity.tsv" \
+            "$RAW_ROOT/matrice5_source_identity.tsv" \
+            > "$RAW_ROOT/source_identity.tsv"
+        SOURCE_IDENTITY_COMBINE_RC=$?
+    fi
+
+    OA_EXPORT_GATE_RC=1
+    if [ "$MATRICE5_EXPORT_GATE_RC" = "0" ] && \
+       [ "$SPADMIC2_EXPORT_GATE_RC" = "0" ] && \
+       [ "$SOURCE_IDENTITY_COMBINE_RC" = "0" ]; then
+        OA_EXPORT_GATE_RC=0
+    else
+        RUN_OK=0
+    fi
+
+    {
+        echo "LABEL=SPADMIC2_MATRICE5_VIRTUOSO_EXPORT"
+        echo "STATUS=$([ "$OA_EXPORT_GATE_RC" = "0" ] && echo PASS || echo FAIL)"
+        echo "PROCESS_ISOLATION_STATUS=PASS"
+        echo "PROCESS_ORDER=matrice5,spadmic2"
+        echo "MATRICE5_VIRTUOSO_RC=$MATRICE5_VIRTUOSO_RC"
+        echo "MATRICE5_EXPORT_GATE_RC=$MATRICE5_EXPORT_GATE_RC"
+        echo "SPADMIC2_VIRTUOSO_RC=$SPADMIC2_VIRTUOSO_RC"
+        echo "SPADMIC2_EXPORT_GATE_RC=$SPADMIC2_EXPORT_GATE_RC"
+        echo "SOURCE_IDENTITY_COMBINE_RC=$SOURCE_IDENTITY_COMBINE_RC"
+    } > "$RAW_ROOT/virtuoso_export_status.rpt"
 fi
 
 if [ "$RUN_OK" = "1" ]; then
@@ -326,9 +416,15 @@ echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
 echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
 echo "CADENCE_LAUNCH_GATE_RC=$CADENCE_LAUNCH_GATE_RC"
 echo "DIAGNOSTIC_CREATE_RC=$DIAGNOSTIC_CREATE_RC"
-echo "SESSION_CDS_LIB=$SESSION_CDS_LIB"
-echo "SESSION_CDS_LIB_CREATE_RC=$SESSION_CDS_LIB_CREATE_RC"
-echo "VIRTUOSO_RC=$VIRTUOSO_RC"
+echo "SPADMIC2_SESSION_CDS_LIB=$SPADMIC2_SESSION_CDS_LIB"
+echo "SPADMIC2_SESSION_CDS_LIB_CREATE_RC=$SPADMIC2_SESSION_CDS_LIB_CREATE_RC"
+echo "MATRICE5_SESSION_CDS_LIB=$MATRICE5_SESSION_CDS_LIB"
+echo "MATRICE5_SESSION_CDS_LIB_CREATE_RC=$MATRICE5_SESSION_CDS_LIB_CREATE_RC"
+echo "MATRICE5_VIRTUOSO_RC=$MATRICE5_VIRTUOSO_RC"
+echo "MATRICE5_EXPORT_GATE_RC=$MATRICE5_EXPORT_GATE_RC"
+echo "SPADMIC2_VIRTUOSO_RC=$SPADMIC2_VIRTUOSO_RC"
+echo "SPADMIC2_EXPORT_GATE_RC=$SPADMIC2_EXPORT_GATE_RC"
+echo "SOURCE_IDENTITY_COMBINE_RC=$SOURCE_IDENTITY_COMBINE_RC"
 echo "OA_EXPORT_GATE_RC=$OA_EXPORT_GATE_RC"
 echo "PROCESS_RC=$PROCESS_RC"
 echo "SOURCE_STABILITY_RC=$SOURCE_STABILITY_RC"

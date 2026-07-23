@@ -97,6 +97,11 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertEqual(contract["physical_policy"]["target_utilization"], 0.60)
         self.assertEqual(contract["physical_policy"]["max_local_density"], 0.70)
         self.assertEqual(contract["phases"]["p03_matrix_interface"]["allowed_density_rules"], ["R1M1", "R1M2", "R1M3", "R1MT"])
+        self.assertEqual(contract["source_layouts"]["matrice5"]["library"], "SPADMIC")
+        self.assertEqual(
+            contract["source_layouts"]["matrice5"]["filesystem_path"],
+            "/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice5",
+        )
         for phase in ("p00_tx", "p01_position", "p02_event_control"):
             self.assertEqual(contract["phases"][phase]["density_gate"], "NOT_RUN")
         self.assertIn("BLOCKED", contract["deferred"]["p04_mptdc_frontend"])
@@ -195,14 +200,28 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             wrapper,
         )
         self.assertIn('CADENCE_CDS_LIB="$CADENCE_LAUNCH_DIR/cds.lib"', wrapper)
-        self.assertIn('SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/audit_session.cds.lib"', wrapper)
-        self.assertIn('echo "INCLUDE $CADENCE_CDS_LIB"', wrapper)
         self.assertIn(
-            'echo "DEFINE TOPLEVEL $MATRIX_OA_LIBRARY_PATH"',
+            'SPADMIC2_SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/spadmic2_session.cds.lib"',
             wrapper,
         )
+        self.assertIn(
+            'MATRICE5_SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/matrice5_session.cds.lib"',
+            wrapper,
+        )
+        self.assertIn('echo "INCLUDE $CADENCE_CDS_LIB"', wrapper)
+        self.assertIn('echo "UNDEFINE SPADMIC"', wrapper)
+        self.assertIn('echo "DEFINE SPADMIC $MATRIX_OA_LIBRARY_PATH"', wrapper)
         self.assertIn('cd "$CADENCE_LAUNCH_DIR"', wrapper)
-        self.assertIn('-cdslib "$SESSION_CDS_LIB"', wrapper)
+        self.assertIn('-cdslib "$session_cds_lib"', wrapper)
+        self.assertIn('SPADMIC_OA_AUDIT_ROLE="$role"', wrapper)
+        self.assertIn(
+            'run_oa_role \\\n        matrice5 \\\n        "$MATRICE5_SESSION_CDS_LIB"',
+            wrapper,
+        )
+        self.assertIn(
+            'run_oa_role \\\n        spadmic2 \\\n        "$SPADMIC2_SESSION_CDS_LIB"',
+            wrapper,
+        )
         self.assertIn(
             '-restore "$REPO/TOP/pnr/scripts/audit_spadmic2_assembly_contract.il"',
             wrapper,
@@ -213,9 +232,28 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             wrapper,
         )
         self.assertIn('"$RAW_ROOT/virtuoso_export_status.rpt"', wrapper)
+        self.assertIn('"$RAW_ROOT/matrice5_virtuoso_export_status.rpt"', wrapper)
+        self.assertIn('"$RAW_ROOT/spadmic2_virtuoso_export_status.rpt"', wrapper)
+        self.assertIn('export SPADMIC_OA_MATRIX_LIBRARY=SPADMIC', wrapper)
+        self.assertIn("OA_EXTRACTION_PROCESS_COUNT=2", wrapper)
+        self.assertIn("OA_EXTRACTION_PROCESS_ORDER=matrice5,spadmic2", wrapper)
+        self.assertIn("SOURCE_IDENTITY_COMBINE_RC", wrapper)
         self.assertIn("grep -Fxq 'STATUS=PASS'", wrapper)
-        self.assertIn("CADENCE_SESSION_CDS_LIB_MODE=RUN_LOCAL_OVERLAY", wrapper)
+        self.assertIn(
+            "CADENCE_SESSION_CDS_LIB_MODE=PROCESS_ISOLATED_SOURCE_BINDINGS",
+            wrapper,
+        )
         self.assertIn("SOURCE_CDS_LIB_MUTATION_AUTHORIZED=NO", wrapper)
+        self.assertIn('role = getShellEnvVar("SPADMIC_OA_AUDIT_ROLE")', audit)
+        self.assertIn(
+            'unless(role == "spadmic2" || role == "matrice5"',
+            audit,
+        )
+        self.assertIn(
+            'identityPath = strcat(outRoot "/" role "_source_identity.tsv")',
+            audit,
+        )
+        self.assertNotIn('identityPath = strcat(outRoot "/source_identity.tsv")', audit)
         self.assertIn("runResult = errset(spadmicAuditAssemblyMain() t)", audit)
         self.assertIn('fprintf(statusFp "STATUS=FAIL\\n")', audit)
         self.assertIn("SPADMIC_OA_AUDIT_COMPLETION_STATUS=PASS", audit)

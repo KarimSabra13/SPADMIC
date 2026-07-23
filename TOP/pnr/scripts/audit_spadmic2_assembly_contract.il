@@ -203,42 +203,51 @@ procedure(spadmicAuditOne(role libName cellName viewName filesystemPath outRoot 
 )
 
 procedure(spadmicAuditAssemblyMain()
-  let((outRoot identityPath identityFp topView matrixView)
+  let((outRoot role identityPath identityFp topView matrixView)
     outRoot = getShellEnvVar("SPADMIC_OA_ASSEMBLY_AUDIT_ROOT")
     unless(outRoot error("SPADMIC_OA_ASSEMBLY_AUDIT_ROOT is required\n"))
+    role = getShellEnvVar("SPADMIC_OA_AUDIT_ROLE")
+    unless(role == "spadmic2" || role == "matrice5"
+      error("SPADMIC_OA_AUDIT_ROLE must be spadmic2 or matrice5\n"))
     topView = getShellEnvVar("SPADMIC_OA_TOP_VIEW")
     matrixView = getShellEnvVar("SPADMIC_OA_MATRIX_VIEW")
     when(topView == nil || topView == "" topView = "layout")
     when(matrixView == nil || matrixView == "" matrixView = "layout")
-    identityPath = strcat(outRoot "/source_identity.tsv")
+    identityPath = strcat(outRoot "/" role "_source_identity.tsv")
     identityFp = outfile(identityPath "w")
     fprintf(identityFp "role\tlibrary\tcell\tview\tfilesystem_path\topen_status\tbbox\n")
-    spadmicAuditOne(
-      "spadmic2"
-      getShellEnvVar("SPADMIC_OA_TOP_LIBRARY")
-      getShellEnvVar("SPADMIC_OA_TOP_CELL")
-      topView
-      getShellEnvVar("SPADMIC_OA_TOP_PATH")
-      outRoot identityFp)
-    spadmicAuditOne(
-      "matrice5"
-      getShellEnvVar("SPADMIC_OA_MATRIX_LIBRARY")
-      getShellEnvVar("SPADMIC_OA_MATRIX_CELL")
-      matrixView
-      getShellEnvVar("SPADMIC_OA_MATRIX_PATH")
-      outRoot identityFp)
+    if(role == "spadmic2" then
+      spadmicAuditOne(
+        role
+        getShellEnvVar("SPADMIC_OA_TOP_LIBRARY")
+        getShellEnvVar("SPADMIC_OA_TOP_CELL")
+        topView
+        getShellEnvVar("SPADMIC_OA_TOP_PATH")
+        outRoot identityFp)
+    else
+      spadmicAuditOne(
+        role
+        getShellEnvVar("SPADMIC_OA_MATRIX_LIBRARY")
+        getShellEnvVar("SPADMIC_OA_MATRIX_CELL")
+        matrixView
+        getShellEnvVar("SPADMIC_OA_MATRIX_PATH")
+        outRoot identityFp)
+    )
     close(identityFp)
     t
   )
 )
 
-let((outRoot runResult statusFp)
+let((outRoot role runResult statusPath statusFp)
   outRoot = getShellEnvVar("SPADMIC_OA_ASSEMBLY_AUDIT_ROOT")
+  role = getShellEnvVar("SPADMIC_OA_AUDIT_ROLE")
   runResult = errset(spadmicAuditAssemblyMain() t)
-  when(outRoot
-    statusFp = outfile(strcat(outRoot "/virtuoso_export_status.rpt") "w")
+  when(outRoot && role
+    statusPath = strcat(outRoot "/" role "_virtuoso_export_status.rpt")
+    statusFp = outfile(statusPath "w")
     when(statusFp
-      fprintf(statusFp "LABEL=SPADMIC2_MATRICE5_VIRTUOSO_EXPORT\n")
+      fprintf(statusFp "LABEL=SPADMIC_OA_ROLE_VIRTUOSO_EXPORT\n")
+      fprintf(statusFp "ROLE=%s\n" role)
       if(runResult then
         fprintf(statusFp "STATUS=PASS\n")
       else

@@ -5264,7 +5264,7 @@ remained unchanged. Do not use this root as an accepted audit.
 Static review found that the initial SKILL extractor traversed every internal
 instance and pin in `matrice5`, although the contract processor consumes only
 its top terminals. The follow-up implementation restricts SPADMIC2 instance-pin
-collection to the exact `TOPLEVEL/matrice5/layout` instance, collects only
+collection to the exact `SPADMIC/matrice5/layout` instance, collects only
 SPADMIC2 top-level data required by the processor, and collects only matrice5
 top terminals. Foreground progress markers identify each read-only stage.
 
@@ -5446,3 +5446,50 @@ pulled wrapper before creating diagnostics or launching Virtuoso. A second
 HEAD change during that guarded execution fails closed. Server command blocks
 also pull and verify the expected commit before invoking the wrapper, avoiding
 the race in normal operation.
+
+### P11-R07 TOPLEVEL Alias Rejected; Source Bindings Process-Isolated
+
+The fresh-wrapper retry at exact commit
+`39574fa3d64ac10bc7b009e1f5a5d0beb2edd2fe` verified the wrapper SHA-256,
+created the intended run-local overlay, and launched it with `-cdslib`. The
+attributable failed root is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260723_132208
+```
+
+SPADMIC2 again opened and exported successfully. Cadence then rejected the
+second logical alias for the matrix OA root:
+
+```text
+path /group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL already belongs to LIB SPADMIC
+SPADMIC_OA_AUDIT_PROGRESS=OPEN_matrice5
+*WARNING* (DB-270210): dbOpenCellViewByType: library 'TOPLEVEL' does not exist
+*Error* SPADMIC_ASSEMBLY_OA_OPEN_FAILED TOPLEVEL/matrice5/layout
+```
+
+This proves that `TOPLEVEL` is a filesystem directory name, while the OA
+library identity stored for `matrice5` is `SPADMIC`. A single Virtuoso process
+cannot simultaneously map logical library `SPADMIC` to both the local
+SPADMIC2 root and the historical matrix root. The processor did not run, no OA
+write was authorized, and the failed root remains negative evidence.
+
+The same run reported a canonical matrice5 pre/post delta:
+
+```text
+SPADMIC2_PRE_POST_IDENTITY_RC=0
+MATRICE5_PRE_POST_IDENTITY_RC=1
+```
+
+That delta remains a separate stop gate and must be classified from
+`matrice5_source_delta.rpt`; it is not waived by the library-binding repair.
+
+The corrected audit now uses two sequential foreground Virtuoso processes.
+The matrice5 process runs first with a run-local `cds.lib` that includes the
+X-FAB project definitions, then applies `UNDEFINE SPADMIC` and rebinds
+`SPADMIC` to `/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL`. Only after
+that role emits a passing status does the SPADMIC2 process run with the
+unmodified X-FAB project mapping. Each process writes a role-specific source
+identity, status report, and log. The wrapper combines identities only after
+both role gates pass, then runs the contract processor. Shared `cds.lib` files
+and both OA sources remain immutable and hash-bound.

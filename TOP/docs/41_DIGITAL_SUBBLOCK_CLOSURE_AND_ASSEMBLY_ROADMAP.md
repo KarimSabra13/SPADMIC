@@ -49,10 +49,12 @@ timing paths. Setup and hold WNS must be nonnegative, TNS and violating-path
 counts must be zero, and design-rule constraints must be clean before Innovus.
 
 The immutable read-only OA audit of `SPADMIC/SPADMIC2/layout` and
-`TOPLEVEL/matrice5/layout` is a prerequisite. It emits fixed obstacles, soft
-group guides, exact matrix proxy pin access, and METTP VDD/VSS overlap anchors.
-Unknown matrix terminal families block p03 only; they do not invalidate a
-reviewed p00-p02 contract.
+`SPADMIC/matrice5/layout` is a prerequisite. Those two cells reside in
+different physical OA roots that both use the logical library name `SPADMIC`,
+so the audit uses two sequential process-isolated `cds.lib` contexts. It emits
+fixed obstacles, soft group guides, exact matrix proxy pin access, and METTP
+VDD/VSS overlap anchors. Unknown matrix terminal families block p03 only; they
+do not invalidate a reviewed p00-p02 contract.
 
 ### Per-Phase Transaction Order
 
