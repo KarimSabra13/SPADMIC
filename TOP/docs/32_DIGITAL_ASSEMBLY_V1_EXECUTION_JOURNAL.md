@@ -5493,3 +5493,27 @@ unmodified X-FAB project mapping. Each process writes a role-specific source
 identity, status report, and log. The wrapper combines identities only after
 both role gates pass, then runs the contract processor. Shared `cds.lib` files
 and both OA sources remain immutable and hash-bound.
+
+### P11-R08 Matrice5 Delta Classified as Host/PID OA Cache
+
+The exact delta from failed root
+`spadmic2_matrice5_assembly_audit_20260723_132208` contained one added file:
+
+```text
+symbol/symbol.oa.lyoelectrosrv01.in2p3.fr.2486563.oacache
+```
+
+Its SHA-256,
+`483b8d0c84a5ccee965cd0c85befe335e4b9ab56980874da7bedbc9161e5a019`,
+is identical to the canonical `symbol/symbol.oa` file recorded immediately
+before it in the inventory. The hostname and process identifier embedded in
+the basename, together with byte identity to the canonical OA database file,
+classify this as a process-local OA cache sidecar rather than changed design
+content.
+
+Canonical source inventory policy `CANONICAL_OA_CONTENT_V2` therefore adds
+only the basename exclusion `*.oa.*.oacache`. It does not exclude arbitrary
+`.oacache` files. Every canonical `.oa` file, `data.dm`, `master.tag`,
+thumbnail, and any unrecognized sidecar remains hash-bound. Exact pre/post
+delta reports remain mandatory, and any nonexcluded change still fails the
+transaction.

@@ -53,12 +53,13 @@ inventory_tree() {
     if [ ! -d "$source_root" ]; then
         return 1
     fi
-    # Process locks and NFS silly-renames are not persistent OA source content.
+    # Process locks, NFS silly-renames, and host/PID OA caches are transient.
     find "$source_root" \
         -type f \
         ! -name '.nfs*' \
         ! -name '*.cdslck' \
         ! -name '*.cdslck.*' \
+        ! -name '*.oa.*.oacache' \
         -print0 2>/dev/null |
         sort -z |
         xargs -0 -r sha256sum > "$output_file"
@@ -222,11 +223,12 @@ if [ "$RUN_OK" = "1" ]; then
     {
         echo "LABEL=SPADMIC_OA_CANONICAL_SOURCE_INVENTORY_POLICY"
         echo "STATUS=PASS"
-        echo "POLICY=CANONICAL_OA_CONTENT_V1"
+        echo "POLICY=CANONICAL_OA_CONTENT_V2"
         echo "SOURCE_MUTATION_AUTHORIZED=NO"
         echo "EXCLUDED_BASENAME_PATTERN=.nfs*"
         echo "EXCLUDED_BASENAME_PATTERN=*.cdslck"
         echo "EXCLUDED_BASENAME_PATTERN=*.cdslck.*"
+        echo "EXCLUDED_BASENAME_PATTERN=*.oa.*.oacache"
     } > "$DIAGNOSTIC_ROOT/source_inventory_policy.rpt"
     inventory_tree "$TOP_OA_PATH" "$DIAGNOSTIC_ROOT/spadmic2_source.pre.sha256"
     TOP_PRE_RC=$?
@@ -381,7 +383,7 @@ if [ -d "$DIAGNOSTIC_ROOT" ]; then
         echo "LABEL=SPADMIC2_MATRICE5_SOURCE_STABILITY"
         echo "STATUS=$([ "$SOURCE_STABILITY_RC" = "0" ] && echo PASS || echo FAIL)"
         echo "SOURCE_MUTATION_AUTHORIZED=NO"
-        echo "SOURCE_INVENTORY_POLICY=CANONICAL_OA_CONTENT_V1"
+        echo "SOURCE_INVENTORY_POLICY=CANONICAL_OA_CONTENT_V2"
         echo "SOURCE_INVENTORY_POLICY_REPORT=$DIAGNOSTIC_ROOT/source_inventory_policy.rpt"
         echo "SPADMIC2_PRE_POST_IDENTITY_RC=$TOP_STABLE_RC"
         echo "MATRICE5_PRE_POST_IDENTITY_RC=$MATRIX_STABLE_RC"

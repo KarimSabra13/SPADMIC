@@ -278,7 +278,13 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("! -name '.nfs*'", wrapper)
         self.assertIn("! -name '*.cdslck'", wrapper)
         self.assertIn("! -name '*.cdslck.*'", wrapper)
-        self.assertIn("POLICY=CANONICAL_OA_CONTENT_V1", wrapper)
+        self.assertIn("! -name '*.oa.*.oacache'", wrapper)
+        self.assertNotIn("! -name '*.oacache'", wrapper)
+        self.assertIn("POLICY=CANONICAL_OA_CONTENT_V2", wrapper)
+        self.assertIn(
+            'echo "EXCLUDED_BASENAME_PATTERN=*.oa.*.oacache"',
+            wrapper,
+        )
         self.assertIn('source_inventory_policy.rpt"', wrapper)
         self.assertIn('> "$DIAGNOSTIC_ROOT/spadmic2_source_delta.rpt"', wrapper)
         self.assertIn('> "$DIAGNOSTIC_ROOT/matrice5_source_delta.rpt"', wrapper)
