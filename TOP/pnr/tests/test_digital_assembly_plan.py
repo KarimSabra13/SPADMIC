@@ -187,6 +187,13 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             "SPADMIC_CADENCE_LAUNCH_DIR:-/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0",
             wrapper,
         )
+        self.assertIn('ENTRY_HEAD="$(git rev-parse HEAD 2>/dev/null)"', wrapper)
+        self.assertIn('[ "$ENTRY_HEAD" != "$ACTUAL_HEAD" ]', wrapper)
+        self.assertIn("export SPADMIC_AUDIT_REEXECUTED=1", wrapper)
+        self.assertIn(
+            'exec bash "$REPO/TOP/ci/server_audit_spadmic2_assembly_contract.sh"',
+            wrapper,
+        )
         self.assertIn('CADENCE_CDS_LIB="$CADENCE_LAUNCH_DIR/cds.lib"', wrapper)
         self.assertIn('SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/audit_session.cds.lib"', wrapper)
         self.assertIn('echo "INCLUDE $CADENCE_CDS_LIB"', wrapper)

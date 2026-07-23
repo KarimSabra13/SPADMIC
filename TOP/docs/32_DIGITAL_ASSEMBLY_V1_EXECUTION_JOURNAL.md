@@ -5414,3 +5414,35 @@ diagnostic root. It includes the immutable X-FAB project `cds.lib` and defines
 `TOPLEVEL` at `/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL`. Virtuoso is
 launched with `-cdslib` pointing to this run-local overlay. The shared project
 library file and both OA sources remain mutation-forbidden and hash-checked.
+
+### P11-R06 Self-Fast-Forward Continued the Stale Wrapper
+
+The next invocation began while the server checkout was still at
+`507e8e4fb916366d6caeec3512cb73dc668ddc9a`. The executing wrapper then pulled
+exact commit `6d1cce83c52da0e166713ca1fc8329b312afff48`, but the already-running Bash
+process continued the old wrapper body. The resulting failed root is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260723_113149
+```
+
+This root did not test the run-local library overlay. Decisive evidence is:
+
+```text
+audit_session.cds.lib=MISSING
+CADENCE_SESSION_CDS_LIB=MISSING_FROM_LAUNCH_REPORT
+DIAGNOSTIC_CREATE_RC=MISSING_FROM_CONSOLE
+SESSION_CDS_LIB_CREATE_RC=MISSING_FROM_CONSOLE
+```
+
+The run therefore repeated the prior `TOPLEVEL`-undefined failure even though
+the working tree contained the corrected file after the pull. SPADMIC2 export
+again completed, canonical source stability passed, both source deltas were
+empty, and no processor or OA write ran.
+
+The wrapper now records its entry HEAD. If checkout or fast-forward changes
+HEAD, it exports a one-time guard and replaces itself with the exact freshly
+pulled wrapper before creating diagnostics or launching Virtuoso. A second
+HEAD change during that guarded execution fails closed. Server command blocks
+also pull and verify the expected commit before invoking the wrapper, avoiding
+the race in normal operation.

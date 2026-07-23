@@ -25,7 +25,10 @@ RUN_OK=1
 CD_RC=NOT_RUN
 CHECKOUT_RC=NOT_RUN
 PULL_RC=NOT_RUN
+ENTRY_HEAD=UNKNOWN
 ACTUAL_HEAD=UNKNOWN
+REEXECUTED="${SPADMIC_AUDIT_REEXECUTED:-0}"
+REEXEC_EXEC_RC=NOT_RUN
 TRACKED_DIFF_RC=NOT_RUN
 STAGED_DIFF_RC=NOT_RUN
 SOURCE_FILE_GATE_RC=NOT_RUN
@@ -63,6 +66,9 @@ fi
 if [ -d "$REPO/.git" ]; then
     cd "$REPO"
     CD_RC=$?
+    if [ "$CD_RC" = "0" ]; then
+        ENTRY_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+    fi
 else
     echo "STOP_HERE_DO_NOT_CONTINUE: repository missing: $REPO"
     CD_RC=1
@@ -85,6 +91,22 @@ if [ "$RUN_OK" = "1" ]; then
        [ "$ACTUAL_HEAD" != "$EXPECTED_HEAD" ] || \
        [ "$TRACKED_DIFF_RC" != "0" ] || [ "$STAGED_DIFF_RC" != "0" ]; then
         echo "STOP_HERE_DO_NOT_CONTINUE: checkout is not attributable"
+        RUN_OK=0
+    fi
+fi
+
+if [ "$RUN_OK" = "1" ] && [ "$ENTRY_HEAD" != "$ACTUAL_HEAD" ]; then
+    if [ "$REEXECUTED" = "0" ]; then
+        echo "WRAPPER_FAST_FORWARD_DETECTED=$ENTRY_HEAD:$ACTUAL_HEAD"
+        echo "WRAPPER_REEXECUTION_STATUS=STARTING_FRESH_CHECKOUT"
+        export SPADMIC_AUDIT_REEXECUTED=1
+        exec bash "$REPO/TOP/ci/server_audit_spadmic2_assembly_contract.sh" \
+            "$EXPECTED_HEAD"
+        REEXEC_EXEC_RC=$?
+        echo "WRAPPER_REEXECUTION_STATUS=EXEC_FAILED"
+        RUN_OK=0
+    else
+        echo "STOP_HERE_DO_NOT_CONTINUE: repository changed during wrapper re-execution"
         RUN_OK=0
     fi
 fi
@@ -294,8 +316,11 @@ fi
 echo "CD_RC=$CD_RC"
 echo "CHECKOUT_RC=$CHECKOUT_RC"
 echo "PULL_RC=$PULL_RC"
+echo "ENTRY_HEAD=$ENTRY_HEAD"
 echo "EXPECTED_HEAD=$EXPECTED_HEAD"
 echo "ACTUAL_HEAD=$ACTUAL_HEAD"
+echo "SPADMIC_AUDIT_REEXECUTED=$REEXECUTED"
+echo "REEXEC_EXEC_RC=$REEXEC_EXEC_RC"
 echo "SOURCE_FILE_GATE_RC=$SOURCE_FILE_GATE_RC"
 echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
 echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
