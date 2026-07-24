@@ -859,7 +859,9 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR",
             )
 
-    def test_pg_floorplan_replay_matches_exact_spadmic2_geometry(self) -> None:
+    def test_pg_floorplan_replay_matches_historical_key_instance_geometry(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             probe, source = self._make_pg_probe(root, include_direct_top=False)
@@ -893,6 +895,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 }
                 for row in historical
             ]
+            self.assertEqual(len(source_instances), 11)
             instance_path = source / "raw_oa_export/spadmic2_instances.tsv"
             self._write_tsv(
                 instance_path,
@@ -1014,6 +1017,10 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             self.assertEqual(
                 status["ASSEMBLY_NORMALIZED_DIE_BBOX_UM"],
                 "0.000000 0.000000 4116.031000 3740.792000",
+            )
+            self.assertEqual(
+                status["ASSEMBLY_FIXED_OBSTACLE_COUNT"],
+                "10",
             )
             self.assertEqual(
                 status["ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT"],
@@ -1333,9 +1340,21 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("--source-audit-root \"$SOURCE_ROOT\"", wrapper)
         self.assertIn("ASSEMBLY_BOUNDARY_INSTANCE=I5", wrapper)
         self.assertIn(
-            "ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=42",
+            "SOURCE_INSTANCES_SHA256="
+            "9dc5e18abadd3b3d38fb43347ff11486ec8c1b13f194bf070dd6ac5957709360",
             wrapper,
         )
+        self.assertIn("ASSEMBLY_FIXED_OBSTACLE_COUNT=13", wrapper)
+        self.assertIn(
+            "ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=62",
+            wrapper,
+        )
+        self.assertIn(
+            "ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM="
+            "3662.775000 164.000000 3952.031000 3576.792000",
+            wrapper,
+        )
+        self.assertNotIn("ASSEMBLY_FIXED_OBSTACLE_COUNT=10", wrapper)
         self.assertIn("REVIEW_CANDIDATE_PAIR_INSTANCE=I6", wrapper)
         self.assertIn(
             "TARGET_INSTANCE_METTP_CONTEXT_STATUS=NOT_PROBED",

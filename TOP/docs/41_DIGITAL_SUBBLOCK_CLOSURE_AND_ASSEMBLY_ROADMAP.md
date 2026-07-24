@@ -1347,9 +1347,18 @@ is `-451.632 -287.715 4115.791 3453.077`, while exact
 only the external strip west of the ring as "verified whitespace" and biased
 the ranking toward `I5`.
 
-Run exactly one processor-only replay of the two unchanged sealed capsules with
-`server_replay_spadmic2_digital_pg_floorplan.sh`. The exact expected
-classification is:
+The first processor-only replay at exact commit
+`0a0d5d6225e459701147f0ab7c272a77c809280a` passed every input-integrity gate
+and completed the classifier with `PROCESS_RC=0`, but the wrapper rejected its
+own stale `ASSEMBLY_FIXED_OBSTACLE_COUNT=10` assertion. That value came from
+the July 9 key-instance fixture, which has 11 total rows. The sealed July 24 OA
+export has 14 total rows. The failed replay root
+`spadmic2_digital_pg_floorplan_replay_20260724_141037_pid775347` remained
+writable and is not accepted evidence.
+
+Run exactly one corrected processor-only replay of the same two unchanged
+sealed capsules with `server_replay_spadmic2_digital_pg_floorplan.sh`. The
+exact expected classification is:
 
 ```text
 ASSEMBLY_BOUNDARY_INSTANCE=I5
@@ -1358,9 +1367,12 @@ ASSEMBLY_NORMALIZED_DIE_BBOX_UM=0.000000 0.000000 4116.031000 3740.792000
 SOURCE_TO_ASSEMBLY_TRANSLATION_UM=0.240000 287.715000
 ASSEMBLY_TO_SOURCE_TRANSLATION_UM=-0.240000 -287.715000
 ASSEMBLY_CORE_KEEPOUT_UM=164.000000
-ASSEMBLY_FIXED_OBSTACLE_COUNT=10
-ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=42
-ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM=3638.910000 164.000000 3952.031000 3576.792000
+SOURCE_INSTANCES_SHA256=9dc5e18abadd3b3d38fb43347ff11486ec8c1b13f194bf070dd6ac5957709360
+ASSEMBLY_FIXED_OBSTACLE_COUNT=13
+ASSEMBLY_CORE_OVERLAP_OBSTACLE_COUNT=13
+ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=62
+ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM=3662.775000 164.000000 3952.031000 3576.792000
+ASSEMBLY_PRIMARY_WHITESPACE_AREA_UM2=987170.562752
 COMPLETE_SAME_INSTANCE_PG_PAIR_STATUS=PASS
 REVIEW_CANDIDATE_PAIR_INSTANCE=I6
 TARGET_INSTANCE_METTP_CONTEXT_STATUS=NOT_PROBED

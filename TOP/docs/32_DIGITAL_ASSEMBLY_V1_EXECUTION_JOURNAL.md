@@ -6022,17 +6022,19 @@ whitespace. It explains why the first classifier chose the `I5` pair and why
 the old guide cannot enter Innovus.
 
 The assembly contract now binds the floorplan to exact `I5`, treats it as a
-hollow boundary, uses a `164 um` core inset, treats the other ten instance
-bboxes as fixed obstacles, and normalizes the boundary lower-left to `(0,0)`.
-The exact reversible translations are:
+hollow boundary, uses a `164 um` core inset, treats every other current source
+instance bbox as a fixed obstacle, and normalizes the boundary lower-left to
+`(0,0)`. The exact reversible translations are:
 
 ```text
 SOURCE_TO_ASSEMBLY_TRANSLATION_UM=0.240000 287.715000
 ASSEMBLY_TO_SOURCE_TRANSLATION_UM=-0.240000 -287.715000
 ```
 
-Applying that policy to the immutable instance geometry yields 42 interior
-free rectangles. The largest is:
+The initial local regression used the July 9 key-instance extract. That
+historical file contains `I5` plus ten other selected rows, and applying the
+policy to that bounded fixture yields 42 interior free rectangles. Its largest
+rectangle is:
 
 ```text
 source:     3638.670000 -123.715000 3951.791000 3289.077000
@@ -6064,3 +6066,53 @@ Only after that probe may one reviewed topology become an immutable bridge
 contract. The normalized phase generator and final OA insertion translation
 must then be repaired before phase preflight. Genus and Innovus remain
 unauthorized.
+
+### P11-R18 First Sealed Floorplan Replay Rejected a Historical Count Gate
+
+The first CPU-only replay ran on 2026-07-24 from exact commit
+`0a0d5d6225e459701147f0ab7c272a77c809280a`. All repository, artifact,
+sealed-source, detached-archive, manifest, read-only, and no-active-processor
+preflight gates passed. The processor completed successfully and retained the
+same complete `I6` DVDD/DVSS pair, but the wrapper rejected the transaction:
+
+```text
+REPLAY_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_floorplan_replay_20260724_141037_pid775347
+PROCESS_RC=0
+MISSING_STATUS_LINE=.../digital_pg_access_status.rpt|ASSEMBLY_FIXED_OBSTACLE_COUNT=10
+STATUS_GATE_RC=1
+PROCESSOR_ONLY_DIGITAL_PG_FLOORPLAN_REPLAY_STATUS=FAIL
+```
+
+The rejected expectation came from the 11-row July 9 key-instance regression,
+not from the sealed July 24 OA export. The exact current input and deterministic
+processor result are:
+
+```text
+SOURCE_INSTANCES_SHA256=9dc5e18abadd3b3d38fb43347ff11486ec8c1b13f194bf070dd6ac5957709360
+ASSEMBLY_FIXED_OBSTACLE_COUNT=13
+ASSEMBLY_CORE_OVERLAP_OBSTACLE_COUNT=13
+ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=62
+ASSEMBLY_PRIMARY_WHITESPACE_SOURCE_BBOX_UM=3662.535000 -123.715000 3951.791000 3289.077000
+ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM=3662.775000 164.000000 3952.031000 3576.792000
+ASSEMBLY_PRIMARY_WHITESPACE_AREA_UM2=987170.562752
+REVIEW_CANDIDATE_PAIR_INSTANCE=I6
+```
+
+The sealed current export therefore contains one exact boundary plus thirteen
+other instances, while the historical regression contained one boundary plus
+ten selected instances. This is a wrapper expectation defect, not a processor,
+source-integrity, or pair-selection failure. Both sealed source capsules passed
+all post-replay manifest checks and remained read-only.
+
+The failed replay root was deliberately not sealed:
+
+```text
+REPLAY_SEAL_RC=1
+REPLAY_WRITABLE_PATH=/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_floorplan_replay_20260724_141037_pid775347
+```
+
+It is negative evidence and must not be reused. The corrected wrapper binds its
+acceptance gate to the exact current source-instance SHA, the `13/62` result,
+the corrected primary rectangle and output hashes, and the unchanged
+review-only `I6` selection. The next action remains one CPU-only retry; Cadence,
+Genus, Innovus, bridge creation, and OA editing remain unauthorized.
