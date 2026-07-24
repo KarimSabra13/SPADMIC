@@ -337,6 +337,8 @@ def main() -> int:
         "LABEL": "SPADMIC2_MATRICE5_IMMUTABLE_ASSEMBLY_AUDIT",
         "STATUS": "FAIL",
         "RESULT": "AUDIT_CONTRACT_REJECTED",
+        "PROCESSOR_SHA256": sha256(Path(__file__).resolve()),
+        "AUDIT_ROOT": audit,
         "SOURCE_MUTATION_AUTHORIZED": "NO",
         "P00_P02_IMPLEMENTATION_AUTHORIZED": "NO",
         "P03_IMPLEMENTATION_AUTHORIZED": "NO",
@@ -1027,6 +1029,19 @@ def main() -> int:
                 "AUDIT_SCOPE": "P00_P02_ENTRY_GATE_WITH_P03_PRECLASSIFICATION",
                 "CONTRACT_SCHEMA": contract["schema"],
                 "CONTRACT_SHA256": sha256(args.contract),
+                "SOURCE_IDENTITY_SHA256": sha256(audit / "source_identity.tsv"),
+                "SPADMIC2_INSTANCES_SHA256": sha256(
+                    audit / "spadmic2_instances.tsv"
+                ),
+                "SPADMIC2_INSTANCE_PINS_SHA256": sha256(
+                    audit / "spadmic2_instance_pins.tsv"
+                ),
+                "SPADMIC2_TOP_SHAPES_SHA256": sha256(
+                    audit / "spadmic2_top_shapes.tsv"
+                ),
+                "MATRICE5_TOP_TERMINALS_SHA256": sha256(
+                    audit / "matrice5_top_terminals.tsv"
+                ),
                 "SOURCE_IDENTITY_GATE_STATUS": "PASS" if source_gate else "FAIL",
                 "EXACT_MATRICE5_INSTANCE_GATE_STATUS": "PASS" if exact_matrix_gate else "FAIL",
                 "MATRICE5_INSTANCE": matrix_name,

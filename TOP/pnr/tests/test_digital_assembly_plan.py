@@ -991,6 +991,44 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             wrapper,
         )
 
+    def test_mettp_context_replay_is_processor_only_and_source_immutable(self) -> None:
+        wrapper_path = (
+            REPO
+            / "TOP"
+            / "ci"
+            / "server_replay_spadmic2_mettp_context.sh"
+        )
+        wrapper = wrapper_path.read_text()
+        syntax = subprocess.run(
+            ["bash", "-n", str(wrapper_path)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stdout)
+        self.assertTrue(os.access(wrapper_path, os.X_OK))
+        self.assertIn('verify_manifest "$SOURCE_ROOT"', wrapper)
+        self.assertIn('verify_manifest "$RAW_ROOT"', wrapper)
+        self.assertIn('mkdir "$REPLAY_ROOT"', wrapper)
+        self.assertNotIn('mkdir -p "$REPLAY_ROOT"', wrapper)
+        self.assertIn('python3 "$PROCESSOR"', wrapper)
+        self.assertIn('[ "$PROCESS_RC" = "2" ]', wrapper)
+        self.assertIn('"$CHMOD_BIN" -R a-w "$REPLAY_ROOT"', wrapper)
+        self.assertNotIn('"$CHMOD_BIN" -R a-w "$SOURCE_ROOT"', wrapper)
+        self.assertIn("SOURCE_MANIFEST_POST_RC", wrapper)
+        self.assertIn("RAW_MANIFEST_POST_RC", wrapper)
+        self.assertIn(
+            "PROCESSOR_ONLY_METTP_CONTEXT_STATUS=$REPLAY_STATUS",
+            wrapper,
+        )
+        self.assertIn("PASS_EVIDENCE_READY", wrapper)
+        self.assertIn("DO_NOT_START_CADENCE_GENUS_OR_EDIT_OA", wrapper)
+        self.assertNotIn("virtuoso ", wrapper)
+        self.assertNotIn("genus ", wrapper)
+        self.assertNotIn("innovus ", wrapper)
+        self.assertNotIn("\nrm ", wrapper)
+
     def test_innovus_flow_rejects_child_macro_implementation(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.tcl").read_text()
         wrapper = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.sh").read_text()

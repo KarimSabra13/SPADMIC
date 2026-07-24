@@ -5700,8 +5700,12 @@ is authorized.
 The processor now refuses any populated output directory before opening an
 output report. It also emits `mettp_anchor_context_summary.tsv` and
 `mettp_netted_shape_context.tsv` for a processor-only replay into a new sibling
-root. Those reports distinguish positive-area overlap, exact boundary touch,
-same-layer context, cross-layer context, and nearest supply-like nets. Every
-derived candidate remains `REVIEW_ONLY_NOT_A_PG_ANCHOR`; proximity never
-changes the direct exact-VDD/VSS authorization rule. The next transaction uses
-the sealed raw payload above and does not start Cadence.
+root. The tracked replay driver is
+`TOP/ci/server_replay_spadmic2_mettp_context.sh`; it rechecks the source
+capsule and archive before and after processing, requires a new exclusive
+output root, verifies its manifest, and seals it read-only. Those reports
+distinguish positive-area overlap, exact boundary touch, same-layer context,
+cross-layer context, and nearest supply-like nets. Every derived candidate
+remains `REVIEW_ONLY_NOT_A_PG_ANCHOR`; proximity never changes the direct
+exact-VDD/VSS authorization rule. The next transaction uses the sealed raw
+payload above and does not start Cadence.
