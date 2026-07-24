@@ -5642,3 +5642,66 @@ well-preserved run may still return the expected contract rejection while
 direct METTP ownership remains unresolved. No fresh Cadence execution, Genus
 run, or OA edit is authorized until the checksum probe and exact-commit
 foreground wrapper retry pass their preservation gates.
+
+### P11-R11 Fresh Evidence Capsule Passed; PG Attribution Remains the Only Entry Block
+
+The exact-wrapper preflight and foreground retry at commit
+`debaebf6b5dff5211ef0b6796f01cfd526ae6f0c` completed on 2026-07-24. The
+wrapper hash was
+`4e01c07945e794f291c725f5aebabdfd213f66c4aa2cbc974bd14e94fc6b7169`.
+The fixed-payload `/usr/bin/sha256sum` probe passed before Cadence, the tracked
+and staged trees were clean, and no audit writer was active. The fresh root is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_assembly_audit_20260724_104441_pid30548
+```
+
+This root is accepted immutable evidence. Both process-isolated Virtuoso
+exports passed, both canonical OA pre/post inventories were identical, and
+the raw, processed, and outer manifests all passed independent post-run
+verification. The recovery archive passed both gzip/tar traversal and detached
+SHA-256 verification:
+
+```text
+SPADMIC2_MATRICE5_EVIDENCE_PRESERVATION_STATUS=PASS
+EVIDENCE_ROOT_READ_ONLY=YES
+RAW_MANIFEST_RC=0
+PROCESSED_MANIFEST_RC=0
+OUTER_MANIFEST_RC=0
+ARCHIVE_HASH_RC=0
+ARCHIVE_TAR_RC=0
+WRITABLE_EVIDENCE_PATH=NONE
+RECOVERY_ARCHIVE_SHA256=4fceb15acc3d6dc838c249d1abf2f69ed9937d88a9770b774f3b5c04c014665e
+```
+
+Audit acceptance remains a separate failed gate. The source identity and exact
+`M182` instance passed. Matrix family parity, reviewed unknown-family policy,
+all 560 translated proxy pin shapes, and the complete p03 interface contract
+also passed. The only rejected p00-p02 entry requirement is direct PG
+ownership:
+
+```text
+P03_INTERFACE_CONTRACT_STATUS=PASS
+PG_ANCHOR_GATE_STATUS=FAIL
+METTP_TOP_SHAPE_COUNT=3
+UNATTRIBUTED_METTP_SHAPE_COUNT=3
+DIRECT_METTP_ATTRIBUTION_STATUS=FAIL
+METTP_OVERLAP_CANDIDATE_COUNT=0
+P00_P02_CONTRACT_STATUS=FAIL
+P00_P02_IMPLEMENTATION_AUTHORIZED=NO
+P03_IMPLEMENTATION_AUTHORIZED=NO
+NEXT_GATE=STOP_AND_RECONCILE_PG_ANCHORS
+```
+
+`PROCESS_RC=2` and wrapper `AUDIT_RC=1` are therefore the expected contract
+rejection, not an extraction or preservation failure. No Genus run or OA edit
+is authorized.
+
+The processor now refuses any populated output directory before opening an
+output report. It also emits `mettp_anchor_context_summary.tsv` and
+`mettp_netted_shape_context.tsv` for a processor-only replay into a new sibling
+root. Those reports distinguish positive-area overlap, exact boundary touch,
+same-layer context, cross-layer context, and nearest supply-like nets. Every
+derived candidate remains `REVIEW_ONLY_NOT_A_PG_ANCHOR`; proximity never
+changes the direct exact-VDD/VSS authorization rule. The next transaction uses
+the sealed raw payload above and does not start Cadence.

@@ -52,9 +52,11 @@ The immutable read-only OA audit of `SPADMIC/SPADMIC2/layout` and
 `SPADMIC/matrice5/layout` is a prerequisite. Those two cells reside in
 different physical OA roots that both use the logical library name `SPADMIC`,
 so the audit uses two sequential process-isolated `cds.lib` contexts. It emits
-fixed obstacles, soft group guides, exact matrix proxy pin access, and METTP
-VDD/VSS overlap anchors. Unknown matrix terminal families block p03 only; they
-do not invalidate a reviewed p00-p02 contract.
+fixed obstacles, soft group guides, and exact matrix proxy pin access. METTP
+VDD/VSS anchors are emitted only when direct exact net ownership is proven;
+overlap, boundary contact, and nearest-net context remain review-only. Unknown
+matrix terminal families block p03 only when they fail the reviewed physical
+policy; they do not invalidate a reviewed p00-p02 contract.
 
 ### Per-Phase Transaction Order
 

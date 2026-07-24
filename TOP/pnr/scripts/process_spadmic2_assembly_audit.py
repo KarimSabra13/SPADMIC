@@ -24,6 +24,13 @@ FAMILY_RE = re.compile(
 )
 SUPPLY_RE = re.compile(r"^(?:[ad]?vdd|[ad]?vss|gnd)(?:[<\[].*)?$", re.IGNORECASE)
 ALLOWED_UNKNOWN_DISPOSITIONS = {"ALLOW_P03", "IGNORE_NON_DIGITAL", "BLOCK"}
+METTP_CONTEXT_CANDIDATE_LIMIT = 20
+CONTACT_RELATIONS = {"AREA_OVERLAP", "BOUNDARY_TOUCH", "CORNER_TOUCH"}
+CONDUCTIVE_SHAPE_TYPES = {"PATH", "PATHSEG", "POLYGON", "RECT"}
+SUPPLY_LIKE_TOKEN_RE = re.compile(
+    r"^(?:[AD]?VDD|[AD]?VSS|VDDO\d*|GNDO\d*|GND\d*|PSUB|SUB)$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -99,6 +106,10 @@ def rect_from_row(row: dict[str, str]) -> Rect:
     return Rect(*(float(row[key]) for key in ("llx", "lly", "urx", "ury")))
 
 
+def is_conductive_shape(row: dict[str, str]) -> bool:
+    return row["shape_type"].strip().upper() in CONDUCTIVE_SHAPE_TYPES
+
+
 def rect_from_bbox(value: str, role: str) -> Rect:
     tokens = value.split()
     if len(tokens) != 4:
@@ -108,6 +119,63 @@ def rect_from_bbox(value: str, role: str) -> Rect:
 
 def same_dimension(left: float, right: float) -> bool:
     return math.isclose(left, right, rel_tol=0.0, abs_tol=1e-6)
+
+
+def axis_gap(first_low: float, first_high: float, second_low: float, second_high: float) -> float:
+    if first_high < second_low:
+        return second_low - first_high
+    if second_high < first_low:
+        return first_low - second_high
+    return 0.0
+
+
+def rect_relation(first: Rect, second: Rect) -> tuple[str, float, float, float]:
+    overlap_x = min(first.urx, second.urx) - max(first.llx, second.llx)
+    overlap_y = min(first.ury, second.ury) - max(first.lly, second.lly)
+    gap_x = axis_gap(first.llx, first.urx, second.llx, second.urx)
+    gap_y = axis_gap(first.lly, first.ury, second.lly, second.ury)
+    distance = math.hypot(gap_x, gap_y)
+    if overlap_x > 0.0 and overlap_y > 0.0:
+        relation = "AREA_OVERLAP"
+    elif same_dimension(gap_x, 0.0) and same_dimension(gap_y, 0.0):
+        relation = (
+            "BOUNDARY_TOUCH"
+            if overlap_x > 0.0 or overlap_y > 0.0
+            else "CORNER_TOUCH"
+        )
+    else:
+        relation = "SEPARATED"
+    return relation, gap_x, gap_y, distance
+
+
+def net_classification(net: str) -> str:
+    normalized = net.strip().upper()
+    if normalized in {"VDD", "VSS"}:
+        return "EXACT_DIGITAL_PG"
+    tokens = [token for token in re.split(r"[^A-Z0-9]+", normalized) if token]
+    if any(SUPPLY_LIKE_TOKEN_RE.fullmatch(token) for token in tokens):
+        return "SUPPLY_LIKE_REVIEW"
+    return "OTHER_NET"
+
+
+def shape_context_sort_key(row: dict[str, object]) -> tuple[object, ...]:
+    return (
+        float(row["bbox_distance_um"]),
+        str(row["candidate_net"]),
+        str(row["candidate_layer"]),
+        str(row["candidate_purpose"]),
+        float(row["candidate_llx"]),
+        float(row["candidate_lly"]),
+        float(row["candidate_urx"]),
+        float(row["candidate_ury"]),
+    )
+
+
+def nearest_context_value(
+    rows: list[dict[str, object]],
+    field: str,
+) -> str:
+    return str(rows[0][field]) if rows else "NONE"
 
 
 def infer_r0_translation(source: Rect, placed: Rect, orient: str) -> tuple[float, float] | None:
@@ -258,7 +326,12 @@ def main() -> int:
     args = parse_args()
     audit = args.audit_root.resolve()
     out = args.out.resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    if out.exists():
+        if not out.is_dir() or any(out.iterdir()):
+            print(f"ERROR=immutable processor output already populated: {out}")
+            return 2
+    else:
+        out.mkdir(parents=True)
     status_path = out / "assembly_audit_status.rpt"
     status: dict[str, object] = {
         "LABEL": "SPADMIC2_MATRICE5_IMMUTABLE_ASSEMBLY_AUDIT",
@@ -634,12 +707,16 @@ def main() -> int:
         mettp_pg_rows = [
             row for row in pg_rows
             if row["layer"].strip().upper() == "METTP"
+            and is_conductive_shape(row)
             and rect_from_row(row).area > 0.0
         ]
         mettp_rows: list[dict[str, object]] = []
         unattributed_mettp: list[tuple[int, dict[str, str], Rect]] = []
         for row in top_shapes:
-            if row["layer"].strip().upper() != "METTP":
+            if (
+                row["layer"].strip().upper() != "METTP"
+                or not is_conductive_shape(row)
+            ):
                 continue
             try:
                 shape_rect = rect_from_row(row)
@@ -676,7 +753,11 @@ def main() -> int:
         for anchor_index, anchor_row, anchor_rect in unattributed_mettp:
             for candidate in top_shapes:
                 candidate_net = candidate["net"].strip()
-                if not candidate_net or candidate_net.upper() == "ABSENT":
+                if (
+                    not is_conductive_shape(candidate)
+                    or not candidate_net
+                    or candidate_net.upper() == "ABSENT"
+                ):
                     continue
                 try:
                     candidate_rect = rect_from_row(candidate)
@@ -718,6 +799,212 @@ def main() -> int:
                 "overlap_area_um2", "authorization",
             ],
             overlap_candidates,
+        )
+
+        context_rows: list[dict[str, object]] = []
+        context_summary_rows: list[dict[str, object]] = []
+        netted_area_overlap_count = 0
+        netted_boundary_contact_count = 0
+        same_layer_exact_pg_contact_count = 0
+        same_layer_supply_like_contact_count = 0
+        for anchor_index, anchor_row, anchor_rect in unattributed_mettp:
+            candidates: list[dict[str, object]] = []
+            anchor_layer = anchor_row["layer"].strip().upper()
+            for candidate in top_shapes:
+                candidate_net = candidate["net"].strip()
+                if (
+                    candidate is anchor_row
+                    or not is_conductive_shape(candidate)
+                    or not candidate_net
+                    or candidate_net.upper() == "ABSENT"
+                ):
+                    continue
+                try:
+                    candidate_rect = rect_from_row(candidate)
+                except ValueError:
+                    continue
+                if candidate_rect.area <= 0.0:
+                    continue
+                relation, gap_x, gap_y, distance = rect_relation(
+                    anchor_rect,
+                    candidate_rect,
+                )
+                candidate_layer = candidate["layer"].strip().upper()
+                candidate_class = net_classification(candidate_net)
+                candidates.append(
+                    {
+                        "anchor_index": anchor_index,
+                        "anchor_shape_type": anchor_row["shape_type"],
+                        "anchor_net": anchor_row["net"],
+                        "anchor_layer": anchor_row["layer"],
+                        "anchor_purpose": anchor_row["purpose"],
+                        "anchor_llx": anchor_row["llx"],
+                        "anchor_lly": anchor_row["lly"],
+                        "anchor_urx": anchor_row["urx"],
+                        "anchor_ury": anchor_row["ury"],
+                        "candidate_shape_type": candidate["shape_type"],
+                        "candidate_net": candidate_net,
+                        "candidate_net_class": candidate_class,
+                        "candidate_layer": candidate["layer"],
+                        "candidate_purpose": candidate["purpose"],
+                        "candidate_llx": candidate["llx"],
+                        "candidate_lly": candidate["lly"],
+                        "candidate_urx": candidate["urx"],
+                        "candidate_ury": candidate["ury"],
+                        "layer_relation": (
+                            "SAME_LAYER"
+                            if candidate_layer == anchor_layer
+                            else "CROSS_LAYER"
+                        ),
+                        "geometry_relation": relation,
+                        "x_gap_um": f"{gap_x:.6f}",
+                        "y_gap_um": f"{gap_y:.6f}",
+                        "bbox_distance_um": f"{distance:.6f}",
+                        "authorization": "REVIEW_ONLY_NOT_A_PG_ANCHOR",
+                    }
+                )
+            candidates.sort(key=shape_context_sort_key)
+            same_layer = [
+                row for row in candidates if row["layer_relation"] == "SAME_LAYER"
+            ]
+            supply_like = [
+                row
+                for row in candidates
+                if row["candidate_net_class"]
+                in {"EXACT_DIGITAL_PG", "SUPPLY_LIKE_REVIEW"}
+            ]
+            for scope, scoped_rows in (
+                ("ALL_NETTED_NEAREST", candidates),
+                ("SAME_LAYER_NETTED_NEAREST", same_layer),
+                ("SUPPLY_LIKE_NETTED_NEAREST", supply_like),
+            ):
+                for rank, candidate in enumerate(
+                    scoped_rows[:METTP_CONTEXT_CANDIDATE_LIMIT],
+                    start=1,
+                ):
+                    context_rows.append(
+                        {
+                            **candidate,
+                            "selection_scope": scope,
+                            "candidate_rank": rank,
+                        }
+                    )
+
+            area_overlaps = [
+                row
+                for row in candidates
+                if row["geometry_relation"] == "AREA_OVERLAP"
+            ]
+            boundary_contacts = [
+                row
+                for row in candidates
+                if row["geometry_relation"] in {"BOUNDARY_TOUCH", "CORNER_TOUCH"}
+            ]
+            exact_pg_contacts = [
+                row
+                for row in candidates
+                if row["layer_relation"] == "SAME_LAYER"
+                and row["geometry_relation"] in CONTACT_RELATIONS
+                and row["candidate_net_class"] == "EXACT_DIGITAL_PG"
+            ]
+            supply_like_contacts = [
+                row
+                for row in candidates
+                if row["layer_relation"] == "SAME_LAYER"
+                and row["geometry_relation"] in CONTACT_RELATIONS
+                and row["candidate_net_class"]
+                in {"EXACT_DIGITAL_PG", "SUPPLY_LIKE_REVIEW"}
+            ]
+            netted_area_overlap_count += len(area_overlaps)
+            netted_boundary_contact_count += len(boundary_contacts)
+            same_layer_exact_pg_contact_count += len(exact_pg_contacts)
+            same_layer_supply_like_contact_count += len(supply_like_contacts)
+            orientation = (
+                "HORIZONTAL"
+                if anchor_rect.width > anchor_rect.height
+                else "VERTICAL"
+                if anchor_rect.height > anchor_rect.width
+                else "SQUARE"
+            )
+            context_summary_rows.append(
+                {
+                    "anchor_index": anchor_index,
+                    "shape_type": anchor_row["shape_type"],
+                    "net": anchor_row["net"],
+                    "layer": anchor_row["layer"],
+                    "purpose": anchor_row["purpose"],
+                    "llx": anchor_row["llx"],
+                    "lly": anchor_row["lly"],
+                    "urx": anchor_row["urx"],
+                    "ury": anchor_row["ury"],
+                    "orientation": orientation,
+                    "minor_width_um": f"{min(anchor_rect.width, anchor_rect.height):.6f}",
+                    "major_length_um": f"{max(anchor_rect.width, anchor_rect.height):.6f}",
+                    "netted_area_overlap_count": len(area_overlaps),
+                    "netted_boundary_contact_count": len(boundary_contacts),
+                    "same_layer_exact_pg_contact_count": len(exact_pg_contacts),
+                    "same_layer_supply_like_contact_count": len(supply_like_contacts),
+                    "nearest_netted_distance_um": nearest_context_value(
+                        candidates,
+                        "bbox_distance_um",
+                    ),
+                    "nearest_netted_net": nearest_context_value(
+                        candidates,
+                        "candidate_net",
+                    ),
+                    "nearest_netted_layer": nearest_context_value(
+                        candidates,
+                        "candidate_layer",
+                    ),
+                    "nearest_same_layer_distance_um": nearest_context_value(
+                        same_layer,
+                        "bbox_distance_um",
+                    ),
+                    "nearest_same_layer_net": nearest_context_value(
+                        same_layer,
+                        "candidate_net",
+                    ),
+                    "nearest_supply_like_distance_um": nearest_context_value(
+                        supply_like,
+                        "bbox_distance_um",
+                    ),
+                    "nearest_supply_like_net": nearest_context_value(
+                        supply_like,
+                        "candidate_net",
+                    ),
+                    "context_status": "REVIEW_ONLY_NOT_A_PG_ANCHOR",
+                }
+            )
+        write_tsv(
+            out / "mettp_anchor_context_summary.tsv",
+            [
+                "anchor_index", "shape_type", "net", "layer", "purpose",
+                "llx", "lly", "urx", "ury", "orientation",
+                "minor_width_um", "major_length_um",
+                "netted_area_overlap_count", "netted_boundary_contact_count",
+                "same_layer_exact_pg_contact_count",
+                "same_layer_supply_like_contact_count",
+                "nearest_netted_distance_um", "nearest_netted_net",
+                "nearest_netted_layer", "nearest_same_layer_distance_um",
+                "nearest_same_layer_net", "nearest_supply_like_distance_um",
+                "nearest_supply_like_net", "context_status",
+            ],
+            context_summary_rows,
+        )
+        write_tsv(
+            out / "mettp_netted_shape_context.tsv",
+            [
+                "anchor_index", "selection_scope", "candidate_rank",
+                "anchor_shape_type", "anchor_net", "anchor_layer",
+                "anchor_purpose", "anchor_llx", "anchor_lly", "anchor_urx",
+                "anchor_ury", "candidate_shape_type", "candidate_net",
+                "candidate_net_class", "candidate_layer",
+                "candidate_purpose", "candidate_llx", "candidate_lly",
+                "candidate_urx", "candidate_ury", "layer_relation",
+                "geometry_relation", "x_gap_um", "y_gap_um",
+                "bbox_distance_um", "authorization",
+            ],
+            context_rows,
         )
 
         pg_gate = (
@@ -780,6 +1067,25 @@ def main() -> int:
                     "PASS" if not unattributed_mettp else "FAIL"
                 ),
                 "METTP_OVERLAP_CANDIDATE_COUNT": len(overlap_candidates),
+                "METTP_CONTEXT_REPORT_STATUS": "PASS",
+                "METTP_CONTEXT_CANDIDATE_LIMIT_PER_SCOPE": (
+                    METTP_CONTEXT_CANDIDATE_LIMIT
+                ),
+                "METTP_NETTED_AREA_OVERLAP_CANDIDATE_COUNT": (
+                    netted_area_overlap_count
+                ),
+                "METTP_NETTED_BOUNDARY_CONTACT_CANDIDATE_COUNT": (
+                    netted_boundary_contact_count
+                ),
+                "METTP_SAME_LAYER_EXACT_PG_CONTACT_CANDIDATE_COUNT": (
+                    same_layer_exact_pg_contact_count
+                ),
+                "METTP_SAME_LAYER_SUPPLY_LIKE_CONTACT_CANDIDATE_COUNT": (
+                    same_layer_supply_like_contact_count
+                ),
+                "METTP_CONTEXT_AUTHORIZATION": (
+                    "REVIEW_ONLY_NOT_A_PG_ANCHOR"
+                ),
                 "VERIFIED_WHITESPACE_RECT_COUNT": len(free),
                 "SPADMIC2_DIE_BBOX_UM": die.format(),
                 "GUIDE_SOURCE_RECT": free[0].format(),

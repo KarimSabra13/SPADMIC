@@ -329,6 +329,19 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             )
             self.assertEqual(status["PG_ANCHOR_GATE_STATUS"], "FAIL")
             self.assertEqual(status["DIRECT_METTP_ATTRIBUTION_STATUS"], "FAIL")
+            self.assertEqual(status["METTP_CONTEXT_REPORT_STATUS"], "PASS")
+            self.assertEqual(
+                status["METTP_CONTEXT_AUTHORIZATION"],
+                "REVIEW_ONLY_NOT_A_PG_ANCHOR",
+            )
+            self.assertEqual(
+                status["METTP_NETTED_AREA_OVERLAP_CANDIDATE_COUNT"],
+                "1",
+            )
+            self.assertEqual(
+                status["METTP_SAME_LAYER_EXACT_PG_CONTACT_CANDIDATE_COUNT"],
+                "0",
+            )
             self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "NO")
             self.assertEqual(status["P03_IMPLEMENTATION_AUTHORIZED"], "NO")
             self.assertEqual(status["NEXT_GATE"], "STOP_AND_RECONCILE_PG_ANCHORS")
@@ -375,6 +388,21 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             )
             self.assertIn("DVDD\tMETTPL\tpin", overlap_text)
             self.assertIn("REVIEW_ONLY_NOT_A_PG_ANCHOR", overlap_text)
+            with (output / "mettp_anchor_context_summary.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                context_summary = list(csv.DictReader(handle, delimiter="\t"))
+            self.assertEqual(len(context_summary), 1)
+            self.assertEqual(context_summary[0]["orientation"], "HORIZONTAL")
+            self.assertEqual(
+                context_summary[0]["nearest_supply_like_net"],
+                "DVDD",
+            )
+            self.assertEqual(
+                context_summary[0]["context_status"],
+                "REVIEW_ONLY_NOT_A_PG_ANCHOR",
+            )
             manifest = subprocess.run(
                 ["sha256sum", "-c", "SHA256SUMS"],
                 cwd=output,
@@ -413,6 +441,131 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             self.assertEqual(status["P03_IMPLEMENTATION_AUTHORIZED"], "YES")
             self.assertEqual(status["UNATTRIBUTED_METTP_SHAPE_COUNT"], "0")
             self.assertEqual(status["DIRECT_METTP_ATTRIBUTION_STATUS"], "PASS")
+            self.assertEqual(
+                status["METTP_NETTED_BOUNDARY_CONTACT_CANDIDATE_COUNT"],
+                "0",
+            )
+
+    def test_oa_processor_reports_same_layer_touch_without_authorizing_pg(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=False)
+            with (audit / "spadmic2_top_shapes.tsv").open(
+                "a",
+                encoding="utf-8",
+            ) as handle:
+                handle.write(
+                    "pathSeg\tVDD\tMETTP\tdrawing\t20\t10\t22\t12\n"
+                )
+            output = root / "processed"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, result.stdout)
+            status = self._read_kv(output / "assembly_audit_status.rpt")
+            self.assertEqual(status["PG_ANCHOR_GATE_STATUS"], "FAIL")
+            self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "NO")
+            self.assertEqual(
+                status["METTP_NETTED_BOUNDARY_CONTACT_CANDIDATE_COUNT"],
+                "1",
+            )
+            self.assertEqual(
+                status["METTP_SAME_LAYER_EXACT_PG_CONTACT_CANDIDATE_COUNT"],
+                "1",
+            )
+            with (output / "mettp_netted_shape_context.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                context_rows = list(csv.DictReader(handle, delimiter="\t"))
+            exact_touch = next(
+                row
+                for row in context_rows
+                if row["selection_scope"] == "SAME_LAYER_NETTED_NEAREST"
+                and row["candidate_net"] == "VDD"
+            )
+            self.assertEqual(exact_touch["candidate_net_class"], "EXACT_DIGITAL_PG")
+            self.assertEqual(exact_touch["geometry_relation"], "BOUNDARY_TOUCH")
+            self.assertEqual(
+                exact_touch["authorization"],
+                "REVIEW_ONLY_NOT_A_PG_ANCHOR",
+            )
+
+    def test_oa_processor_does_not_accept_mettp_labels_as_pg_geometry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=False)
+            with (audit / "spadmic2_top_shapes.tsv").open(
+                "a",
+                encoding="utf-8",
+            ) as handle:
+                handle.write("label\tVDD\tMETTP\tpin\t2\t0\t4\t100\n")
+                handle.write("label\tVSS\tMETTP\tpin\t6\t0\t8\t100\n")
+            output = root / "processed"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, result.stdout)
+            status = self._read_kv(output / "assembly_audit_status.rpt")
+            self.assertEqual(status["VDD_METTP_ANCHOR_COUNT"], "0")
+            self.assertEqual(status["VSS_METTP_ANCHOR_COUNT"], "0")
+            self.assertEqual(status["METTP_TOP_SHAPE_COUNT"], "1")
+            self.assertEqual(status["PG_ANCHOR_GATE_STATUS"], "FAIL")
+
+    def test_oa_processor_refuses_populated_output_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit = self._make_processor_audit(root, include_exact_pg=False)
+            output = root / "processed"
+            output.mkdir()
+            sentinel = output / "sentinel.txt"
+            sentinel.write_text("preserve\n", encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROCESSOR),
+                    "--audit-root",
+                    str(audit),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, result.stdout)
+            self.assertIn(
+                "ERROR=immutable processor output already populated:",
+                result.stdout,
+            )
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
+            self.assertEqual([path.name for path in output.iterdir()], ["sentinel.txt"])
 
     def test_oa_processor_rejects_unattributed_mettp_even_with_exact_pg(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
