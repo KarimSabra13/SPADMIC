@@ -293,6 +293,15 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 }
             ],
         )
+        (probe / "virtuoso_export_status.rpt").write_text(
+            "LABEL=SPADMIC2_DIGITAL_PG_ACCESS_VIRTUOSO_EXPORT\n"
+            "SOURCE_MUTATION_AUTHORIZED=NO\n"
+            "OA_EDIT_AUTHORIZED=NO\n"
+            "INSTANCE_TERMINAL_ENUMERATION_POLICY="
+            "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY\n"
+            "STATUS=PASS\n",
+            encoding="utf-8",
+        )
         self._write_tsv(
             source / "processed_contract/verified_digital_whitespace.tsv",
             ["rank", "llx", "lly", "urx", "ury", "area_um2", "status"],
@@ -521,6 +530,20 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             )
             self.assertEqual(status["REVIEW_CANDIDATE_PAIR_STATUS"], "PASS")
             self.assertEqual(
+                status["INSTANCE_TERMINAL_ENUMERATION_POLICY"],
+                "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY",
+            )
+            self.assertEqual(
+                status["INSTANCE_CHIP_PG_MASTER_TERMINAL_COUNT"],
+                "2",
+            )
+            self.assertEqual(
+                status["INSTANCE_CHIP_PG_DISCONNECTED_MASTER_TERMINAL_COUNT"],
+                "1",
+            )
+            self.assertEqual(status["INSTANCE_PIN_VDD_ALL_LAYER_SHAPE_COUNT"], "1")
+            self.assertEqual(status["INSTANCE_PIN_VSS_ALL_LAYER_SHAPE_COUNT"], "1")
+            self.assertEqual(
                 status["NEXT_GATE"],
                 "SELECT_INSTANCE_PIN_PAIR_AND_DEFINE_CANDIDATE_BRIDGES",
             )
@@ -554,6 +577,19 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 output / "mettp_to_supply_access_context.tsv"
             ).read_text(encoding="utf-8")
             self.assertIn("M1\tDDRs2\tDVDD", context)
+            all_layers = (
+                output / "digital_pg_access_all_layers.tsv"
+            ).read_text(encoding="utf-8")
+            self.assertIn(
+                "INSTANCE_MASTER_TERMINAL_PIN\t"
+                "INSTANCE_PIN_EXACT_TERMINAL_NAME",
+                all_layers,
+            )
+            self.assertIn("NO_INSTTERM_CONNECTIVITY", all_layers)
+            layer_summary = (
+                output / "digital_pg_access_layer_summary.tsv"
+            ).read_text(encoding="utf-8")
+            self.assertIn("POSITIVE_AREA_METTP", layer_summary)
             manifest = subprocess.run(
                 ["sha256sum", "-c", "SHA256SUMS"],
                 cwd=output,
@@ -599,6 +635,82 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             self.assertEqual(status["OA_EDIT_AUTHORIZED"], "NO")
             self.assertEqual(status["INNOVUS_AUTHORIZED"], "NO")
 
+    def test_pg_access_classifier_separates_non_mettp_master_pins(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe, source = self._make_pg_probe(root, include_direct_top=False)
+            pin_path = probe / "supply_instance_pins.tsv"
+            with pin_path.open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle, delimiter="\t"))
+            for row in rows:
+                if row["terminal"] in {"DVDD", "DVSS"}:
+                    row["layer"] = "MET3"
+            self._write_tsv(pin_path, list(rows[0]), rows)
+            output = root / "classified"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PG_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--source-audit-root",
+                    str(source),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "digital_pg_access_status.rpt")
+            self.assertEqual(
+                status["INSTANCE_PIN_CHIP_PG_METTP_CANDIDATE_STATUS"],
+                "FAIL",
+            )
+            self.assertEqual(status["INSTANCE_PIN_VDD_ALL_LAYER_SHAPE_COUNT"], "1")
+            self.assertEqual(status["INSTANCE_PIN_VSS_ALL_LAYER_SHAPE_COUNT"], "1")
+            self.assertEqual(
+                status["NEXT_GATE"],
+                "REVIEW_NON_METTP_CHIP_PG_PINS_AND_REQUEST_ROUTABLE_ACCESS",
+            )
+
+    def test_pg_access_classifier_rejects_instterm_only_probe_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe, source = self._make_pg_probe(root, include_direct_top=False)
+            (probe / "virtuoso_export_status.rpt").write_text(
+                "STATUS=PASS\n"
+                "INSTANCE_TERMINAL_ENUMERATION_POLICY=INSTTERMS_ONLY\n",
+                encoding="utf-8",
+            )
+            output = root / "classified"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PG_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--source-audit-root",
+                    str(source),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, result.stdout)
+            status = self._read_kv(output / "digital_pg_access_status.rpt")
+            self.assertIn(
+                "master-terminal enumeration independent of instTerm",
+                status["ERROR"],
+            )
+
     def test_pg_access_probe_is_one_read_only_cadence_action(self) -> None:
         skill = (
             REPO / "TOP" / "pnr" / "scripts" / "probe_spadmic2_digital_pg_access.il"
@@ -620,6 +732,16 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn('dbOpenCellViewByType(libName cellName viewName "" "r")', skill)
         self.assertIn("spadmicPgWriteSupplyInstancePins", skill)
         self.assertIn("dbTransformBBox(fig~>bBox inst~>transform)", skill)
+        instance_writer = skill.split(
+            "procedure(spadmicPgWriteSupplyInstancePins",
+            1,
+        )[1].split("procedure(spadmicPgWriteDirectMettpShapes", 1)[0]
+        self.assertIn("foreach(term master~>terminals", instance_writer)
+        self.assertNotIn("foreach(instTerm inst~>instTerms", instance_writer)
+        self.assertIn(
+            "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY",
+            skill,
+        )
         self.assertIn("SPADMIC_PG_CHIP_VDD", skill)
         self.assertIn("SPADMIC_PG_CHIP_VSS", skill)
         self.assertNotIn("dbSave", skill)
@@ -632,6 +754,8 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("SPADMIC_SHA256_SELFTEST_V1", wrapper)
         self.assertIn("evidence_payload.tar.gz.sha256", wrapper)
         self.assertIn("RECOVERY_ARCHIVE_HASH_VERIFY_RC", wrapper)
+        self.assertIn("digital_pg_access_layer_summary.tsv", wrapper)
+        self.assertIn("digital_pg_access_all_layers.tsv", wrapper)
         self.assertIn(
             'echo "RAW_MANIFEST_POST_ARCHIVE_RC=$RAW_MANIFEST_POST_ARCHIVE_RC"',
             wrapper,

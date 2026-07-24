@@ -5812,3 +5812,66 @@ The p03 matrix signal contract remains proven. The next server action is only
 the exact chip-PG access probe against the sealed P11-R11 root. Its reviewed
 pair will determine whether the first isolated Innovus candidate uses direct
 top access or explicit candidate-owned bridges to child `DVDD/DVSS` pins.
+
+### P11-R14 First Exact PG Probe Preserved; Child Coverage Gap Found
+
+The foreground probe at exact commit
+`99dad7ed3d94b2cd09485fa6953902e01d0df331` completed on 2026-07-24 and
+created immutable diagnostic root:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_access_probe_20260724_121715_pid517133
+READ_ONLY_DIGITAL_PG_ACCESS_PROBE_STATUS=PASS_EVIDENCE_READY
+RECOVERY_ARCHIVE_SHA256=66a1b8f8bf72c142f4333ca8faf12f9b9e8bb63a531da8ede0515a9947d0981e
+SOURCE_MANIFEST_PRE_RC=0
+SOURCE_RAW_MANIFEST_PRE_RC=0
+SOURCE_STABILITY_RC=0
+SOURCE_MANIFEST_POST_RC=0
+SOURCE_RAW_MANIFEST_POST_RC=0
+OUTER_MANIFEST_POST_SEAL_RC=0
+WRITABLE_EVIDENCE_PATH=NONE
+```
+
+The transaction and preservation gates passed. Logical mapping also passed:
+
+```text
+SOURCE_TO_LOCAL_PG_MAPPING_STATUS=PASS
+LOCAL_VDD_NET=VDD
+CHIP_VDD_NET=DVDD
+LOCAL_VSS_NET=VSS
+CHIP_VSS_NET=DVSS
+DIRECT_TOP_VDD_METTP_ACCESS_COUNT=0
+DIRECT_TOP_VSS_METTP_ACCESS_COUNT=0
+INSTANCE_PIN_VDD_METTP_CANDIDATE_COUNT=0
+INSTANCE_PIN_VSS_METTP_CANDIDATE_COUNT=0
+P00_P02_IMPLEMENTATION_AUTHORIZED=NO
+P03_IMPLEMENTATION_AUTHORIZED=NO
+```
+
+The direct-top zero counts are valid for the exported top objects. The
+child-instance zero counts are not a complete physical-absence proof: the
+probe iterated `inst~>instTerms`, which omits a physical master terminal when
+the instance has no connected `instTerm`. The immutable July 9 historical
+layout snapshot demonstrates this failure mode with 12 exact `DVDD/DVSS`
+master-terminal rows whose connected-net field is empty, including METTP pin
+pairs on `DDRs2`, `TXRX4TDC2`, and `BOX_RING2`. Those historical coordinates
+are not current authorization and must not be copied into an Innovus bridge.
+
+The corrected read-only probe now iterates every
+`inst~>master~>terminals` entry, transforms every matching pin figure, and
+looks up optional `instTerm` connectivity separately. Its raw status must
+declare:
+
+```text
+INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY
+```
+
+The classifier rejects older extraction policy, emits an exact all-layer
+inventory and layer summary, and keeps positive-area METTP geometry as the
+only bridge-candidate class. A pair found only on lower metal changes the gate
+to request routable access; it does not authorize an inferred via stack.
+
+The next action is one fresh foreground rerun of the corrected probe against
+the unchanged sealed P11-R11 root. Do not replay the old probe root through
+the new classifier, start Genus or Innovus, infer PG from `METTPL` labels, or
+edit OA.

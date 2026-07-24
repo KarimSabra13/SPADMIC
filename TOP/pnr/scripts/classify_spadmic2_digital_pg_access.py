@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONTRACT = ROOT / "TOP/pnr/assembly/spadmic_digital_assembly_contract.json"
 CONDUCTIVE_SHAPE_TYPES = {"PATH", "PATHSEG", "POLYGON", "RECT"}
 CONTEXT_LIMIT_PER_NET = 20
+INSTANCE_TERMINAL_ENUMERATION_POLICY = (
+    "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY"
+)
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,16 @@ def read_tsv(path: Path, required: Iterable[str]) -> list[dict[str, str]]:
         if missing:
             raise ValueError(f"{path}: missing columns {missing}")
         return list(reader)
+
+
+def read_status(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        raise ValueError(f"missing probe status: {path}")
+    return dict(
+        line.split("=", 1)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if "=" in line
+    )
 
 
 def write_tsv(
@@ -147,6 +160,27 @@ def positive_mettp(row: dict[str, str]) -> bool:
         return False
 
 
+def physical_shape_status(row: dict[str, str]) -> str:
+    try:
+        area = rect_from_row(row).area
+    except (KeyError, ValueError):
+        return "NO_PHYSICAL_FIGURE"
+    if area <= 0.0:
+        return "NONPOSITIVE_AREA"
+    if row.get("layer", "").strip().upper() == "METTP":
+        return "POSITIVE_AREA_METTP"
+    return "POSITIVE_AREA_NON_METTP"
+
+
+def connectivity_status(row: dict[str, str], chip_net: str) -> str:
+    net = row.get("net", "").strip().upper()
+    if net in {"", "ABSENT"}:
+        return "NO_INSTTERM_CONNECTIVITY"
+    if net == chip_net:
+        return "CONNECTED_TO_EXACT_CHIP_NET"
+    return "CONNECTED_TO_OTHER_NET"
+
+
 def whitespace_context(
     rect: Rect,
     whitespace: list[dict[str, str]],
@@ -211,6 +245,18 @@ def main() -> int:
             )
         if len(set(mapping.values())) != len(mapping):
             raise ValueError("chip power aliases must be unique")
+
+        export_status = read_status(probe / "virtuoso_export_status.rpt")
+        if export_status.get("STATUS") != "PASS":
+            raise ValueError("PG probe Virtuoso export status is not PASS")
+        if (
+            export_status.get("INSTANCE_TERMINAL_ENUMERATION_POLICY")
+            != INSTANCE_TERMINAL_ENUMERATION_POLICY
+        ):
+            raise ValueError(
+                "PG probe does not prove master-terminal enumeration independent "
+                "of instTerm connectivity"
+            )
 
         source_identity = read_tsv(
             probe / "source_identity.tsv",
@@ -295,6 +341,7 @@ def main() -> int:
         )
 
         candidates: list[dict[str, object]] = []
+        inventory: list[dict[str, object]] = []
 
         def add_candidate(
             row: dict[str, str],
@@ -338,11 +385,61 @@ def main() -> int:
                 }
             )
 
+        def add_inventory(
+            row: dict[str, str],
+            evidence_class: str,
+            source_object: str,
+        ) -> None:
+            resolved = chip_mapping_for_row(row, mapping)
+            if resolved is None:
+                return
+            local_net, chip_net, match_field = resolved
+            inventory.append(
+                {
+                    "local_net": local_net,
+                    "chip_net": chip_net,
+                    "source_object": source_object,
+                    "evidence_class": evidence_class,
+                    "match_field": match_field,
+                    "instance": row.get("instance", "TOP"),
+                    "master_library": row.get("master_library", ""),
+                    "master_cell": row.get("master_cell", ""),
+                    "master_view": row.get("master_view", ""),
+                    "orient": row.get("orient", ""),
+                    "terminal": row.get("terminal", ""),
+                    "connected_net": row.get("net", ""),
+                    "connectivity_status": (
+                        connectivity_status(row, chip_net)
+                        if source_object == "INSTANCE_MASTER_TERMINAL_PIN"
+                        else "TOP_LEVEL"
+                    ),
+                    "shape_type": row.get("shape_type", "PIN_FIG"),
+                    "layer": row.get("layer", ""),
+                    "purpose": row.get("purpose", ""),
+                    "llx": row.get("llx", ""),
+                    "lly": row.get("lly", ""),
+                    "urx": row.get("urx", ""),
+                    "ury": row.get("ury", ""),
+                    "physical_shape_status": physical_shape_status(row),
+                    "mettp_candidate_status": (
+                        "REVIEW_CANDIDATE"
+                        if positive_mettp(row)
+                        else "NOT_METTP_CANDIDATE"
+                    ),
+                    "authorization": "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR",
+                }
+            )
+
         for row in top_shapes:
             if (
                 row["shape_type"].strip().upper() in CONDUCTIVE_SHAPE_TYPES
                 and row["net"].strip().upper() in set(mapping.values())
             ):
+                add_inventory(
+                    row,
+                    "DIRECT_TOP_SHAPE_EXACT_NET",
+                    "TOP_SHAPE",
+                )
                 add_candidate(
                     row,
                     "DIRECT_TOP_SHAPE_EXACT_NET",
@@ -352,6 +449,11 @@ def main() -> int:
         for row in top_terminals:
             resolved = chip_mapping_for_row(row, mapping)
             if resolved is not None:
+                add_inventory(
+                    row,
+                    "TOP_TERMINAL_EXACT_NAME_OR_NET",
+                    "TOP_TERMINAL_PIN",
+                )
                 add_candidate(
                     row,
                     "TOP_TERMINAL_EXACT_NAME_OR_NET",
@@ -368,7 +470,104 @@ def main() -> int:
                 if row["net"].strip().upper() == chip_net
                 else "INSTANCE_PIN_EXACT_TERMINAL_NAME"
             )
+            add_inventory(
+                row,
+                evidence_class,
+                "INSTANCE_MASTER_TERMINAL_PIN",
+            )
             add_candidate(row, evidence_class, "INSTANCE_TERMINAL_PIN")
+
+        inventory_fields = [
+            "local_net",
+            "chip_net",
+            "source_object",
+            "evidence_class",
+            "match_field",
+            "instance",
+            "master_library",
+            "master_cell",
+            "master_view",
+            "orient",
+            "terminal",
+            "connected_net",
+            "connectivity_status",
+            "shape_type",
+            "layer",
+            "purpose",
+            "llx",
+            "lly",
+            "urx",
+            "ury",
+            "physical_shape_status",
+            "mettp_candidate_status",
+            "authorization",
+        ]
+        inventory.sort(
+            key=lambda row: (
+                row["local_net"],
+                str(row["source_object"]),
+                str(row["instance"]),
+                str(row["layer"]),
+                float(row["llx"]) if row["llx"] not in {"", "UNKNOWN"} else math.inf,
+                float(row["lly"]) if row["lly"] not in {"", "UNKNOWN"} else math.inf,
+            )
+        )
+        write_tsv(
+            out / "digital_pg_access_all_layers.tsv",
+            inventory_fields,
+            inventory,
+        )
+
+        summary: dict[tuple[str, ...], dict[str, object]] = {}
+        for row in inventory:
+            key = (
+                str(row["source_object"]),
+                str(row["local_net"]),
+                str(row["chip_net"]),
+                str(row["connectivity_status"]),
+                str(row["layer"]),
+                str(row["purpose"]),
+                str(row["physical_shape_status"]),
+            )
+            if key not in summary:
+                summary[key] = {
+                    "source_object": key[0],
+                    "local_net": key[1],
+                    "chip_net": key[2],
+                    "connectivity_status": key[3],
+                    "layer": key[4],
+                    "purpose": key[5],
+                    "physical_shape_status": key[6],
+                    "row_count": 0,
+                    "instances": set(),
+                }
+            summary[key]["row_count"] = int(summary[key]["row_count"]) + 1
+            if row["instance"] not in {"", "TOP"}:
+                instances = summary[key]["instances"]
+                assert isinstance(instances, set)
+                instances.add(str(row["instance"]))
+        summary_rows: list[dict[str, object]] = []
+        for key in sorted(summary):
+            row = summary[key]
+            instances = row.pop("instances")
+            assert isinstance(instances, set)
+            row["unique_instance_count"] = len(instances)
+            summary_rows.append(row)
+        write_tsv(
+            out / "digital_pg_access_layer_summary.tsv",
+            [
+                "source_object",
+                "local_net",
+                "chip_net",
+                "connectivity_status",
+                "layer",
+                "purpose",
+                "physical_shape_status",
+                "row_count",
+                "unique_instance_count",
+            ],
+            summary_rows,
+        )
 
         candidate_fields = [
             "local_net",
@@ -535,10 +734,36 @@ def main() -> int:
         direct_gate = all(direct_counts[net] > 0 for net in local_nets)
         instance_gate = all(instance_counts[net] > 0 for net in local_nets)
         pair_gate = len(recommendations) == len(local_nets)
+        instance_inventory = [
+            row
+            for row in inventory
+            if row["source_object"] == "INSTANCE_MASTER_TERMINAL_PIN"
+        ]
+        master_terminal_keys = {
+            (str(row["local_net"]), str(row["instance"]), str(row["terminal"]))
+            for row in instance_inventory
+        }
+        disconnected_master_terminal_keys = {
+            (str(row["local_net"]), str(row["instance"]), str(row["terminal"]))
+            for row in instance_inventory
+            if row["connectivity_status"] == "NO_INSTTERM_CONNECTIVITY"
+        }
+        all_layer_instance_counts = {
+            local_net: sum(
+                row["local_net"] == local_net
+                and str(row["physical_shape_status"]).startswith("POSITIVE_AREA_")
+                for row in instance_inventory
+            )
+            for local_net in local_nets
+        }
         if direct_gate:
             next_gate = "REVIEW_DIRECT_CHIP_PG_ACCESS_AND_DEFINE_LOCAL_RAILS"
         elif instance_gate:
             next_gate = "SELECT_INSTANCE_PIN_PAIR_AND_DEFINE_CANDIDATE_BRIDGES"
+        elif all(all_layer_instance_counts[net] > 0 for net in local_nets):
+            next_gate = (
+                "REVIEW_NON_METTP_CHIP_PG_PINS_AND_REQUEST_ROUTABLE_ACCESS"
+            )
         else:
             next_gate = "STOP_AND_REQUEST_CHIP_PG_OWNER_INPUT"
 
@@ -569,6 +794,9 @@ def main() -> int:
                     / "processed_contract/verified_digital_whitespace.tsv"
                 ),
                 "SOURCE_TO_LOCAL_PG_MAPPING_STATUS": "PASS",
+                "INSTANCE_TERMINAL_ENUMERATION_POLICY": (
+                    INSTANCE_TERMINAL_ENUMERATION_POLICY
+                ),
                 "LOCAL_VDD_NET": "VDD",
                 "CHIP_VDD_NET": mapping["VDD"],
                 "LOCAL_VSS_NET": "VSS",
@@ -582,6 +810,18 @@ def main() -> int:
                 "INSTANCE_PIN_VSS_METTP_CANDIDATE_COUNT": instance_counts["VSS"],
                 "INSTANCE_PIN_CHIP_PG_METTP_CANDIDATE_STATUS": (
                     "PASS" if instance_gate else "FAIL"
+                ),
+                "INSTANCE_CHIP_PG_MASTER_TERMINAL_COUNT": len(
+                    master_terminal_keys
+                ),
+                "INSTANCE_CHIP_PG_DISCONNECTED_MASTER_TERMINAL_COUNT": len(
+                    disconnected_master_terminal_keys
+                ),
+                "INSTANCE_PIN_VDD_ALL_LAYER_SHAPE_COUNT": (
+                    all_layer_instance_counts["VDD"]
+                ),
+                "INSTANCE_PIN_VSS_ALL_LAYER_SHAPE_COUNT": (
+                    all_layer_instance_counts["VSS"]
                 ),
                 "REVIEW_CANDIDATE_PAIR_STATUS": "PASS" if pair_gate else "FAIL",
                 "REVIEW_CANDIDATE_COUNT": len(candidates),

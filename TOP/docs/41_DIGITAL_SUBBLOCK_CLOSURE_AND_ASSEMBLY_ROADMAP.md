@@ -1,11 +1,14 @@
 # Digital Subblock Closure and Assembly Roadmap
 
 Status: cumulative soft-assembly flow implemented locally; sealed OA source
-evidence and the complete p03 signal-interface preclassification pass. The
-remaining p00 entry blocker is exact chip-PG access: local `VDD/VSS` maps to
-chip `DVDD/DVSS`, but no reviewed assembly landing/bridge pair is accepted.
-Position and Event OOC results remain immutable supporting evidence, not child
-hard macros on the p00-p03 implementation path. No assembly phase is promoted.
+evidence and the complete p03 signal-interface preclassification pass. Local
+`VDD/VSS` maps to chip `DVDD/DVSS`, but no reviewed assembly landing/bridge
+pair is accepted. The first exact-access probe preserved valid evidence but
+enumerated only connected `instTerms`, so its zero child-pin result is not a
+complete physical-absence proof. A corrected master-terminal probe is the sole
+p00 entry action. Position and Event OOC results remain immutable supporting
+evidence, not child hard macros on the p00-p03 implementation path. No assembly
+phase is promoted.
 
 Date: 2026-07-24.
 
@@ -69,11 +72,13 @@ assembly VSS -> chip DVSS
 
 Name equivalence alone does not select geometry. The read-only
 `server_probe_spadmic2_digital_pg_access.sh` transaction inventories exact
-current top-level and child-instance `DVDD/DVSS` METTP pin geometry, compares
-it with the verified digital whitespace and unattributed direct METTP shapes,
-then seals a manifest-valid recovery archive and the result root. Every
-discovered geometry remains review-only until a separate candidate bridge
-contract is accepted.
+current top-level geometry and every child master `DVDD/DVSS` terminal figure,
+including disconnected terminals that have no `instTerm`. It records optional
+connected-net evidence separately, classifies all physical layers, compares
+positive-area METTP candidates with the verified digital whitespace and
+unattributed direct METTP shapes, then seals a manifest-valid recovery archive
+and the result root. Every discovered geometry remains review-only until a
+separate candidate bridge contract is accepted.
 
 ### Per-Phase Transaction Order
 
@@ -1290,12 +1295,15 @@ LVS is an attributable accepted `MATCH`. No Event PVS rerun is authorized.
 
 ## 13. Immediate Next Action
 
-The current action supersedes the older OOC chronology retained below. Run
+The current action supersedes the older OOC chronology retained below. Rerun
 exactly one foreground, read-only `DVDD/DVSS` access probe against sealed OA
 evidence root
 `spadmic2_matrice5_assembly_audit_20260724_104441_pid30548` and archive hash
 `4fceb15acc3d6dc838c249d1abf2f69ed9937d88a9770b774f3b5c04c014665e`.
-The probe must leave both source OA and the sealed input capsule unchanged.
+The corrected probe must report
+`INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY`.
+The classifier rejects the earlier `instTerms`-only evidence. The probe must
+leave both source OA and the sealed input capsule unchanged.
 
 Review these outputs before changing an implementation gate:
 
@@ -1303,16 +1311,21 @@ Review these outputs before changing an implementation gate:
 processed_classification/digital_pg_access_status.rpt
 processed_classification/digital_pg_review_pair.tsv
 processed_classification/digital_pg_access_candidates.tsv
+processed_classification/digital_pg_access_layer_summary.tsv
+processed_classification/digital_pg_access_all_layers.tsv
 processed_classification/mettp_to_supply_access_context.tsv
 ```
 
 If exact top-level `DVDD` and `DVSS` METTP access both pass, define local
 candidate rails against those shapes. If only exact child-instance pins pass,
 select one reviewed pin per supply and define explicit candidate-owned bridge
-geometry from the verified whitespace. In either case, run one fresh Innovus
-candidate per bridge method and require regular connectivity, special PG
-connectivity, DRC, timing, and export gates separately. The probe itself does
-not authorize Genus, Innovus, or an OA edit.
+geometry from the verified whitespace. If both aliases exist only below
+METTP, request a reviewed routable access or via-stack topology before
+Innovus. If either alias has no physical master-terminal figure, return that
+exact absence to the chip-PG owner. Only after one pair is reviewed may one
+fresh Innovus process test one bridge method; regular connectivity, special PG
+connectivity, DRC, timing, and export remain separate gates. The probe itself
+does not authorize Genus, Innovus, or an OA edit.
 
 P09-R10 parsed the complete accepted Position GDS hierarchy and proved zero
 reachable geometry and text for PAD `19/0`, PIMIDE `221/5`, and NOPIM `46/0`.

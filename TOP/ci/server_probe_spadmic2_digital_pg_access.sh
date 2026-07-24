@@ -528,7 +528,8 @@ done
 require_status_lines "$RAW_ROOT/virtuoso_export_status.rpt" \
     'STATUS=PASS' \
     'SOURCE_MUTATION_AUTHORIZED=NO' \
-    'OA_EDIT_AUTHORIZED=NO'
+    'OA_EDIT_AUTHORIZED=NO' \
+    'INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY'
 if [ "$?" != "0" ]; then
     RAW_EXPORT_GATE_RC=1
 fi
@@ -579,6 +580,7 @@ require_status_lines "$PROCESSED_ROOT/digital_pg_access_status.rpt" \
     'CHIP_VDD_NET=DVDD' \
     'LOCAL_VSS_NET=VSS' \
     'CHIP_VSS_NET=DVSS' \
+    'INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY' \
     "PROCESSOR_SHA256=$CLASSIFIER_SHA256" \
     "CONTRACT_SHA256=$CONTRACT_SHA256" \
     'CANDIDATE_AUTHORIZATION=REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR' \
@@ -856,6 +858,8 @@ for REPORT in \
     "$PROCESSED_ROOT/digital_pg_access_status.rpt" \
     "$PROCESSED_ROOT/digital_pg_review_pair.tsv" \
     "$PROCESSED_ROOT/digital_pg_access_candidates.tsv" \
+    "$PROCESSED_ROOT/digital_pg_access_layer_summary.tsv" \
+    "$PROCESSED_ROOT/digital_pg_access_all_layers.tsv" \
     "$PROCESSED_ROOT/mettp_to_supply_access_context.tsv"
 do
     echo

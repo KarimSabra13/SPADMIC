@@ -138,49 +138,63 @@ procedure(spadmicPgWriteSupplyTopShapes(cv path)
   )
 )
 
+procedure(spadmicPgConnectedNetName(inst termName)
+  let((netName instTerm)
+    netName = nil
+    foreach(instTerm inst~>instTerms
+      when(instTerm~>term &&
+           instTerm~>term~>name == termName &&
+           instTerm~>net &&
+           instTerm~>net~>name
+        netName = instTerm~>net~>name
+      )
+    )
+    netName
+  )
+)
+
 procedure(spadmicPgWriteSupplyInstancePins(cv path)
-  let((fp inst master instTerm term termName netName pin fig transformed emitted)
+  let((fp inst master term termName netName pin fig transformed emitted)
     fp = outfile(path "w")
     fprintf(fp "instance\tmaster_library\tmaster_cell\tmaster_view\torient\tterminal\tdirection\tnet\tlayer\tpurpose\tllx\tlly\turx\tury\n")
     foreach(inst cv~>instances
       master = inst~>master
-      foreach(instTerm inst~>instTerms
-        term = instTerm~>term
-        termName = if(term then term~>name else nil)
-        netName = if(instTerm~>net then instTerm~>net~>name else nil)
-        when(spadmicPgMatchesSupply(termName) ||
-             spadmicPgMatchesSupply(netName)
-          emitted = nil
-          when(term
+      when(master
+        foreach(term master~>terminals
+          termName = term~>name
+          netName = spadmicPgConnectedNetName(inst termName)
+          when(spadmicPgMatchesSupply(termName) ||
+               spadmicPgMatchesSupply(netName)
+            emitted = nil
             foreach(pin term~>pins
               foreach(fig pin~>figs
                 transformed = dbTransformBBox(fig~>bBox inst~>transform)
                 fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
                   spadmicPgText(inst~>name)
-                  if(master then spadmicPgText(master~>libName) else "ABSENT")
-                  if(master then spadmicPgText(master~>cellName) else "ABSENT")
-                  if(master then spadmicPgText(master~>viewName) else "ABSENT")
+                  spadmicPgText(master~>libName)
+                  spadmicPgText(master~>cellName)
+                  spadmicPgText(master~>viewName)
                   spadmicPgText(inst~>orient)
                   spadmicPgText(termName)
                   spadmicPgText(term~>direction)
-                  spadmicPgNetName(instTerm)
+                  spadmicPgText(netName)
                   spadmicPgLayer(fig)
                   spadmicPgPurpose(fig)
                   spadmicPgBox(transformed))
                 emitted = t
               )
             )
-          )
-          unless(emitted
-            fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tABSENT\tABSENT\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\n"
-              spadmicPgText(inst~>name)
-              if(master then spadmicPgText(master~>libName) else "ABSENT")
-              if(master then spadmicPgText(master~>cellName) else "ABSENT")
-              if(master then spadmicPgText(master~>viewName) else "ABSENT")
-              spadmicPgText(inst~>orient)
-              spadmicPgText(termName)
-              if(term then spadmicPgText(term~>direction) else "ABSENT")
-              spadmicPgNetName(instTerm))
+            unless(emitted
+              fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tABSENT\tABSENT\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\n"
+                spadmicPgText(inst~>name)
+                spadmicPgText(master~>libName)
+                spadmicPgText(master~>cellName)
+                spadmicPgText(master~>viewName)
+                spadmicPgText(inst~>orient)
+                spadmicPgText(termName)
+                spadmicPgText(term~>direction)
+                spadmicPgText(netName))
+            )
           )
         )
       )
@@ -250,6 +264,7 @@ let((outRoot runResult statusFp)
       fprintf(statusFp "LABEL=SPADMIC2_DIGITAL_PG_ACCESS_VIRTUOSO_EXPORT\n")
       fprintf(statusFp "SOURCE_MUTATION_AUTHORIZED=NO\n")
       fprintf(statusFp "OA_EDIT_AUTHORIZED=NO\n")
+      fprintf(statusFp "INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY\n")
       if(runResult then
         fprintf(statusFp "STATUS=PASS\n")
       else
