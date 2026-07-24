@@ -632,6 +632,15 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("SPADMIC_SHA256_SELFTEST_V1", wrapper)
         self.assertIn("evidence_payload.tar.gz.sha256", wrapper)
         self.assertIn("RECOVERY_ARCHIVE_HASH_VERIFY_RC", wrapper)
+        self.assertIn(
+            'echo "RAW_MANIFEST_POST_ARCHIVE_RC=$RAW_MANIFEST_POST_ARCHIVE_RC"',
+            wrapper,
+        )
+        self.assertIn(
+            'echo "PROCESSED_MANIFEST_POST_ARCHIVE_RC='
+            '$PROCESSED_MANIFEST_POST_ARCHIVE_RC"',
+            wrapper,
+        )
         self.assertIn("DO_NOT_START_GENUS_INNOVUS_OR_EDIT_OA", wrapper)
         self.assertNotIn("\ngenus ", wrapper)
         self.assertNotIn("\ninnovus ", wrapper)
