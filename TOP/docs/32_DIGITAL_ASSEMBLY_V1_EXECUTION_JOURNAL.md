@@ -5709,3 +5709,52 @@ cross-layer context, and nearest supply-like nets. Every derived candidate
 remains `REVIEW_ONLY_NOT_A_PG_ANCHOR`; proximity never changes the direct
 exact-VDD/VSS authorization rule. The next transaction uses the sealed raw
 payload above and does not start Cadence.
+
+### P11-R12 Processor-Only METTP Context Passed; No PG Anchor Was Proven
+
+The processor-only replay at exact commit
+`daecb77e55fc931fa6b8b71ccd4a20d07d7d0869` completed on 2026-07-24
+without Cadence, Genus, Innovus, or an OA edit. It consumed only the sealed
+P11-R11 raw payload and wrote a new sibling root:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_matrice5_mettp_context_replay_20260724_113950_pid69067
+PROCESSOR_ONLY_METTP_CONTEXT_STATUS=PASS_EVIDENCE_READY
+REPLAY_RC=0
+PROCESS_RC=2
+STATUS_GATE_RC=0
+REPLAY_MANIFEST_PRE_SEAL_RC=0
+REPLAY_MANIFEST_POST_SEAL_RC=0
+REPLAY_WRITABLE_PATH=NONE
+SOURCE_MANIFEST_POST_RC=0
+RAW_MANIFEST_POST_RC=0
+SOURCE_WRITABLE_PATH_POST=NONE
+```
+
+`PROCESS_RC=2` remains the expected rejected-contract result. Wrapper success
+means that the derived review evidence is complete, manifest-valid, and
+read-only; it does not mean that the PG gate passed.
+
+No direct METTP shape has positive-area overlap, boundary contact, or
+same-layer contact with any netted conductive shape. The nearest-net summary
+is:
+
+| Anchor | Geometry | Nearest netted context | Distance | Classification |
+| --- | --- | --- | ---: | --- |
+| 1 | horizontal, `0.440 x 816.225 um` | `I183\|VDDO_CLK_N`, `MET4/pin` | `0.420000 um` | cross-layer, separated |
+| 2 | vertical, `10.000 x 298.025 um` | `I183\|PSUB_AVSS`, `MET4/pin` | `105.105000 um` | cross-layer, separated |
+| 3 | vertical, `10.000 x 297.530 um` | `I183\|PSUB_AVSS`, `MET4/pin` | `107.224689 um` | cross-layer, separated |
+
+`VDDO_CLK_N` and `PSUB_AVSS` are only supply-like lexical context. They are
+not exact digital `VDD` or `VSS`, and none touches a candidate anchor.
+Consequently all three rows remain
+`REVIEW_ONLY_NOT_A_PG_ANCHOR`; the two visually rail-like vertical segments
+cannot be assigned power or ground by shape, ordering, or proximity.
+
+Automatic geometry classification is now exhausted. The next gate is a
+reviewed chip-supply and anchor-ownership contract identifying the intended
+digital power and ground domains and exact physically connected OA access
+shapes. A read-only connectivity or via-provenance extraction may support
+that decision, but absent-net geometry cannot authorize implementation.
+Do not relabel a shape, infer `VDD/VSS` from a nearby hierarchical net, start
+Genus, or edit OA.
