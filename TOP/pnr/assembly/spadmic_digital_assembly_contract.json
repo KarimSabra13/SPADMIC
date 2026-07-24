@@ -66,6 +66,10 @@
     "ordinary_signal_layers": ["MET1", "MET2", "MET3"],
     "mettp_policy": "PG_AND_BOUNDED_PIN_ACCESS_ONLY",
     "power_nets": ["VDD", "VSS"],
+    "digital_to_chip_power_net_map": {
+      "VDD": "DVDD",
+      "VSS": "DVSS"
+    },
     "standard_cell_fill": "REQUIRED",
     "metal_fill": "DEFER_TO_FINAL_CHIP_INTEGRATION"
   },

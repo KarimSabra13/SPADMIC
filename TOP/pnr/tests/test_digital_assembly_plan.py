@@ -16,6 +16,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 GENERATOR = REPO / "TOP" / "pnr" / "scripts" / "gen_spadmic_digital_assembly_v1.py"
 PROCESSOR = REPO / "TOP" / "pnr" / "scripts" / "process_spadmic2_assembly_audit.py"
+PG_CLASSIFIER = (
+    REPO / "TOP" / "pnr" / "scripts" / "classify_spadmic2_digital_pg_access.py"
+)
 CONTRACT = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_contract.json"
 UNKNOWN_POLICY = REPO / "TOP" / "pnr" / "assembly" / "matrice5_unknown_family_policy.csv"
 RTL = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_v1.sv"
@@ -259,6 +262,194 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         )
         return audit
 
+    def _make_pg_probe(self, root: Path, include_direct_top: bool) -> tuple[Path, Path]:
+        probe = root / "pg_probe"
+        probe.mkdir()
+        source = root / "sealed_source"
+        (source / "processed_contract").mkdir(parents=True)
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        self._write_tsv(
+            probe / "source_identity.tsv",
+            [
+                "role",
+                "library",
+                "cell",
+                "view",
+                "filesystem_path",
+                "open_status",
+                "bbox",
+            ],
+            [
+                {
+                    "role": "spadmic2",
+                    "library": contract["source_layouts"]["spadmic2"]["library"],
+                    "cell": contract["source_layouts"]["spadmic2"]["cell"],
+                    "view": contract["source_layouts"]["spadmic2"]["view"],
+                    "filesystem_path": contract["source_layouts"]["spadmic2"][
+                        "filesystem_path"
+                    ],
+                    "open_status": "PASS",
+                    "bbox": "0 0 200 200",
+                }
+            ],
+        )
+        self._write_tsv(
+            source / "processed_contract/verified_digital_whitespace.tsv",
+            ["rank", "llx", "lly", "urx", "ury", "area_um2", "status"],
+            [
+                {
+                    "rank": "1",
+                    "llx": "-100",
+                    "lly": "0",
+                    "urx": "0",
+                    "ury": "200",
+                    "area_um2": "20000",
+                    "status": "VERIFIED_EMPTY",
+                }
+            ],
+        )
+        common_shape_fields = [
+            "shape_type",
+            "net",
+            "layer",
+            "purpose",
+            "llx",
+            "lly",
+            "urx",
+            "ury",
+        ]
+        direct_rows = [
+            {
+                "shape_type": "pathSeg",
+                "net": "ABSENT",
+                "layer": "METTP",
+                "purpose": "drawing",
+                "llx": "10",
+                "lly": "40",
+                "urx": "12",
+                "ury": "80",
+            }
+        ]
+        self._write_tsv(
+            probe / "direct_mettp_shapes.tsv",
+            common_shape_fields,
+            direct_rows,
+        )
+        top_supply_rows: list[dict[str, str]] = []
+        if include_direct_top:
+            top_supply_rows = [
+                {
+                    "shape_type": "rect",
+                    "net": "DVDD",
+                    "layer": "METTP",
+                    "purpose": "drawing",
+                    "llx": "-20",
+                    "lly": "10",
+                    "urx": "-18",
+                    "ury": "190",
+                },
+                {
+                    "shape_type": "rect",
+                    "net": "DVSS",
+                    "layer": "METTP",
+                    "purpose": "drawing",
+                    "llx": "-30",
+                    "lly": "10",
+                    "urx": "-28",
+                    "ury": "190",
+                },
+            ]
+        self._write_tsv(
+            probe / "supply_top_shapes.tsv",
+            common_shape_fields,
+            top_supply_rows,
+        )
+        self._write_tsv(
+            probe / "supply_top_terminals.tsv",
+            [
+                "terminal",
+                "direction",
+                "net",
+                "layer",
+                "purpose",
+                "llx",
+                "lly",
+                "urx",
+                "ury",
+            ],
+            [],
+        )
+        self._write_tsv(
+            probe / "supply_instance_pins.tsv",
+            [
+                "instance",
+                "master_library",
+                "master_cell",
+                "master_view",
+                "orient",
+                "terminal",
+                "direction",
+                "net",
+                "layer",
+                "purpose",
+                "llx",
+                "lly",
+                "urx",
+                "ury",
+            ],
+            [
+                {
+                    "instance": "M1",
+                    "master_library": "SPADMIC",
+                    "master_cell": "DDRs2",
+                    "master_view": "layout",
+                    "orient": "R0",
+                    "terminal": "DVDD",
+                    "direction": "inputOutput",
+                    "net": "ABSENT",
+                    "layer": "METTP",
+                    "purpose": "pin",
+                    "llx": "5",
+                    "lly": "100",
+                    "urx": "7",
+                    "ury": "130",
+                },
+                {
+                    "instance": "M1",
+                    "master_library": "SPADMIC",
+                    "master_cell": "DDRs2",
+                    "master_view": "layout",
+                    "orient": "R0",
+                    "terminal": "DVSS",
+                    "direction": "inputOutput",
+                    "net": "DVSS",
+                    "layer": "METTP",
+                    "purpose": "pin",
+                    "llx": "5",
+                    "lly": "140",
+                    "urx": "7",
+                    "ury": "170",
+                },
+                {
+                    "instance": "I_LOCAL",
+                    "master_library": "D_CELLS_JIHD",
+                    "master_cell": "ON22JIHDX1",
+                    "master_view": "layout",
+                    "orient": "R0",
+                    "terminal": "VDD",
+                    "direction": "inputOutput",
+                    "net": "VDD",
+                    "layer": "METTP",
+                    "purpose": "pin",
+                    "llx": "-90",
+                    "lly": "20",
+                    "urx": "-88",
+                    "ury": "40",
+                },
+            ],
+        )
+        return probe, source
+
     def test_contract_defines_exact_cumulative_soft_phase_order(self) -> None:
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(contract["schema"], "spadmic.digital_assembly.contract.v2")
@@ -276,6 +467,10 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertEqual(contract["physical_policy"]["ordinary_signal_layers"], ["MET1", "MET2", "MET3"])
         self.assertEqual(contract["physical_policy"]["target_utilization"], 0.60)
         self.assertEqual(contract["physical_policy"]["max_local_density"], 0.70)
+        self.assertEqual(
+            contract["physical_policy"]["digital_to_chip_power_net_map"],
+            {"VDD": "DVDD", "VSS": "DVSS"},
+        )
         self.assertEqual(contract["phases"]["p03_matrix_interface"]["allowed_density_rules"], ["R1M1", "R1M2", "R1M3", "R1MT"])
         self.assertEqual(contract["source_layouts"]["matrice5"]["library"], "SPADMIC")
         self.assertEqual(
@@ -286,6 +481,161 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             self.assertEqual(contract["phases"][phase]["density_gate"], "NOT_RUN")
         self.assertIn("BLOCKED", contract["deferred"]["p04_mptdc_frontend"])
         self.assertEqual(contract["deferred"]["p05_csr_i2c"], "DEFERRED")
+
+    def test_pg_access_classifier_keeps_instance_pin_candidates_review_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe, source = self._make_pg_probe(root, include_direct_top=False)
+            output = root / "classified"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PG_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--source-audit-root",
+                    str(source),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "digital_pg_access_status.rpt")
+            self.assertEqual(status["STATUS"], "PASS")
+            self.assertEqual(status["LOCAL_VDD_NET"], "VDD")
+            self.assertEqual(status["CHIP_VDD_NET"], "DVDD")
+            self.assertEqual(status["LOCAL_VSS_NET"], "VSS")
+            self.assertEqual(status["CHIP_VSS_NET"], "DVSS")
+            self.assertEqual(
+                status["DIRECT_TOP_CHIP_PG_METTP_ACCESS_STATUS"],
+                "FAIL",
+            )
+            self.assertEqual(
+                status["INSTANCE_PIN_CHIP_PG_METTP_CANDIDATE_STATUS"],
+                "PASS",
+            )
+            self.assertEqual(status["REVIEW_CANDIDATE_PAIR_STATUS"], "PASS")
+            self.assertEqual(
+                status["NEXT_GATE"],
+                "SELECT_INSTANCE_PIN_PAIR_AND_DEFINE_CANDIDATE_BRIDGES",
+            )
+            self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "NO")
+
+            with (output / "digital_pg_review_pair.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                pair = list(csv.DictReader(handle, delimiter="\t"))
+            self.assertEqual({row["local_net"] for row in pair}, {"VDD", "VSS"})
+            self.assertTrue(all(row["instance"] == "M1" for row in pair))
+            vdd = next(row for row in pair if row["local_net"] == "VDD")
+            vss = next(row for row in pair if row["local_net"] == "VSS")
+            self.assertEqual(
+                vdd["evidence_class"],
+                "INSTANCE_PIN_EXACT_TERMINAL_NAME",
+            )
+            self.assertEqual(
+                vss["evidence_class"],
+                "INSTANCE_PIN_EXACT_CONNECTED_NET",
+            )
+            self.assertTrue(
+                all(
+                    row["authorization"]
+                    == "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR"
+                    for row in pair
+                )
+            )
+            context = (
+                output / "mettp_to_supply_access_context.tsv"
+            ).read_text(encoding="utf-8")
+            self.assertIn("M1\tDDRs2\tDVDD", context)
+            manifest = subprocess.run(
+                ["sha256sum", "-c", "SHA256SUMS"],
+                cwd=output,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(manifest.returncode, 0, manifest.stdout)
+
+    def test_pg_access_classifier_distinguishes_direct_top_alias_access(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe, source = self._make_pg_probe(root, include_direct_top=True)
+            output = root / "classified"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PG_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--source-audit-root",
+                    str(source),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "digital_pg_access_status.rpt")
+            self.assertEqual(
+                status["DIRECT_TOP_CHIP_PG_METTP_ACCESS_STATUS"],
+                "PASS",
+            )
+            self.assertEqual(
+                status["NEXT_GATE"],
+                "REVIEW_DIRECT_CHIP_PG_ACCESS_AND_DEFINE_LOCAL_RAILS",
+            )
+            self.assertEqual(status["OA_EDIT_AUTHORIZED"], "NO")
+            self.assertEqual(status["INNOVUS_AUTHORIZED"], "NO")
+
+    def test_pg_access_probe_is_one_read_only_cadence_action(self) -> None:
+        skill = (
+            REPO / "TOP" / "pnr" / "scripts" / "probe_spadmic2_digital_pg_access.il"
+        ).read_text()
+        wrapper_path = (
+            REPO / "TOP" / "ci" / "server_probe_spadmic2_digital_pg_access.sh"
+        )
+        wrapper = wrapper_path.read_text()
+        syntax = subprocess.run(
+            ["bash", "-n", str(wrapper_path)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stdout)
+        self.assertTrue(os.access(wrapper_path, os.X_OK))
+        self.assertEqual(wrapper.count('"$VIRTUOSO_BIN" -nograph'), 1)
+        self.assertIn('dbOpenCellViewByType(libName cellName viewName "" "r")', skill)
+        self.assertIn("spadmicPgWriteSupplyInstancePins", skill)
+        self.assertIn("dbTransformBBox(fig~>bBox inst~>transform)", skill)
+        self.assertIn("SPADMIC_PG_CHIP_VDD", skill)
+        self.assertIn("SPADMIC_PG_CHIP_VSS", skill)
+        self.assertNotIn("dbSave", skill)
+        self.assertNotIn("dbCreate", skill)
+        self.assertNotIn("dbDelete", skill)
+        self.assertIn('inventory_tree "$TOP_OA_PATH"', wrapper)
+        self.assertIn('"$CHMOD_BIN" -R a-w "$RAW_ROOT"', wrapper)
+        self.assertIn('"$CHMOD_BIN" -R a-w "$PROCESSED_ROOT"', wrapper)
+        self.assertIn('"$CHMOD_BIN" -R a-w "$DIAGNOSTIC_ROOT"', wrapper)
+        self.assertIn("SPADMIC_SHA256_SELFTEST_V1", wrapper)
+        self.assertIn("evidence_payload.tar.gz.sha256", wrapper)
+        self.assertIn("RECOVERY_ARCHIVE_HASH_VERIFY_RC", wrapper)
+        self.assertIn("DO_NOT_START_GENUS_INNOVUS_OR_EDIT_OA", wrapper)
+        self.assertNotIn("\ngenus ", wrapper)
+        self.assertNotIn("\ninnovus ", wrapper)
+        self.assertNotIn("\nrm ", wrapper)
 
     def test_oa_processor_reconciles_physical_inputoutput_and_isolated_matrix_pins(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -756,8 +1106,11 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 self.assertIn("HARD_MACRO_COUNT=0", status)
                 self.assertIn("CHILD_GDS_MERGE_COUNT=0", status)
                 self.assertIn("SIGNAL_ROUTE_LAYERS=MET1-MET3", status)
+                self.assertIn("CHIP_POWER_NET_MAP=VDD:DVDD,VSS:DVSS", status)
                 self.assertIn("variable hard_macro_count 0", config)
                 self.assertIn("variable child_gds_merge_count 0", config)
+                self.assertIn("set chip_power_net_map(VDD) {DVDD}", config)
+                self.assertIn("set chip_power_net_map(VSS) {DVSS}", config)
                 self.assertIn("set pg_anchors(VDD)", config)
                 self.assertIn("set pg_anchors(VSS)", config)
                 with (output / "matrix_proxy_pin_plan.tsv").open(newline="") as handle:

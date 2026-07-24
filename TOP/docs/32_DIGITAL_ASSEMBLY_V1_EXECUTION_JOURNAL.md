@@ -5758,3 +5758,57 @@ shapes. A read-only connectivity or via-provenance extraction may support
 that decision, but absent-net geometry cannot authorize implementation.
 Do not relabel a shape, infer `VDD/VSS` from a nearby hierarchical net, start
 Genus, or edit OA.
+
+### P11-R13 Chip PG Naming Confirmed; Exact Access Probe Prepared
+
+The chip-domain naming question is now resolved by owner input:
+
+```text
+assembly VDD -> chip DVDD
+assembly VSS -> chip DVSS
+```
+
+This answers only logical domain equivalence. It does not authorize any of the
+three absent-net direct METTP shapes, select an instance pin, or define bridge
+geometry. The physical blocker therefore remains narrower and measurable:
+identify exact current METTP pin geometry whose terminal or connected net is
+literally `DVDD` or `DVSS`, then review one pair relative to the verified
+digital whitespace.
+
+Commit-local implementation now provides one foreground read-only transaction:
+
+```text
+TOP/ci/server_probe_spadmic2_digital_pg_access.sh
+TOP/pnr/scripts/probe_spadmic2_digital_pg_access.il
+TOP/pnr/scripts/classify_spadmic2_digital_pg_access.py
+```
+
+The SKILL probe opens only `SPADMIC/SPADMIC2/layout` in read mode. It exports
+top supply nets, top terminals, top shapes, transformed child-instance supply
+pin boxes, and all direct METTP shapes. The CPU classifier binds local
+`VDD/VSS` semantics to exact chip aliases `DVDD/DVSS`, rejects local-only
+child pin names as chip-access proof, ranks exact candidates by evidence class
+and distance to verified whitespace, and labels every result
+`REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR`.
+
+The server wrapper revalidates the sealed P11-R11 source capsule and detached
+archive, requires the source to remain read-only, records canonical OA
+pre/post inventories, seals raw evidence before CPU classification, verifies
+all manifests, runs the fixed-payload checksum self-test, seals the processed
+payload before archiving, creates and verifies a detached-hash recovery
+archive, and seals the new root recursively. Its success means only
+`PASS_EVIDENCE_READY`; it leaves Genus, Innovus, and OA edits unauthorized.
+
+The machine-readable phase table is reconciled with this state:
+
+```text
+p00_tx=BLOCKED_BY_DVDD_DVSS_ACCESS_CONTRACT
+p01_position=BLOCKED_BY_P00_REVIEW
+p02_event_control=BLOCKED_BY_P01_REVIEW
+p03_matrix_interface=BLOCKED_BY_P02_REVIEW
+```
+
+The p03 matrix signal contract remains proven. The next server action is only
+the exact chip-PG access probe against the sealed P11-R11 root. Its reviewed
+pair will determine whether the first isolated Innovus candidate uses direct
+top access or explicit candidate-owned bridges to child `DVDD/DVSS` pins.

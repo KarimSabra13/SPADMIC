@@ -1,11 +1,13 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: cumulative soft-assembly flow implemented locally; server execution
-has not started. Position and Event OOC results remain immutable supporting
-evidence, but they are not child hard macros on the p00-p03 implementation
-path. No assembly phase is promoted.
+Status: cumulative soft-assembly flow implemented locally; sealed OA source
+evidence and the complete p03 signal-interface preclassification pass. The
+remaining p00 entry blocker is exact chip-PG access: local `VDD/VSS` maps to
+chip `DVDD/DVSS`, but no reviewed assembly landing/bridge pair is accepted.
+Position and Event OOC results remain immutable supporting evidence, not child
+hard macros on the p00-p03 implementation path. No assembly phase is promoted.
 
-Date: 2026-07-21.
+Date: 2026-07-24.
 
 This document is the execution authority for building the matrix-top digital
 logic as four cumulative fresh-from-RTL phases. It preserves the TX, Position,
@@ -58,6 +60,21 @@ overlap, boundary contact, and nearest-net context remain review-only. Unknown
 matrix terminal families block p03 only when they fail the reviewed physical
 policy; they do not invalidate a reviewed p00-p02 contract.
 
+The logical-to-chip PG naming contract is explicit:
+
+```text
+assembly VDD -> chip DVDD
+assembly VSS -> chip DVSS
+```
+
+Name equivalence alone does not select geometry. The read-only
+`server_probe_spadmic2_digital_pg_access.sh` transaction inventories exact
+current top-level and child-instance `DVDD/DVSS` METTP pin geometry, compares
+it with the verified digital whitespace and unattributed direct METTP shapes,
+then seals a manifest-valid recovery archive and the result root. Every
+discovered geometry remains review-only until a separate candidate bridge
+contract is accepted.
+
 ### Per-Phase Transaction Order
 
 For each phase, use one foreground EDA action and stop for review after every
@@ -65,15 +82,17 @@ transaction:
 
 ```text
 1. server_audit_spadmic2_assembly_contract.sh       # once, read-only OA
-2. server_preflight_digital_assembly_phase.sh       # phase contract + RTL checks
-3. server_run_digital_assembly_phase_genus.sh       # exactly one Genus action
-4. server_run_digital_assembly_phase_innovus.sh     # exactly one Innovus action
-5. server_stage_digital_assembly_phase_handoff.sh   # immutable exact-name package
-6. server_preflight_digital_assembly_phase_pvs.sh   # controls only; PVS not executed
-7. server_run_digital_assembly_phase_pvs.sh ... base
-8. p03 only: server_run_digital_assembly_phase_pvs.sh ... density
-9. server_run_digital_assembly_phase_pvs.sh ... lvs
-10. review the phase gate before starting the next phase
+2. server_probe_spadmic2_digital_pg_access.sh       # current PG blocker only
+3. review and bind one local-VDD/VSS to chip-DVDD/DVSS bridge contract
+4. server_preflight_digital_assembly_phase.sh       # phase contract + RTL checks
+5. server_run_digital_assembly_phase_genus.sh       # exactly one Genus action
+6. server_run_digital_assembly_phase_innovus.sh     # exactly one Innovus action
+7. server_stage_digital_assembly_phase_handoff.sh   # immutable exact-name package
+8. server_preflight_digital_assembly_phase_pvs.sh   # controls only; PVS not executed
+9. server_run_digital_assembly_phase_pvs.sh ... base
+10. p03 only: server_run_digital_assembly_phase_pvs.sh ... density
+11. server_run_digital_assembly_phase_pvs.sh ... lvs
+12. review the phase gate before starting the next phase
 ```
 
 p00-p02 deliberately skip density. Their accepted physical tuple is base DRC
@@ -135,9 +154,10 @@ The matched GDS remains useful as an immutable diagnostic and Virtuoso repair
 baseline. Any physical edit changes its hash and requires new base DRC,
 density DRC, and explicit LVS evidence.
 
-The packet debt does not prevent independent OOC work on the next digital
-blocks. It does prevent promotion of the `p00_tx` assembly and therefore
-prevents inserting a new child into an allegedly approved parent checkpoint.
+The packet debt does not prevent the fresh cumulative `p00_tx` build because
+that phase does not reuse the provisional packet GDS as a child hard macro.
+It remains diagnostic evidence: the new p00 implementation must independently
+pass its own timing, connectivity, DRC, export, and exact-GDS LVS gates.
 
 ## 2. Sources of Truth
 
@@ -171,6 +191,7 @@ TOP/pnr/assembly/spadmic_digital_assembly_contract.json
 TOP/pnr/assembly/matrice5_unknown_family_policy.csv
 TOP/pnr/assembly/spadmic_digital_assembly_v1.sv
 TOP/ci/server_audit_spadmic2_assembly_contract.sh
+TOP/ci/server_probe_spadmic2_digital_pg_access.sh
 TOP/ci/server_preflight_digital_assembly_phase.sh
 TOP/ci/server_run_digital_assembly_phase_genus.sh
 TOP/ci/server_run_digital_assembly_phase_innovus.sh
@@ -179,6 +200,8 @@ TOP/ci/server_preflight_digital_assembly_phase_pvs.sh
 TOP/ci/server_run_digital_assembly_phase_pvs.sh
 TOP/ci/server_prepare_digital_assembly_p03_oa_insertion.sh
 TOP/ci/server_insert_digital_assembly_p03_into_spadmic2.sh
+TOP/pnr/scripts/probe_spadmic2_digital_pg_access.il
+TOP/pnr/scripts/classify_spadmic2_digital_pg_access.py
 TOP/docs/34_INNOVUS_22_33_PG_ROUTING_COMMAND_NOTES.md
 TOP/docs/38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md
 TOP/docs/39_TX_PACKET_CORE_PVS_BASE_DRC_NON_ANTENNA_ANALYSIS.md
@@ -1161,10 +1184,10 @@ used for promotion.
 
 | Phase | Entry gate | Added content | Exit gate |
 | --- | --- | --- | --- |
-| `p00_tx` | exact TX child packages | packet + strip | promoted TX phase package |
-| `p01_position` | promoted `p00_tx` | hard position core | promoted position phase |
-| `p02_event_control` | promoted `p01_position` | hard event + soft central control | promoted event phase |
-| `p03_matrix_interface` | promoted `p02_event_control` | matrix-interface soft guide | promoted matrix phase |
+| `p00_tx` | accepted source audit plus reviewed `VDD/VSS -> DVDD/DVSS` bridge contract | fresh soft packet + strip RTL | TC timing, Innovus physical gates, base DRC zero, exact-GDS LVS `MATCH` |
+| `p01_position` | promoted `p00_tx` exact package | fresh cumulative p00 + Position RTL | TC timing, Innovus physical gates, base DRC zero, exact-GDS LVS `MATCH` |
+| `p02_event_control` | promoted `p01_position` exact package | fresh cumulative p01 + Event/control RTL | TC timing, Innovus physical gates, base DRC zero, exact-GDS LVS `MATCH` |
+| `p03_matrix_interface` | promoted `p02_event_control` plus accepted matrix proxy contract | fresh cumulative p02 + matrix-interface RTL | TC timing, Innovus physical gates, base+density DRC pass, exact-GDS LVS `MATCH` |
 | `p04_mptdc_frontend` | final MPTDC abstracts and pin contract | MPTDC frontend/corridor | currently blocked |
 | `p05_csr_i2c` | promoted `p04` plus pad contract | CSR/I2C | deferred |
 
@@ -1180,13 +1203,14 @@ ready flag:
 
 | Scope | Current attributable state | Remaining gate | Assembly effect |
 | --- | --- | --- | --- |
-| TX packet core | exact-GDS LVS `MATCH`; provisional physical baseline | 4 Innovus MET1 minimum-area markers, 135 PVS antenna results, density not run | blocks `p00_tx` promotion |
-| TX DDR strip | signal route DRC/connectivity clean | internal PG reconstruction, mapped GDS, base+density DRC, LVS | blocks `p00_tx` promotion |
+| SPADMIC2/matrice5 OA | sealed source/export evidence passes; source identity, exact M182, 560 matrix proxies, and p03 interface pass | exact reviewed `DVDD/DVSS` physical access and candidate bridge contract | sole blocker before cumulative `p00_tx` preflight |
+| TX packet core OOC | exact-GDS LVS `MATCH`; provisional physical baseline | 4 Innovus MET1 minimum-area markers, 135 PVS antenna results, density not run | supporting diagnostic only; not reused as a p00 hard macro |
+| TX DDR strip OOC | signal route DRC/connectivity clean | internal PG reconstruction, mapped GDS, base+density DRC, LVS | supporting diagnostic only; p00 rebuilds this logic from RTL |
 | TX implementation children | `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and `ddrs2_adapter` abstracts are ready for top review | parent/package-level PG and PVS remain | supporting leaf evidence only; do not place as duplicate top macros |
-| Position core | base DRC `PASS`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p01_position` still waits for promoted `p00_tx` and density disposition |
-| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged; base DRC `PASS` with `0 (0)`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p02_event_control` still waits for promoted `p01` and density disposition |
+| Position core OOC | base DRC `PASS`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | diagnostic guidance only; p01 rebuilds Position cumulatively from RTL |
+| Event coordinator OOC | TC Genus boundary `PASS`; grid-fit Innovus clean; base DRC `PASS`; density has four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | diagnostic guidance only; p02 rebuilds Event cumulatively from RTL |
 | Central control | stable RTL in a soft guide | assembled timing, congestion, connectivity, and verification | inserted only with `p02_event_control` |
-| Matrix interface | stable RTL in a soft guide | guided placement, pin access, congestion, timing, DRC/LVS | inserted only after promoted `p02` |
+| Matrix interface | exact family parity and all 560 proxy shapes pass | guided placement, pin access, congestion, timing, DRC/LVS | signal contract ready; phase still waits for promoted `p02` |
 | MPTDC/TC frontend | route corridor and three axis blockages reserved | final MPTDC abstracts and exact pin contract are missing | hard stop at `p04_mptdc_frontend`; no invented dimensions or pins |
 | CSR/I2C | RTL present; physical wrapper deferred | promoted `p04`, pad contract, physical wrapper, assembled verification | deferred `p05_csr_i2c` |
 
@@ -1265,6 +1289,30 @@ preparation and pin parity. Event base PVS DRC is an attributable `0 (0)`
 LVS is an attributable accepted `MATCH`. No Event PVS rerun is authorized.
 
 ## 13. Immediate Next Action
+
+The current action supersedes the older OOC chronology retained below. Run
+exactly one foreground, read-only `DVDD/DVSS` access probe against sealed OA
+evidence root
+`spadmic2_matrice5_assembly_audit_20260724_104441_pid30548` and archive hash
+`4fceb15acc3d6dc838c249d1abf2f69ed9937d88a9770b774f3b5c04c014665e`.
+The probe must leave both source OA and the sealed input capsule unchanged.
+
+Review these outputs before changing an implementation gate:
+
+```text
+processed_classification/digital_pg_access_status.rpt
+processed_classification/digital_pg_review_pair.tsv
+processed_classification/digital_pg_access_candidates.tsv
+processed_classification/mettp_to_supply_access_context.tsv
+```
+
+If exact top-level `DVDD` and `DVSS` METTP access both pass, define local
+candidate rails against those shapes. If only exact child-instance pins pass,
+select one reviewed pin per supply and define explicit candidate-owned bridge
+geometry from the verified whitespace. In either case, run one fresh Innovus
+candidate per bridge method and require regular connectivity, special PG
+connectivity, DRC, timing, and export gates separately. The probe itself does
+not authorize Genus, Innovus, or an OA edit.
 
 P09-R10 parsed the complete accepted Position GDS hierarchy and proved zero
 reachable geometry and text for PAD `19/0`, PIMIDE `221/5`, and NOPIM `46/0`.

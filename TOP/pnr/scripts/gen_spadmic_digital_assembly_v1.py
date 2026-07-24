@@ -203,11 +203,14 @@ def render_config(
         "  variable signal_bottom_layer {MET1}",
         "  variable signal_top_layer {MET3}",
         "  variable mettp_policy {PG_AND_BOUNDED_PIN_ACCESS_ONLY}",
+        "  variable chip_power_net_map",
         "  variable hard_macro_count 0",
         "  variable child_gds_merge_count 0",
         "  variable groups {" + " ".join(str(group) for group in phase_data["groups"]) + "}",
         "  variable group_patterns",
     ]
+    for local_net, chip_net in physical["digital_to_chip_power_net_map"].items():
+        lines.append(f"  set chip_power_net_map({local_net}) {{{chip_net}}}")
     for group in phase_data["groups"]:
         lines.append(f"  set group_patterns({group}) {{{GROUP_PATTERNS[str(group)]}}}")
     lines.extend(["  variable guides", "  variable obstacles", "  variable pg_anchors"])
@@ -330,6 +333,12 @@ def main() -> int:
         "SPADMIC2_DIE_BBOX_UM": audit_status["SPADMIC2_DIE_BBOX_UM"],
         "SIGNAL_ROUTE_LAYERS": "MET1-MET3",
         "METTP_POLICY": "PG_AND_BOUNDED_PIN_ACCESS_ONLY",
+        "CHIP_POWER_NET_MAP": ",".join(
+            f"{local}:{chip}"
+            for local, chip in contract["physical_policy"][
+                "digital_to_chip_power_net_map"
+            ].items()
+        ),
         "PG_ANCHOR_STATUS": "PASS",
         "DENSITY_GATE": phase_data["density_gate"],
         "METAL_FILL_STATUS": "DEFERRED_TO_FINAL_CHIP_INTEGRATION",
