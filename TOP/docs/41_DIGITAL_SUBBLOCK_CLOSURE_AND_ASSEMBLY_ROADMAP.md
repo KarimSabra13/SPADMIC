@@ -74,7 +74,11 @@ Name equivalence alone does not select geometry. The read-only
 `server_probe_spadmic2_digital_pg_access.sh` transaction inventories exact
 current top-level geometry and every child master `DVDD/DVSS` terminal figure,
 including disconnected terminals that have no `instTerm`. It records optional
-connected-net evidence separately, classifies all physical layers, compares
+connected-net evidence separately. For child figures it also records the OA
+object type, transform provenance, master-local bbox, and top-level bbox.
+Only a database transform or a bbox-verified ordinary-instance reconstruction
+may produce candidate coordinates; unresolved mosaic or nonstandard transforms
+remain master-local review evidence. The classifier compares eligible
 positive-area METTP candidates with the verified digital whitespace and
 unattributed direct METTP shapes, then seals a manifest-valid recovery archive
 and the result root. Every discovered geometry remains review-only until a
@@ -1295,15 +1299,23 @@ LVS is an attributable accepted `MATCH`. No Event PVS rerun is authorized.
 
 ## 13. Immediate Next Action
 
-The current action supersedes the older OOC chronology retained below. Rerun
-exactly one foreground, read-only `DVDD/DVSS` access probe against sealed OA
-evidence root
+The current action supersedes the older OOC chronology retained below. The
+master-terminal retry at commit `8e3d7260be1105319c4b37cc2721b2c8a5242019`
+stopped before classification on
+`dbTransformBBox: Invalid transform - nil`. Source stability and both sealed
+source manifests remained clean; the incomplete writable output root is not
+evidence. Rerun exactly one foreground, read-only `DVDD/DVSS` access probe
+with explicit transform provenance against sealed OA evidence root
 `spadmic2_matrice5_assembly_audit_20260724_104441_pid30548` and archive hash
 `4fceb15acc3d6dc838c249d1abf2f69ed9937d88a9770b774f3b5c04c014665e`.
 The corrected probe must report
-`INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY`.
-The classifier rejects the earlier `instTerms`-only evidence. The probe must
-leave both source OA and the sealed input capsule unchanged.
+`INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_TRANSFORM_PROVENANCE_V2`.
+It must also report
+`INSTANCE_TRANSFORM_POLICY=DB_TRANSFORM_OR_BBOX_VERIFIED_XY_ORIENT_UNIT_MAG_STANDARD_INSTANCE`
+and `UNAVAILABLE_TRANSFORM_POLICY=MASTER_LOCAL_ONLY_NOT_A_CANDIDATE`.
+The classifier rejects the earlier extraction policies and any unproven
+top-level coordinates. The probe must leave both source OA and the sealed input
+capsule unchanged.
 
 Review these outputs before changing an implementation gate:
 
@@ -1321,11 +1333,14 @@ candidate rails against those shapes. If only exact child-instance pins pass,
 select one reviewed pin per supply and define explicit candidate-owned bridge
 geometry from the verified whitespace. If both aliases exist only below
 METTP, request a reviewed routable access or via-stack topology before
-Innovus. If either alias has no physical master-terminal figure, return that
-exact absence to the chip-PG owner. Only after one pair is reviewed may one
-fresh Innovus process test one bridge method; regular connectivity, special PG
-connectivity, DRC, timing, and export remain separate gates. The probe itself
-does not authorize Genus, Innovus, or an OA edit.
+Innovus. If exact chip-PG figures exist but their instance transform is
+unavailable, resolve that object or mosaic transform before claiming absence.
+Only when every relevant transform is proven and either alias has no physical
+master-terminal figure may that exact absence return to the chip-PG owner.
+Only after one pair is reviewed may one fresh Innovus process test one bridge
+method; regular connectivity, special PG connectivity, DRC, timing, and export
+remain separate gates. The probe itself does not authorize Genus, Innovus, or
+an OA edit.
 
 P09-R10 parsed the complete accepted Position GDS hierarchy and proved zero
 reachable geometry and text for PAD `19/0`, PIMIDE `221/5`, and NOPIM `46/0`.

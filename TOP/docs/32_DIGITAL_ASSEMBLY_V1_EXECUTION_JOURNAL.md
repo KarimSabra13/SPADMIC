@@ -5875,3 +5875,79 @@ The next action is one fresh foreground rerun of the corrected probe against
 the unchanged sealed P11-R11 root. Do not replay the old probe root through
 the new classifier, start Genus or Innovus, infer PG from `METTPL` labels, or
 edit OA.
+
+### P11-R15 Master-Terminal Retry Rejected a Nil Instance Transform
+
+The foreground retry at exact commit
+`8e3d7260be1105319c4b37cc2721b2c8a5242019` passed its repository, source
+capsule, detached archive, checksum-tool, and no-active-process preflight. It
+created the incomplete diagnostic root:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_access_probe_20260724_124926_pid706040
+```
+
+Virtuoso opened the exact `SPADMIC/SPADMIC2/layout` source read-only and
+reached master-terminal extraction, then stopped on:
+
+```text
+SPADMIC_PG_PROBE_PROGRESS=WRITE_SUPPLY_EVIDENCE
+*Error* dbTransformBBox: Invalid transform - nil
+SPADMIC_PG_PROBE_COMPLETION_STATUS=FAIL
+RAW_EXPORT_GATE_RC=1
+CLASSIFIER_RC=NOT_RUN
+READ_ONLY_DIGITAL_PG_ACCESS_PROBE_STATUS=FAIL
+```
+
+This is an extractor failure, not a source mutation or a negative physical
+access result. The source evidence remained attributable:
+
+```text
+SOURCE_MANIFEST_PRE_RC=0
+SOURCE_RAW_MANIFEST_PRE_RC=0
+SOURCE_STABILITY_RC=0
+SOURCE_MANIFEST_POST_RC=0
+SOURCE_RAW_MANIFEST_POST_RC=0
+```
+
+The failed output root is deliberately not a sealed evidence capsule:
+`OUTER_MANIFEST_POST_SEAL_RC=1` and its root remained writable. No
+classification ran, so it cannot prove the presence or absence of a current
+`DVDD/DVSS` access pair. No Genus, Innovus, or OA edit occurred.
+
+The fault came from treating every object returned by `cv~>instances` as an
+ordinary instance with one non-null transform. The failed log does not record
+the offending object type because the crash occurred before the row was
+written, so a mosaic is a supported hypothesis rather than a proven
+classification.
+
+The corrected extractor now records explicit transform provenance for every
+matching master-terminal figure:
+
+```text
+INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_TRANSFORM_PROVENANCE_V2
+INSTANCE_TRANSFORM_POLICY=DB_TRANSFORM_OR_BBOX_VERIFIED_XY_ORIENT_UNIT_MAG_STANDARD_INSTANCE
+UNAVAILABLE_TRANSFORM_POLICY=MASTER_LOCAL_ONLY_NOT_A_CANDIDATE
+```
+
+An ordinary object may use its OA database transform. If that value is absent,
+only an object whose type is exactly `inst` may reconstruct
+`(xy orient 1.0)`, and that reconstruction is accepted only when the
+transformed master bbox equals the instance bbox. Any mosaic or other
+nonstandard object with no transform is exported with its object type,
+master-local pin bbox, `UNKNOWN` top coordinates, and an unavailable-transform
+status. The CPU classifier keeps that row in the all-layer inventory but marks
+it `REJECT_UNPROVEN_TOP_COORDINATES`; it cannot become a METTP bridge
+candidate.
+
+If a complete proven top or child METTP pair exists, review can continue even
+when unrelated transforms are unresolved, with transform coverage reported
+separately. If no complete pair exists and an exact chip-PG terminal has only
+master-local coordinates, the next gate is
+`STOP_AND_RESOLVE_UNAVAILABLE_INSTANCE_TRANSFORMS`, not the incorrect
+`STOP_AND_REQUEST_CHIP_PG_OWNER_INPUT`.
+
+The next action remains one fresh foreground read-only probe against the
+unchanged sealed P11-R11 source capsule. Review the transform coverage and the
+exact pair before defining any bridge geometry. Do not reuse the failed
+P11-R15 root, start Genus or Innovus, or edit OA.

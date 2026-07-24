@@ -18,8 +18,17 @@ DEFAULT_CONTRACT = ROOT / "TOP/pnr/assembly/spadmic_digital_assembly_contract.js
 CONDUCTIVE_SHAPE_TYPES = {"PATH", "PATHSEG", "POLYGON", "RECT"}
 CONTEXT_LIMIT_PER_NET = 20
 INSTANCE_TERMINAL_ENUMERATION_POLICY = (
-    "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY"
+    "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_"
+    "TRANSFORM_PROVENANCE_V2"
 )
+INSTANCE_TRANSFORM_POLICY = (
+    "DB_TRANSFORM_OR_BBOX_VERIFIED_XY_ORIENT_UNIT_MAG_STANDARD_INSTANCE"
+)
+UNAVAILABLE_TRANSFORM_POLICY = "MASTER_LOCAL_ONLY_NOT_A_CANDIDATE"
+ELIGIBLE_INSTANCE_TRANSFORMS = {
+    "DB_INSTANCE_TRANSFORM",
+    "RECONSTRUCTED_XY_ORIENT_UNIT_MAG_BBOX_VERIFIED",
+}
 
 
 @dataclass(frozen=True)
@@ -97,6 +106,15 @@ def rect_from_row(row: dict[str, str]) -> Rect:
     return Rect(*(float(row[key]) for key in ("llx", "lly", "urx", "ury")))
 
 
+def master_rect_from_row(row: dict[str, str]) -> Rect:
+    return Rect(
+        *(
+            float(row[key])
+            for key in ("master_llx", "master_lly", "master_urx", "master_ury")
+        )
+    )
+
+
 def axis_gap(
     first_low: float,
     first_high: float,
@@ -160,7 +178,25 @@ def positive_mettp(row: dict[str, str]) -> bool:
         return False
 
 
-def physical_shape_status(row: dict[str, str]) -> str:
+def instance_transform_eligible(row: dict[str, str]) -> bool:
+    return row.get("transform_status", "") in ELIGIBLE_INSTANCE_TRANSFORMS
+
+
+def physical_shape_status(
+    row: dict[str, str],
+    source_object: str,
+) -> str:
+    if (
+        source_object == "INSTANCE_MASTER_TERMINAL_PIN"
+        and not instance_transform_eligible(row)
+    ):
+        try:
+            master_area = master_rect_from_row(row).area
+        except (KeyError, ValueError):
+            return "NO_PHYSICAL_FIGURE"
+        if master_area <= 0.0:
+            return "NONPOSITIVE_MASTER_LOCAL_AREA"
+        return "MASTER_LOCAL_FIGURE_TOP_COORDINATE_UNAVAILABLE"
     try:
         area = rect_from_row(row).area
     except (KeyError, ValueError):
@@ -170,6 +206,20 @@ def physical_shape_status(row: dict[str, str]) -> str:
     if row.get("layer", "").strip().upper() == "METTP":
         return "POSITIVE_AREA_METTP"
     return "POSITIVE_AREA_NON_METTP"
+
+
+def mettp_candidate_status(
+    row: dict[str, str],
+    source_object: str,
+) -> str:
+    if (
+        source_object == "INSTANCE_MASTER_TERMINAL_PIN"
+        and not instance_transform_eligible(row)
+    ):
+        return "REJECT_UNPROVEN_TOP_COORDINATES"
+    if positive_mettp(row):
+        return "REVIEW_CANDIDATE"
+    return "NOT_METTP_CANDIDATE"
 
 
 def connectivity_status(row: dict[str, str], chip_net: str) -> str:
@@ -255,7 +305,21 @@ def main() -> int:
         ):
             raise ValueError(
                 "PG probe does not prove master-terminal enumeration independent "
-                "of instTerm connectivity"
+                "of instTerm connectivity with explicit transform provenance"
+            )
+        if (
+            export_status.get("INSTANCE_TRANSFORM_POLICY")
+            != INSTANCE_TRANSFORM_POLICY
+        ):
+            raise ValueError(
+                "PG probe instance transform policy is missing or unsupported"
+            )
+        if (
+            export_status.get("UNAVAILABLE_TRANSFORM_POLICY")
+            != UNAVAILABLE_TRANSFORM_POLICY
+        ):
+            raise ValueError(
+                "PG probe unavailable-transform policy is missing or unsupported"
             )
 
         source_identity = read_tsv(
@@ -308,6 +372,7 @@ def main() -> int:
         ]
         instance_pin_fields = [
             "instance",
+            "instance_object_type",
             "master_library",
             "master_cell",
             "master_view",
@@ -317,6 +382,12 @@ def main() -> int:
             "net",
             "layer",
             "purpose",
+            "transform_status",
+            "coordinate_space",
+            "master_llx",
+            "master_lly",
+            "master_urx",
+            "master_ury",
             "llx",
             "lly",
             "urx",
@@ -351,6 +422,11 @@ def main() -> int:
             resolved = chip_mapping_for_row(row, mapping)
             if resolved is None or not positive_mettp(row):
                 return
+            if (
+                source_object == "INSTANCE_TERMINAL_PIN"
+                and not instance_transform_eligible(row)
+            ):
+                return
             local_net, chip_net, match_field = resolved
             rect = rect_from_row(row)
             relation, distance, whitespace_rank = whitespace_context(
@@ -365,12 +441,28 @@ def main() -> int:
                     "evidence_class": evidence_class,
                     "match_field": match_field,
                     "instance": row.get("instance", "TOP"),
+                    "instance_object_type": row.get(
+                        "instance_object_type",
+                        "TOP",
+                    ),
                     "master_library": row.get("master_library", ""),
                     "master_cell": row.get("master_cell", ""),
                     "master_view": row.get("master_view", ""),
                     "orient": row.get("orient", ""),
                     "terminal": row.get("terminal", ""),
                     "connected_net": row.get("net", ""),
+                    "transform_status": row.get(
+                        "transform_status",
+                        "TOP_LEVEL_NOT_APPLICABLE",
+                    ),
+                    "coordinate_space": row.get(
+                        "coordinate_space",
+                        "TOP_CELLVIEW",
+                    ),
+                    "master_llx": row.get("master_llx", "NOT_APPLICABLE"),
+                    "master_lly": row.get("master_lly", "NOT_APPLICABLE"),
+                    "master_urx": row.get("master_urx", "NOT_APPLICABLE"),
+                    "master_ury": row.get("master_ury", "NOT_APPLICABLE"),
                     "shape_type": row.get("shape_type", ""),
                     "layer": row["layer"],
                     "purpose": row["purpose"],
@@ -402,12 +494,28 @@ def main() -> int:
                     "evidence_class": evidence_class,
                     "match_field": match_field,
                     "instance": row.get("instance", "TOP"),
+                    "instance_object_type": row.get(
+                        "instance_object_type",
+                        "TOP",
+                    ),
                     "master_library": row.get("master_library", ""),
                     "master_cell": row.get("master_cell", ""),
                     "master_view": row.get("master_view", ""),
                     "orient": row.get("orient", ""),
                     "terminal": row.get("terminal", ""),
                     "connected_net": row.get("net", ""),
+                    "transform_status": row.get(
+                        "transform_status",
+                        "TOP_LEVEL_NOT_APPLICABLE",
+                    ),
+                    "coordinate_space": row.get(
+                        "coordinate_space",
+                        "TOP_CELLVIEW",
+                    ),
+                    "master_llx": row.get("master_llx", "NOT_APPLICABLE"),
+                    "master_lly": row.get("master_lly", "NOT_APPLICABLE"),
+                    "master_urx": row.get("master_urx", "NOT_APPLICABLE"),
+                    "master_ury": row.get("master_ury", "NOT_APPLICABLE"),
                     "connectivity_status": (
                         connectivity_status(row, chip_net)
                         if source_object == "INSTANCE_MASTER_TERMINAL_PIN"
@@ -420,11 +528,13 @@ def main() -> int:
                     "lly": row.get("lly", ""),
                     "urx": row.get("urx", ""),
                     "ury": row.get("ury", ""),
-                    "physical_shape_status": physical_shape_status(row),
-                    "mettp_candidate_status": (
-                        "REVIEW_CANDIDATE"
-                        if positive_mettp(row)
-                        else "NOT_METTP_CANDIDATE"
+                    "physical_shape_status": physical_shape_status(
+                        row,
+                        source_object,
+                    ),
+                    "mettp_candidate_status": mettp_candidate_status(
+                        row,
+                        source_object,
                     ),
                     "authorization": "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR",
                 }
@@ -484,12 +594,19 @@ def main() -> int:
             "evidence_class",
             "match_field",
             "instance",
+            "instance_object_type",
             "master_library",
             "master_cell",
             "master_view",
             "orient",
             "terminal",
             "connected_net",
+            "transform_status",
+            "coordinate_space",
+            "master_llx",
+            "master_lly",
+            "master_urx",
+            "master_ury",
             "connectivity_status",
             "shape_type",
             "layer",
@@ -507,6 +624,7 @@ def main() -> int:
                 row["local_net"],
                 str(row["source_object"]),
                 str(row["instance"]),
+                str(row["transform_status"]),
                 str(row["layer"]),
                 float(row["llx"]) if row["llx"] not in {"", "UNKNOWN"} else math.inf,
                 float(row["lly"]) if row["lly"] not in {"", "UNKNOWN"} else math.inf,
@@ -525,6 +643,9 @@ def main() -> int:
                 str(row["local_net"]),
                 str(row["chip_net"]),
                 str(row["connectivity_status"]),
+                str(row["instance_object_type"]),
+                str(row["transform_status"]),
+                str(row["coordinate_space"]),
                 str(row["layer"]),
                 str(row["purpose"]),
                 str(row["physical_shape_status"]),
@@ -535,9 +656,12 @@ def main() -> int:
                     "local_net": key[1],
                     "chip_net": key[2],
                     "connectivity_status": key[3],
-                    "layer": key[4],
-                    "purpose": key[5],
-                    "physical_shape_status": key[6],
+                    "instance_object_type": key[4],
+                    "transform_status": key[5],
+                    "coordinate_space": key[6],
+                    "layer": key[7],
+                    "purpose": key[8],
+                    "physical_shape_status": key[9],
                     "row_count": 0,
                     "instances": set(),
                 }
@@ -560,6 +684,9 @@ def main() -> int:
                 "local_net",
                 "chip_net",
                 "connectivity_status",
+                "instance_object_type",
+                "transform_status",
+                "coordinate_space",
                 "layer",
                 "purpose",
                 "physical_shape_status",
@@ -576,12 +703,19 @@ def main() -> int:
             "evidence_class",
             "match_field",
             "instance",
+            "instance_object_type",
             "master_library",
             "master_cell",
             "master_view",
             "orient",
             "terminal",
             "connected_net",
+            "transform_status",
+            "coordinate_space",
+            "master_llx",
+            "master_lly",
+            "master_urx",
+            "master_ury",
             "shape_type",
             "layer",
             "purpose",
@@ -674,9 +808,18 @@ def main() -> int:
                             "anchor_urx": anchor["urx"],
                             "anchor_ury": anchor["ury"],
                             "candidate_instance": candidate["instance"],
+                            "candidate_instance_object_type": candidate[
+                                "instance_object_type"
+                            ],
                             "candidate_master_cell": candidate["master_cell"],
                             "candidate_terminal": candidate["terminal"],
                             "candidate_connected_net": candidate["connected_net"],
+                            "candidate_transform_status": candidate[
+                                "transform_status"
+                            ],
+                            "candidate_coordinate_space": candidate[
+                                "coordinate_space"
+                            ],
                             "candidate_llx": candidate["llx"],
                             "candidate_lly": candidate["lly"],
                             "candidate_urx": candidate["urx"],
@@ -701,9 +844,12 @@ def main() -> int:
                 "anchor_urx",
                 "anchor_ury",
                 "candidate_instance",
+                "candidate_instance_object_type",
                 "candidate_master_cell",
                 "candidate_terminal",
                 "candidate_connected_net",
+                "candidate_transform_status",
+                "candidate_coordinate_space",
                 "candidate_llx",
                 "candidate_lly",
                 "candidate_urx",
@@ -748,6 +894,28 @@ def main() -> int:
             for row in instance_inventory
             if row["connectivity_status"] == "NO_INSTTERM_CONNECTIVITY"
         }
+        transform_eligible_master_terminal_keys = {
+            (str(row["local_net"]), str(row["instance"]), str(row["terminal"]))
+            for row in instance_inventory
+            if str(row["transform_status"]) in ELIGIBLE_INSTANCE_TRANSFORMS
+        }
+        transform_unavailable_master_terminal_keys = {
+            (str(row["local_net"]), str(row["instance"]), str(row["terminal"]))
+            for row in instance_inventory
+            if str(row["transform_status"]) not in ELIGIBLE_INSTANCE_TRANSFORMS
+        }
+        nonstandard_unavailable_master_terminal_keys = {
+            (str(row["local_net"]), str(row["instance"]), str(row["terminal"]))
+            for row in instance_inventory
+            if str(row["transform_status"]) not in ELIGIBLE_INSTANCE_TRANSFORMS
+            and str(row["instance_object_type"]).lower() != "inst"
+        }
+        if not transform_unavailable_master_terminal_keys:
+            transform_coverage_status = "PASS"
+        elif transform_eligible_master_terminal_keys:
+            transform_coverage_status = "PARTIAL"
+        else:
+            transform_coverage_status = "UNAVAILABLE"
         all_layer_instance_counts = {
             local_net: sum(
                 row["local_net"] == local_net
@@ -764,6 +932,8 @@ def main() -> int:
             next_gate = (
                 "REVIEW_NON_METTP_CHIP_PG_PINS_AND_REQUEST_ROUTABLE_ACCESS"
             )
+        elif transform_unavailable_master_terminal_keys:
+            next_gate = "STOP_AND_RESOLVE_UNAVAILABLE_INSTANCE_TRANSFORMS"
         else:
             next_gate = "STOP_AND_REQUEST_CHIP_PG_OWNER_INPUT"
 
@@ -797,6 +967,8 @@ def main() -> int:
                 "INSTANCE_TERMINAL_ENUMERATION_POLICY": (
                     INSTANCE_TERMINAL_ENUMERATION_POLICY
                 ),
+                "INSTANCE_TRANSFORM_POLICY": INSTANCE_TRANSFORM_POLICY,
+                "UNAVAILABLE_TRANSFORM_POLICY": UNAVAILABLE_TRANSFORM_POLICY,
                 "LOCAL_VDD_NET": "VDD",
                 "CHIP_VDD_NET": mapping["VDD"],
                 "LOCAL_VSS_NET": "VSS",
@@ -817,6 +989,21 @@ def main() -> int:
                 "INSTANCE_CHIP_PG_DISCONNECTED_MASTER_TERMINAL_COUNT": len(
                     disconnected_master_terminal_keys
                 ),
+                "INSTANCE_CHIP_PG_TRANSFORM_ELIGIBLE_MASTER_TERMINAL_COUNT": len(
+                    transform_eligible_master_terminal_keys
+                ),
+                "INSTANCE_CHIP_PG_TRANSFORM_UNAVAILABLE_MASTER_TERMINAL_COUNT": (
+                    len(transform_unavailable_master_terminal_keys)
+                ),
+                "INSTANCE_CHIP_PG_NONSTANDARD_UNAVAILABLE_MASTER_TERMINAL_COUNT": (
+                    len(nonstandard_unavailable_master_terminal_keys)
+                ),
+                "INSTANCE_CHIP_PG_TRANSFORM_UNAVAILABLE_ROW_COUNT": sum(
+                    str(row["transform_status"])
+                    not in ELIGIBLE_INSTANCE_TRANSFORMS
+                    for row in instance_inventory
+                ),
+                "INSTANCE_TRANSFORM_COVERAGE_STATUS": transform_coverage_status,
                 "INSTANCE_PIN_VDD_ALL_LAYER_SHAPE_COUNT": (
                     all_layer_instance_counts["VDD"]
                 ),

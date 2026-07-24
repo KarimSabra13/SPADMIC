@@ -153,13 +153,49 @@ procedure(spadmicPgConnectedNetName(inst termName)
   )
 )
 
+procedure(spadmicPgInstanceTransformRecord(inst master)
+  let((transform candidate transformedMaster)
+    transform = inst~>transform
+    cond(
+      (transform
+        list("DB_INSTANCE_TRANSFORM" transform)
+      )
+      (inst~>objType == "inst" && inst~>xy && inst~>orient
+        candidate = list(inst~>xy inst~>orient 1.0)
+        transformedMaster = if(master~>bBox then
+          dbTransformBBox(master~>bBox candidate)
+        else
+          nil)
+        if(transformedMaster && inst~>bBox &&
+           transformedMaster == inst~>bBox then
+          list(
+            "RECONSTRUCTED_XY_ORIENT_UNIT_MAG_BBOX_VERIFIED"
+            candidate)
+        else
+          list("RECONSTRUCTED_TRANSFORM_BBOX_MISMATCH" nil)
+        )
+      )
+      (inst~>objType == "mosaic"
+        list("UNAVAILABLE_MOSAIC_TRANSFORM" nil)
+      )
+      (t
+        list("UNAVAILABLE_NONSTANDARD_INSTANCE_TRANSFORM" nil)
+      )
+    )
+  )
+)
+
 procedure(spadmicPgWriteSupplyInstancePins(cv path)
-  let((fp inst master term termName netName pin fig transformed emitted)
+  let((fp inst master term termName netName pin fig transformed emitted
+       transformRecord transformStatus transform coordinateSpace)
     fp = outfile(path "w")
-    fprintf(fp "instance\tmaster_library\tmaster_cell\tmaster_view\torient\tterminal\tdirection\tnet\tlayer\tpurpose\tllx\tlly\turx\tury\n")
+    fprintf(fp "instance\tinstance_object_type\tmaster_library\tmaster_cell\tmaster_view\torient\tterminal\tdirection\tnet\tlayer\tpurpose\ttransform_status\tcoordinate_space\tmaster_llx\tmaster_lly\tmaster_urx\tmaster_ury\tllx\tlly\turx\tury\n")
     foreach(inst cv~>instances
       master = inst~>master
       when(master
+        transformRecord = spadmicPgInstanceTransformRecord(inst master)
+        transformStatus = car(transformRecord)
+        transform = cadr(transformRecord)
         foreach(term master~>terminals
           termName = term~>name
           netName = spadmicPgConnectedNetName(inst termName)
@@ -168,9 +204,17 @@ procedure(spadmicPgWriteSupplyInstancePins(cv path)
             emitted = nil
             foreach(pin term~>pins
               foreach(fig pin~>figs
-                transformed = dbTransformBBox(fig~>bBox inst~>transform)
-                fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
+                transformed = if(transform then
+                  dbTransformBBox(fig~>bBox transform)
+                else
+                  nil)
+                coordinateSpace = if(transform then
+                  "TOP_CELLVIEW"
+                else
+                  "MASTER_LOCAL_ONLY")
+                fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
                   spadmicPgText(inst~>name)
+                  spadmicPgText(inst~>objType)
                   spadmicPgText(master~>libName)
                   spadmicPgText(master~>cellName)
                   spadmicPgText(master~>viewName)
@@ -180,20 +224,25 @@ procedure(spadmicPgWriteSupplyInstancePins(cv path)
                   spadmicPgText(netName)
                   spadmicPgLayer(fig)
                   spadmicPgPurpose(fig)
+                  transformStatus
+                  coordinateSpace
+                  spadmicPgBox(fig~>bBox)
                   spadmicPgBox(transformed))
                 emitted = t
               )
             )
             unless(emitted
-              fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tABSENT\tABSENT\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\n"
+              fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tABSENT\tABSENT\t%s\tNO_PIN_FIGURE\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\tUNKNOWN\n"
                 spadmicPgText(inst~>name)
+                spadmicPgText(inst~>objType)
                 spadmicPgText(master~>libName)
                 spadmicPgText(master~>cellName)
                 spadmicPgText(master~>viewName)
                 spadmicPgText(inst~>orient)
                 spadmicPgText(termName)
                 spadmicPgText(term~>direction)
-                spadmicPgText(netName))
+                spadmicPgText(netName)
+                transformStatus)
             )
           )
         )
@@ -264,7 +313,9 @@ let((outRoot runResult statusFp)
       fprintf(statusFp "LABEL=SPADMIC2_DIGITAL_PG_ACCESS_VIRTUOSO_EXPORT\n")
       fprintf(statusFp "SOURCE_MUTATION_AUTHORIZED=NO\n")
       fprintf(statusFp "OA_EDIT_AUTHORIZED=NO\n")
-      fprintf(statusFp "INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY\n")
+      fprintf(statusFp "INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_TRANSFORM_PROVENANCE_V2\n")
+      fprintf(statusFp "INSTANCE_TRANSFORM_POLICY=DB_TRANSFORM_OR_BBOX_VERIFIED_XY_ORIENT_UNIT_MAG_STANDARD_INSTANCE\n")
+      fprintf(statusFp "UNAVAILABLE_TRANSFORM_POLICY=MASTER_LOCAL_ONLY_NOT_A_CANDIDATE\n")
       if(runResult then
         fprintf(statusFp "STATUS=PASS\n")
       else

@@ -298,7 +298,12 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             "SOURCE_MUTATION_AUTHORIZED=NO\n"
             "OA_EDIT_AUTHORIZED=NO\n"
             "INSTANCE_TERMINAL_ENUMERATION_POLICY="
-            "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY\n"
+            "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_"
+            "TRANSFORM_PROVENANCE_V2\n"
+            "INSTANCE_TRANSFORM_POLICY="
+            "DB_TRANSFORM_OR_BBOX_VERIFIED_XY_ORIENT_UNIT_MAG_STANDARD_INSTANCE\n"
+            "UNAVAILABLE_TRANSFORM_POLICY="
+            "MASTER_LOCAL_ONLY_NOT_A_CANDIDATE\n"
             "STATUS=PASS\n",
             encoding="utf-8",
         )
@@ -392,6 +397,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             probe / "supply_instance_pins.tsv",
             [
                 "instance",
+                "instance_object_type",
                 "master_library",
                 "master_cell",
                 "master_view",
@@ -401,6 +407,12 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 "net",
                 "layer",
                 "purpose",
+                "transform_status",
+                "coordinate_space",
+                "master_llx",
+                "master_lly",
+                "master_urx",
+                "master_ury",
                 "llx",
                 "lly",
                 "urx",
@@ -409,6 +421,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             [
                 {
                     "instance": "M1",
+                    "instance_object_type": "inst",
                     "master_library": "SPADMIC",
                     "master_cell": "DDRs2",
                     "master_view": "layout",
@@ -418,6 +431,14 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                     "net": "ABSENT",
                     "layer": "METTP",
                     "purpose": "pin",
+                    "transform_status": (
+                        "RECONSTRUCTED_XY_ORIENT_UNIT_MAG_BBOX_VERIFIED"
+                    ),
+                    "coordinate_space": "TOP_CELLVIEW",
+                    "master_llx": "5",
+                    "master_lly": "100",
+                    "master_urx": "7",
+                    "master_ury": "130",
                     "llx": "5",
                     "lly": "100",
                     "urx": "7",
@@ -425,6 +446,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 },
                 {
                     "instance": "M1",
+                    "instance_object_type": "inst",
                     "master_library": "SPADMIC",
                     "master_cell": "DDRs2",
                     "master_view": "layout",
@@ -434,6 +456,12 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                     "net": "DVSS",
                     "layer": "METTP",
                     "purpose": "pin",
+                    "transform_status": "DB_INSTANCE_TRANSFORM",
+                    "coordinate_space": "TOP_CELLVIEW",
+                    "master_llx": "5",
+                    "master_lly": "140",
+                    "master_urx": "7",
+                    "master_ury": "170",
                     "llx": "5",
                     "lly": "140",
                     "urx": "7",
@@ -441,6 +469,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 },
                 {
                     "instance": "I_LOCAL",
+                    "instance_object_type": "inst",
                     "master_library": "D_CELLS_JIHD",
                     "master_cell": "ON22JIHDX1",
                     "master_view": "layout",
@@ -450,6 +479,12 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                     "net": "VDD",
                     "layer": "METTP",
                     "purpose": "pin",
+                    "transform_status": "DB_INSTANCE_TRANSFORM",
+                    "coordinate_space": "TOP_CELLVIEW",
+                    "master_llx": "-90",
+                    "master_lly": "20",
+                    "master_urx": "-88",
+                    "master_ury": "40",
                     "llx": "-90",
                     "lly": "20",
                     "urx": "-88",
@@ -531,7 +566,21 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             self.assertEqual(status["REVIEW_CANDIDATE_PAIR_STATUS"], "PASS")
             self.assertEqual(
                 status["INSTANCE_TERMINAL_ENUMERATION_POLICY"],
-                "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY",
+                "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_"
+                "TRANSFORM_PROVENANCE_V2",
+            )
+            self.assertEqual(status["INSTANCE_TRANSFORM_COVERAGE_STATUS"], "PASS")
+            self.assertEqual(
+                status[
+                    "INSTANCE_CHIP_PG_TRANSFORM_ELIGIBLE_MASTER_TERMINAL_COUNT"
+                ],
+                "2",
+            )
+            self.assertEqual(
+                status[
+                    "INSTANCE_CHIP_PG_TRANSFORM_UNAVAILABLE_MASTER_TERMINAL_COUNT"
+                ],
+                "0",
             )
             self.assertEqual(
                 status["INSTANCE_CHIP_PG_MASTER_TERMINAL_COUNT"],
@@ -563,6 +612,10 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 "INSTANCE_PIN_EXACT_TERMINAL_NAME",
             )
             self.assertEqual(
+                vdd["transform_status"],
+                "RECONSTRUCTED_XY_ORIENT_UNIT_MAG_BBOX_VERIFIED",
+            )
+            self.assertEqual(
                 vss["evidence_class"],
                 "INSTANCE_PIN_EXACT_CONNECTED_NET",
             )
@@ -576,7 +629,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             context = (
                 output / "mettp_to_supply_access_context.tsv"
             ).read_text(encoding="utf-8")
-            self.assertIn("M1\tDDRs2\tDVDD", context)
+            self.assertIn("M1\tinst\tDDRs2\tDVDD", context)
             all_layers = (
                 output / "digital_pg_access_all_layers.tsv"
             ).read_text(encoding="utf-8")
@@ -677,6 +730,66 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 "REVIEW_NON_METTP_CHIP_PG_PINS_AND_REQUEST_ROUTABLE_ACCESS",
             )
 
+    def test_pg_access_classifier_rejects_unresolved_mosaic_coordinates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe, source = self._make_pg_probe(root, include_direct_top=False)
+            pin_path = probe / "supply_instance_pins.tsv"
+            with pin_path.open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle, delimiter="\t"))
+            for row in rows:
+                if row["terminal"] in {"DVDD", "DVSS"}:
+                    row["instance_object_type"] = "mosaic"
+                    row["transform_status"] = "UNAVAILABLE_MOSAIC_TRANSFORM"
+                    row["coordinate_space"] = "MASTER_LOCAL_ONLY"
+                    for field in ("llx", "lly", "urx", "ury"):
+                        row[field] = "UNKNOWN"
+            self._write_tsv(pin_path, list(rows[0]), rows)
+            output = root / "classified"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PG_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--source-audit-root",
+                    str(source),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "digital_pg_access_status.rpt")
+            self.assertEqual(status["INSTANCE_TRANSFORM_COVERAGE_STATUS"], "UNAVAILABLE")
+            self.assertEqual(
+                status[
+                    "INSTANCE_CHIP_PG_TRANSFORM_UNAVAILABLE_MASTER_TERMINAL_COUNT"
+                ],
+                "2",
+            )
+            self.assertEqual(
+                status[
+                    "INSTANCE_CHIP_PG_NONSTANDARD_UNAVAILABLE_MASTER_TERMINAL_COUNT"
+                ],
+                "2",
+            )
+            self.assertEqual(status["REVIEW_CANDIDATE_COUNT"], "0")
+            self.assertEqual(
+                status["NEXT_GATE"],
+                "STOP_AND_RESOLVE_UNAVAILABLE_INSTANCE_TRANSFORMS",
+            )
+            all_layers = (
+                output / "digital_pg_access_all_layers.tsv"
+            ).read_text(encoding="utf-8")
+            self.assertIn("UNAVAILABLE_MOSAIC_TRANSFORM", all_layers)
+            self.assertIn("MASTER_LOCAL_ONLY", all_layers)
+            self.assertIn("REJECT_UNPROVEN_TOP_COORDINATES", all_layers)
+
     def test_pg_access_classifier_rejects_instterm_only_probe_policy(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -731,7 +844,17 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertEqual(wrapper.count('"$VIRTUOSO_BIN" -nograph'), 1)
         self.assertIn('dbOpenCellViewByType(libName cellName viewName "" "r")', skill)
         self.assertIn("spadmicPgWriteSupplyInstancePins", skill)
-        self.assertIn("dbTransformBBox(fig~>bBox inst~>transform)", skill)
+        self.assertNotIn("dbTransformBBox(fig~>bBox inst~>transform)", skill)
+        self.assertIn("spadmicPgInstanceTransformRecord", skill)
+        self.assertIn("dbTransformBBox(fig~>bBox transform)", skill)
+        self.assertIn('inst~>objType == "inst"', skill)
+        self.assertIn('inst~>objType == "mosaic"', skill)
+        self.assertIn(
+            "RECONSTRUCTED_XY_ORIENT_UNIT_MAG_BBOX_VERIFIED",
+            skill,
+        )
+        self.assertIn("UNAVAILABLE_MOSAIC_TRANSFORM", skill)
+        self.assertIn("MASTER_LOCAL_ONLY", skill)
         instance_writer = skill.split(
             "procedure(spadmicPgWriteSupplyInstancePins",
             1,
@@ -739,8 +862,18 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("foreach(term master~>terminals", instance_writer)
         self.assertNotIn("foreach(instTerm inst~>instTerms", instance_writer)
         self.assertIn(
-            "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY",
+            "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_"
+            "TRANSFORM_PROVENANCE_V2",
             skill,
+        )
+        self.assertIn(
+            "MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_"
+            "TRANSFORM_PROVENANCE_V2",
+            wrapper,
+        )
+        self.assertIn(
+            "UNAVAILABLE_TRANSFORM_POLICY=MASTER_LOCAL_ONLY_NOT_A_CANDIDATE",
+            wrapper,
         )
         self.assertIn("SPADMIC_PG_CHIP_VDD", skill)
         self.assertIn("SPADMIC_PG_CHIP_VSS", skill)
