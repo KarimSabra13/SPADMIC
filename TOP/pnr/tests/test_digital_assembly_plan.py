@@ -752,6 +752,92 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("SPADMIC2_SOURCE_DELTA_REPORT=", wrapper)
         self.assertIn("MATRICE5_SOURCE_DELTA_REPORT=", wrapper)
 
+    def test_oa_audit_pins_and_self_tests_checksum_executable(self) -> None:
+        wrapper_path = (
+            REPO / "TOP" / "ci" / "server_audit_spadmic2_assembly_contract.sh"
+        )
+        wrapper = wrapper_path.read_text()
+        syntax = subprocess.run(
+            ["bash", "-n", str(wrapper_path)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stdout)
+        self.assertIn('SHA256SUM_BIN="$(type -P sha256sum 2>/dev/null)"', wrapper)
+        self.assertIn("SPADMIC_SHA256_SELFTEST_V1", wrapper)
+        self.assertIn(
+            "8f07d5176d42a4f11c17a591edc7e38026d0b4e4a31366b9e5a807b5e70cecd5",
+            wrapper,
+        )
+        self.assertIn('"$SHA256SUM_BIN" -c SHA256SUMS', wrapper)
+        self.assertIn("PAYLOAD_MUTATION_AUTHORIZED=NO", wrapper)
+        self.assertNotIn("xargs -0 -r sha256sum", wrapper)
+
+    def test_oa_audit_archives_and_read_only_seals_verified_payloads(self) -> None:
+        wrapper = (
+            REPO / "TOP" / "ci" / "server_audit_spadmic2_assembly_contract.sh"
+        ).read_text()
+        raw_manifest = wrapper.index('create_directory_manifest "$RAW_ROOT"')
+        processor = wrapper.index(
+            'python3 "$REPO/TOP/pnr/scripts/process_spadmic2_assembly_audit.py"'
+        )
+        raw_read_only_seal = wrapper.index(
+            '"$CHMOD_BIN" -R a-w "$RAW_ROOT"'
+        )
+        post_processor = wrapper.index(
+            'RAW_MANIFEST_POST_PROCESS_RC=$?', processor
+        )
+        processed_read_only_seal = wrapper.index(
+            '"$CHMOD_BIN" -R a-w "$PROCESSED_ROOT"'
+        )
+        archive = wrapper.index(
+            '"$TAR_BIN" -czf evidence_payload.tar.gz'
+        )
+        post_archive = wrapper.index(
+            'RAW_MANIFEST_POST_ARCHIVE_RC=$?', archive
+        )
+        outer_manifest = wrapper.index(
+            'create_outer_manifest "$DIAGNOSTIC_ROOT"'
+        )
+        read_only_seal = wrapper.index(
+            '"$CHMOD_BIN" -R a-w "$DIAGNOSTIC_ROOT"'
+        )
+        post_seal = wrapper.index(
+            'POST_SEAL_MANIFEST_RC=$?', read_only_seal
+        )
+        self.assertLess(raw_manifest, processor)
+        self.assertLess(raw_manifest, raw_read_only_seal)
+        self.assertLess(raw_read_only_seal, processor)
+        self.assertLess(processor, post_processor)
+        self.assertLess(post_processor, processed_read_only_seal)
+        self.assertLess(processed_read_only_seal, archive)
+        self.assertLess(post_processor, archive)
+        self.assertLess(archive, post_archive)
+        self.assertLess(post_archive, outer_manifest)
+        self.assertLess(outer_manifest, read_only_seal)
+        self.assertLess(read_only_seal, post_seal)
+        self.assertIn("evidence_payload.tar.gz.sha256", wrapper)
+        self.assertIn("RECOVERY_ARCHIVE_TAR_VERIFY_RC", wrapper)
+        self.assertIn("PROCESSED_MANIFEST_POST_ARCHIVE_RC", wrapper)
+        self.assertIn('RUN_ID="${TIMESTAMP}_pid$$"', wrapper)
+        self.assertIn('mkdir "$DIAGNOSTIC_ROOT"', wrapper)
+        self.assertNotIn('mkdir -p "$RAW_ROOT" "$PROCESSED_ROOT"', wrapper)
+        self.assertIn(
+            '[ "$DIAGNOSTIC_ROOT_CREATE_RC" = "0" ] && \\\n'
+            '   [ -d "$DIAGNOSTIC_ROOT" ]',
+            wrapper,
+        )
+        self.assertIn("! -path './SHA256SUMS'", wrapper)
+        self.assertIn("READ_ONLY_MODE_GATE_RC", wrapper)
+        self.assertIn("SPADMIC2_MATRICE5_EVIDENCE_PRESERVATION_STATUS=PASS", wrapper)
+        self.assertIn("EVIDENCE_ROOT_REUSE_AUTHORIZED=NO", wrapper)
+        self.assertIn(
+            '[ "$RUN_OK" = "1" ] && [ "$EVIDENCE_PRESERVATION_RC" = "0" ]',
+            wrapper,
+        )
+
     def test_innovus_flow_rejects_child_macro_implementation(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.tcl").read_text()
         wrapper = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_digital_assembly.sh").read_text()

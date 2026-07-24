@@ -16,11 +16,19 @@ TOP_OA_PATH=/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC2/layout
 MATRIX_OA_LIBRARY_PATH=/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL
 MATRIX_OA_PATH="$MATRIX_OA_LIBRARY_PATH/matrice5"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-DIAGNOSTIC_ROOT="$WORK_ROOT/diagnostics/spadmic2_matrice5_assembly_audit_$TIMESTAMP"
+RUN_ID="${TIMESTAMP}_pid$$"
+DIAGNOSTIC_PARENT="$WORK_ROOT/diagnostics"
+DIAGNOSTIC_ROOT="$DIAGNOSTIC_PARENT/spadmic2_matrice5_assembly_audit_$RUN_ID"
 RAW_ROOT="$DIAGNOSTIC_ROOT/raw_oa_export"
 PROCESSED_ROOT="$DIAGNOSTIC_ROOT/processed_contract"
 SPADMIC2_SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/spadmic2_session.cds.lib"
 MATRICE5_SESSION_CDS_LIB="$DIAGNOSTIC_ROOT/matrice5_session.cds.lib"
+CHECKSUM_SELFTEST_ROOT="$DIAGNOSTIC_ROOT/checksum_selftest"
+RECOVERY_ARCHIVE="$DIAGNOSTIC_ROOT/evidence_payload.tar.gz"
+RECOVERY_ARCHIVE_SHA256_FILE="$RECOVERY_ARCHIVE.sha256"
+RECOVERY_ARCHIVE_FILELIST="$DIAGNOSTIC_ROOT/evidence_payload_filelist.txt"
+EVIDENCE_SEAL_REPORT="$DIAGNOSTIC_ROOT/evidence_seal_status.rpt"
+EXPECTED_CHECKSUM_SELFTEST_SHA256=8f07d5176d42a4f11c17a591edc7e38026d0b4e4a31366b9e5a807b5e70cecd5
 
 RUN_OK=1
 CD_RC=NOT_RUN
@@ -34,7 +42,16 @@ TRACKED_DIFF_RC=NOT_RUN
 STAGED_DIFF_RC=NOT_RUN
 SOURCE_FILE_GATE_RC=NOT_RUN
 CADENCE_LAUNCH_GATE_RC=NOT_RUN
+EVIDENCE_TOOL_GATE_RC=NOT_RUN
+SHA256SUM_BIN=UNKNOWN
+SHA256SUM_BIN_SHA256=UNKNOWN
+TAR_BIN=UNKNOWN
+CHMOD_BIN=UNKNOWN
+DIAGNOSTIC_PARENT_CREATE_RC=NOT_RUN
+DIAGNOSTIC_ROOT_CREATE_RC=NOT_RUN
+DIAGNOSTIC_PAYLOAD_DIRS_CREATE_RC=NOT_RUN
 DIAGNOSTIC_CREATE_RC=NOT_RUN
+CHECKSUM_SELFTEST_RC=NOT_RUN
 SPADMIC2_SESSION_CDS_LIB_CREATE_RC=NOT_RUN
 MATRICE5_SESSION_CDS_LIB_CREATE_RC=NOT_RUN
 SPADMIC2_VIRTUOSO_RC=NOT_RUN
@@ -43,9 +60,31 @@ SPADMIC2_EXPORT_GATE_RC=NOT_RUN
 MATRICE5_EXPORT_GATE_RC=NOT_RUN
 SOURCE_IDENTITY_COMBINE_RC=NOT_RUN
 OA_EXPORT_GATE_RC=NOT_RUN
+RAW_MANIFEST_CREATE_RC=NOT_RUN
+RAW_MANIFEST_PRE_PROCESS_RC=NOT_RUN
+RAW_READ_ONLY_SEAL_RC=NOT_RUN
+RAW_READ_ONLY_MODE_GATE_RC=NOT_RUN
+RAW_MANIFEST_POST_PROCESS_RC=NOT_RUN
+RAW_MANIFEST_POST_ARCHIVE_RC=NOT_RUN
 PROCESS_RC=NOT_RUN
+PROCESSED_MANIFEST_PRE_ARCHIVE_RC=NOT_RUN
+PROCESSED_READ_ONLY_SEAL_RC=NOT_RUN
+PROCESSED_READ_ONLY_MODE_GATE_RC=NOT_RUN
+PROCESSED_MANIFEST_POST_ARCHIVE_RC=NOT_RUN
 SOURCE_STABILITY_RC=NOT_RUN
+RECOVERY_ARCHIVE_FILELIST_RC=NOT_RUN
+RECOVERY_ARCHIVE_CREATE_RC=NOT_RUN
+RECOVERY_ARCHIVE_TAR_VERIFY_RC=NOT_RUN
+RECOVERY_ARCHIVE_HASH_CREATE_RC=NOT_RUN
+RECOVERY_ARCHIVE_HASH_VERIFY_RC=NOT_RUN
+RECOVERY_ARCHIVE_SHA256=UNKNOWN
+PRESEAL_CAPSULE_RC=NOT_RUN
 MANIFEST_RC=NOT_RUN
+MANIFEST_VERIFY_RC=NOT_RUN
+READ_ONLY_SEAL_RC=NOT_RUN
+READ_ONLY_MODE_GATE_RC=NOT_RUN
+POST_SEAL_MANIFEST_RC=NOT_RUN
+EVIDENCE_PRESERVATION_RC=NOT_RUN
 
 inventory_tree() {
     local source_root="$1"
@@ -62,7 +101,127 @@ inventory_tree() {
         ! -name '*.oa.*.oacache' \
         -print0 2>/dev/null |
         sort -z |
-        xargs -0 -r sha256sum > "$output_file"
+        xargs -0 -r "$SHA256SUM_BIN" > "$output_file"
+}
+
+create_directory_manifest() {
+    local root="$1"
+    (
+        cd "$root"
+        MANIFEST_CD_RC=$?
+        if [ "$MANIFEST_CD_RC" = "0" ]; then
+            find . -type f ! -name SHA256SUMS -print0 |
+                sort -z |
+                xargs -0 -r "$SHA256SUM_BIN" > SHA256SUMS
+        else
+            false
+        fi
+    )
+}
+
+create_outer_manifest() {
+    local root="$1"
+    (
+        cd "$root"
+        MANIFEST_CD_RC=$?
+        if [ "$MANIFEST_CD_RC" = "0" ]; then
+            find . -type f ! -path './SHA256SUMS' -print0 |
+                sort -z |
+                xargs -0 -r "$SHA256SUM_BIN" > SHA256SUMS
+        else
+            false
+        fi
+    )
+}
+
+verify_directory_manifest() {
+    local root="$1"
+    (
+        cd "$root"
+        MANIFEST_CD_RC=$?
+        if [ "$MANIFEST_CD_RC" = "0" ] && [ -r SHA256SUMS ]; then
+            "$SHA256SUM_BIN" -c SHA256SUMS
+        else
+            false
+        fi
+    )
+}
+
+run_checksum_selftest() {
+    local payload="$CHECKSUM_SELFTEST_ROOT/payload.txt"
+    local verify_log="$CHECKSUM_SELFTEST_ROOT/verification.rpt"
+    local status_report="$CHECKSUM_SELFTEST_ROOT/status.rpt"
+    local observed_before=UNKNOWN
+    local observed_after=UNKNOWN
+    local size_before=UNKNOWN
+    local size_after=UNKNOWN
+    local manifest_create_rc=1
+    local manifest_verify_rc=1
+    local result=1
+
+    mkdir -p "$CHECKSUM_SELFTEST_ROOT"
+    SELFTEST_MKDIR_RC=$?
+    if [ "$SELFTEST_MKDIR_RC" = "0" ]; then
+        printf 'SPADMIC_SHA256_SELFTEST_V1\n' > "$payload"
+        SELFTEST_PAYLOAD_CREATE_RC=$?
+    else
+        SELFTEST_PAYLOAD_CREATE_RC=1
+    fi
+
+    if [ "$SELFTEST_PAYLOAD_CREATE_RC" = "0" ]; then
+        observed_before="$("$SHA256SUM_BIN" "$payload" 2>/dev/null | awk '{print $1}')"
+        size_before="$(wc -c < "$payload" 2>/dev/null)"
+        (
+            cd "$CHECKSUM_SELFTEST_ROOT"
+            SELFTEST_CD_RC=$?
+            if [ "$SELFTEST_CD_RC" = "0" ]; then
+                "$SHA256SUM_BIN" payload.txt > SHA256SUMS
+            else
+                false
+            fi
+        )
+        manifest_create_rc=$?
+        if [ "$manifest_create_rc" = "0" ]; then
+            (
+                cd "$CHECKSUM_SELFTEST_ROOT"
+                SELFTEST_CD_RC=$?
+                if [ "$SELFTEST_CD_RC" = "0" ]; then
+                    "$SHA256SUM_BIN" -c SHA256SUMS
+                else
+                    false
+                fi
+            ) > "$verify_log" 2>&1
+            manifest_verify_rc=$?
+        fi
+        observed_after="$("$SHA256SUM_BIN" "$payload" 2>/dev/null | awk '{print $1}')"
+        size_after="$(wc -c < "$payload" 2>/dev/null)"
+    fi
+
+    if [ "$SELFTEST_PAYLOAD_CREATE_RC" = "0" ] && \
+       [ "$manifest_create_rc" = "0" ] && \
+       [ "$manifest_verify_rc" = "0" ] && \
+       [ "$observed_before" = "$EXPECTED_CHECKSUM_SELFTEST_SHA256" ] && \
+       [ "$observed_after" = "$EXPECTED_CHECKSUM_SELFTEST_SHA256" ] && \
+       [ "$size_before" = "27" ] && [ "$size_after" = "27" ]; then
+        result=0
+    fi
+
+    {
+        echo "LABEL=SPADMIC_SHA256_EXECUTABLE_SELFTEST"
+        echo "STATUS=$([ "$result" = "0" ] && echo PASS || echo FAIL)"
+        echo "SHA256SUM_BIN=$SHA256SUM_BIN"
+        echo "SHA256SUM_BIN_SHA256=$SHA256SUM_BIN_SHA256"
+        echo "EXPECTED_PAYLOAD_SHA256=$EXPECTED_CHECKSUM_SELFTEST_SHA256"
+        echo "OBSERVED_PAYLOAD_SHA256_BEFORE=$observed_before"
+        echo "OBSERVED_PAYLOAD_SHA256_AFTER=$observed_after"
+        echo "PAYLOAD_SIZE_BEFORE=$size_before"
+        echo "PAYLOAD_SIZE_AFTER=$size_after"
+        echo "MANIFEST_CREATE_RC=$manifest_create_rc"
+        echo "MANIFEST_VERIFY_RC=$manifest_verify_rc"
+        echo "PAYLOAD_MUTATION_AUTHORIZED=NO"
+    } > "$status_report"
+
+    return "$result"
 }
 
 run_oa_role() {
@@ -157,6 +316,35 @@ if [ "$SOURCE_FILE_GATE_RC" != "0" ]; then
     RUN_OK=0
 fi
 
+EVIDENCE_TOOL_GATE_RC=0
+SHA256SUM_BIN="$(type -P sha256sum 2>/dev/null)"
+TAR_BIN="$(type -P tar 2>/dev/null)"
+CHMOD_BIN="$(type -P chmod 2>/dev/null)"
+for TOOL_BINDING in \
+    "sha256sum:$SHA256SUM_BIN" \
+    "tar:$TAR_BIN" \
+    "chmod:$CHMOD_BIN"
+do
+    TOOL_NAME="${TOOL_BINDING%%:*}"
+    TOOL_PATH="${TOOL_BINDING#*:}"
+    if [ -z "$TOOL_PATH" ] || [ ! -x "$TOOL_PATH" ]; then
+        echo "MISSING_EVIDENCE_EXECUTABLE=$TOOL_NAME"
+        EVIDENCE_TOOL_GATE_RC=1
+    fi
+done
+if [ "$EVIDENCE_TOOL_GATE_RC" = "0" ]; then
+    SHA256SUM_BIN_SHA256="$(
+        "$SHA256SUM_BIN" "$SHA256SUM_BIN" 2>/dev/null |
+            awk '{print $1}'
+    )"
+    if [ -z "$SHA256SUM_BIN_SHA256" ]; then
+        EVIDENCE_TOOL_GATE_RC=1
+    fi
+fi
+if [ "$EVIDENCE_TOOL_GATE_RC" != "0" ]; then
+    RUN_OK=0
+fi
+
 CADENCE_LAUNCH_GATE_RC=0
 if [ ! -d "$CADENCE_LAUNCH_DIR" ]; then
     echo "MISSING_CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
@@ -181,9 +369,33 @@ if [ "$CADENCE_LAUNCH_GATE_RC" != "0" ]; then
 fi
 
 if [ "$RUN_OK" = "1" ]; then
-    mkdir -p "$RAW_ROOT" "$PROCESSED_ROOT"
-    DIAGNOSTIC_CREATE_RC=$?
+    mkdir -p "$DIAGNOSTIC_PARENT"
+    DIAGNOSTIC_PARENT_CREATE_RC=$?
+    if [ "$DIAGNOSTIC_PARENT_CREATE_RC" = "0" ]; then
+        mkdir "$DIAGNOSTIC_ROOT"
+        DIAGNOSTIC_ROOT_CREATE_RC=$?
+    else
+        DIAGNOSTIC_ROOT_CREATE_RC=1
+    fi
+    if [ "$DIAGNOSTIC_ROOT_CREATE_RC" = "0" ]; then
+        mkdir "$RAW_ROOT" "$PROCESSED_ROOT"
+        DIAGNOSTIC_PAYLOAD_DIRS_CREATE_RC=$?
+    else
+        DIAGNOSTIC_PAYLOAD_DIRS_CREATE_RC=1
+    fi
+    if [ "$DIAGNOSTIC_PARENT_CREATE_RC" = "0" ] && \
+       [ "$DIAGNOSTIC_ROOT_CREATE_RC" = "0" ] && \
+       [ "$DIAGNOSTIC_PAYLOAD_DIRS_CREATE_RC" = "0" ]; then
+        DIAGNOSTIC_CREATE_RC=0
+    else
+        DIAGNOSTIC_CREATE_RC=1
+    fi
     if [ "$DIAGNOSTIC_CREATE_RC" = "0" ]; then
+        run_checksum_selftest
+        CHECKSUM_SELFTEST_RC=$?
+    fi
+    if [ "$DIAGNOSTIC_CREATE_RC" = "0" ] && \
+       [ "$CHECKSUM_SELFTEST_RC" = "0" ]; then
         echo "INCLUDE $CADENCE_CDS_LIB" > "$SPADMIC2_SESSION_CDS_LIB"
         SPADMIC2_SESSION_CDS_LIB_CREATE_RC=$?
         {
@@ -194,6 +406,7 @@ if [ "$RUN_OK" = "1" ]; then
         MATRICE5_SESSION_CDS_LIB_CREATE_RC=$?
     fi
     if [ "$DIAGNOSTIC_CREATE_RC" != "0" ] || \
+       [ "$CHECKSUM_SELFTEST_RC" != "0" ] || \
        [ "$SPADMIC2_SESSION_CDS_LIB_CREATE_RC" != "0" ] || \
        [ "$MATRICE5_SESSION_CDS_LIB_CREATE_RC" != "0" ]; then
         RUN_OK=0
@@ -206,13 +419,16 @@ if [ "$RUN_OK" = "1" ]; then
         echo "STATUS=PASS"
         echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
         echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
-        echo "CADENCE_CDS_LIB_SHA256=$(sha256sum "$CADENCE_CDS_LIB" | awk '{print $1}')"
+        echo "CADENCE_CDS_LIB_SHA256=$("$SHA256SUM_BIN" "$CADENCE_CDS_LIB" | awk '{print $1}')"
+        echo "SHA256SUM_BIN=$SHA256SUM_BIN"
+        echo "SHA256SUM_BIN_SHA256=$SHA256SUM_BIN_SHA256"
+        echo "CHECKSUM_SELFTEST_STATUS=PASS"
         echo "CADENCE_SESSION_CDS_LIB_MODE=PROCESS_ISOLATED_SOURCE_BINDINGS"
         echo "SPADMIC2_SESSION_CDS_LIB=$SPADMIC2_SESSION_CDS_LIB"
-        echo "SPADMIC2_SESSION_CDS_LIB_SHA256=$(sha256sum "$SPADMIC2_SESSION_CDS_LIB" | awk '{print $1}')"
+        echo "SPADMIC2_SESSION_CDS_LIB_SHA256=$("$SHA256SUM_BIN" "$SPADMIC2_SESSION_CDS_LIB" | awk '{print $1}')"
         echo "SPADMIC2_LIBRARY_BINDING=SPADMIC:XFAB_PROJECT_CDS_LIB"
         echo "MATRICE5_SESSION_CDS_LIB=$MATRICE5_SESSION_CDS_LIB"
-        echo "MATRICE5_SESSION_CDS_LIB_SHA256=$(sha256sum "$MATRICE5_SESSION_CDS_LIB" | awk '{print $1}')"
+        echo "MATRICE5_SESSION_CDS_LIB_SHA256=$("$SHA256SUM_BIN" "$MATRICE5_SESSION_CDS_LIB" | awk '{print $1}')"
         echo "MATRICE5_LIBRARY_BINDING=SPADMIC:$MATRIX_OA_LIBRARY_PATH"
         echo "OA_EXTRACTION_PROCESS_COUNT=2"
         echo "OA_EXTRACTION_PROCESS_ORDER=matrice5,spadmic2"
@@ -311,7 +527,7 @@ if [ "$RUN_OK" = "1" ]; then
     fi
 fi
 
-if [ -d "$RAW_ROOT" ]; then
+if [ "$DIAGNOSTIC_ROOT_CREATE_RC" = "0" ] && [ -d "$RAW_ROOT" ]; then
     SOURCE_IDENTITY_COMBINE_RC=1
     if [ "$MATRICE5_EXPORT_GATE_RC" = "0" ] && \
        [ "$SPADMIC2_EXPORT_GATE_RC" = "0" ]; then
@@ -344,6 +560,42 @@ if [ -d "$RAW_ROOT" ]; then
     } > "$RAW_ROOT/virtuoso_export_status.rpt"
 fi
 
+if [ "$OA_EXPORT_GATE_RC" = "0" ]; then
+    create_directory_manifest "$RAW_ROOT"
+    RAW_MANIFEST_CREATE_RC=$?
+    if [ "$RAW_MANIFEST_CREATE_RC" = "0" ]; then
+        verify_directory_manifest "$RAW_ROOT" >/dev/null 2>&1
+        RAW_MANIFEST_PRE_PROCESS_RC=$?
+    else
+        RAW_MANIFEST_PRE_PROCESS_RC=1
+    fi
+    if [ "$RAW_MANIFEST_CREATE_RC" != "0" ] || \
+       [ "$RAW_MANIFEST_PRE_PROCESS_RC" != "0" ]; then
+        RUN_OK=0
+    fi
+    if [ "$RAW_MANIFEST_PRE_PROCESS_RC" = "0" ]; then
+        "$CHMOD_BIN" -R a-w "$RAW_ROOT"
+        RAW_READ_ONLY_SEAL_RC=$?
+        WRITABLE_RAW_PATH="$(
+            find "$RAW_ROOT" -perm /222 -print -quit 2>/dev/null
+        )"
+        RAW_READ_ONLY_FIND_RC=$?
+        if [ "$RAW_READ_ONLY_FIND_RC" = "0" ] && \
+           [ -z "$WRITABLE_RAW_PATH" ]; then
+            RAW_READ_ONLY_MODE_GATE_RC=0
+        else
+            RAW_READ_ONLY_MODE_GATE_RC=1
+        fi
+    else
+        RAW_READ_ONLY_SEAL_RC=1
+        RAW_READ_ONLY_MODE_GATE_RC=1
+    fi
+    if [ "$RAW_READ_ONLY_SEAL_RC" != "0" ] || \
+       [ "$RAW_READ_ONLY_MODE_GATE_RC" != "0" ]; then
+        RUN_OK=0
+    fi
+fi
+
 if [ "$RUN_OK" = "1" ]; then
     python3 "$REPO/TOP/pnr/scripts/process_spadmic2_assembly_audit.py" \
         --audit-root "$RAW_ROOT" \
@@ -356,7 +608,46 @@ if [ "$RUN_OK" = "1" ]; then
     fi
 fi
 
-if [ -d "$DIAGNOSTIC_ROOT" ]; then
+if [ "$DIAGNOSTIC_ROOT_CREATE_RC" = "0" ] && \
+   [ -r "$RAW_ROOT/SHA256SUMS" ]; then
+    verify_directory_manifest "$RAW_ROOT" >/dev/null 2>&1
+    RAW_MANIFEST_POST_PROCESS_RC=$?
+    if [ "$RAW_MANIFEST_POST_PROCESS_RC" != "0" ]; then
+        RUN_OK=0
+    fi
+else
+    RAW_MANIFEST_POST_PROCESS_RC=1
+fi
+
+if [ "$DIAGNOSTIC_ROOT_CREATE_RC" = "0" ] && \
+   [ -r "$PROCESSED_ROOT/SHA256SUMS" ]; then
+    verify_directory_manifest "$PROCESSED_ROOT" >/dev/null 2>&1
+    PROCESSED_MANIFEST_PRE_ARCHIVE_RC=$?
+    if [ "$PROCESSED_MANIFEST_PRE_ARCHIVE_RC" = "0" ]; then
+        "$CHMOD_BIN" -R a-w "$PROCESSED_ROOT"
+        PROCESSED_READ_ONLY_SEAL_RC=$?
+        WRITABLE_PROCESSED_PATH="$(
+            find "$PROCESSED_ROOT" -perm /222 -print -quit 2>/dev/null
+        )"
+        PROCESSED_READ_ONLY_FIND_RC=$?
+        if [ "$PROCESSED_READ_ONLY_FIND_RC" = "0" ] && \
+           [ -z "$WRITABLE_PROCESSED_PATH" ]; then
+            PROCESSED_READ_ONLY_MODE_GATE_RC=0
+        else
+            PROCESSED_READ_ONLY_MODE_GATE_RC=1
+        fi
+    else
+        PROCESSED_READ_ONLY_SEAL_RC=1
+        PROCESSED_READ_ONLY_MODE_GATE_RC=1
+    fi
+else
+    PROCESSED_MANIFEST_PRE_ARCHIVE_RC=1
+    PROCESSED_READ_ONLY_SEAL_RC=1
+    PROCESSED_READ_ONLY_MODE_GATE_RC=1
+fi
+
+if [ "$DIAGNOSTIC_ROOT_CREATE_RC" = "0" ] && \
+   [ -d "$DIAGNOSTIC_ROOT" ]; then
     inventory_tree "$TOP_OA_PATH" "$DIAGNOSTIC_ROOT/spadmic2_source.post.sha256"
     TOP_POST_RC=$?
     inventory_tree "$MATRIX_OA_PATH" "$DIAGNOSTIC_ROOT/matrice5_source.post.sha256"
@@ -393,16 +684,179 @@ if [ -d "$DIAGNOSTIC_ROOT" ]; then
 
     (
         cd "$DIAGNOSTIC_ROOT"
-        MANIFEST_CD_RC=$?
-        if [ "$MANIFEST_CD_RC" = "0" ]; then
-            find . -type f ! -name SHA256SUMS -print0 |
-                sort -z |
-                xargs -0 -r sha256sum > SHA256SUMS
+        ARCHIVE_LIST_CD_RC=$?
+        if [ "$ARCHIVE_LIST_CD_RC" = "0" ]; then
+            find . -type f \
+                ! -path './evidence_payload.tar.gz' \
+                ! -path './evidence_payload.tar.gz.sha256' \
+                ! -path './evidence_seal_status.rpt' \
+                ! -path './SHA256SUMS' \
+                -print |
+                LC_ALL=C sort > evidence_payload_filelist.txt
         else
             false
         fi
     )
+    RECOVERY_ARCHIVE_FILELIST_RC=$?
+
+    if [ "$RECOVERY_ARCHIVE_FILELIST_RC" = "0" ]; then
+        (
+            cd "$DIAGNOSTIC_ROOT"
+            ARCHIVE_CD_RC=$?
+            if [ "$ARCHIVE_CD_RC" = "0" ]; then
+                "$TAR_BIN" -czf evidence_payload.tar.gz \
+                    -T evidence_payload_filelist.txt
+            else
+                false
+            fi
+        )
+        RECOVERY_ARCHIVE_CREATE_RC=$?
+    else
+        RECOVERY_ARCHIVE_CREATE_RC=1
+    fi
+
+    if [ "$RECOVERY_ARCHIVE_CREATE_RC" = "0" ]; then
+        "$TAR_BIN" -tzf "$RECOVERY_ARCHIVE" >/dev/null 2>&1
+        RECOVERY_ARCHIVE_TAR_VERIFY_RC=$?
+        (
+            cd "$DIAGNOSTIC_ROOT"
+            ARCHIVE_HASH_CD_RC=$?
+            if [ "$ARCHIVE_HASH_CD_RC" = "0" ]; then
+                "$SHA256SUM_BIN" evidence_payload.tar.gz \
+                    > evidence_payload.tar.gz.sha256
+            else
+                false
+            fi
+        )
+        RECOVERY_ARCHIVE_HASH_CREATE_RC=$?
+    else
+        RECOVERY_ARCHIVE_TAR_VERIFY_RC=1
+        RECOVERY_ARCHIVE_HASH_CREATE_RC=1
+    fi
+
+    if [ "$RECOVERY_ARCHIVE_HASH_CREATE_RC" = "0" ]; then
+        (
+            cd "$DIAGNOSTIC_ROOT"
+            ARCHIVE_VERIFY_CD_RC=$?
+            if [ "$ARCHIVE_VERIFY_CD_RC" = "0" ]; then
+                "$SHA256SUM_BIN" -c evidence_payload.tar.gz.sha256
+            else
+                false
+            fi
+        ) >/dev/null 2>&1
+        RECOVERY_ARCHIVE_HASH_VERIFY_RC=$?
+        RECOVERY_ARCHIVE_SHA256="$(
+            "$SHA256SUM_BIN" "$RECOVERY_ARCHIVE" 2>/dev/null |
+                awk '{print $1}'
+        )"
+    else
+        RECOVERY_ARCHIVE_HASH_VERIFY_RC=1
+    fi
+
+    if [ -r "$RAW_ROOT/SHA256SUMS" ]; then
+        verify_directory_manifest "$RAW_ROOT" >/dev/null 2>&1
+        RAW_MANIFEST_POST_ARCHIVE_RC=$?
+    else
+        RAW_MANIFEST_POST_ARCHIVE_RC=1
+    fi
+    if [ -r "$PROCESSED_ROOT/SHA256SUMS" ]; then
+        verify_directory_manifest "$PROCESSED_ROOT" >/dev/null 2>&1
+        PROCESSED_MANIFEST_POST_ARCHIVE_RC=$?
+    else
+        PROCESSED_MANIFEST_POST_ARCHIVE_RC=1
+    fi
+
+    PRESEAL_CAPSULE_RC=1
+    if [ "$EVIDENCE_TOOL_GATE_RC" = "0" ] && \
+       [ "$CHECKSUM_SELFTEST_RC" = "0" ] && \
+       [ "$RAW_MANIFEST_CREATE_RC" = "0" ] && \
+       [ "$RAW_MANIFEST_PRE_PROCESS_RC" = "0" ] && \
+       [ "$RAW_READ_ONLY_SEAL_RC" = "0" ] && \
+       [ "$RAW_READ_ONLY_MODE_GATE_RC" = "0" ] && \
+       [ "$RAW_MANIFEST_POST_PROCESS_RC" = "0" ] && \
+       [ "$RAW_MANIFEST_POST_ARCHIVE_RC" = "0" ] && \
+       [ "$PROCESSED_MANIFEST_PRE_ARCHIVE_RC" = "0" ] && \
+       [ "$PROCESSED_READ_ONLY_SEAL_RC" = "0" ] && \
+       [ "$PROCESSED_READ_ONLY_MODE_GATE_RC" = "0" ] && \
+       [ "$PROCESSED_MANIFEST_POST_ARCHIVE_RC" = "0" ] && \
+       [ "$RECOVERY_ARCHIVE_FILELIST_RC" = "0" ] && \
+       [ "$RECOVERY_ARCHIVE_CREATE_RC" = "0" ] && \
+       [ "$RECOVERY_ARCHIVE_TAR_VERIFY_RC" = "0" ] && \
+       [ "$RECOVERY_ARCHIVE_HASH_CREATE_RC" = "0" ] && \
+       [ "$RECOVERY_ARCHIVE_HASH_VERIFY_RC" = "0" ]; then
+        PRESEAL_CAPSULE_RC=0
+    fi
+
+    {
+        echo "LABEL=SPADMIC2_MATRICE5_EVIDENCE_CAPSULE_PRESEAL"
+        echo "STATUS=$([ "$PRESEAL_CAPSULE_RC" = "0" ] && echo PASS || echo FAIL)"
+        echo "AUDIT_CONTRACT_PROCESS_RC=$PROCESS_RC"
+        echo "SHA256SUM_BIN=$SHA256SUM_BIN"
+        echo "SHA256SUM_BIN_SHA256=$SHA256SUM_BIN_SHA256"
+        echo "CHECKSUM_SELFTEST_RC=$CHECKSUM_SELFTEST_RC"
+        echo "RAW_MANIFEST_CREATE_RC=$RAW_MANIFEST_CREATE_RC"
+        echo "RAW_MANIFEST_PRE_PROCESS_RC=$RAW_MANIFEST_PRE_PROCESS_RC"
+        echo "RAW_READ_ONLY_SEAL_RC=$RAW_READ_ONLY_SEAL_RC"
+        echo "RAW_READ_ONLY_MODE_GATE_RC=$RAW_READ_ONLY_MODE_GATE_RC"
+        echo "RAW_MANIFEST_POST_PROCESS_RC=$RAW_MANIFEST_POST_PROCESS_RC"
+        echo "RAW_MANIFEST_POST_ARCHIVE_RC=$RAW_MANIFEST_POST_ARCHIVE_RC"
+        echo "PROCESSED_MANIFEST_PRE_ARCHIVE_RC=$PROCESSED_MANIFEST_PRE_ARCHIVE_RC"
+        echo "PROCESSED_READ_ONLY_SEAL_RC=$PROCESSED_READ_ONLY_SEAL_RC"
+        echo "PROCESSED_READ_ONLY_MODE_GATE_RC=$PROCESSED_READ_ONLY_MODE_GATE_RC"
+        echo "PROCESSED_MANIFEST_POST_ARCHIVE_RC=$PROCESSED_MANIFEST_POST_ARCHIVE_RC"
+        echo "RECOVERY_ARCHIVE=$RECOVERY_ARCHIVE"
+        echo "RECOVERY_ARCHIVE_SHA256=$RECOVERY_ARCHIVE_SHA256"
+        echo "RECOVERY_ARCHIVE_SHA256_FILE=$RECOVERY_ARCHIVE_SHA256_FILE"
+        echo "RECOVERY_ARCHIVE_FILELIST=$RECOVERY_ARCHIVE_FILELIST"
+        echo "RECOVERY_ARCHIVE_FILELIST_RC=$RECOVERY_ARCHIVE_FILELIST_RC"
+        echo "RECOVERY_ARCHIVE_CREATE_RC=$RECOVERY_ARCHIVE_CREATE_RC"
+        echo "RECOVERY_ARCHIVE_TAR_VERIFY_RC=$RECOVERY_ARCHIVE_TAR_VERIFY_RC"
+        echo "RECOVERY_ARCHIVE_HASH_CREATE_RC=$RECOVERY_ARCHIVE_HASH_CREATE_RC"
+        echo "RECOVERY_ARCHIVE_HASH_VERIFY_RC=$RECOVERY_ARCHIVE_HASH_VERIFY_RC"
+        echo "RAW_AND_PROCESSED_MUTATION_AUTHORIZED=NO"
+        echo "EVIDENCE_ROOT_REUSE_AUTHORIZED=NO"
+        echo "READ_ONLY_SEAL_POLICY=REMOVE_ALL_WRITE_BITS_RECURSIVELY"
+        echo "FINAL_READ_ONLY_SEAL_STATUS=SEE_WRAPPER_CONSOLE_GATES"
+    } > "$EVIDENCE_SEAL_REPORT"
+
+    create_outer_manifest "$DIAGNOSTIC_ROOT"
     MANIFEST_RC=$?
+    if [ "$MANIFEST_RC" = "0" ]; then
+        verify_directory_manifest "$DIAGNOSTIC_ROOT" >/dev/null 2>&1
+        MANIFEST_VERIFY_RC=$?
+    else
+        MANIFEST_VERIFY_RC=1
+    fi
+
+    "$CHMOD_BIN" -R a-w "$DIAGNOSTIC_ROOT"
+    READ_ONLY_SEAL_RC=$?
+    WRITABLE_EVIDENCE_PATH="$(
+        find "$DIAGNOSTIC_ROOT" -perm /222 -print -quit 2>/dev/null
+    )"
+    READ_ONLY_MODE_FIND_RC=$?
+    if [ "$READ_ONLY_MODE_FIND_RC" = "0" ] && \
+       [ -z "$WRITABLE_EVIDENCE_PATH" ]; then
+        READ_ONLY_MODE_GATE_RC=0
+    else
+        READ_ONLY_MODE_GATE_RC=1
+    fi
+
+    if [ -r "$DIAGNOSTIC_ROOT/SHA256SUMS" ]; then
+        verify_directory_manifest "$DIAGNOSTIC_ROOT" >/dev/null 2>&1
+        POST_SEAL_MANIFEST_RC=$?
+    else
+        POST_SEAL_MANIFEST_RC=1
+    fi
+
+    EVIDENCE_PRESERVATION_RC=1
+    if [ "$PRESEAL_CAPSULE_RC" = "0" ] && \
+       [ "$MANIFEST_RC" = "0" ] && \
+       [ "$MANIFEST_VERIFY_RC" = "0" ] && \
+       [ "$READ_ONLY_SEAL_RC" = "0" ] && \
+       [ "$READ_ONLY_MODE_GATE_RC" = "0" ] && \
+       [ "$POST_SEAL_MANIFEST_RC" = "0" ]; then
+        EVIDENCE_PRESERVATION_RC=0
+    fi
 fi
 
 echo "CD_RC=$CD_RC"
@@ -417,7 +871,15 @@ echo "SOURCE_FILE_GATE_RC=$SOURCE_FILE_GATE_RC"
 echo "CADENCE_LAUNCH_DIR=$CADENCE_LAUNCH_DIR"
 echo "CADENCE_CDS_LIB=$CADENCE_CDS_LIB"
 echo "CADENCE_LAUNCH_GATE_RC=$CADENCE_LAUNCH_GATE_RC"
+echo "EVIDENCE_TOOL_GATE_RC=$EVIDENCE_TOOL_GATE_RC"
+echo "SHA256SUM_BIN=$SHA256SUM_BIN"
+echo "SHA256SUM_BIN_SHA256=$SHA256SUM_BIN_SHA256"
+echo "RUN_ID=$RUN_ID"
+echo "DIAGNOSTIC_PARENT_CREATE_RC=$DIAGNOSTIC_PARENT_CREATE_RC"
+echo "DIAGNOSTIC_ROOT_CREATE_RC=$DIAGNOSTIC_ROOT_CREATE_RC"
+echo "DIAGNOSTIC_PAYLOAD_DIRS_CREATE_RC=$DIAGNOSTIC_PAYLOAD_DIRS_CREATE_RC"
 echo "DIAGNOSTIC_CREATE_RC=$DIAGNOSTIC_CREATE_RC"
+echo "CHECKSUM_SELFTEST_RC=$CHECKSUM_SELFTEST_RC"
 echo "SPADMIC2_SESSION_CDS_LIB=$SPADMIC2_SESSION_CDS_LIB"
 echo "SPADMIC2_SESSION_CDS_LIB_CREATE_RC=$SPADMIC2_SESSION_CDS_LIB_CREATE_RC"
 echo "MATRICE5_SESSION_CDS_LIB=$MATRICE5_SESSION_CDS_LIB"
@@ -428,12 +890,45 @@ echo "SPADMIC2_VIRTUOSO_RC=$SPADMIC2_VIRTUOSO_RC"
 echo "SPADMIC2_EXPORT_GATE_RC=$SPADMIC2_EXPORT_GATE_RC"
 echo "SOURCE_IDENTITY_COMBINE_RC=$SOURCE_IDENTITY_COMBINE_RC"
 echo "OA_EXPORT_GATE_RC=$OA_EXPORT_GATE_RC"
+echo "RAW_MANIFEST_CREATE_RC=$RAW_MANIFEST_CREATE_RC"
+echo "RAW_MANIFEST_PRE_PROCESS_RC=$RAW_MANIFEST_PRE_PROCESS_RC"
+echo "RAW_READ_ONLY_SEAL_RC=$RAW_READ_ONLY_SEAL_RC"
+echo "RAW_READ_ONLY_MODE_GATE_RC=$RAW_READ_ONLY_MODE_GATE_RC"
+echo "RAW_MANIFEST_POST_PROCESS_RC=$RAW_MANIFEST_POST_PROCESS_RC"
+echo "RAW_MANIFEST_POST_ARCHIVE_RC=$RAW_MANIFEST_POST_ARCHIVE_RC"
 echo "PROCESS_RC=$PROCESS_RC"
+echo "PROCESSED_MANIFEST_PRE_ARCHIVE_RC=$PROCESSED_MANIFEST_PRE_ARCHIVE_RC"
+echo "PROCESSED_READ_ONLY_SEAL_RC=$PROCESSED_READ_ONLY_SEAL_RC"
+echo "PROCESSED_READ_ONLY_MODE_GATE_RC=$PROCESSED_READ_ONLY_MODE_GATE_RC"
+echo "PROCESSED_MANIFEST_POST_ARCHIVE_RC=$PROCESSED_MANIFEST_POST_ARCHIVE_RC"
 echo "SOURCE_STABILITY_RC=$SOURCE_STABILITY_RC"
+echo "RECOVERY_ARCHIVE=$RECOVERY_ARCHIVE"
+echo "RECOVERY_ARCHIVE_SHA256=$RECOVERY_ARCHIVE_SHA256"
+echo "RECOVERY_ARCHIVE_SHA256_FILE=$RECOVERY_ARCHIVE_SHA256_FILE"
+echo "RECOVERY_ARCHIVE_FILELIST=$RECOVERY_ARCHIVE_FILELIST"
+echo "RECOVERY_ARCHIVE_FILELIST_RC=$RECOVERY_ARCHIVE_FILELIST_RC"
+echo "RECOVERY_ARCHIVE_CREATE_RC=$RECOVERY_ARCHIVE_CREATE_RC"
+echo "RECOVERY_ARCHIVE_TAR_VERIFY_RC=$RECOVERY_ARCHIVE_TAR_VERIFY_RC"
+echo "RECOVERY_ARCHIVE_HASH_CREATE_RC=$RECOVERY_ARCHIVE_HASH_CREATE_RC"
+echo "RECOVERY_ARCHIVE_HASH_VERIFY_RC=$RECOVERY_ARCHIVE_HASH_VERIFY_RC"
+echo "PRESEAL_CAPSULE_RC=$PRESEAL_CAPSULE_RC"
 echo "MANIFEST_RC=$MANIFEST_RC"
+echo "MANIFEST_VERIFY_RC=$MANIFEST_VERIFY_RC"
+echo "READ_ONLY_SEAL_RC=$READ_ONLY_SEAL_RC"
+echo "READ_ONLY_MODE_GATE_RC=$READ_ONLY_MODE_GATE_RC"
+echo "POST_SEAL_MANIFEST_RC=$POST_SEAL_MANIFEST_RC"
+echo "EVIDENCE_PRESERVATION_RC=$EVIDENCE_PRESERVATION_RC"
 echo "DIAGNOSTIC_ROOT=$DIAGNOSTIC_ROOT"
 
-if [ "$RUN_OK" = "1" ] && [ "$MANIFEST_RC" = "0" ]; then
+if [ "$EVIDENCE_PRESERVATION_RC" = "0" ]; then
+    echo "SPADMIC2_MATRICE5_EVIDENCE_PRESERVATION_STATUS=PASS"
+    echo "EVIDENCE_ROOT_READ_ONLY=YES"
+else
+    echo "SPADMIC2_MATRICE5_EVIDENCE_PRESERVATION_STATUS=FAIL"
+    echo "EVIDENCE_ROOT_READ_ONLY=UNPROVEN"
+fi
+
+if [ "$RUN_OK" = "1" ] && [ "$EVIDENCE_PRESERVATION_RC" = "0" ]; then
     echo "SPADMIC2_MATRICE5_ASSEMBLY_AUDIT_TRANSACTION_STATUS=PASS"
     echo "RETURN_OUTPUT_FOR_P00_IMPLEMENTATION_REVIEW"
     true

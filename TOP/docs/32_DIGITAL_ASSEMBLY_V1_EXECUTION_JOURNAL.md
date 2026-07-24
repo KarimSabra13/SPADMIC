@@ -5580,3 +5580,65 @@ Geometric overlaps with netted hierarchical shapes are emitted to
 blocking, even if other exact VDD/VSS shapes are later found. No Cadence
 rerun, OA edit, Genus run, or implementation authorization follows from this
 reconciliation. The next gate is exact PG-anchor attribution.
+
+### P11-R10 Completed Evidence Root Was Truncated and Is Not Recoverable
+
+A processor-only replay preflight on 2026-07-24 detected that the previously
+complete P11-R09 root no longer matched its immutable outer manifest. A
+subsequent read-only forensic pass proved that six regular files had been
+truncated in place to zero bytes:
+
+```text
+processed_contract/matrice5_terminal_family_contract.tsv
+raw_oa_export/matrice5_top_terminals.tsv
+raw_oa_export/source_identity.tsv
+raw_oa_export/spadmic2_instance_pins.tsv
+raw_oa_export/spadmic2_instances.tsv
+raw_oa_export/spadmic2_top_shapes.tsv
+```
+
+All six now hash to the SHA-256 of an empty payload,
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+Five files have the identical modification and change timestamp
+`2026-07-24 10:08:41.631198813 +0200`; the instance report changed at
+`10:08:43.335234484`, followed by the top-shape report at
+`10:08:48.672346207`. The evidence root is on local read-write `ext4` mounted
+at `/sim`, and no audit or processor writer was active when the forensic probe
+ran. The latter observation does not identify the process responsible at the
+earlier truncation time.
+
+The manifest still records the expected pre-truncation hashes. Exact
+hash-identical copies of the three SPADMIC2 reports survive in three older
+diagnostic roots. The two role-specific identity reports also survive, so the
+combined identity text can be reconstructed. These facts do not repair the
+root: no expected-hash copy of `matrice5_top_terminals.tsv` survives, and its
+exact terminal coordinates are required to derive the 560 matrix proxy pin
+shapes. Rewriting the damaged files or its manifest would manufacture a new
+provenance claim. The P11-R09 root is therefore retained only as negative
+evidence and is prohibited as processor, P00-P02, P03, Genus, or OA-edit
+input.
+
+The audit wrapper now hardens every fresh evidence transaction before another
+server run is authorized:
+
+- resolve and invoke the disk `sha256sum` executable by absolute path;
+- run a fixed-payload checksum create/check/nonmutation self-test before
+  Cadence;
+- create a timestamp-and-PID evidence root with exclusive directory creation,
+  never `mkdir -p` reuse;
+- create and verify the raw OA manifest, then seal the raw payload read-only
+  before the processor;
+- recheck the raw manifest after the processor and after evidence archiving;
+- verify and seal the processor payload read-only before archiving, then verify
+  it again after archiving;
+- create and integrity-check `evidence_payload.tar.gz` plus its detached
+  SHA-256;
+- include nested payload manifests in the outer root manifest;
+- remove all write bits recursively, then verify both root permissions and the
+  outer manifest again.
+
+Evidence preservation and audit acceptance remain separate gates. A
+well-preserved run may still return the expected contract rejection while
+direct METTP ownership remains unresolved. No fresh Cadence execution, Genus
+run, or OA edit is authorized until the checksum probe and exact-commit
+foreground wrapper retry pass their preservation gates.
