@@ -6,9 +6,10 @@ evidence and the complete p03 signal-interface preclassification pass. Local
 four current METTP review candidates on `I5/BOX_RING2` and
 `I6/TXRX4TDC2_HV`, but no bridge is accepted. The earlier `I5` recommendation
 used invalid exterior whitespace because the hollow `BOX_RING2` pad boundary
-was treated as a solid obstacle. A processor-only normalized floorplan replay
-is now the sole next action; it is expected to select the complete `I6` pair
-against the largest true interior region. Position and Event OOC results
+was treated as a solid obstacle. The corrected processor-only normalized
+floorplan replay is accepted and selects the complete `I6` pair against the
+largest true interior region. The sole next action is a bounded read-only
+hierarchical METTP corridor probe around I6. Position and Event OOC results
 remain immutable supporting evidence, not child hard macros on the p00-p03
 implementation path. No assembly phase is promoted.
 
@@ -97,8 +98,8 @@ transaction:
 ```text
 1. server_audit_spadmic2_assembly_contract.sh             # complete, sealed OA
 2. server_probe_spadmic2_digital_pg_access.sh             # complete, sealed OA
-3. server_replay_spadmic2_digital_pg_floorplan.sh         # current CPU-only gate
-4. selected-instance METTP corridor probe                 # read-only OA, not yet run
+3. server_replay_spadmic2_digital_pg_floorplan.sh         # complete, sealed CPU
+4. server_probe_spadmic2_selected_pg_corridor.sh          # current read-only OA gate
 5. review and bind one VDD/VSS-to-DVDD/DVSS bridge contract
 6. server_preflight_digital_assembly_phase.sh             # phase + RTL checks
 7. server_run_digital_assembly_phase_genus.sh             # one Genus action
@@ -1356,9 +1357,19 @@ export has 14 total rows. The failed replay root
 `spadmic2_digital_pg_floorplan_replay_20260724_141037_pid775347` remained
 writable and is not accepted evidence.
 
-Run exactly one corrected processor-only replay of the same two unchanged
-sealed capsules with `server_replay_spadmic2_digital_pg_floorplan.sh`. The
-exact expected classification is:
+The corrected processor-only replay passed at exact commit
+`a2f5f90c058743517f5d566e9b50320b645b0837` and sealed:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_floorplan_replay_20260724_141934_pid779817
+PROCESS_RC=0
+STATUS_GATE_RC=0
+REPLAY_SEAL_RC=0
+REPLAY_WRITABLE_PATH=NONE
+PROCESSOR_ONLY_DIGITAL_PG_FLOORPLAN_REPLAY_STATUS=PASS_EVIDENCE_READY
+```
+
+Its accepted classification is:
 
 ```text
 ASSEMBLY_BOUNDARY_INSTANCE=I5
@@ -1380,23 +1391,33 @@ BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED
 NEXT_GATE=RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE
 ```
 
-Review `assembly_floorplan_boundary.tsv`,
-`assembly_fixed_obstacles_normalized.tsv`,
-`assembly_verified_whitespace_normalized.tsv`,
-`digital_pg_pair_ranking.tsv`, and `digital_pg_review_pair.tsv`. The replay
-must leave both source capsules unchanged and seal its own result root.
-
-Even after the expected `I6` selection, do not draw a bridge. Its `DVDD` and
+Do not draw a bridge. The accepted I6 `DVDD` and
 `DVSS` pin figures are adjacent on METTP and a direct horizontal DVDD
-extension would encounter the DVSS access region. The next read-only OA action
-must inventory all transformed METTP shapes around `I6`, prove bounded
-candidate corridors into the primary interior region, and keep every topology
-review-only. Only an accepted corridor result may produce an immutable bridge
-contract. After that contract, repair the phase generator to consume normalized
-obstacles and PG geometry, repair the OA insertion translation, run phase
-preflight, then start one Genus transaction. Innovus remains after Genus and
-must test one bridge topology per fresh process with DRC, regular connectivity,
-special PG connectivity, timing, and export reported separately.
+extension intersects the DVSS access region. Run exactly one foreground
+`server_probe_spadmic2_selected_pg_corridor.sh` transaction. It binds the
+accepted pair and `x=3662.535` primary-whitespace entry, queries all hierarchy
+through depth 32 in source window
+`3415.960 2141.710 3762.535 2343.845`, and keeps every result review-only.
+
+The expected gate is evidence readiness, not route readiness:
+
+```text
+TARGET_INSTANCE=I6
+TARGET_PIN_PAIR_STATUS=PASS
+TARGET_PIN_HIERARCHICAL_COVERAGE_STATUS=PASS
+DVDD_DIRECT_EAST_TO_WHITESPACE_STATUS=REJECT_TARGET_DVSS_INTERSECTION
+CORRIDOR_SEARCH_REGION_STATUS=PASS_EVIDENCE_READY
+BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED
+NEXT_GATE=RETURN_I6_CORRIDOR_EVIDENCE_FOR_BRIDGE_CANDIDATE_DEFINITION
+```
+
+Only review of the actual north, south, DVSS-direct, and whitespace-entry
+occupancy may define bounded bridge candidates. After one bridge contract is
+accepted, repair the phase generator to consume normalized obstacles and PG
+geometry, repair the OA insertion translation, run phase preflight, then
+start one Genus transaction. Innovus remains after Genus and must test one
+bridge topology per fresh process with DRC, regular connectivity, special PG
+connectivity, timing, and export reported separately.
 
 P09-R10 parsed the complete accepted Position GDS hierarchy and proved zero
 reachable geometry and text for PAD `19/0`, PIMIDE `221/5`, and NOPIM `46/0`.

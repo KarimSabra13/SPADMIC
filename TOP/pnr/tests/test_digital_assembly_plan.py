@@ -19,6 +19,13 @@ PROCESSOR = REPO / "TOP" / "pnr" / "scripts" / "process_spadmic2_assembly_audit.
 PG_CLASSIFIER = (
     REPO / "TOP" / "pnr" / "scripts" / "classify_spadmic2_digital_pg_access.py"
 )
+CORRIDOR_CLASSIFIER = (
+    REPO
+    / "TOP"
+    / "pnr"
+    / "scripts"
+    / "classify_spadmic2_selected_pg_corridor.py"
+)
 CONTRACT = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_contract.json"
 UNKNOWN_POLICY = REPO / "TOP" / "pnr" / "assembly" / "matrice5_unknown_family_policy.csv"
 RTL = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_v1.sv"
@@ -584,6 +591,47 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertEqual(
             contract["assembly_floorplan"]["core_keepout_um"],
             164.0,
+        )
+        self.assertEqual(
+            contract["selected_pg_corridor_probe"]["target_instance"],
+            {
+                "instance": "I6",
+                "master_library": "SPADMIC",
+                "master_cell": "TXRX4TDC2_HV",
+                "master_view": "layout",
+                "orient": "R0",
+            },
+        )
+        self.assertEqual(
+            contract["selected_pg_corridor_probe"]["target_pins"]["VDD"],
+            {
+                "chip_net": "DVDD",
+                "layer": "METTP",
+                "purpose": "pin",
+                "source_bbox_um": [3515.96, 2241.71, 3550.96, 2243.845],
+            },
+        )
+        self.assertEqual(
+            contract["selected_pg_corridor_probe"]["target_pins"]["VSS"],
+            {
+                "chip_net": "DVSS",
+                "layer": "METTP",
+                "purpose": "pin",
+                "source_bbox_um": [3555.96, 2241.985, 3590.96, 2243.845],
+            },
+        )
+        self.assertEqual(
+            contract["selected_pg_corridor_probe"]["hierarchy_depth"],
+            [0, 32],
+        )
+        self.assertTrue(
+            contract["selected_pg_corridor_probe"][
+                "include_mosaic_rows_and_columns"
+            ]
+        )
+        self.assertEqual(
+            contract["selected_pg_corridor_probe"]["candidate_policy"],
+            "REVIEW_ONLY_NO_GEOMETRY_CREATION",
         )
         self.assertEqual(contract["phases"]["p03_matrix_interface"]["allowed_density_rules"], ["R1M1", "R1M2", "R1M3", "R1MT"])
         self.assertEqual(contract["source_layouts"]["matrice5"]["library"], "SPADMIC")
@@ -1369,6 +1417,479 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("DO_NOT_START_CADENCE_GENUS_INNOVUS_OR_EDIT_OA", wrapper)
         self.assertNotIn('"$VIRTUOSO_BIN"', wrapper)
         self.assertNotIn("-nograph", wrapper)
+        self.assertNotIn("\ngenus ", wrapper)
+        self.assertNotIn("\ninnovus ", wrapper)
+        self.assertNotIn("\nrm ", wrapper)
+        self.assertNotIn("\nexit ", wrapper)
+        self.assertNotIn("set -e", wrapper)
+
+    def test_selected_i6_corridor_classifier_is_evidence_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe = root / "raw_corridor"
+            floorplan = root / "floorplan"
+            output = root / "classified"
+            probe.mkdir()
+            floorplan.mkdir()
+            contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+            source = contract["source_layouts"]["spadmic2"]
+
+            (probe / "virtuoso_export_status.rpt").write_text(
+                "LABEL=SPADMIC2_SELECTED_I6_METTP_CORRIDOR_VIRTUOSO_EXPORT\n"
+                "SOURCE_MUTATION_AUTHORIZED=NO\n"
+                "OA_EDIT_AUTHORIZED=NO\n"
+                "HIERARCHICAL_QUERY_POLICY="
+                "DB_GET_TRUE_OVERLAPS_DEPTH_0_32_WITH_ROW_COLUMN_ENUMERATION\n"
+                "HIERARCHICAL_TRANSFORM_POLICY=DB_GET_HIER_PATH_TRANSFORM\n"
+                "CORRIDOR_AUTHORIZATION=REVIEW_ONLY_NO_GEOMETRY_CREATION\n"
+                "STATUS=PASS\n",
+                encoding="utf-8",
+            )
+            (probe / "corridor_query_status.rpt").write_text(
+                "LABEL=SPADMIC2_SELECTED_I6_METTP_CORRIDOR_QUERY\n"
+                "STATUS=PASS\n"
+                "TARGET_INSTANCE=I6\n"
+                "TARGET_MASTER=SPADMIC/TXRX4TDC2_HV/layout\n"
+                "TARGET_ORIENT=R0\n"
+                "TARGET_PG_PIN_SHAPE_COUNT=2\n"
+                "QUERY_WINDOW_UM="
+                "3415.960000 2141.710000 3762.535000 2343.845000\n"
+                "DB_GET_TRUE_OVERLAPS_RESULT_COUNT=4\n"
+                "HIERARCHICAL_SHAPE_ROW_COUNT=4\n"
+                "HIERARCHICAL_TRANSFORM_FAILURE_COUNT=0\n"
+                "HIERARCHY_DEPTH=0:32\n"
+                "MOSAIC_ROW_COLUMN_ENUMERATION=YES\n"
+                "CORRIDOR_AUTHORIZATION=REVIEW_ONLY_NO_GEOMETRY_CREATION\n",
+                encoding="utf-8",
+            )
+            self._write_tsv(
+                probe / "source_identity.tsv",
+                [
+                    "role",
+                    "library",
+                    "cell",
+                    "view",
+                    "filesystem_path",
+                    "open_status",
+                    "bbox",
+                ],
+                [
+                    {
+                        "role": "spadmic2",
+                        "library": source["library"],
+                        "cell": source["cell"],
+                        "view": source["view"],
+                        "filesystem_path": source["filesystem_path"],
+                        "open_status": "PASS",
+                        "bbox": (
+                            "-451.632000 -287.715000 "
+                            "4115.791000 3453.077000"
+                        ),
+                    }
+                ],
+            )
+            self._write_tsv(
+                probe / "target_instance.tsv",
+                [
+                    "instance",
+                    "instance_object_type",
+                    "master_library",
+                    "master_cell",
+                    "master_view",
+                    "orient",
+                    "transform",
+                    "llx",
+                    "lly",
+                    "urx",
+                    "ury",
+                ],
+                [
+                    {
+                        "instance": "I6",
+                        "instance_object_type": "inst",
+                        "master_library": "SPADMIC",
+                        "master_cell": "TXRX4TDC2_HV",
+                        "master_view": "layout",
+                        "orient": "R0",
+                        "transform": "((3485.165 836.155) R0 1.0)",
+                        "llx": "3485.165",
+                        "lly": "836.155",
+                        "urx": "4115.790",
+                        "ury": "2824.170",
+                    }
+                ],
+            )
+            pin_fields = [
+                "instance",
+                "terminal",
+                "direction",
+                "net",
+                "shape_type",
+                "layer",
+                "purpose",
+                "master_llx",
+                "master_lly",
+                "master_urx",
+                "master_ury",
+                "llx",
+                "lly",
+                "urx",
+                "ury",
+                "transform_status",
+            ]
+            pin_rows = [
+                {
+                    "instance": "I6",
+                    "terminal": "DVDD",
+                    "direction": "inputOutput",
+                    "net": "ABSENT",
+                    "shape_type": "rect",
+                    "layer": "METTP",
+                    "purpose": "pin",
+                    "master_llx": "30.795",
+                    "master_lly": "1405.555",
+                    "master_urx": "65.795",
+                    "master_ury": "1407.690",
+                    "llx": "3515.960",
+                    "lly": "2241.710",
+                    "urx": "3550.960",
+                    "ury": "2243.845",
+                    "transform_status": "DB_INSTANCE_TRANSFORM",
+                },
+                {
+                    "instance": "I6",
+                    "terminal": "DVSS",
+                    "direction": "inputOutput",
+                    "net": "ABSENT",
+                    "shape_type": "rect",
+                    "layer": "METTP",
+                    "purpose": "pin",
+                    "master_llx": "70.795",
+                    "master_lly": "1405.830",
+                    "master_urx": "105.795",
+                    "master_ury": "1407.690",
+                    "llx": "3555.960",
+                    "lly": "2241.985",
+                    "urx": "3590.960",
+                    "ury": "2243.845",
+                    "transform_status": "DB_INSTANCE_TRANSFORM",
+                },
+            ]
+            self._write_tsv(probe / "target_pg_pins.tsv", pin_fields, pin_rows)
+
+            shape_fields = [
+                "query_index",
+                "hierarchy_depth",
+                "top_instance",
+                "hierarchy_path",
+                "shape_type",
+                "net",
+                "layer",
+                "purpose",
+                "transform_status",
+                "master_llx",
+                "master_lly",
+                "master_urx",
+                "master_ury",
+                "llx",
+                "lly",
+                "urx",
+                "ury",
+            ]
+            shape_rows = [
+                {
+                    "query_index": "1",
+                    "hierarchy_depth": "1",
+                    "top_instance": "I6",
+                    "hierarchy_path": "(I6 DVDD)",
+                    "shape_type": "rect",
+                    "net": "DVDD",
+                    "layer": "METTP",
+                    "purpose": "pin",
+                    "transform_status": "DB_GET_HIER_PATH_TRANSFORM",
+                    "master_llx": "30.795",
+                    "master_lly": "1405.555",
+                    "master_urx": "65.795",
+                    "master_ury": "1407.690",
+                    "llx": "3515.960",
+                    "lly": "2241.710",
+                    "urx": "3550.960",
+                    "ury": "2243.845",
+                },
+                {
+                    "query_index": "2",
+                    "hierarchy_depth": "1",
+                    "top_instance": "I6",
+                    "hierarchy_path": "(I6 DVSS)",
+                    "shape_type": "rect",
+                    "net": "DVSS",
+                    "layer": "METTP",
+                    "purpose": "pin",
+                    "transform_status": "DB_GET_HIER_PATH_TRANSFORM",
+                    "master_llx": "70.795",
+                    "master_lly": "1405.830",
+                    "master_urx": "105.795",
+                    "master_ury": "1407.690",
+                    "llx": "3555.960",
+                    "lly": "2241.985",
+                    "urx": "3590.960",
+                    "ury": "2243.845",
+                },
+                {
+                    "query_index": "3",
+                    "hierarchy_depth": "2",
+                    "top_instance": "I6",
+                    "hierarchy_path": "(I6 I3 obstruction)",
+                    "shape_type": "pathSeg",
+                    "net": "ABSENT",
+                    "layer": "METTP",
+                    "purpose": "drawing",
+                    "transform_status": "DB_GET_HIER_PATH_TRANSFORM",
+                    "master_llx": "114.835",
+                    "master_lly": "1438.845",
+                    "master_urx": "134.835",
+                    "master_ury": "1448.845",
+                    "llx": "3600.000",
+                    "lly": "2275.000",
+                    "urx": "3620.000",
+                    "ury": "2285.000",
+                },
+                {
+                    "query_index": "4",
+                    "hierarchy_depth": "0",
+                    "top_instance": "TOP",
+                    "hierarchy_path": "topShape",
+                    "shape_type": "rect",
+                    "net": "SIGNAL",
+                    "layer": "MET4",
+                    "purpose": "drawing",
+                    "transform_status": "TOP_CELLVIEW_IDENTITY",
+                    "master_llx": "3610.000",
+                    "master_lly": "2242.000",
+                    "master_urx": "3620.000",
+                    "master_ury": "2243.000",
+                    "llx": "3610.000",
+                    "lly": "2242.000",
+                    "urx": "3620.000",
+                    "ury": "2243.000",
+                },
+            ]
+            self._write_tsv(
+                probe / "corridor_hierarchical_shapes.tsv",
+                shape_fields,
+                shape_rows,
+            )
+
+            (floorplan / "digital_pg_access_status.rpt").write_text(
+                "STATUS=PASS\n"
+                "ASSEMBLY_FLOORPLAN_MODEL_STATUS=PASS\n"
+                "ASSEMBLY_PRIMARY_WHITESPACE_SOURCE_BBOX_UM="
+                "3662.535000 -123.715000 3951.791000 3289.077000\n"
+                "REVIEW_CANDIDATE_PAIR_INSTANCE=I6\n"
+                "REVIEW_CANDIDATE_PAIR_OWNER_SCOPE=INSTANCE\n"
+                "TARGET_INSTANCE_METTP_CONTEXT_STATUS=NOT_PROBED\n"
+                "BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED\n"
+                "NEXT_GATE=RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE\n",
+                encoding="utf-8",
+            )
+            self._write_tsv(
+                floorplan / "digital_pg_review_pair.tsv",
+                [
+                    "local_net",
+                    "chip_net",
+                    "instance",
+                    "layer",
+                    "purpose",
+                    "llx",
+                    "lly",
+                    "urx",
+                    "ury",
+                ],
+                [
+                    {
+                        "local_net": "VDD",
+                        "chip_net": "DVDD",
+                        "instance": "I6",
+                        "layer": "METTP",
+                        "purpose": "pin",
+                        "llx": "3515.960",
+                        "lly": "2241.710",
+                        "urx": "3550.960",
+                        "ury": "2243.845",
+                    },
+                    {
+                        "local_net": "VSS",
+                        "chip_net": "DVSS",
+                        "instance": "I6",
+                        "layer": "METTP",
+                        "purpose": "pin",
+                        "llx": "3555.960",
+                        "lly": "2241.985",
+                        "urx": "3590.960",
+                        "ury": "2243.845",
+                    },
+                ],
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(CORRIDOR_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--floorplan-root",
+                    str(floorplan),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "selected_i6_corridor_status.rpt")
+            self.assertEqual(status["STATUS"], "PASS")
+            self.assertEqual(status["TARGET_INSTANCE"], "I6")
+            self.assertEqual(status["TARGET_PIN_PAIR_STATUS"], "PASS")
+            self.assertEqual(
+                status["TARGET_PIN_HIERARCHICAL_COVERAGE_STATUS"],
+                "PASS",
+            )
+            self.assertEqual(
+                status["DVDD_DIRECT_EAST_TO_WHITESPACE_STATUS"],
+                "REJECT_TARGET_DVSS_INTERSECTION",
+            )
+            self.assertEqual(
+                status["DVDD_DIRECT_DVSS_INTERSECTION_BBOX_UM"],
+                "3555.960000 2241.985000 3590.960000 2243.845000",
+            )
+            self.assertEqual(status["BRIDGE_GEOMETRY_STATUS"], "NOT_AUTHORIZED")
+            self.assertEqual(status["GENUS_AUTHORIZED"], "NO")
+            self.assertEqual(status["INNOVUS_AUTHORIZED"], "NO")
+            self.assertEqual(
+                status["NEXT_GATE"],
+                "RETURN_I6_CORRIDOR_EVIDENCE_FOR_BRIDGE_CANDIDATE_DEFINITION",
+            )
+            with (output / "corridor_search_regions.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                regions = list(csv.DictReader(handle, delimiter="\t"))
+            self.assertEqual(len(regions), 5)
+            north = next(
+                row
+                for row in regions
+                if row["region"] == "DVDD_NORTH_ESCAPE_SEARCH"
+            )
+            self.assertEqual(north["non_target_mettp_contact_count"], "1")
+            manifest = subprocess.run(
+                ["sha256sum", "-c", "SHA256SUMS"],
+                cwd=output,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(manifest.returncode, 0, manifest.stdout)
+
+            self._write_tsv(
+                probe / "corridor_hierarchical_shapes.tsv",
+                shape_fields,
+                [shape_rows[0], shape_rows[2], shape_rows[3]],
+            )
+            query_status_path = probe / "corridor_query_status.rpt"
+            query_status_path.write_text(
+                query_status_path.read_text(encoding="utf-8").replace(
+                    "HIERARCHICAL_SHAPE_ROW_COUNT=4",
+                    "HIERARCHICAL_SHAPE_ROW_COUNT=3",
+                ),
+                encoding="utf-8",
+            )
+            rejected = root / "rejected_missing_vss"
+            rejected_result = subprocess.run(
+                [
+                    sys.executable,
+                    str(CORRIDOR_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--floorplan-root",
+                    str(floorplan),
+                    "--out",
+                    str(rejected),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(rejected_result.returncode, 2)
+            rejected_status = self._read_kv(
+                rejected / "selected_i6_corridor_status.rpt"
+            )
+            self.assertEqual(rejected_status["STATUS"], "FAIL")
+            self.assertIn(
+                "did not recover exact VSS pin",
+                rejected_status["ERROR"],
+            )
+
+    def test_selected_i6_corridor_probe_is_read_only_and_fail_closed(self) -> None:
+        skill_path = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "probe_spadmic2_selected_pg_corridor.il"
+        )
+        wrapper_path = (
+            REPO
+            / "TOP"
+            / "ci"
+            / "server_probe_spadmic2_selected_pg_corridor.sh"
+        )
+        skill = skill_path.read_text(encoding="utf-8")
+        wrapper = wrapper_path.read_text(encoding="utf-8")
+        syntax = subprocess.run(
+            ["bash", "-n", str(wrapper_path)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stdout)
+        self.assertTrue(os.access(wrapper_path, os.X_OK))
+        self.assertTrue(os.access(CORRIDOR_CLASSIFIER, os.X_OK))
+        self.assertEqual(wrapper.count('"$VIRTUOSO_BIN" -nograph'), 1)
+        self.assertIn(
+            'dbOpenCellViewByType(libName cellName viewName "" "r")',
+            skill,
+        )
+        self.assertIn("dbGetTrueOverlaps(cv queryBox t 0:32 t)", skill)
+        self.assertIn("dbGetHierPathTransform(overlap)", skill)
+        self.assertIn("dbTransformBBox(leaf~>bBox transform)", skill)
+        self.assertIn("spadmicCorridorTopInstance(overlap)", skill)
+        self.assertNotIn("dbSave", skill)
+        self.assertNotIn("dbCreate", skill)
+        self.assertNotIn("dbDelete", skill)
+        self.assertIn("set +e", wrapper)
+        self.assertIn("FLOORPLAN_MANIFEST_PRE_RC", wrapper)
+        self.assertIn("SOURCE_STABILITY_RC", wrapper)
+        self.assertIn('"$CHMOD_BIN" -R a-w "$RAW_ROOT"', wrapper)
+        self.assertIn('"$CHMOD_BIN" -R a-w "$PROCESSED_ROOT"', wrapper)
+        self.assertIn('"$CHMOD_BIN" -R a-w "$DIAGNOSTIC_ROOT"', wrapper)
+        self.assertIn(
+            "DVDD_DIRECT_EAST_TO_WHITESPACE_STATUS="
+            "REJECT_TARGET_DVSS_INTERSECTION",
+            wrapper,
+        )
+        self.assertIn("BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED", wrapper)
+        self.assertIn(
+            "RETURN_I6_CORRIDOR_EVIDENCE_FOR_BRIDGE_CANDIDATE_DEFINITION",
+            wrapper,
+        )
+        self.assertIn("DO_NOT_START_GENUS_INNOVUS_OR_EDIT_OA", wrapper)
         self.assertNotIn("\ngenus ", wrapper)
         self.assertNotIn("\ninnovus ", wrapper)
         self.assertNotIn("\nrm ", wrapper)

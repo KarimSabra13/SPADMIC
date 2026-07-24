@@ -30,6 +30,39 @@
     "fixed_obstacle_policy": "ALL_OTHER_TOP_INSTANCE_BBOXES",
     "primary_whitespace_policy": "LARGEST_CORE_RECT_AFTER_FIXED_BBOX_SUBTRACTION"
   },
+  "selected_pg_corridor_probe": {
+    "target_instance": {
+      "instance": "I6",
+      "master_library": "SPADMIC",
+      "master_cell": "TXRX4TDC2_HV",
+      "master_view": "layout",
+      "orient": "R0"
+    },
+    "target_pins": {
+      "VDD": {
+        "chip_net": "DVDD",
+        "layer": "METTP",
+        "purpose": "pin",
+        "source_bbox_um": [3515.96, 2241.71, 3550.96, 2243.845]
+      },
+      "VSS": {
+        "chip_net": "DVSS",
+        "layer": "METTP",
+        "purpose": "pin",
+        "source_bbox_um": [3555.96, 2241.985, 3590.96, 2243.845]
+      }
+    },
+    "primary_whitespace_entry_x_um": 3662.535,
+    "context_margin_um": {
+      "west": 100.0,
+      "south": 100.0,
+      "north": 100.0,
+      "inside_primary_whitespace": 100.0
+    },
+    "hierarchy_depth": [0, 32],
+    "include_mosaic_rows_and_columns": true,
+    "candidate_policy": "REVIEW_ONLY_NO_GEOMETRY_CREATION"
+  },
   "matrix_terminal_families": {
     "R": {"width": 64, "direction": "OUTPUT"},
     "Y": {"width": 64, "direction": "OUTPUT"},

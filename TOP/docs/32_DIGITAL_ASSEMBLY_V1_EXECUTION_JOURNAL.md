@@ -6116,3 +6116,86 @@ acceptance gate to the exact current source-instance SHA, the `13/62` result,
 the corrected primary rectangle and output hashes, and the unchanged
 review-only `I6` selection. The next action remains one CPU-only retry; Cadence,
 Genus, Innovus, bridge creation, and OA editing remain unauthorized.
+
+### P11-R19 Corrected Floorplan Replay Accepted and Sealed
+
+The corrected CPU-only replay ran at exact commit
+`a2f5f90c058743517f5d566e9b50320b645b0837` and produced accepted immutable
+root:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_floorplan_replay_20260724_141934_pid779817
+PROCESS_RC=0
+STATUS_GATE_RC=0
+REPLAY_MANIFEST_PRE_SEAL_RC=0
+REPLAY_SEAL_RC=0
+REPLAY_WRITABLE_PATH=NONE
+REPLAY_MANIFEST_POST_SEAL_RC=0
+PROCESSOR_ONLY_DIGITAL_PG_FLOORPLAN_REPLAY_STATUS=PASS_EVIDENCE_READY
+```
+
+All source, PG-probe, and replay manifests passed before and after processing,
+and both upstream evidence roots remained read-only. The exact accepted
+physical model is:
+
+```text
+ASSEMBLY_BOUNDARY_INSTANCE=I5
+ASSEMBLY_FIXED_OBSTACLE_COUNT=13
+ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=62
+ASSEMBLY_PRIMARY_WHITESPACE_SOURCE_BBOX_UM=3662.535000 -123.715000 3951.791000 3289.077000
+ASSEMBLY_PRIMARY_WHITESPACE_AREA_UM2=987170.562752
+REVIEW_CANDIDATE_PAIR_INSTANCE=I6
+TARGET_INSTANCE_METTP_CONTEXT_STATUS=NOT_PROBED
+BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED
+NEXT_GATE=RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE
+```
+
+The selected exact METTP pin figures are:
+
+```text
+DVDD 3515.960000 2241.710000 3550.960000 2243.845000
+DVSS 3555.960000 2241.985000 3590.960000 2243.845000
+```
+
+Their y ranges overlap, and DVSS is immediately east of DVDD. A direct
+eastward DVDD extension toward the primary whitespace therefore crosses the
+DVSS pin rectangle and is rejected before any implementation action.
+
+### P11-R20 Selected-I6 Hierarchical Corridor Gate Prepared
+
+The next transaction is implemented as one foreground read-only OA probe:
+
+```text
+TOP/ci/server_probe_spadmic2_selected_pg_corridor.sh
+TOP/pnr/scripts/probe_spadmic2_selected_pg_corridor.il
+TOP/pnr/scripts/classify_spadmic2_selected_pg_corridor.py
+```
+
+The contract binds exact `I6/SPADMIC/TXRX4TDC2_HV/layout R0`, both accepted
+pin bboxes, the primary-whitespace entry at `x=3662.535`, and context window:
+
+```text
+3415.960000 2141.710000 3762.535000 2343.845000
+```
+
+The SKILL transaction opens `SPADMIC2/layout` in read-only mode and uses
+hierarchical overlap enumeration through depth 32, including mosaic rows and
+columns. Every hierarchical figure must have a proven top-cell transform.
+The CPU classifier must recover both exact target pin figures and emits
+bounded direct, north-jog, south-jog, and whitespace-entry search regions.
+
+This is an evidence gate only:
+
+```text
+DVDD_DIRECT_EAST_TO_WHITESPACE_STATUS=REJECT_TARGET_DVSS_INTERSECTION
+CANDIDATE_AUTHORIZATION=REVIEW_ONLY_NO_GEOMETRY_CREATION
+BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED
+P00_P02_IMPLEMENTATION_AUTHORIZED=NO
+P03_IMPLEMENTATION_AUTHORIZED=NO
+NEXT_GATE=RETURN_I6_CORRIDOR_EVIDENCE_FOR_BRIDGE_CANDIDATE_DEFINITION
+```
+
+The wrapper verifies and preserves the sealed assembly, PG, and floorplan
+evidence roots, hashes the live source before and after the OA read, seals raw
+and processed outputs, creates a detached-hash recovery archive, and removes
+all write bits. No Genus or Innovus action is part of this transaction.
