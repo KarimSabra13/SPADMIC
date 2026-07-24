@@ -22,6 +22,15 @@ PG_CLASSIFIER = (
 CONTRACT = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_contract.json"
 UNKNOWN_POLICY = REPO / "TOP" / "pnr" / "assembly" / "matrice5_unknown_family_policy.csv"
 RTL = REPO / "TOP" / "pnr" / "assembly" / "spadmic_digital_assembly_v1.sv"
+SPADMIC2_KEY_INSTANCES = (
+    REPO
+    / "TOP"
+    / "docs"
+    / "layout_audits"
+    / "SPADMIC2_20260709_072331"
+    / "reports"
+    / "SPADMIC2_key_instances.csv"
+)
 
 OOC_MODULE_PATH = REPO / "TOP" / "pnr" / "scripts" / "gen_ooc_block_harden_plan.py"
 OOC_SPEC = importlib.util.spec_from_file_location("ooc_harden_plan", OOC_MODULE_PATH)
@@ -267,6 +276,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         probe.mkdir()
         source = root / "sealed_source"
         (source / "processed_contract").mkdir(parents=True)
+        (source / "raw_oa_export").mkdir()
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         self._write_tsv(
             probe / "source_identity.tsv",
@@ -289,8 +299,46 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                         "filesystem_path"
                     ],
                     "open_status": "PASS",
-                    "bbox": "0 0 200 200",
+                    "bbox": "-500 -500 1100 1100",
                 }
+            ],
+        )
+        self._write_tsv(
+            source / "raw_oa_export/spadmic2_instances.tsv",
+            [
+                "instance",
+                "master_library",
+                "master_cell",
+                "master_view",
+                "orient",
+                "llx",
+                "lly",
+                "urx",
+                "ury",
+            ],
+            [
+                {
+                    "instance": "I5",
+                    "master_library": "SPADMIC",
+                    "master_cell": "BOX_RING2",
+                    "master_view": "layout",
+                    "orient": "R0",
+                    "llx": "-0.240",
+                    "lly": "-287.715",
+                    "urx": "999.760",
+                    "ury": "712.285",
+                },
+                {
+                    "instance": "M1",
+                    "master_library": "SPADMIC",
+                    "master_cell": "DDRs2",
+                    "master_view": "layout",
+                    "orient": "R0",
+                    "llx": "0",
+                    "lly": "80",
+                    "urx": "20",
+                    "ury": "180",
+                },
             ],
         )
         (probe / "virtuoso_export_status.rpt").write_text(
@@ -515,6 +563,28 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             contract["physical_policy"]["digital_to_chip_power_net_map"],
             {"VDD": "DVDD", "VSS": "DVSS"},
         )
+        self.assertEqual(
+            contract["assembly_floorplan"]["boundary_instance"],
+            {
+                "instance": "I5",
+                "master_library": "SPADMIC",
+                "master_cell": "BOX_RING2",
+                "master_view": "layout",
+                "orient": "R0",
+            },
+        )
+        self.assertEqual(
+            contract["assembly_floorplan"]["boundary_policy"],
+            "HOLLOW_PAD_RING_REFERENCE",
+        )
+        self.assertEqual(
+            contract["assembly_floorplan"]["coordinate_policy"],
+            "NORMALIZE_TO_BOUNDARY_INSTANCE_LOWER_LEFT",
+        )
+        self.assertEqual(
+            contract["assembly_floorplan"]["core_keepout_um"],
+            164.0,
+        )
         self.assertEqual(contract["phases"]["p03_matrix_interface"]["allowed_density_rules"], ["R1M1", "R1M2", "R1M3", "R1MT"])
         self.assertEqual(contract["source_layouts"]["matrice5"]["library"], "SPADMIC")
         self.assertEqual(
@@ -594,7 +664,30 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             self.assertEqual(status["INSTANCE_PIN_VSS_ALL_LAYER_SHAPE_COUNT"], "1")
             self.assertEqual(
                 status["NEXT_GATE"],
-                "SELECT_INSTANCE_PIN_PAIR_AND_DEFINE_CANDIDATE_BRIDGES",
+                "RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE",
+            )
+            self.assertEqual(status["ASSEMBLY_FLOORPLAN_MODEL_STATUS"], "PASS")
+            self.assertEqual(status["ASSEMBLY_BOUNDARY_INSTANCE"], "I5")
+            self.assertEqual(
+                status["ASSEMBLY_NORMALIZED_DIE_BBOX_UM"],
+                "0.000000 0.000000 1000.000000 1000.000000",
+            )
+            self.assertEqual(
+                status["SOURCE_TO_ASSEMBLY_TRANSLATION_UM"],
+                "0.240000 287.715000",
+            )
+            self.assertEqual(
+                status["COMPLETE_SAME_INSTANCE_PG_PAIR_STATUS"],
+                "PASS",
+            )
+            self.assertEqual(status["REVIEW_CANDIDATE_PAIR_INSTANCE"], "M1")
+            self.assertEqual(
+                status["TARGET_INSTANCE_METTP_CONTEXT_STATUS"],
+                "NOT_PROBED",
+            )
+            self.assertEqual(
+                status["BRIDGE_GEOMETRY_STATUS"],
+                "NOT_AUTHORIZED",
             )
             self.assertEqual(status["P00_P02_IMPLEMENTATION_AUTHORIZED"], "NO")
 
@@ -643,6 +736,312 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 output / "digital_pg_access_layer_summary.tsv"
             ).read_text(encoding="utf-8")
             self.assertIn("POSITIVE_AREA_METTP", layer_summary)
+            self.assertTrue(
+                (output / "assembly_floorplan_boundary.tsv").is_file()
+            )
+            self.assertTrue(
+                (output / "assembly_fixed_obstacles_normalized.tsv").is_file()
+            )
+            self.assertTrue(
+                (output / "assembly_verified_whitespace_normalized.tsv").is_file()
+            )
+            self.assertTrue((output / "digital_pg_pair_ranking.tsv").is_file())
+            manifest = subprocess.run(
+                ["sha256sum", "-c", "SHA256SUMS"],
+                cwd=output,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(manifest.returncode, 0, manifest.stdout)
+
+    def test_pg_access_classifier_ranks_complete_pair_against_corrected_interior(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe, source = self._make_pg_probe(root, include_direct_top=False)
+
+            instance_path = source / "raw_oa_export/spadmic2_instances.tsv"
+            with instance_path.open(newline="", encoding="utf-8") as handle:
+                instances = list(csv.DictReader(handle, delimiter="\t"))
+            instances.append(
+                {
+                    "instance": "I6",
+                    "master_library": "SPADMIC",
+                    "master_cell": "TXRX4TDC2_HV",
+                    "master_view": "layout",
+                    "orient": "R0",
+                    "llx": "700",
+                    "lly": "200",
+                    "urx": "800",
+                    "ury": "500",
+                }
+            )
+            self._write_tsv(instance_path, list(instances[0]), instances)
+
+            pin_path = probe / "supply_instance_pins.tsv"
+            with pin_path.open(newline="", encoding="utf-8") as handle:
+                pins = list(csv.DictReader(handle, delimiter="\t"))
+            for row in pins:
+                if row["instance"] == "M1":
+                    row["net"] = "ABSENT"
+            for terminal, lly, ury in (
+                ("DVDD", "300", "310"),
+                ("DVSS", "320", "330"),
+            ):
+                pins.append(
+                    {
+                        "instance": "I6",
+                        "instance_object_type": "inst",
+                        "master_library": "SPADMIC",
+                        "master_cell": "TXRX4TDC2_HV",
+                        "master_view": "layout",
+                        "orient": "R0",
+                        "terminal": terminal,
+                        "direction": "inputOutput",
+                        "net": "ABSENT",
+                        "layer": "METTP",
+                        "purpose": "pin",
+                        "transform_status": "DB_INSTANCE_TRANSFORM",
+                        "coordinate_space": "TOP_CELLVIEW",
+                        "master_llx": "0",
+                        "master_lly": lly,
+                        "master_urx": "20",
+                        "master_ury": ury,
+                        "llx": "700",
+                        "lly": lly,
+                        "urx": "720",
+                        "ury": ury,
+                    }
+                )
+            self._write_tsv(pin_path, list(pins[0]), pins)
+
+            output = root / "classified"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PG_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--source-audit-root",
+                    str(source),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "digital_pg_access_status.rpt")
+            self.assertEqual(status["REVIEW_CANDIDATE_PAIR_INSTANCE"], "I6")
+            self.assertEqual(
+                status["ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM"],
+                "164.000000 164.000000 700.240000 836.000000",
+            )
+            self.assertEqual(
+                status["NEXT_GATE"],
+                "RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE",
+            )
+            with (output / "digital_pg_pair_ranking.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                ranking = list(csv.DictReader(handle, delimiter="\t"))
+            self.assertEqual(ranking[0]["instance"], "I6")
+            self.assertEqual(ranking[1]["instance"], "M1")
+            self.assertEqual(
+                ranking[0]["authorization"],
+                "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR",
+            )
+
+    def test_pg_floorplan_replay_matches_exact_spadmic2_geometry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            probe, source = self._make_pg_probe(root, include_direct_top=False)
+
+            identity_path = probe / "source_identity.tsv"
+            with identity_path.open(newline="", encoding="utf-8") as handle:
+                identity = list(csv.DictReader(handle, delimiter="\t"))
+            identity[0]["bbox"] = (
+                "-451.632000 -287.715000 4115.791000 3453.077000"
+            )
+            self._write_tsv(identity_path, list(identity[0]), identity)
+
+            with SPADMIC2_KEY_INSTANCES.open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                historical = list(csv.reader(handle))
+            source_instances = [
+                {
+                    "instance": row[0],
+                    "master_library": row[1],
+                    "master_cell": (
+                        "matrice5" if row[0] == "M182" else row[2]
+                    ),
+                    "master_view": row[3],
+                    "orient": row[4] or "ABSENT",
+                    "llx": row[5],
+                    "lly": row[6],
+                    "urx": row[7],
+                    "ury": row[8],
+                }
+                for row in historical
+            ]
+            instance_path = source / "raw_oa_export/spadmic2_instances.tsv"
+            self._write_tsv(
+                instance_path,
+                list(source_instances[0]),
+                source_instances,
+            )
+
+            pin_fields = [
+                "instance",
+                "instance_object_type",
+                "master_library",
+                "master_cell",
+                "master_view",
+                "orient",
+                "terminal",
+                "direction",
+                "net",
+                "layer",
+                "purpose",
+                "transform_status",
+                "coordinate_space",
+                "master_llx",
+                "master_lly",
+                "master_urx",
+                "master_ury",
+                "llx",
+                "lly",
+                "urx",
+                "ury",
+            ]
+            pin_rows = []
+            for (
+                instance,
+                master_cell,
+                terminal,
+                master_bbox,
+                placed_bbox,
+            ) in (
+                (
+                    "I5",
+                    "BOX_RING2",
+                    "DVDD",
+                    ("1608.600000", "49.245000", "1661.600000", "115.260000"),
+                    ("1391.500000", "49.245000", "1444.500000", "115.260000"),
+                ),
+                (
+                    "I5",
+                    "BOX_RING2",
+                    "DVSS",
+                    ("1420.600000", "49.245000", "1473.600000", "115.260000"),
+                    ("1203.500000", "49.245000", "1256.500000", "115.260000"),
+                ),
+                (
+                    "I6",
+                    "TXRX4TDC2_HV",
+                    "DVDD",
+                    ("30.795000", "1405.555000", "65.795000", "1407.690000"),
+                    ("3515.960000", "2241.710000", "3550.960000", "2243.845000"),
+                ),
+                (
+                    "I6",
+                    "TXRX4TDC2_HV",
+                    "DVSS",
+                    ("70.795000", "1405.830000", "105.795000", "1407.690000"),
+                    ("3555.960000", "2241.985000", "3590.960000", "2243.845000"),
+                ),
+            ):
+                pin_rows.append(
+                    {
+                        "instance": instance,
+                        "instance_object_type": "inst",
+                        "master_library": "SPADMIC",
+                        "master_cell": master_cell,
+                        "master_view": "layout",
+                        "orient": "R0",
+                        "terminal": terminal,
+                        "direction": "inputOutput",
+                        "net": "ABSENT",
+                        "layer": "METTP",
+                        "purpose": "pin",
+                        "transform_status": "DB_INSTANCE_TRANSFORM",
+                        "coordinate_space": "TOP_CELLVIEW",
+                        "master_llx": master_bbox[0],
+                        "master_lly": master_bbox[1],
+                        "master_urx": master_bbox[2],
+                        "master_ury": master_bbox[3],
+                        "llx": placed_bbox[0],
+                        "lly": placed_bbox[1],
+                        "urx": placed_bbox[2],
+                        "ury": placed_bbox[3],
+                    }
+                )
+            self._write_tsv(
+                probe / "supply_instance_pins.tsv",
+                pin_fields,
+                pin_rows,
+            )
+
+            output = root / "classified"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PG_CLASSIFIER),
+                    "--probe-root",
+                    str(probe),
+                    "--source-audit-root",
+                    str(source),
+                    "--out",
+                    str(output),
+                ],
+                cwd=REPO,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            status = self._read_kv(output / "digital_pg_access_status.rpt")
+            self.assertEqual(
+                status["ASSEMBLY_NORMALIZED_DIE_BBOX_UM"],
+                "0.000000 0.000000 4116.031000 3740.792000",
+            )
+            self.assertEqual(
+                status["ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT"],
+                "42",
+            )
+            self.assertEqual(
+                status["ASSEMBLY_PRIMARY_WHITESPACE_SOURCE_BBOX_UM"],
+                "3638.670000 -123.715000 3951.791000 3289.077000",
+            )
+            self.assertEqual(
+                status["ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM"],
+                "3638.910000 164.000000 3952.031000 3576.792000",
+            )
+            self.assertEqual(status["REVIEW_CANDIDATE_PAIR_INSTANCE"], "I6")
+            with (output / "digital_pg_pair_ranking.tsv").open(
+                newline="",
+                encoding="utf-8",
+            ) as handle:
+                ranking = list(csv.DictReader(handle, delimiter="\t"))
+            self.assertEqual([row["instance"] for row in ranking], ["I6", "I5"])
+            self.assertEqual(
+                ranking[0]["vdd_primary_whitespace_distance_um"],
+                "87.710000",
+            )
+            self.assertEqual(
+                ranking[0]["vss_primary_whitespace_distance_um"],
+                "47.710000",
+            )
             manifest = subprocess.run(
                 ["sha256sum", "-c", "SHA256SUMS"],
                 cwd=output,
@@ -889,6 +1288,15 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("RECOVERY_ARCHIVE_HASH_VERIFY_RC", wrapper)
         self.assertIn("digital_pg_access_layer_summary.tsv", wrapper)
         self.assertIn("digital_pg_access_all_layers.tsv", wrapper)
+        self.assertIn("assembly_floorplan_boundary.tsv", wrapper)
+        self.assertIn("assembly_fixed_obstacles_normalized.tsv", wrapper)
+        self.assertIn("assembly_verified_whitespace_normalized.tsv", wrapper)
+        self.assertIn("digital_pg_pair_ranking.tsv", wrapper)
+        self.assertIn("REVIEW_CANDIDATE_PAIR_INSTANCE=I6", wrapper)
+        self.assertIn(
+            "RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE",
+            wrapper,
+        )
         self.assertIn(
             'echo "RAW_MANIFEST_POST_ARCHIVE_RC=$RAW_MANIFEST_POST_ARCHIVE_RC"',
             wrapper,
@@ -902,6 +1310,51 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertNotIn("\ngenus ", wrapper)
         self.assertNotIn("\ninnovus ", wrapper)
         self.assertNotIn("\nrm ", wrapper)
+
+    def test_pg_floorplan_replay_is_processor_only_and_fail_closed(self) -> None:
+        wrapper_path = (
+            REPO
+            / "TOP"
+            / "ci"
+            / "server_replay_spadmic2_digital_pg_floorplan.sh"
+        )
+        wrapper = wrapper_path.read_text(encoding="utf-8")
+        syntax = subprocess.run(
+            ["bash", "-n", str(wrapper_path)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stdout)
+        self.assertTrue(os.access(wrapper_path, os.X_OK))
+        self.assertIn("set +e", wrapper)
+        self.assertIn("--probe-root \"$PG_RAW\"", wrapper)
+        self.assertIn("--source-audit-root \"$SOURCE_ROOT\"", wrapper)
+        self.assertIn("ASSEMBLY_BOUNDARY_INSTANCE=I5", wrapper)
+        self.assertIn(
+            "ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=42",
+            wrapper,
+        )
+        self.assertIn("REVIEW_CANDIDATE_PAIR_INSTANCE=I6", wrapper)
+        self.assertIn(
+            "TARGET_INSTANCE_METTP_CONTEXT_STATUS=NOT_PROBED",
+            wrapper,
+        )
+        self.assertIn("BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED", wrapper)
+        self.assertIn(
+            "RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE",
+            wrapper,
+        )
+        self.assertIn('"$CHMOD_BIN" -R a-w "$REPLAY_ROOT"', wrapper)
+        self.assertIn("DO_NOT_START_CADENCE_GENUS_INNOVUS_OR_EDIT_OA", wrapper)
+        self.assertNotIn('"$VIRTUOSO_BIN"', wrapper)
+        self.assertNotIn("-nograph", wrapper)
+        self.assertNotIn("\ngenus ", wrapper)
+        self.assertNotIn("\ninnovus ", wrapper)
+        self.assertNotIn("\nrm ", wrapper)
+        self.assertNotIn("\nexit ", wrapper)
+        self.assertNotIn("set -e", wrapper)
 
     def test_oa_processor_reconciles_physical_inputoutput_and_isolated_matrix_pins(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

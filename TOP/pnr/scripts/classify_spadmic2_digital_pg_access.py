@@ -25,6 +25,15 @@ INSTANCE_TRANSFORM_POLICY = (
     "DB_TRANSFORM_OR_BBOX_VERIFIED_XY_ORIENT_UNIT_MAG_STANDARD_INSTANCE"
 )
 UNAVAILABLE_TRANSFORM_POLICY = "MASTER_LOCAL_ONLY_NOT_A_CANDIDATE"
+ASSEMBLY_BOUNDARY_POLICY = "HOLLOW_PAD_RING_REFERENCE"
+ASSEMBLY_COORDINATE_POLICY = "NORMALIZE_TO_BOUNDARY_INSTANCE_LOWER_LEFT"
+ASSEMBLY_FIXED_OBSTACLE_POLICY = "ALL_OTHER_TOP_INSTANCE_BBOXES"
+ASSEMBLY_PRIMARY_WHITESPACE_POLICY = (
+    "LARGEST_CORE_RECT_AFTER_FIXED_BBOX_SUBTRACTION"
+)
+PAIR_SELECTION_POLICY = (
+    "SAME_OWNER_COMPLETE_PAIR_THEN_EVIDENCE_THEN_PRIMARY_WHITESPACE_DISTANCE"
+)
 ELIGIBLE_INSTANCE_TRANSFORMS = {
     "DB_INSTANCE_TRANSFORM",
     "RECONSTRUCTED_XY_ORIENT_UNIT_MAG_BBOX_VERIFIED",
@@ -49,6 +58,37 @@ class Rect:
     @property
     def area(self) -> float:
         return self.width * self.height
+
+    def intersect(self, other: "Rect") -> "Rect | None":
+        result = Rect(
+            max(self.llx, other.llx),
+            max(self.lly, other.lly),
+            min(self.urx, other.urx),
+            min(self.ury, other.ury),
+        )
+        return result if result.width > 0.0 and result.height > 0.0 else None
+
+    def translate(self, dx: float, dy: float) -> "Rect":
+        return Rect(
+            self.llx + dx,
+            self.lly + dy,
+            self.urx + dx,
+            self.ury + dy,
+        )
+
+    def inset(self, margin: float) -> "Rect":
+        return Rect(
+            self.llx + margin,
+            self.lly + margin,
+            self.urx - margin,
+            self.ury - margin,
+        )
+
+    def format(self) -> str:
+        return (
+            f"{self.llx:.6f} {self.lly:.6f} "
+            f"{self.urx:.6f} {self.ury:.6f}"
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -152,6 +192,43 @@ def rect_relation(first: Rect, second: Rect) -> tuple[str, float]:
             return "BOUNDARY_TOUCH", distance
         return "CORNER_TOUCH", distance
     return "SEPARATED", distance
+
+
+def subtract_rect(source: Rect, obstacle: Rect) -> list[Rect]:
+    overlap = source.intersect(obstacle)
+    if overlap is None:
+        return [source]
+    candidates = [
+        Rect(source.llx, source.lly, overlap.llx, source.ury),
+        Rect(overlap.urx, source.lly, source.urx, source.ury),
+        Rect(overlap.llx, source.lly, overlap.urx, overlap.lly),
+        Rect(overlap.llx, overlap.ury, overlap.urx, source.ury),
+    ]
+    return [rect for rect in candidates if rect.area > 1.0]
+
+
+def free_rectangles(boundary: Rect, obstacles: Iterable[Rect]) -> list[Rect]:
+    free = [boundary]
+    for obstacle in obstacles:
+        next_free: list[Rect] = []
+        for candidate in free:
+            next_free.extend(subtract_rect(candidate, obstacle))
+        free = next_free
+    unique = {(r.llx, r.lly, r.urx, r.ury): r for r in free}
+    return sorted(unique.values(), key=lambda rect: (-rect.area, rect.llx, rect.lly))
+
+
+def source_instance_rect(row: dict[str, str]) -> Rect:
+    return Rect(*(float(row[key]) for key in ("llx", "lly", "urx", "ury")))
+
+
+def rect_output(prefix: str, rect: Rect) -> dict[str, str]:
+    return {
+        f"{prefix}_llx": f"{rect.llx:.6f}",
+        f"{prefix}_lly": f"{rect.lly:.6f}",
+        f"{prefix}_urx": f"{rect.urx:.6f}",
+        f"{prefix}_ury": f"{rect.ury:.6f}",
+    }
 
 
 def chip_mapping_for_row(
@@ -349,6 +426,252 @@ def main() -> int:
         ):
             raise ValueError("SPADMIC2 probe source identity does not match contract")
 
+        floorplan = contract["assembly_floorplan"]
+        if floorplan.get("boundary_policy") != ASSEMBLY_BOUNDARY_POLICY:
+            raise ValueError("unsupported assembly boundary policy")
+        if floorplan.get("coordinate_policy") != ASSEMBLY_COORDINATE_POLICY:
+            raise ValueError("unsupported assembly coordinate policy")
+        if (
+            floorplan.get("fixed_obstacle_policy")
+            != ASSEMBLY_FIXED_OBSTACLE_POLICY
+        ):
+            raise ValueError("unsupported assembly fixed-obstacle policy")
+        if (
+            floorplan.get("primary_whitespace_policy")
+            != ASSEMBLY_PRIMARY_WHITESPACE_POLICY
+        ):
+            raise ValueError("unsupported assembly primary-whitespace policy")
+
+        source_instances_path = (
+            source / "raw_oa_export/spadmic2_instances.tsv"
+        )
+        source_instances = read_tsv(
+            source_instances_path,
+            [
+                "instance",
+                "master_library",
+                "master_cell",
+                "master_view",
+                "orient",
+                "llx",
+                "lly",
+                "urx",
+                "ury",
+            ],
+        )
+        boundary_spec = floorplan["boundary_instance"]
+        boundary_matches = [
+            row
+            for row in source_instances
+            if all(
+                row.get(field) == str(boundary_spec[field])
+                for field in (
+                    "instance",
+                    "master_library",
+                    "master_cell",
+                    "master_view",
+                    "orient",
+                )
+            )
+        ]
+        if len(boundary_matches) != 1:
+            raise ValueError(
+                "assembly boundary instance contract must match exactly one "
+                "source instance"
+            )
+        boundary_row = boundary_matches[0]
+        boundary_source = source_instance_rect(boundary_row)
+        if boundary_source.area <= 0.0:
+            raise ValueError("assembly boundary instance has nonpositive bbox")
+
+        source_bbox_values = source_identity[0]["bbox"].split()
+        if len(source_bbox_values) != 4:
+            raise ValueError("SPADMIC2 source identity bbox is malformed")
+        source_cellview_bbox = Rect(*(float(value) for value in source_bbox_values))
+        if (
+            boundary_source.llx < source_cellview_bbox.llx
+            or boundary_source.lly < source_cellview_bbox.lly
+            or boundary_source.urx > source_cellview_bbox.urx
+            or boundary_source.ury > source_cellview_bbox.ury
+        ):
+            raise ValueError(
+                "assembly boundary instance is outside the source cellview bbox"
+            )
+
+        keepout_um = float(floorplan["core_keepout_um"])
+        if keepout_um <= 0.0:
+            raise ValueError("assembly core keepout must be positive")
+        core_source = boundary_source.inset(keepout_um)
+        if core_source.area <= 0.0:
+            raise ValueError("assembly core bbox is empty after pad-ring keepout")
+
+        source_to_assembly_dx = -boundary_source.llx
+        source_to_assembly_dy = -boundary_source.lly
+        boundary_assembly = boundary_source.translate(
+            source_to_assembly_dx,
+            source_to_assembly_dy,
+        )
+        core_assembly = core_source.translate(
+            source_to_assembly_dx,
+            source_to_assembly_dy,
+        )
+
+        obstacle_rows: list[dict[str, object]] = []
+        obstacle_rects: list[Rect] = []
+        for row in source_instances:
+            if row is boundary_row:
+                continue
+            source_rect = source_instance_rect(row)
+            if source_rect.area <= 0.0:
+                raise ValueError(
+                    f"source instance {row['instance']} has nonpositive bbox"
+                )
+            core_overlap = source_rect.intersect(core_source)
+            if core_overlap is not None:
+                obstacle_rects.append(source_rect)
+            assembly_rect = source_rect.translate(
+                source_to_assembly_dx,
+                source_to_assembly_dy,
+            )
+            obstacle_rows.append(
+                {
+                    "instance": row["instance"],
+                    "master_library": row["master_library"],
+                    "master_cell": row["master_cell"],
+                    "master_view": row["master_view"],
+                    "orient": row["orient"],
+                    **rect_output("source", source_rect),
+                    **rect_output("assembly", assembly_rect),
+                    "core_overlap_status": (
+                        "OVERLAPS_CORE" if core_overlap is not None else "OUTSIDE_CORE"
+                    ),
+                    "obstacle_policy": ASSEMBLY_FIXED_OBSTACLE_POLICY,
+                }
+            )
+
+        free_source = free_rectangles(core_source, obstacle_rects)
+        if not free_source:
+            raise ValueError("no verified interior whitespace remains")
+        whitespace_rows: list[dict[str, object]] = []
+        whitespace_context_rows: list[dict[str, str]] = []
+        for rank, source_rect in enumerate(free_source, start=1):
+            assembly_rect = source_rect.translate(
+                source_to_assembly_dx,
+                source_to_assembly_dy,
+            )
+            whitespace_rows.append(
+                {
+                    "rank": rank,
+                    **rect_output("source", source_rect),
+                    **rect_output("assembly", assembly_rect),
+                    "area_um2": f"{source_rect.area:.6f}",
+                    "status": "VERIFIED_INTERIOR_EMPTY",
+                }
+            )
+            whitespace_context_rows.append(
+                {
+                    "rank": str(rank),
+                    "llx": f"{source_rect.llx:.6f}",
+                    "lly": f"{source_rect.lly:.6f}",
+                    "urx": f"{source_rect.urx:.6f}",
+                    "ury": f"{source_rect.ury:.6f}",
+                    "status": "VERIFIED_INTERIOR_EMPTY",
+                }
+            )
+        primary_whitespace_source = free_source[0]
+        primary_whitespace_assembly = primary_whitespace_source.translate(
+            source_to_assembly_dx,
+            source_to_assembly_dy,
+        )
+
+        write_tsv(
+            out / "assembly_floorplan_boundary.tsv",
+            [
+                "instance",
+                "master_library",
+                "master_cell",
+                "master_view",
+                "orient",
+                "boundary_policy",
+                "coordinate_policy",
+                "core_keepout_um",
+                "source_llx",
+                "source_lly",
+                "source_urx",
+                "source_ury",
+                "assembly_llx",
+                "assembly_lly",
+                "assembly_urx",
+                "assembly_ury",
+                "core_source_llx",
+                "core_source_lly",
+                "core_source_urx",
+                "core_source_ury",
+                "core_assembly_llx",
+                "core_assembly_lly",
+                "core_assembly_urx",
+                "core_assembly_ury",
+                "source_to_assembly_dx",
+                "source_to_assembly_dy",
+            ],
+            [
+                {
+                    "instance": boundary_row["instance"],
+                    "master_library": boundary_row["master_library"],
+                    "master_cell": boundary_row["master_cell"],
+                    "master_view": boundary_row["master_view"],
+                    "orient": boundary_row["orient"],
+                    "boundary_policy": ASSEMBLY_BOUNDARY_POLICY,
+                    "coordinate_policy": ASSEMBLY_COORDINATE_POLICY,
+                    "core_keepout_um": f"{keepout_um:.6f}",
+                    **rect_output("source", boundary_source),
+                    **rect_output("assembly", boundary_assembly),
+                    **rect_output("core_source", core_source),
+                    **rect_output("core_assembly", core_assembly),
+                    "source_to_assembly_dx": f"{source_to_assembly_dx:.6f}",
+                    "source_to_assembly_dy": f"{source_to_assembly_dy:.6f}",
+                }
+            ],
+        )
+        write_tsv(
+            out / "assembly_fixed_obstacles_normalized.tsv",
+            [
+                "instance",
+                "master_library",
+                "master_cell",
+                "master_view",
+                "orient",
+                "source_llx",
+                "source_lly",
+                "source_urx",
+                "source_ury",
+                "assembly_llx",
+                "assembly_lly",
+                "assembly_urx",
+                "assembly_ury",
+                "core_overlap_status",
+                "obstacle_policy",
+            ],
+            obstacle_rows,
+        )
+        write_tsv(
+            out / "assembly_verified_whitespace_normalized.tsv",
+            [
+                "rank",
+                "source_llx",
+                "source_lly",
+                "source_urx",
+                "source_ury",
+                "assembly_llx",
+                "assembly_lly",
+                "assembly_urx",
+                "assembly_ury",
+                "area_um2",
+                "status",
+            ],
+            whitespace_rows,
+        )
+
         top_shape_fields = [
             "shape_type",
             "net",
@@ -406,7 +729,7 @@ def main() -> int:
             probe / "direct_mettp_shapes.tsv",
             top_shape_fields,
         )
-        whitespace = read_tsv(
+        _legacy_whitespace = read_tsv(
             source / "processed_contract/verified_digital_whitespace.tsv",
             ["rank", "llx", "lly", "urx", "ury", "status"],
         )
@@ -431,7 +754,15 @@ def main() -> int:
             rect = rect_from_row(row)
             relation, distance, whitespace_rank = whitespace_context(
                 rect,
-                whitespace,
+                whitespace_context_rows,
+            )
+            primary_relation, primary_distance = rect_relation(
+                rect,
+                primary_whitespace_source,
+            )
+            assembly_rect = rect.translate(
+                source_to_assembly_dx,
+                source_to_assembly_dy,
             )
             candidates.append(
                 {
@@ -470,9 +801,14 @@ def main() -> int:
                     "lly": row["lly"],
                     "urx": row["urx"],
                     "ury": row["ury"],
+                    **rect_output("assembly", assembly_rect),
                     "whitespace_rank": whitespace_rank,
                     "whitespace_relation": relation,
                     "whitespace_distance_um": distance,
+                    "primary_whitespace_relation": primary_relation,
+                    "primary_whitespace_distance_um": (
+                        f"{primary_distance:.6f}"
+                    ),
                     "authorization": "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR",
                 }
             )
@@ -723,15 +1059,22 @@ def main() -> int:
             "lly",
             "urx",
             "ury",
+            "assembly_llx",
+            "assembly_lly",
+            "assembly_urx",
+            "assembly_ury",
             "whitespace_rank",
             "whitespace_relation",
             "whitespace_distance_um",
+            "primary_whitespace_relation",
+            "primary_whitespace_distance_um",
             "authorization",
         ]
         candidates.sort(
             key=lambda row: (
                 row["local_net"],
                 evidence_rank(str(row["evidence_class"])),
+                float(row["primary_whitespace_distance_um"]),
                 float(row["whitespace_distance_um"]),
                 str(row["instance"]),
                 float(row["llx"]),
@@ -744,18 +1087,173 @@ def main() -> int:
             candidates,
         )
 
-        recommendations: list[dict[str, object]] = []
-        for local_net in local_nets:
-            local_candidates = [
-                row for row in candidates if row["local_net"] == local_net
+        def owner_key(row: dict[str, object]) -> tuple[str, str, str, str, str]:
+            if row["source_object"] in {"TOP_SHAPE", "TOP_TERMINAL_PIN"}:
+                return ("TOP", "TOP", "", "", "")
+            return (
+                "INSTANCE",
+                str(row["instance"]),
+                str(row["master_library"]),
+                str(row["master_cell"]),
+                str(row["master_view"]),
+            )
+
+        pair_candidates: list[
+            tuple[
+                tuple[int, int, float, str, str],
+                tuple[str, str, str, str, str],
+                dict[str, dict[str, object]],
             ]
-            if local_candidates:
+        ] = []
+        owners = sorted({owner_key(row) for row in candidates})
+        for owner in owners:
+            selected_by_net: dict[str, dict[str, object]] = {}
+            for local_net in local_nets:
+                owner_net_candidates = [
+                    row
+                    for row in candidates
+                    if owner_key(row) == owner and row["local_net"] == local_net
+                ]
+                if not owner_net_candidates:
+                    break
+                owner_net_candidates.sort(
+                    key=lambda row: (
+                        evidence_rank(str(row["evidence_class"])),
+                        float(row["primary_whitespace_distance_um"]),
+                        float(row["whitespace_distance_um"]),
+                        float(row["llx"]),
+                        float(row["lly"]),
+                    )
+                )
+                selected_by_net[local_net] = owner_net_candidates[0]
+            if len(selected_by_net) != len(local_nets):
+                continue
+            evidence_ranks = [
+                evidence_rank(str(selected_by_net[net]["evidence_class"]))
+                for net in local_nets
+            ]
+            primary_distance_sum = sum(
+                float(selected_by_net[net]["primary_whitespace_distance_um"])
+                for net in local_nets
+            )
+            pair_candidates.append(
+                (
+                    (
+                        max(evidence_ranks),
+                        sum(evidence_ranks),
+                        primary_distance_sum,
+                        owner[0],
+                        owner[1],
+                    ),
+                    owner,
+                    selected_by_net,
+                )
+            )
+        pair_candidates.sort(key=lambda item: item[0])
+
+        pair_rows: list[dict[str, object]] = []
+        for pair_rank, (_, owner, selected_by_net) in enumerate(
+            pair_candidates,
+            start=1,
+        ):
+            vdd = selected_by_net["VDD"]
+            vss = selected_by_net["VSS"]
+            pair_distance_sum = sum(
+                float(
+                    selected_by_net[net][
+                        "primary_whitespace_distance_um"
+                    ]
+                )
+                for net in local_nets
+            )
+            pair_rows.append(
+                {
+                    "pair_rank": pair_rank,
+                    "owner_scope": owner[0],
+                    "instance": owner[1],
+                    "master_library": owner[2],
+                    "master_cell": owner[3],
+                    "master_view": owner[4],
+                    "vdd_evidence_class": vdd["evidence_class"],
+                    "vdd_terminal": vdd["terminal"],
+                    "vdd_source_llx": vdd["llx"],
+                    "vdd_source_lly": vdd["lly"],
+                    "vdd_source_urx": vdd["urx"],
+                    "vdd_source_ury": vdd["ury"],
+                    "vdd_assembly_llx": vdd["assembly_llx"],
+                    "vdd_assembly_lly": vdd["assembly_lly"],
+                    "vdd_assembly_urx": vdd["assembly_urx"],
+                    "vdd_assembly_ury": vdd["assembly_ury"],
+                    "vdd_primary_whitespace_distance_um": vdd[
+                        "primary_whitespace_distance_um"
+                    ],
+                    "vss_evidence_class": vss["evidence_class"],
+                    "vss_terminal": vss["terminal"],
+                    "vss_source_llx": vss["llx"],
+                    "vss_source_lly": vss["lly"],
+                    "vss_source_urx": vss["urx"],
+                    "vss_source_ury": vss["ury"],
+                    "vss_assembly_llx": vss["assembly_llx"],
+                    "vss_assembly_lly": vss["assembly_lly"],
+                    "vss_assembly_urx": vss["assembly_urx"],
+                    "vss_assembly_ury": vss["assembly_ury"],
+                    "vss_primary_whitespace_distance_um": vss[
+                        "primary_whitespace_distance_um"
+                    ],
+                    "pair_primary_whitespace_distance_sum_um": (
+                        f"{pair_distance_sum:.6f}"
+                    ),
+                    "selection_policy": PAIR_SELECTION_POLICY,
+                    "authorization": "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR",
+                }
+            )
+        write_tsv(
+            out / "digital_pg_pair_ranking.tsv",
+            [
+                "pair_rank",
+                "owner_scope",
+                "instance",
+                "master_library",
+                "master_cell",
+                "master_view",
+                "vdd_evidence_class",
+                "vdd_terminal",
+                "vdd_source_llx",
+                "vdd_source_lly",
+                "vdd_source_urx",
+                "vdd_source_ury",
+                "vdd_assembly_llx",
+                "vdd_assembly_lly",
+                "vdd_assembly_urx",
+                "vdd_assembly_ury",
+                "vdd_primary_whitespace_distance_um",
+                "vss_evidence_class",
+                "vss_terminal",
+                "vss_source_llx",
+                "vss_source_lly",
+                "vss_source_urx",
+                "vss_source_ury",
+                "vss_assembly_llx",
+                "vss_assembly_lly",
+                "vss_assembly_urx",
+                "vss_assembly_ury",
+                "vss_primary_whitespace_distance_um",
+                "pair_primary_whitespace_distance_sum_um",
+                "selection_policy",
+                "authorization",
+            ],
+            pair_rows,
+        )
+
+        recommendations: list[dict[str, object]] = []
+        selected_pair_owner: tuple[str, str, str, str, str] | None = None
+        if pair_candidates:
+            _, selected_pair_owner, selected_by_net = pair_candidates[0]
+            for local_net in local_nets:
                 recommendations.append(
                     {
-                        **local_candidates[0],
-                        "selection_basis": (
-                            "STRONGEST_EVIDENCE_THEN_NEAREST_VERIFIED_WHITESPACE"
-                        ),
+                        **selected_by_net[local_net],
+                        "selection_basis": PAIR_SELECTION_POLICY,
                     }
                 )
         write_tsv(
@@ -879,7 +1377,19 @@ def main() -> int:
         }
         direct_gate = all(direct_counts[net] > 0 for net in local_nets)
         instance_gate = all(instance_counts[net] > 0 for net in local_nets)
-        pair_gate = len(recommendations) == len(local_nets)
+        pair_gate = (
+            selected_pair_owner is not None
+            and len(recommendations) == len(local_nets)
+        )
+        selected_pair_scope = (
+            selected_pair_owner[0] if selected_pair_owner is not None else "NONE"
+        )
+        selected_pair_instance = (
+            selected_pair_owner[1] if selected_pair_owner is not None else "NONE"
+        )
+        complete_instance_pair_gate = (
+            pair_gate and selected_pair_scope == "INSTANCE"
+        )
         instance_inventory = [
             row
             for row in inventory
@@ -926,8 +1436,10 @@ def main() -> int:
         }
         if direct_gate:
             next_gate = "REVIEW_DIRECT_CHIP_PG_ACCESS_AND_DEFINE_LOCAL_RAILS"
+        elif complete_instance_pair_gate:
+            next_gate = "RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE"
         elif instance_gate:
-            next_gate = "SELECT_INSTANCE_PIN_PAIR_AND_DEFINE_CANDIDATE_BRIDGES"
+            next_gate = "STOP_AND_REQUIRE_COMPLETE_SAME_INSTANCE_PG_PAIR"
         elif all(all_layer_instance_counts[net] > 0 for net in local_nets):
             next_gate = (
                 "REVIEW_NON_METTP_CHIP_PG_PINS_AND_REQUEST_ROUTABLE_ACCESS"
@@ -963,6 +1475,63 @@ def main() -> int:
                     source
                     / "processed_contract/verified_digital_whitespace.tsv"
                 ),
+                "LEGACY_WHITESPACE_POLICY_STATUS": (
+                    "SUPERSEDED_BY_BOUNDARY_INSTANCE_MODEL"
+                ),
+                "SOURCE_INSTANCES_SHA256": sha256(source_instances_path),
+                "ASSEMBLY_FLOORPLAN_MODEL_STATUS": "PASS",
+                "ASSEMBLY_BOUNDARY_INSTANCE": boundary_row["instance"],
+                "ASSEMBLY_BOUNDARY_MASTER": (
+                    f"{boundary_row['master_library']}/"
+                    f"{boundary_row['master_cell']}/"
+                    f"{boundary_row['master_view']}"
+                ),
+                "ASSEMBLY_BOUNDARY_ORIENT": boundary_row["orient"],
+                "ASSEMBLY_BOUNDARY_POLICY": ASSEMBLY_BOUNDARY_POLICY,
+                "ASSEMBLY_COORDINATE_POLICY": ASSEMBLY_COORDINATE_POLICY,
+                "ASSEMBLY_FIXED_OBSTACLE_POLICY": (
+                    ASSEMBLY_FIXED_OBSTACLE_POLICY
+                ),
+                "ASSEMBLY_PRIMARY_WHITESPACE_POLICY": (
+                    ASSEMBLY_PRIMARY_WHITESPACE_POLICY
+                ),
+                "SOURCE_CELLVIEW_BBOX_UM": source_cellview_bbox.format(),
+                "ASSEMBLY_SOURCE_BOUNDARY_BBOX_UM": boundary_source.format(),
+                "ASSEMBLY_NORMALIZED_DIE_BBOX_UM": boundary_assembly.format(),
+                "ASSEMBLY_SOURCE_CORE_BBOX_UM": core_source.format(),
+                "ASSEMBLY_NORMALIZED_CORE_BBOX_UM": core_assembly.format(),
+                "SOURCE_TO_ASSEMBLY_TRANSLATION_UM": (
+                    f"{source_to_assembly_dx:.6f} "
+                    f"{source_to_assembly_dy:.6f}"
+                ),
+                "ASSEMBLY_TO_SOURCE_TRANSLATION_UM": (
+                    f"{-source_to_assembly_dx:.6f} "
+                    f"{-source_to_assembly_dy:.6f}"
+                ),
+                "ASSEMBLY_CORE_KEEPOUT_UM": f"{keepout_um:.6f}",
+                "ASSEMBLY_FIXED_OBSTACLE_COUNT": len(obstacle_rows),
+                "ASSEMBLY_CORE_OVERLAP_OBSTACLE_COUNT": len(obstacle_rects),
+                "ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT": len(
+                    free_source
+                ),
+                "ASSEMBLY_PRIMARY_WHITESPACE_SOURCE_BBOX_UM": (
+                    primary_whitespace_source.format()
+                ),
+                "ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM": (
+                    primary_whitespace_assembly.format()
+                ),
+                "ASSEMBLY_PRIMARY_WHITESPACE_AREA_UM2": (
+                    f"{primary_whitespace_source.area:.6f}"
+                ),
+                "ASSEMBLY_FLOORPLAN_BOUNDARY_SHA256": sha256(
+                    out / "assembly_floorplan_boundary.tsv"
+                ),
+                "ASSEMBLY_FIXED_OBSTACLES_SHA256": sha256(
+                    out / "assembly_fixed_obstacles_normalized.tsv"
+                ),
+                "ASSEMBLY_VERIFIED_WHITESPACE_SHA256": sha256(
+                    out / "assembly_verified_whitespace_normalized.tsv"
+                ),
                 "SOURCE_TO_LOCAL_PG_MAPPING_STATUS": "PASS",
                 "INSTANCE_TERMINAL_ENUMERATION_POLICY": (
                     INSTANCE_TERMINAL_ENUMERATION_POLICY
@@ -983,6 +1552,18 @@ def main() -> int:
                 "INSTANCE_PIN_CHIP_PG_METTP_CANDIDATE_STATUS": (
                     "PASS" if instance_gate else "FAIL"
                 ),
+                "COMPLETE_SAME_OWNER_PG_PAIR_STATUS": (
+                    "PASS" if pair_gate else "FAIL"
+                ),
+                "COMPLETE_SAME_INSTANCE_PG_PAIR_STATUS": (
+                    "PASS" if complete_instance_pair_gate else "FAIL"
+                ),
+                "REVIEW_CANDIDATE_PAIR_INSTANCE": selected_pair_instance,
+                "REVIEW_CANDIDATE_PAIR_OWNER_SCOPE": selected_pair_scope,
+                "REVIEW_CANDIDATE_PAIR_SELECTION_POLICY": (
+                    PAIR_SELECTION_POLICY
+                ),
+                "REVIEW_CANDIDATE_COMPLETE_PAIR_COUNT": len(pair_candidates),
                 "INSTANCE_CHIP_PG_MASTER_TERMINAL_COUNT": len(
                     master_terminal_keys
                 ),
@@ -1019,6 +1600,8 @@ def main() -> int:
                 "CANDIDATE_AUTHORIZATION": (
                     "REVIEW_ONLY_NOT_AN_ASSEMBLY_ANCHOR"
                 ),
+                "TARGET_INSTANCE_METTP_CONTEXT_STATUS": "NOT_PROBED",
+                "BRIDGE_GEOMETRY_STATUS": "NOT_AUTHORIZED",
                 "P00_P02_IMPLEMENTATION_AUTHORIZED": "NO",
                 "P03_IMPLEMENTATION_AUTHORIZED": "NO",
                 "NEXT_GATE": next_gate,

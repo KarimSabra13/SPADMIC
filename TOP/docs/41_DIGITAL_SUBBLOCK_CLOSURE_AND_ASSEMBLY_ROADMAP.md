@@ -2,13 +2,15 @@
 
 Status: cumulative soft-assembly flow implemented locally; sealed OA source
 evidence and the complete p03 signal-interface preclassification pass. Local
-`VDD/VSS` maps to chip `DVDD/DVSS`, but no reviewed assembly landing/bridge
-pair is accepted. The first exact-access probe preserved valid evidence but
-enumerated only connected `instTerms`, so its zero child-pin result is not a
-complete physical-absence proof. A corrected master-terminal probe is the sole
-p00 entry action. Position and Event OOC results remain immutable supporting
-evidence, not child hard macros on the p00-p03 implementation path. No assembly
-phase is promoted.
+`VDD/VSS` maps to chip `DVDD/DVSS`. The corrected master-terminal probe proves
+four current METTP review candidates on `I5/BOX_RING2` and
+`I6/TXRX4TDC2_HV`, but no bridge is accepted. The earlier `I5` recommendation
+used invalid exterior whitespace because the hollow `BOX_RING2` pad boundary
+was treated as a solid obstacle. A processor-only normalized floorplan replay
+is now the sole next action; it is expected to select the complete `I6` pair
+against the largest true interior region. Position and Event OOC results
+remain immutable supporting evidence, not child hard macros on the p00-p03
+implementation path. No assembly phase is promoted.
 
 Date: 2026-07-24.
 
@@ -78,11 +80,14 @@ connected-net evidence separately. For child figures it also records the OA
 object type, transform provenance, master-local bbox, and top-level bbox.
 Only a database transform or a bbox-verified ordinary-instance reconstruction
 may produce candidate coordinates; unresolved mosaic or nonstandard transforms
-remain master-local review evidence. The classifier compares eligible
-positive-area METTP candidates with the verified digital whitespace and
-unattributed direct METTP shapes, then seals a manifest-valid recovery archive
-and the result root. Every discovered geometry remains review-only until a
-separate candidate bridge contract is accepted.
+remain master-local review evidence. The classifier treats exact
+`I5/SPADMIC/BOX_RING2/layout R0` as a hollow physical boundary, normalizes its
+lower-left corner to `(0,0)`, insets the core by `164 um`, and subtracts every
+other top-instance bbox as a fixed obstacle. It ranks only complete same-owner
+`VDD/VSS` pairs against the largest corrected interior region. The legacy
+cellview-exterior whitespace report is retained only as superseded provenance.
+Every discovered geometry remains review-only until a selected-instance METTP
+corridor probe and a separate candidate bridge contract pass.
 
 ### Per-Phase Transaction Order
 
@@ -90,18 +95,20 @@ For each phase, use one foreground EDA action and stop for review after every
 transaction:
 
 ```text
-1. server_audit_spadmic2_assembly_contract.sh       # once, read-only OA
-2. server_probe_spadmic2_digital_pg_access.sh       # current PG blocker only
-3. review and bind one local-VDD/VSS to chip-DVDD/DVSS bridge contract
-4. server_preflight_digital_assembly_phase.sh       # phase contract + RTL checks
-5. server_run_digital_assembly_phase_genus.sh       # exactly one Genus action
-6. server_run_digital_assembly_phase_innovus.sh     # exactly one Innovus action
-7. server_stage_digital_assembly_phase_handoff.sh   # immutable exact-name package
-8. server_preflight_digital_assembly_phase_pvs.sh   # controls only; PVS not executed
-9. server_run_digital_assembly_phase_pvs.sh ... base
-10. p03 only: server_run_digital_assembly_phase_pvs.sh ... density
-11. server_run_digital_assembly_phase_pvs.sh ... lvs
-12. review the phase gate before starting the next phase
+1. server_audit_spadmic2_assembly_contract.sh             # complete, sealed OA
+2. server_probe_spadmic2_digital_pg_access.sh             # complete, sealed OA
+3. server_replay_spadmic2_digital_pg_floorplan.sh         # current CPU-only gate
+4. selected-instance METTP corridor probe                 # read-only OA, not yet run
+5. review and bind one VDD/VSS-to-DVDD/DVSS bridge contract
+6. server_preflight_digital_assembly_phase.sh             # phase + RTL checks
+7. server_run_digital_assembly_phase_genus.sh             # one Genus action
+8. server_run_digital_assembly_phase_innovus.sh           # one Innovus action
+9. server_stage_digital_assembly_phase_handoff.sh         # immutable package
+10. server_preflight_digital_assembly_phase_pvs.sh        # controls only
+11. server_run_digital_assembly_phase_pvs.sh ... base
+12. p03 only: server_run_digital_assembly_phase_pvs.sh ... density
+13. server_run_digital_assembly_phase_pvs.sh ... lvs
+14. review the phase gate before starting the next phase
 ```
 
 p00-p02 deliberately skip density. Their accepted physical tuple is base DRC
@@ -133,12 +140,17 @@ server_prepare_digital_assembly_p03_oa_insertion.sh
 server_insert_digital_assembly_p03_into_spadmic2.sh
 ```
 
-The write script may replace at most one allowlisted p00-p03 assembly instance
-and inserts exactly one p03 instance at `(0,0) R0`. It cannot remove an
-unrelated instance. OA bbox and boundary-pin parity prove only the integration
-contract, not logical equivalence or full-chip signoff. After insertion, full
-top GDS export, base DRC, density DRC, and LVS are separate mandatory gates and
-remain `NOT_RUN` until explicitly executed.
+The current write script can replace at most one allowlisted p00-p03 assembly
+instance, but its existing `(0,0) R0` insertion assumption is explicitly
+blocked. A normalized assembly whose `BOX_RING2` boundary starts at `(0,0)`
+must be inserted at the reviewed assembly-to-source translation
+`(-0.240,-287.715) R0`; that translation must be generated from sealed
+evidence and verified by the read-only candidate gate before any write is
+authorized. The script cannot remove an unrelated instance. OA bbox and
+boundary-pin parity prove only the integration contract, not logical
+equivalence or full-chip signoff. After insertion, full-top GDS export, base
+DRC, density DRC, and LVS are separate mandatory gates and remain `NOT_RUN`
+until explicitly executed.
 
 p04 MPTDC remains blocked on final abstracts and an exact pin contract. p05
 CSR/I2C remains deferred. Neither is inferred into p03.
@@ -201,6 +213,8 @@ TOP/pnr/assembly/matrice5_unknown_family_policy.csv
 TOP/pnr/assembly/spadmic_digital_assembly_v1.sv
 TOP/ci/server_audit_spadmic2_assembly_contract.sh
 TOP/ci/server_probe_spadmic2_digital_pg_access.sh
+TOP/ci/server_replay_spadmic2_digital_pg_floorplan.sh
+TOP/pnr/scripts/classify_spadmic2_digital_pg_access.py
 TOP/ci/server_preflight_digital_assembly_phase.sh
 TOP/ci/server_run_digital_assembly_phase_genus.sh
 TOP/ci/server_run_digital_assembly_phase_innovus.sh
@@ -1300,47 +1314,77 @@ LVS is an attributable accepted `MATCH`. No Event PVS rerun is authorized.
 ## 13. Immediate Next Action
 
 The current action supersedes the older OOC chronology retained below. The
-master-terminal retry at commit `8e3d7260be1105319c4b37cc2721b2c8a5242019`
-stopped before classification on
-`dbTransformBBox: Invalid transform - nil`. Source stability and both sealed
-source manifests remained clean; the incomplete writable output root is not
-evidence. Rerun exactly one foreground, read-only `DVDD/DVSS` access probe
-with explicit transform provenance against sealed OA evidence root
-`spadmic2_matrice5_assembly_audit_20260724_104441_pid30548` and archive hash
-`4fceb15acc3d6dc838c249d1abf2f69ed9937d88a9770b774f3b5c04c014665e`.
-The corrected probe must report
-`INSTANCE_TERMINAL_ENUMERATION_POLICY=MASTER_TERMINALS_WITH_OPTIONAL_INSTTERM_CONNECTIVITY_AND_TRANSFORM_PROVENANCE_V2`.
-It must also report
-`INSTANCE_TRANSFORM_POLICY=DB_TRANSFORM_OR_BBOX_VERIFIED_XY_ORIENT_UNIT_MAG_STANDARD_INSTANCE`
-and `UNAVAILABLE_TRANSFORM_POLICY=MASTER_LOCAL_ONLY_NOT_A_CANDIDATE`.
-The classifier rejects the earlier extraction policies and any unproven
-top-level coordinates. The probe must leave both source OA and the sealed input
-capsule unchanged.
-
-Review these outputs before changing an implementation gate:
+corrected foreground master-terminal probe passed at exact commit
+`94416d98f091c629171261245e7b7d03bd1c9584` and created sealed root:
 
 ```text
-processed_classification/digital_pg_access_status.rpt
-processed_classification/digital_pg_review_pair.tsv
-processed_classification/digital_pg_access_candidates.tsv
-processed_classification/digital_pg_access_layer_summary.tsv
-processed_classification/digital_pg_access_all_layers.tsv
-processed_classification/mettp_to_supply_access_context.tsv
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_access_probe_20260724_132453_pid735750
+RECOVERY_ARCHIVE_SHA256=9c16001006fed909c8704e9bdeb68dfc3dfa5a487f3d5d6730878213537ba261
+READ_ONLY_DIGITAL_PG_ACCESS_PROBE_STATUS=PASS_EVIDENCE_READY
+SOURCE_STABILITY_RC=0
+OUTER_MANIFEST_POST_SEAL_RC=0
+WRITABLE_EVIDENCE_PATH=NONE
 ```
 
-If exact top-level `DVDD` and `DVSS` METTP access both pass, define local
-candidate rails against those shapes. If only exact child-instance pins pass,
-select one reviewed pin per supply and define explicit candidate-owned bridge
-geometry from the verified whitespace. If both aliases exist only below
-METTP, request a reviewed routable access or via-stack topology before
-Innovus. If exact chip-PG figures exist but their instance transform is
-unavailable, resolve that object or mosaic transform before claiming absence.
-Only when every relevant transform is proven and either alias has no physical
-master-terminal figure may that exact absence return to the chip-PG owner.
-Only after one pair is reviewed may one fresh Innovus process test one bridge
-method; regular connectivity, special PG connectivity, DRC, timing, and export
-remain separate gates. The probe itself does not authorize Genus, Innovus, or
-an OA edit.
+It proved exact local-to-chip naming and four current, transform-eligible
+METTP review candidates:
+
+```text
+I5/BOX_RING2       DVDD 1391.500 49.245 1444.500 115.260
+I5/BOX_RING2       DVSS 1203.500 49.245 1256.500 115.260
+I6/TXRX4TDC2_HV    DVDD 3515.960 2241.710 3550.960 2243.845
+I6/TXRX4TDC2_HV    DVSS 3555.960 2241.985 3590.960 2243.845
+```
+
+All four have `NO_INSTTERM_CONNECTIVITY`; they prove physical pin figures, not
+top-net ownership. Direct top-level exact METTP access remains absent. Mosaic
+rows remain master-local and cannot enter bridge selection.
+
+The probe's original `I5` recommendation is rejected. The source cellview bbox
+is `-451.632 -287.715 4115.791 3453.077`, while exact
+`I5/BOX_RING2/layout R0` is the hollow pad boundary
+`-0.240 -287.715 4115.791 3453.077`. Treating `I5` as a solid obstacle left
+only the external strip west of the ring as "verified whitespace" and biased
+the ranking toward `I5`.
+
+Run exactly one processor-only replay of the two unchanged sealed capsules with
+`server_replay_spadmic2_digital_pg_floorplan.sh`. The exact expected
+classification is:
+
+```text
+ASSEMBLY_BOUNDARY_INSTANCE=I5
+ASSEMBLY_BOUNDARY_POLICY=HOLLOW_PAD_RING_REFERENCE
+ASSEMBLY_NORMALIZED_DIE_BBOX_UM=0.000000 0.000000 4116.031000 3740.792000
+SOURCE_TO_ASSEMBLY_TRANSLATION_UM=0.240000 287.715000
+ASSEMBLY_TO_SOURCE_TRANSLATION_UM=-0.240000 -287.715000
+ASSEMBLY_CORE_KEEPOUT_UM=164.000000
+ASSEMBLY_FIXED_OBSTACLE_COUNT=10
+ASSEMBLY_VERIFIED_INTERIOR_WHITESPACE_RECT_COUNT=42
+ASSEMBLY_PRIMARY_WHITESPACE_NORMALIZED_BBOX_UM=3638.910000 164.000000 3952.031000 3576.792000
+COMPLETE_SAME_INSTANCE_PG_PAIR_STATUS=PASS
+REVIEW_CANDIDATE_PAIR_INSTANCE=I6
+TARGET_INSTANCE_METTP_CONTEXT_STATUS=NOT_PROBED
+BRIDGE_GEOMETRY_STATUS=NOT_AUTHORIZED
+NEXT_GATE=RUN_READ_ONLY_SELECTED_INSTANCE_METTP_CORRIDOR_PROBE
+```
+
+Review `assembly_floorplan_boundary.tsv`,
+`assembly_fixed_obstacles_normalized.tsv`,
+`assembly_verified_whitespace_normalized.tsv`,
+`digital_pg_pair_ranking.tsv`, and `digital_pg_review_pair.tsv`. The replay
+must leave both source capsules unchanged and seal its own result root.
+
+Even after the expected `I6` selection, do not draw a bridge. Its `DVDD` and
+`DVSS` pin figures are adjacent on METTP and a direct horizontal DVDD
+extension would encounter the DVSS access region. The next read-only OA action
+must inventory all transformed METTP shapes around `I6`, prove bounded
+candidate corridors into the primary interior region, and keep every topology
+review-only. Only an accepted corridor result may produce an immutable bridge
+contract. After that contract, repair the phase generator to consume normalized
+obstacles and PG geometry, repair the OA insertion translation, run phase
+preflight, then start one Genus transaction. Innovus remains after Genus and
+must test one bridge topology per fresh process with DRC, regular connectivity,
+special PG connectivity, timing, and export reported separately.
 
 P09-R10 parsed the complete accepted Position GDS hierarchy and proved zero
 reachable geometry and text for PAD `19/0`, PIMIDE `221/5`, and NOPIM `46/0`.

@@ -5951,3 +5951,116 @@ The next action remains one fresh foreground read-only probe against the
 unchanged sealed P11-R11 source capsule. Review the transform coverage and the
 exact pair before defining any bridge geometry. Do not reuse the failed
 P11-R15 root, start Genus or Innovus, or edit OA.
+
+### P11-R16 Corrected Master-Terminal Probe Found Four Exact METTP Candidates
+
+The foreground retry at exact commit
+`94416d98f091c629171261245e7b7d03bd1c9584` passed on 2026-07-24 and created
+immutable root:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/spadmic2_digital_pg_access_probe_20260724_132453_pid735750
+READ_ONLY_DIGITAL_PG_ACCESS_PROBE_STATUS=PASS_EVIDENCE_READY
+RECOVERY_ARCHIVE_SHA256=9c16001006fed909c8704e9bdeb68dfc3dfa5a487f3d5d6730878213537ba261
+SOURCE_MANIFEST_PRE_RC=0
+SOURCE_RAW_MANIFEST_PRE_RC=0
+SOURCE_STABILITY_RC=0
+SOURCE_MANIFEST_POST_RC=0
+SOURCE_RAW_MANIFEST_POST_RC=0
+OUTER_MANIFEST_POST_SEAL_RC=0
+WRITABLE_EVIDENCE_PATH=NONE
+```
+
+The corrected enumeration and transform policies passed. The inventory found
+two exact `DVDD` and two exact `DVSS` positive-area METTP pin figures with
+proven top-cell coordinates:
+
+```text
+I5  SPADMIC/BOX_RING2/layout R0
+  DVDD 1391.500000 49.245000 1444.500000 115.260000
+  DVSS 1203.500000 49.245000 1256.500000 115.260000
+
+I6  SPADMIC/TXRX4TDC2_HV/layout R0
+  DVDD 3515.960000 2241.710000 3550.960000 2243.845000
+  DVSS 3555.960000 2241.985000 3590.960000 2243.845000
+```
+
+Every row has `NO_INSTTERM_CONNECTIVITY`. This is valid physical-access
+evidence and not proof that a chip top net owns the pin. The direct top exact
+counts remain zero. Five nonstandard or mosaic master terminals remain
+master-local with unavailable transforms, and the classifier correctly keeps
+them outside the candidate set.
+
+The transaction passed evidence collection, not implementation authorization:
+
+```text
+INSTANCE_PIN_CHIP_PG_METTP_CANDIDATE_STATUS=PASS
+REVIEW_CANDIDATE_COUNT=4
+P00_P02_IMPLEMENTATION_AUTHORIZED=NO
+P03_IMPLEMENTATION_AUTHORIZED=NO
+```
+
+### P11-R17 Pad-Boundary Floorplan Error Classified; CPU Replay Added
+
+Review of P11-R16 exposed a distinct floorplan-model failure. The source audit
+used the full SPADMIC2 cellview bbox:
+
+```text
+-451.632000 -287.715000 4115.791000 3453.077000
+```
+
+It also treated every instance bbox as a solid obstacle. Exact instance `I5`
+is `SPADMIC/BOX_RING2/layout R0`, a hollow pad-ring boundary whose bbox is:
+
+```text
+-0.240000 -287.715000 4115.791000 3453.077000
+```
+
+Subtracting that whole bbox as a solid obstacle leaves only the external strip
+from `x=-451.632` to `x=-0.240`. That strip is not interior digital
+whitespace. It explains why the first classifier chose the `I5` pair and why
+the old guide cannot enter Innovus.
+
+The assembly contract now binds the floorplan to exact `I5`, treats it as a
+hollow boundary, uses a `164 um` core inset, treats the other ten instance
+bboxes as fixed obstacles, and normalizes the boundary lower-left to `(0,0)`.
+The exact reversible translations are:
+
+```text
+SOURCE_TO_ASSEMBLY_TRANSLATION_UM=0.240000 287.715000
+ASSEMBLY_TO_SOURCE_TRANSLATION_UM=-0.240000 -287.715000
+```
+
+Applying that policy to the immutable instance geometry yields 42 interior
+free rectangles. The largest is:
+
+```text
+source:     3638.670000 -123.715000 3951.791000 3289.077000
+normalized: 3638.910000 164.000000 3952.031000 3576.792000
+area_um2:   1068616.843832
+```
+
+Complete-pair ranking must use one owner for both supplies and distance to this
+same primary region. Under that policy, `I6/TXRX4TDC2_HV` outranks
+`I5/BOX_RING2`. The new CPU classifier emits:
+
+```text
+assembly_floorplan_boundary.tsv
+assembly_fixed_obstacles_normalized.tsv
+assembly_verified_whitespace_normalized.tsv
+digital_pg_pair_ranking.tsv
+digital_pg_review_pair.tsv
+```
+
+`server_replay_spadmic2_digital_pg_floorplan.sh` verifies both sealed input
+capsules and detached archive hashes, reruns only the CPU classifier, verifies
+the exact `I6` result, seals the replay root, and verifies both source capsules
+again. It does not invoke Cadence, Genus, Innovus, or an OA write.
+
+The selected `I6` pair is still not bridge geometry. Its two pins are adjacent
+on METTP; a naive horizontal DVDD extension can encounter the DVSS region. The
+next gate is a focused read-only transformed-METTP corridor probe for `I6`.
+Only after that probe may one reviewed topology become an immutable bridge
+contract. The normalized phase generator and final OA insertion translation
+must then be repaired before phase preflight. Genus and Innovus remain
+unauthorized.

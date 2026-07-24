@@ -16,6 +16,20 @@
       "access": "read_only"
     }
   },
+  "assembly_floorplan": {
+    "boundary_instance": {
+      "instance": "I5",
+      "master_library": "SPADMIC",
+      "master_cell": "BOX_RING2",
+      "master_view": "layout",
+      "orient": "R0"
+    },
+    "boundary_policy": "HOLLOW_PAD_RING_REFERENCE",
+    "coordinate_policy": "NORMALIZE_TO_BOUNDARY_INSTANCE_LOWER_LEFT",
+    "core_keepout_um": 164.0,
+    "fixed_obstacle_policy": "ALL_OTHER_TOP_INSTANCE_BBOXES",
+    "primary_whitespace_policy": "LARGEST_CORE_RECT_AFTER_FIXED_BBOX_SUBTRACTION"
+  },
   "matrix_terminal_families": {
     "R": {"width": 64, "direction": "OUTPUT"},
     "Y": {"width": 64, "direction": "OUTPUT"},
