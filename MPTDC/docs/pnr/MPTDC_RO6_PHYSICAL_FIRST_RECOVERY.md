@@ -17,7 +17,7 @@ markers remain. Regular connectivity is clean, but raw special connectivity is
 not final-clean. Therefore another routing-layer or `sroute` sweep is not the
 next experiment.
 
-The next bounded action is to generate a fresh marker-derived PnR-only
+The completed bounded action generated a fresh marker-derived PnR-only
 `RO_tune6` LEF from the pre-sroute MET3 markers. It may open OBS access only for
 `S[0:7]` and `rstb`; VDD, VSS, code pins, and unknown-pin windows are rejected.
 The canonical `/group/.../RO_tune6.lef` remains read-only and is still the
@@ -46,6 +46,22 @@ blockage during signal routing, and removes it before filler PG work and final
 DRC. This preserves an ordinary signal top of MET3 without leaving the broad
 blockage in the final database.
 
+The first marker-derived PnR-LEF replay,
+`20260824_151753_mptdc_bufftap0_pnrlef_physical`, proved the requested LEF path
+and SHA-256, all 26 access windows, floorplan, placement, CTS, and the two south
+MET3 pin plans. It stopped before detailed routing because the pre-route PG
+classifier found 35 dangling-only `IMPVFC-94` row tails while the replay still
+used the PG-proof bound of 34. Relative to the accepted PG proof, the only added
+marker is VSS at `(219.580, 660.800)` on MET1, immediately outside the slow RO
+right edge. The original 34 marker signatures are unchanged; cross-net PG
+shorts and fatal special-connectivity findings remain zero.
+
+The next replay therefore uses the explicit, PnR-LEF-only continuation bound of
+35. This is not final PG acceptance: the driver permits 35 only when the
+hash-bound LEF summary proves exactly 13 MET2 plus 13 MET3 access windows, and
+the final route gate still requires raw special connectivity, all DRC, all
+shorts, regular connectivity, and unrouted nets to be exactly zero.
+
 This recovery keeps ordinary and phase routing on MET1 through MET3 while still
 allowing special VDD/VSS routing on METTP. It does not reuse the dirty route
 checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.
@@ -62,7 +78,8 @@ checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.
    access windows, no unexpected pin windows, and at least one OBS trim.
 4. Run a fresh physical-first PnR with that exact LEF and require Innovus DRC,
    shorts, regular connectivity, special connectivity, and unrouted nets all
-   zero.
+   zero. The single custom-LEF replay may continue past pre-route with exactly
+   35 classified dangling-only tails; this bound is discarded at final route.
 5. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
    temporary METTP blockage was created and removed, and both tap pins exist.
 6. Restore only that clean `04_route.enc.dat` checkpoint and merge the real RO
@@ -84,7 +101,7 @@ log tails are what make remote analysis possible.
 | Pre-PnR | package RC 0, pre-PnR RC 0, `PRE_PNR_GATE=PASS` | `genus` |
 | PG proof | wrapper RC 0, sroute PASS, PG cross-net shorts 0, non-RO failures 0, and either raw clean or bounded classified `IMPVFC-94` only | `innovus` |
 | PnR LEF preparation | preparation PASS, `S[0:7]` plus `rstb` present, MET2/MET3 windows nonzero, unexpected-pin count 0, OBS trims nonzero | bundled into physical `innovus` snapshot |
-| Physical PnR | wrapper RC 0, requested/imported PnR LEF path and hash match, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
+| Physical PnR | pre-route status PASS with the audited PnR-LEF-only bound 35, requested/imported PnR LEF path and hash match, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every final DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
 | Base DRC | gate PASS, variant BASE, both report totals 0 | `pvs` |
@@ -186,11 +203,92 @@ still requires raw special connectivity, all DRC, and all shorts to be zero.
 
 ### 2. Prepare the PnR LEF and Run Physical PnR
 
-This is the current next command. It reuses the accepted PG proof
+The preparation and first replay are complete. They reused the accepted PG proof
 `20260824_mptdc_bufftap0_simplepg_pgproof_135116` and the exact pre-sroute MET3
-marker snapshot from the latest failed physical run. Run the whole block once.
-It does not modify the canonical RO LEF, does not reuse a dirty route
-checkpoint, and does not close the SSH shell on failure.
+marker snapshot from the earlier failed physical run. The generated server LEF
+is `/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_tempblk_met3_20260824_151753.lef`
+with SHA-256
+`6788f856561a3e8c002dc7f2536ac338b16fc76b56aaae9d2062f4dccfec8469`.
+
+#### 2A. Current Next Command: Replay with the Audited 35-Tail Bound
+
+Run this block once. It starts a fresh Innovus process from the Genus handoff,
+reuses the exact generated LEF and sidecar summary, publishes pass or failure
+evidence automatically, and leaves the SSH shell open on failure.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+PG_RUN_ID=20260824_mptdc_bufftap0_simplepg_pgproof_135116
+GENUS_RUN_ID=MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+HANDOFF=/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/$GENUS_RUN_ID
+SOURCE_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+PNR_LEF=/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_tempblk_met3_20260824_151753.lef
+PNR_LEF_SUMMARY=${PNR_LEF%.lef}.summary.txt
+TAG=$(date +%Y%m%d_%H%M%S)
+PNR_RUN=${TAG}_mptdc_bufftap0_pnrlef35_physical
+PNR_DIR=/sim/ksabra/SPADMIC_work/innovus/$PNR_RUN
+DRIVER_LOG=/tmp/${PNR_RUN}.driver.log
+
+SYNC_RC=99
+PNR_DRIVER_RC=99
+REPO_READY=0
+
+if [ -d "$REPO/.git" ]; then
+  cd "$REPO"
+  git checkout SPADMIC_test
+  git pull --ff-only origin SPADMIC_test
+  SYNC_RC=$?
+  [ "$SYNC_RC" -eq 0 ] && REPO_READY=1
+else
+  echo "STOP: repository missing: $REPO"
+fi
+
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+PREP_STATUS="$(sed -n 's/^PNR_LEF_PREP_STATUS=//p' "$PNR_LEF_SUMMARY" 2>/dev/null | tail -1)"
+
+if [ "$REPO_READY" -eq 1 ] && [ -z "$TRACKED_STATUS" ] && \
+   [ -r "$PNR_LEF" ] && [ -r "$PNR_LEF_SUMMARY" ] && \
+   [ "$PREP_STATUS" = PASS ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
+    --stage physical-pnr \
+    --run-id "$PNR_RUN" \
+    --pg-run-id "$PG_RUN_ID" \
+    --expected-head "$EXPECTED_HEAD" \
+    --genus-run-id "$GENUS_RUN_ID" \
+    --handoff-dir "$HANDOFF" \
+    --source-lef "$SOURCE_LEF" \
+    --pnr-lef "$PNR_LEF" \
+    --pre-route-dangling-max 35 \
+    2>&1 | tee "$DRIVER_LOG"
+  PNR_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, PnR LEF, or PnR LEF summary gate failed"
+  [ -n "$TRACKED_STATUS" ] && printf '%s\n' "$TRACKED_STATUS"
+fi
+
+echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "PREP_STATUS=$PREP_STATUS"
+echo "PNR_RUN=$PNR_RUN"
+echo "PNR_DRIVER_RC=$PNR_DRIVER_RC"
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PNR_RUN_ID)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -20
+cat "$PNR_DIR/reports/operator_gate_physical_pnr.rpt" 2>/dev/null
+```
+
+Continue to PVS only when the final lines show `PNR_DRIVER_RC=0`,
+`DECISION=PASS_CONTINUE`, `PUBLISH_RC=0`, and `NEXT_STAGE=PVS`. A nonzero result
+is already published when `PUBLISH_RC=0`; send only `PNR_RUN` and `FINAL_HEAD`.
+
+#### 2B. Completed PnR-LEF Generation Reference
+
+Do not rerun this block while the exact generated LEF and summary above remain
+readable. It is retained only to reproduce the file if server scratch storage
+is lost. It does not modify the canonical RO LEF or reuse a dirty checkpoint.
 
 ```bash
 set +e
@@ -245,7 +343,8 @@ if [ "$LEF_PREP_RC" -eq 0 ] && [ "$PREP_STATUS" = PASS ]; then
     --genus-run-id "$GENUS_RUN_ID" \
     --handoff-dir "$HANDOFF" \
     --source-lef "$SOURCE_LEF" \
-    --pnr-lef "$PNR_LEF"
+    --pnr-lef "$PNR_LEF" \
+    --pre-route-dangling-max 35
   PNR_DRIVER_RC=$?
 else
   echo "STOP: PnR LEF preparation failed; Innovus was not launched"
@@ -269,8 +368,8 @@ LEF_PREP_RC=0
 PREP_STATUS=PASS
 REQUIRED_ACCESS_PIN_SET_STATUS=PASS
 UNEXPECTED_ACCESS_PIN_COUNT=0
-MET2_ACCESS_WINDOW_COUNT=<nonzero>
-MET3_ACCESS_WINDOW_COUNT=<nonzero>
+MET2_ACCESS_WINDOW_COUNT=13
+MET3_ACCESS_WINDOW_COUNT=13
 PNR_LEF_PREP_STATUS=PASS
 ```
 
@@ -291,6 +390,13 @@ PNR_LEF_SUMMARY_BINDING_STATUS=PASS
 PNR_LEF_PATH_MATCH_STATUS=PASS
 PNR_LEF_EVIDENCE_STATUS=PASS
 PNR_LEF_GATE_STATUS=PASS
+PRE_ROUTE_SROUTE_STATUS=PASS
+PRE_ROUTE_DANGLING_MODE=PNR_LEF_ONE_MARKER_CONTINUATION
+PRE_ROUTE_DANGLING_ONLY_STATUS=DANGLING_ONLY
+PRE_ROUTE_DANGLING_COUNT=35
+PRE_ROUTE_DANGLING_MAX=35
+PRE_ROUTE_DANGLING_FATAL_COUNT=0
+PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=0
 signal_top_layer=MET3
 router_command_top_layer=METTP
 ROUTE_COMMAND_STATUS=PASS

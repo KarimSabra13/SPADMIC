@@ -23,6 +23,9 @@ SOURCE_LEF=""
 PNR_LEF=""
 PNR_LEF_SUMMARY=""
 PNR_LEF_SUMMARY_BINDING_STATUS=NOT_REQUESTED
+PRE_ROUTE_DANGLING_MAX=34
+PRE_ROUTE_DANGLING_MAX_EXPLICIT=0
+PRE_ROUTE_DANGLING_MODE=BASELINE_34
 
 usage() {
   cat <<'USAGE'
@@ -42,6 +45,10 @@ Options:
   --source-lef <path>    Override the RO_tune6 LEF passed to the launcher.
   --pnr-lef <path>       PnR-only RO_tune6 LEF for physical-pnr. The imported
                          path and copied evidence hash must match exactly.
+  --pre-route-dangling-max <34|35>
+                         Physical-pnr pre-route continuation bound. Value 35 is
+                         allowed only with the audited 13+13 marker-derived PnR
+                         LEF; the final route gate still requires raw zero debt.
   -h, --help             Show this help.
 
 The stage runs in the foreground, writes an operator_gate report, and publishes
@@ -373,6 +380,11 @@ while [[ $# -gt 0 ]]; do
     --work-root) WORK_ROOT="${2:?missing --work-root value}"; shift 2 ;;
     --source-lef) SOURCE_LEF="${2:?missing --source-lef value}"; shift 2 ;;
     --pnr-lef) PNR_LEF="${2:?missing --pnr-lef value}"; shift 2 ;;
+    --pre-route-dangling-max)
+      PRE_ROUTE_DANGLING_MAX="${2:?missing --pre-route-dangling-max value}"
+      PRE_ROUTE_DANGLING_MAX_EXPLICIT=1
+      shift 2
+      ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -439,6 +451,7 @@ echo "SOURCE_PG_RUN_ID=${SOURCE_PG_RUN_ID:-NONE}"
 echo "PNR_LEF=${PNR_LEF:-NOT_REQUESTED}"
 echo "PNR_LEF_SUMMARY=${PNR_LEF_SUMMARY:-NOT_REQUESTED}"
 echo "PNR_LEF_SUMMARY_BINDING_STATUS=$PNR_LEF_SUMMARY_BINDING_STATUS"
+echo "PRE_ROUTE_DANGLING_MAX=$PRE_ROUTE_DANGLING_MAX"
 echo "BRANCH=$BRANCH"
 echo "ACTUAL_HEAD=$ACTUAL_HEAD"
 echo "ORIGIN_HEAD=${ORIGIN_HEAD:-MISSING}"
@@ -504,6 +517,26 @@ if [[ -n "$PNR_LEF" && "$STAGE" != "physical-pnr" ]]; then
   echo "STOP: --pnr-lef is only valid for physical-pnr"
   PREFLIGHT=FAIL
 fi
+if [[ "$PRE_ROUTE_DANGLING_MAX" != 34 && "$PRE_ROUTE_DANGLING_MAX" != 35 ]]; then
+  echo "STOP: --pre-route-dangling-max must be 34 or 35"
+  PREFLIGHT=FAIL
+fi
+if [[ "$PRE_ROUTE_DANGLING_MAX_EXPLICIT" -eq 1 && "$STAGE" != "physical-pnr" ]]; then
+  echo "STOP: --pre-route-dangling-max is only valid for physical-pnr"
+  PREFLIGHT=FAIL
+fi
+if [[ "$PRE_ROUTE_DANGLING_MAX" == 35 ]]; then
+  PRE_ROUTE_DANGLING_MODE=PNR_LEF_ONE_MARKER_CONTINUATION
+  if [[ -z "$PNR_LEF" || "$PNR_LEF_SUMMARY_BINDING_STATUS" != PASS || \
+        "$(report_value "$PNR_LEF_SUMMARY" REQUIRED_ACCESS_PIN_SET_STATUS)" != PASS || \
+        "$(report_value "$PNR_LEF_SUMMARY" UNEXPECTED_ACCESS_PIN_COUNT)" != 0 || \
+        "$(report_value "$PNR_LEF_SUMMARY" MET2_ACCESS_WINDOW_COUNT)" != 13 || \
+        "$(report_value "$PNR_LEF_SUMMARY" MET3_ACCESS_WINDOW_COUNT)" != 13 ]]; then
+    echo "STOP: dangling bound 35 requires the audited 13+13 marker-derived PnR LEF"
+    PREFLIGHT=FAIL
+  fi
+fi
+echo "PRE_ROUTE_DANGLING_MODE=$PRE_ROUTE_DANGLING_MODE"
 
 echo "RECOVERY_PREFLIGHT=$PREFLIGHT"
 if [[ "$PREFLIGHT" != "PASS" ]]; then
@@ -532,7 +565,7 @@ LAUNCH_ARGS=(
   --work-root "$WORK_ROOT"
   --no-free-all
   --local-phase-preplace
-  --dangling-only-max 34
+  --dangling-only-max "$PRE_ROUTE_DANGLING_MAX"
 )
 if [[ -n "$SOURCE_LEF" ]]; then
   LAUNCH_ARGS+=(--source-lef "$SOURCE_LEF")
@@ -637,6 +670,7 @@ else
   ROUTE_INTENT_REPORT="$RUN_DIR/reports/route_layer_intent.rpt"
   ROUTE_COMMAND_REPORT="$RUN_DIR/reports/route_command_status.rpt"
   SIGNAL_TOP_BLOCKAGE_REPORT="$RUN_DIR/reports/signal_top_route_blockage_status.rpt"
+  PRE_ROUTE_REPORT="$RUN_DIR/reports/postplace_pre_route_sroute_status.rpt"
   RO_IMPORT_REPORT="$RUN_DIR/reports/ro_import_source_gate.rpt"
   IO_PIN_SUMMARY="$RUN_DIR/reports/io_pin_placement_summary.md"
   IO_PIN_CSV="$RUN_DIR/reports/io_pin_placement.csv"
@@ -656,6 +690,12 @@ else
   SIGNAL_TOP_BLOCKAGE_CREATE="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS)"
   SIGNAL_TOP_BLOCKAGE_REMOVE="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS)"
   SIGNAL_TOP_BLOCKAGE_STATUS="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS)"
+  PRE_ROUTE_SROUTE_STATUS="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_SROUTE_STATUS)"
+  PRE_ROUTE_DANGLING_STATUS="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_STATUS)"
+  PRE_ROUTE_DANGLING_COUNT="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_COUNT)"
+  PRE_ROUTE_DANGLING_ACTUAL_MAX="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX)"
+  PRE_ROUTE_DANGLING_FATAL="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT)"
+  PRE_ROUTE_CROSS_SHORT_COUNT="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT)"
   ACTUAL_PNR_LEF="$(report_value "$RO_IMPORT_REPORT" O1_RO_LEF_PATH)"
   PNR_LEF_PATH_MATCH_STATUS=NOT_REQUESTED
   PNR_LEF_ACTUAL_SHA256=NOT_REQUESTED
@@ -699,7 +739,10 @@ else
         "$UNROUTED" == 0 && "$SIGNAL_TOP" == MET3 && "$ROUTER_TOP" == METTP && \
         "$ROUTE_COMMAND_STATUS" == PASS && "$SIGNAL_TOP_BLOCKAGE_TEMPORARY" == 1 && \
         "$SIGNAL_TOP_BLOCKAGE_CREATE" == PASS && "$SIGNAL_TOP_BLOCKAGE_REMOVE" == PASS && \
-        "$SIGNAL_TOP_BLOCKAGE_STATUS" == REMOVED && "$PNR_LEF_GATE_STATUS" == PASS && \
+        "$SIGNAL_TOP_BLOCKAGE_STATUS" == REMOVED && "$PRE_ROUTE_SROUTE_STATUS" == PASS && \
+        "$PRE_ROUTE_DANGLING_ACTUAL_MAX" == "$PRE_ROUTE_DANGLING_MAX" && \
+        "$PRE_ROUTE_DANGLING_FATAL" == 0 && "$PRE_ROUTE_CROSS_SHORT_COUNT" == 0 && \
+        "$PNR_LEF_GATE_STATUS" == PASS && \
         "$IO_PIN_STATUS" == OK && \
         "$TAP_SLOW_PLAN" == 1 && "$TAP_FAST_PLAN" == 1 && "$TAP_SLOW_COUNT" == 1 && \
         "$TAP_FAST_COUNT" == 1 && "$TAP_TOTAL_COUNT" == 2 ]]; then
@@ -732,6 +775,13 @@ else
       echo "SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=$SIGNAL_TOP_BLOCKAGE_CREATE"
       echo "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=$SIGNAL_TOP_BLOCKAGE_REMOVE"
       echo "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=$SIGNAL_TOP_BLOCKAGE_STATUS"
+      echo "PRE_ROUTE_SROUTE_STATUS=$PRE_ROUTE_SROUTE_STATUS"
+      echo "PRE_ROUTE_DANGLING_MODE=$PRE_ROUTE_DANGLING_MODE"
+      echo "PRE_ROUTE_DANGLING_ONLY_STATUS=$PRE_ROUTE_DANGLING_STATUS"
+      echo "PRE_ROUTE_DANGLING_COUNT=$PRE_ROUTE_DANGLING_COUNT"
+      echo "PRE_ROUTE_DANGLING_MAX=$PRE_ROUTE_DANGLING_ACTUAL_MAX"
+      echo "PRE_ROUTE_DANGLING_FATAL_COUNT=$PRE_ROUTE_DANGLING_FATAL"
+      echo "PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=$PRE_ROUTE_CROSS_SHORT_COUNT"
       echo "PNR_LEF_REQUESTED=${PNR_LEF:-NOT_REQUESTED}"
       echo "PNR_LEF_SUMMARY=${PNR_LEF_SUMMARY:-NOT_REQUESTED}"
       echo "PNR_LEF_SUMMARY_BINDING_STATUS=$PNR_LEF_SUMMARY_BINDING_STATUS"

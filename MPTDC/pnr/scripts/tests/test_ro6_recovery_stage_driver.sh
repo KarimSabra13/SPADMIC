@@ -71,6 +71,10 @@ printf 'MACRO RO_tune6\nEND RO_tune6\n' > "$PNR_LEF"
 cat > "$PNR_LEF_SUMMARY" <<EOF
 OUTPUT_LEF=$PNR_LEF
 OUTPUT_LEF_SHA256=$(sha256sum "$PNR_LEF" | awk '{print $1}')
+REQUIRED_ACCESS_PIN_SET_STATUS=PASS
+UNEXPECTED_ACCESS_PIN_COUNT=0
+MET2_ACCESS_WINDOW_COUNT=13
+MET3_ACCESS_WINDOW_COUNT=13
 PNR_LEF_PREP_STATUS=PASS
 EOF
 
@@ -107,7 +111,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 test "$strict_special_clean" = 0
-test "$dangling_only_max" = 34
+test "$dangling_only_max" = "${EXPECTED_DANGLING_ONLY_MAX:-34}"
 if [[ "$stage" == full_closure ]]; then
   test "$temporary_signal_top_blockage" = 1
 fi
@@ -152,6 +156,14 @@ POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=$cross_short_count
 RPT
   exit 0
 fi
+cat > "$run/reports/postplace_pre_route_sroute_status.rpt" <<RPT
+POSTPLACE_PRE_ROUTE_SROUTE_STATUS=PASS
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_STATUS=DANGLING_ONLY
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_COUNT=$dangling_only_max
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX=$dangling_only_max
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT=0
+POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=0
+RPT
 shorts=0
 tool_rc=0
 if [[ "${FAKE_DIRTY_ROUTE:-0}" == 1 ]]; then shorts=1; tool_rc=1; fi
@@ -355,9 +367,45 @@ grep -qx 'PNR_LEF_PATH_MATCH_STATUS=PASS' "$WORK/innovus/route_fixture/reports/o
 grep -qx 'PNR_LEF_EVIDENCE_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'PNR_LEF_SUMMARY_BINDING_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'PNR_LEF_GATE_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PRE_ROUTE_DANGLING_MODE=BASELINE_34' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PRE_ROUTE_DANGLING_MAX=34' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$WORK/innovus/route_fixture/reports/tap_pin_def_excerpt.rpt"
 test -s "$WORK/innovus/route_fixture/outputs/RO_tune6_pnr_lef_used.txt"
 test -s "$WORK/innovus/route_fixture/outputs/RO_tune6_pnr_lef_summary.txt"
+
+env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 bash "$DRIVER" \
+  --stage physical-pnr --run-id route_pnr_lef_35 --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_pnr_lef_35.stdout"
+grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PRE_ROUTE_DANGLING_MODE=PNR_LEF_ONE_MARKER_CONTINUATION' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PRE_ROUTE_DANGLING_COUNT=35' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PRE_ROUTE_DANGLING_MAX=35' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+
+set +e
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage physical-pnr --run-id route_35_without_pnr_lef --pg-run-id pg_prior \
+  --pre-route-dangling-max 35 \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_35_without_pnr_lef.stdout"
+ROUTE_35_WITHOUT_LEF_RC=$?
+set -e
+test "$ROUTE_35_WITHOUT_LEF_RC" -eq 4
+grep -qx 'STOP: dangling bound 35 requires the audited 13+13 marker-derived PnR LEF' "$TMP_ROOT/route_35_without_pnr_lef.stdout"
+grep -qx 'RECOVERY_PREFLIGHT=FAIL' "$TMP_ROOT/route_35_without_pnr_lef.stdout"
+
+set +e
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage physical-pnr --run-id route_invalid_bound --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 36 \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_invalid_bound.stdout"
+ROUTE_INVALID_BOUND_RC=$?
+set -e
+test "$ROUTE_INVALID_BOUND_RC" -eq 4
+grep -qx 'STOP: --pre-route-dangling-max must be 34 or 35' "$TMP_ROOT/route_invalid_bound.stdout"
+grep -qx 'RECOVERY_PREFLIGHT=FAIL' "$TMP_ROOT/route_invalid_bound.stdout"
 
 set +e
 env "${COMMON_ENV[@]}" FAKE_PNR_LEF_MISMATCH=1 bash "$DRIVER" \
