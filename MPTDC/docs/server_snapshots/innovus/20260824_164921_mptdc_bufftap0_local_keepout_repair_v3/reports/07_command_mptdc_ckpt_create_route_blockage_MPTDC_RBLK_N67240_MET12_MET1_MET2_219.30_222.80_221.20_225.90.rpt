@@ -1,0 +1,16 @@
+# checkpoint repair command 7
+COMMAND=mptdc_ckpt_create_route_blockage MPTDC_RBLK_N67240_MET12 {MET1 MET2} {219.30 222.80 221.20 225.90}
+REPORT_STATUS=FAILED
+ERROR=route blockage creation could not be verified for MPTDC_RBLK_N67240_MET12: status=PASS count=2
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+route blockage creation could not be verified for MPTDC_RBLK_N67240_MET12: status=PASS count=2
+    while executing
+"error "route blockage creation could not be verified for $name: status=[dict get $after status] count=$count""
+    (procedure "mptdc_ckpt_create_route_blockage" line 52)
+    invoked from within
+"mptdc_ckpt_create_route_blockage MPTDC_RBLK_N67240_MET12 {MET1 MET2} {219.30 222.80 221.20 225.90}"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END

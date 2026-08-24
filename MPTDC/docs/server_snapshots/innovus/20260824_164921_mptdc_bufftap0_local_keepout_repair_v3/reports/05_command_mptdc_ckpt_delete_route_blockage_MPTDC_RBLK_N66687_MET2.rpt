@@ -1,0 +1,4 @@
+# checkpoint repair command 5
+COMMAND=mptdc_ckpt_delete_route_blockage MPTDC_RBLK_N66687_MET2
+HELPER_RESULT=name MPTDC_RBLK_N66687_MET2 command {deleteRouteBlk -name MPTDC_RBLK_N66687_MET2} count 0
+REPORT_STATUS=PASS

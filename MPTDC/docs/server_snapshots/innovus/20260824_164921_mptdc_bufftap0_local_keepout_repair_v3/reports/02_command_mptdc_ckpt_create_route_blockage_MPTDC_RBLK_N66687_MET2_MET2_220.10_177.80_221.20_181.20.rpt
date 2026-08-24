@@ -1,0 +1,4 @@
+# checkpoint repair command 2
+COMMAND=mptdc_ckpt_create_route_blockage MPTDC_RBLK_N66687_MET2 {MET2} {220.10 177.80 221.20 181.20}
+HELPER_RESULT=name MPTDC_RBLK_N66687_MET2 layers MET2 box {220.10 177.80 221.20 181.20} command {createRouteBlk -name MPTDC_RBLK_N66687_MET2 -box 220.10 177.80 221.20 181.20 -layer MET2} count 1
+REPORT_STATUS=PASS
