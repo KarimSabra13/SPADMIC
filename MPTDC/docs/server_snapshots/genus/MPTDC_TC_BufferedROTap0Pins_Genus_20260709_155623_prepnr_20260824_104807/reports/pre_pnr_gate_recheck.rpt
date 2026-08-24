@@ -1,0 +1,66 @@
+# MPTDC Pre-PNR Gate
+run_id=MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+source_kind=handoff
+source_root=/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+summary=/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623/00_decision/SUMMARY.md
+
+check	expected	actual	status
+FINAL_DECISION	GENUS_TYPICAL_CLOSED	GENUS_TYPICAL_CLOSED	PASS
+GENUS_TYPICAL_STATUS	GENUS_TYPICAL_CLOSED	GENUS_TYPICAL_CLOSED	PASS
+READY_FOR_INNOVUS_TYPICAL_CLOSURE	YES	YES	PASS
+TYPICAL_ONLY_TAPEOUT_PACKAGE	YES	YES	PASS
+NOT_MMMC_SIGNOFF	YES	YES	PASS
+FINAL_SIGNOFF	NO	NO	PASS
+Genus exit code	0	0	PASS
+Snapshot exit code	0	0	PASS
+Frequency mode	r750_delta5	r750_delta5	PASS
+Packet format	unchanged	unchanged	PASS
+raw_lfsr_tag	unchanged	unchanged	PASS
+MPTDC_OPT_MODE	STRIDE2 active	MPTDC_OPT_MODE[=:][[:space:]]*STRIDE2	PASS
+Phase buffer topology	BUJIHDX4 -> BUJIHDX12	BUJIHDX4 -> BUJIHDX12 per tap	PASS
+Setup WNS ps	>= 0	0.3	PASS
+Setup TNS ps	0	-0.0	PASS
+Setup violating path count	0	0	PASS
+Real timed WNS ps	>= 0	0.3	PASS
+Real timed TNS ps	0	-0.0	PASS
+Real timed violating path count	0	0	PASS
+Max transition violations	0	0	PASS
+Max capacitance violations	0	0	PASS
+Max fanout violations	0	0	PASS
+RO_tune6 instance count	2	2	PASS
+RO_tune6 instance count source	summary/netlist/derived	summary	WARN
+mptdc_osc_stub residue count	0	0	PASS
+BUJIHDX4 phase-buffer u_iso count	8	8	PASS
+BUJIHDX12 phase-buffer u_drv count	8	8	PASS
+BUHDX4 instance count	ignored when JIHD phase-buffer u_iso count is clean	0	WARN
+BUHDX12 instance count	ignored when JIHD phase-buffer u_drv count is clean	0	WARN
+RAW_RO_CLOCKS_FOUND	16	16	PASS
+BUFFER_PHASE_CLOCKS_FOUND	16	16	PASS
+BUFFER_PHASE_CLOCKS_EXPECTED	16	16	PASS
+BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP	YES	YES	PASS
+CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS	YES	YES	PASS
+PD intentional Vernier paths matched	64	64	PASS
+PD intentional Vernier sources matched	8	8	PASS
+PD intentional Vernier exception applied	YES	YES	PASS
+PD intentional Vernier overmatch	NO	NO	PASS
+PD intentional Vernier undermatch	NO	NO	PASS
+UNKNOWN_REVIEW_REQUIRED count	0	0	PASS
+ACTIVE_SDC_FAILURE_COUNT	0	0	PASS
+Report helpers status	PASS	PASS	PASS
+Summary/raw agreement status	PASS	PASS	PASS
+FAST_TAG_MAPPING_PARSE_STATUS	PASS	PASS	PASS
+FAST_TAG_MAPPING_STATUS	PASS	PASS	PASS
+EXACT_FAST_TAG_REPAIR_STATUS	PASS	PASS	PASS
+FAST_TAG_EXACT_SOURCE_CELL_REQUESTED	not required for Repair8	NO	WARN
+netlist	file exists	/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623/05_outputs/mptdc_axis_core.postsyn.v	PASS
+SDC	file exists	/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623/05_outputs/mptdc_axis_core.postsyn.sdc	PASS
+final SDC overlay	file exists	/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623/final_sdc_overlay_used.sdc	PASS
+final filelist	file exists	/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623/final_filelist_used.f	PASS
+timing summary	file exists	/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623/timing_summary.rpt	PASS
+design rules	file exists	/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623/report_design_rules.rpt	PASS
+PACKAGE_CHECKS.tsv failures	0	0	PASS
+GENUS_WNS_MARGIN_LOW	warn if WNS < 20 ps	YES	WARN
+PRE_PNR_GATE=PASS
+PRE_PNR_GATE_SOURCE=/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+PRE_PNR_GATE_KIND=handoff
+GENUS_WNS_MARGIN_LOW=YES
