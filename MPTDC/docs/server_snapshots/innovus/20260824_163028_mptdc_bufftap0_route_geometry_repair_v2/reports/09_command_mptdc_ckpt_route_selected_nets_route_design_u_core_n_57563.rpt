@@ -1,0 +1,4 @@
+# checkpoint repair command 9
+COMMAND=mptdc_ckpt_route_selected_nets_route_design {u_core_n_57563}
+HELPER_RESULT=u_core_n_57563
+REPORT_STATUS=PASS

@@ -1,0 +1,16 @@
+# checkpoint repair command 10
+COMMAND=mptdc_ckpt_assert_geometry_regular_clean
+REPORT_STATUS=FAILED
+ERROR=geometry/regular connectivity is not clean after checkpoint repair command: DRC=4 SHORTS=1 REGULAR_BAD=0 report=/sim/ksabra/SPADMIC_work/innovus/20260824_163028_mptdc_bufftap0_route_geometry_repair_v2/reports/inline_01_assert_geometry_regular_verify_drc.rpt
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+geometry/regular connectivity is not clean after checkpoint repair command: DRC=4 SHORTS=1 REGULAR_BAD=0 report=/sim/ksabra/SPADMIC_work/innovus/20260824_163028_mptdc_bufftap0_route_geometry_repair_v2/reports/inline_01_assert_geometry_regular_verify_drc.rpt
+    while executing
+"error "geometry/regular connectivity is not clean after checkpoint repair command: DRC=$total SHORTS=$shorts REGULAR_BAD=$regular_bad report=[dict get..."
+    (procedure "mptdc_ckpt_assert_geometry_regular_clean" line 19)
+    invoked from within
+"mptdc_ckpt_assert_geometry_regular_clean"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END

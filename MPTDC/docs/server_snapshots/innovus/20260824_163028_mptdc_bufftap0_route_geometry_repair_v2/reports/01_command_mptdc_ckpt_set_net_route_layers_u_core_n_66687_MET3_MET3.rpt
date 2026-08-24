@@ -1,0 +1,4 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_set_net_route_layers u_core_n_66687 MET3 MET3
+HELPER_RESULT=net u_core_n_66687 bottom_layer MET3 top_layer MET3 methods {BOTTOM:setAttribute TOP:setAttribute EFFORT:setAttribute}
+REPORT_STATUS=PASS
