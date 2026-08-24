@@ -1,0 +1,221 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/logs/innovus_mptdc_digital_signoff.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+**INFO:  MMMC transition support version v31-84 
+**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+**ERROR: (IMPLF-186):	The property 'CatenaDesignType' is not defined or the object containing the property does not match the object type 'MACRO' in PROPERTYDEFINITIONS section. The property is ignored.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLNP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLN2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[0]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[7]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[0]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[7]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'rstb' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[1]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[2]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[3]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[4]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[5]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[6]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[2]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[6]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[3]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[1]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[5]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[4]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_rise' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_fall' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_rise' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_fall' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-302):	No function defined for cell 'RO_tune6'. The cell will only be used for analysis. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib)
+**WARN: (TCLCMD-1461):	Skipped unsupported command: set_units (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 12).
+**WARN: (TCLCMD-1461):	Skipped unsupported command: set_units (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 13).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[7].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[6].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[5].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[4].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[3].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[2].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[1].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[0].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[7].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[6].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[5].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[4].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[3].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[2].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[1].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[0].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[7].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[6].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[5].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[4].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260824_151753_mptdc_bufftap0_pnrlef_physical/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 180).
+**WARN: (TA-976):	Path groups asserted by the group_path constraint are considered by the software to be global in nature - they cannot be restricted to specific constraint modes. Due to this restriction, the group_path constraint is not supported directly in the constraint files which are configured in mode-specific commands such as create_constraint_mode. The current group_path entry will be ignored. You can enter the group_path constraint interactively or as part of a general command script -  where it will be interpreted as global and will be in effect for all modes.
+ERROR     IMPLF-186            1  The property '%s' is not defined or the ...
+**WARN: (IMPDC-1629):	The default delay limit was set to 101. This is less than the default of 1000 and may result in inaccurate delay calculation for nets with a fanout higher than the setting.  If needed, the default delay limit may be adjusted by running the command 'set delaycal_use_default_delay_limit'.
+**WARN: (IMPFP-325):	Floorplan of the design is resized. All current floorplan objects are automatically derived based on specified new floorplan. This may change blocks, fixed standard cells, existing routes and blockages.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_fifo_rd_ptr_q_reg[5] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_meas_ctrl_state_q_reg[2] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_drain_ctrl_state_q_reg[1] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][7] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][6] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][5] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][4] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][3] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][2] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][1] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][0] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][63] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][62] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][61] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][60] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][59] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][58] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][57] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][56] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][55] is placed and rerun verifyConnectivity.
+**WARN: (EMS-27):	Message (IMPVFC-96) has exceeded the current message display limit of 20.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[0].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[1].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[2].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[3].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[4].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[5].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[6].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[7].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[0].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[1].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[2].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[3].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[4].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[5].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[6].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_fast/gen_phase_buf[7].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+**INFO: Enable pre-place timing setting for timing analysis
+**WARN: (IMPDC-1629):	The default delay limit was set to 101. This is less than the default of 1000 and may result in inaccurate delay calculation for nets with a fanout higher than the setting.  If needed, the default delay limit may be adjusted by running the command 'set delaycal_use_default_delay_limit'.
+**INFO: Analyzing IO path groups for slack adjustment
+**INFO: Disable pre-place timing setting for timing analysis
+**INFO: Pre-place timing setting for timing analysis already disabled
+**WARN: (IMPSP-9531):	Turning off clkGateAware when timingDriven is off
+**WARN: (IMPSP-9025):	No scan chain specified/traced.
+**INFO: Enable pre-place timing setting for timing analysis
+**WARN: (IMPDC-1629):	The default delay limit was set to 101. This is less than the default of 1000 and may result in inaccurate delay calculation for nets with a fanout higher than the setting.  If needed, the default delay limit may be adjusted by running the command 'set delaycal_use_default_delay_limit'.
+**INFO: Analyzing IO path groups for slack adjustment
+**INFO: Disable pre-place timing setting for timing analysis
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPSP-9025):	No scan chain specified/traced.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**INFO: User's settings:
+**WARN: (IMPCCOPT-2015):	Innovus will not update I/O latencies for the following reason(s):
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+      Artificially removing short and long paths...
+      Artificially removing short and long paths done. (took cpu=0:00:00.0 real=0:00:00.0)
+      Artificially removing short and long paths...
+      Artificially removing short and long paths done. (took cpu=0:00:00.1 real=0:00:00.1)
+    Artificially removing short and long paths...
+    Artificially removing short and long paths done. (took cpu=0:00:00.0 real=0:00:00.0)
+      Artificially removing short and long paths...
+      Artificially removing short and long paths done. (took cpu=0:00:00.0 real=0:00:00.0)
+**WARN: (IMPCCOPT-2015):	Innovus will not update I/O latencies for the following reason(s):
+**WARN: (IMPSP-9025):	No scan chain specified/traced.
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPVFC-3):	Verify Connectivity stopped: Number of errors exceeds the limit 1000
+**WARN: (IMPVFC-3):	Verify Connectivity stopped: Number of errors exceeds the limit 1000
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (840.16, 817.74) (842.10, 818.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (1000.16, 754.48) (1002.16, 754.74).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to MINAREA rule violation, viaGen fail to generate via on layer MET3 at (1081.50, 736.56) (1082.16, 736.82).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (360.16, 683.34) (361.62, 683.60).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (840.16, 682.80) (842.16, 683.06).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (1080.16, 683.34) (1081.78, 683.60).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (200.16, 602.16) (202.16, 602.42).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (600.16, 593.74) (602.16, 594.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (680.16, 593.74) (682.16, 594.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (760.16, 593.74) (762.02, 594.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (840.16, 593.74) (842.16, 594.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (920.16, 593.74) (922.16, 594.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (1000.16, 593.74) (1002.16, 594.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (920.16, 584.24) (922.16, 584.50).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (920.16, 513.15) (922.16, 513.36).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (600.16, 333.36) (602.16, 333.62).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (840.16, 324.94) (842.16, 325.20).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (1080.16, 198.96) (1082.16, 199.22).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIATP at (124.16, 839.60) (126.16, 839.88).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIATP at (204.16, 839.60) (206.16, 839.88).
+**WARN: (EMS-27):	Message (IMPPP-531) has exceeded the current message display limit of 20.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.

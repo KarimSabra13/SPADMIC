@@ -1,0 +1,67 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7f1e0f90dc10	{476.14 550.01 476.42 550.39}	MET1	Geometry	Minimal_Area	Regular Wire of Net CTS_4 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+2	0x7f1e0f90dc40	{476.7 556.17 476.98 556.55}	MET1	Geometry	Minimal_Area	Regular Wire of Net CTS_4 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+3	0x7f1e0f90dc70	{480.06 574.09 480.34 574.47}	MET1	Geometry	Minimal_Area	Regular Wire of Net CTS_4 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+4	0x7f1e0f90dca0	{483.98 567.93 484.26 568.31}	MET1	Geometry	Minimal_Area	Regular Wire of Net CTS_4 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+5	0x7f1e0f90da30	{476.14 550.01 476.21 550.39}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[0][nfast_hit_packed][352] Type: Metal Short # -1 -1 9 2 : 476.1400 550.0100 476.2100 550.3900 1: 476.1400 550.0100 476.2100 550.3900 1
+6	0x7f1e0f90d160	{476.7 556.17 476.98 556.42}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][352] Type: Metal Short # -1 -1 9 2 : 476.7000 556.1700 476.9800 556.4200 1: 476.7000 556.1700 476.9800 556.4200 1
+7	0x7f1e0f90d190	{480.06 574.09 480.34 574.34}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[0][nfast_hit_packed][357] Type: Metal Short # -1 -1 9 2 : 480.0600 574.0900 480.3400 574.3400 1: 480.0600 574.0900 480.3400 574.3400 1
+8	0x7f1e0f90d1c0	{483.98 567.93 484.05 568.31}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][357] Type: Metal Short # -1 -1 9 2 : 483.9800 567.9300 484.0500 568.3100 1: 483.9800 567.9300 484.0500 568.3100 1
+9	0x7f1e0f90d1f0	{476.14 549.805 476.42 550.01}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[0][nfast_hit_packed][352] Actual: 0.205000 Required: 0.230000 Type: ParallelRunLength Spacing # 205 230 3 2 : 476.1400 549.4300 476.4200 549.8050 1: 476.1400 550.0100 476.4200 550.2900 1     LEF Description:  SPACING 0.230000 
+10	0x7f1e0f90d220	{476.42 550.14 476.5 550.39}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[0][nfast_hit_packed][352] Actual: 0.080000 Required: 0.230000 Type: ParallelRunLength Spacing # 80 230 3 2 : 476.1400 550.1100 476.4200 550.3900 1: 476.5000 550.1400 476.7500 550.3900 1     LEF Description:  SPACING 0.230000 
+11	0x7f1e0f90d250	{476.7 556.55 476.84 556.755}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][352] Actual: 0.205000 Required: 0.230000 Type: ParallelRunLength Spacing # 205 230 3 2 : 476.4650 556.7550 476.8400 557.1300 1: 476.7000 556.2700 476.9800 556.5500 1     LEF Description:  SPACING 0.230000 
+12	0x7f1e0f90d280	{476.98 556.17 477.15 556.51}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][352] Actual: 0.170000 Required: 0.230000 Type: ParallelRunLength Spacing # 170 230 3 2 : 476.7000 556.1700 476.9800 556.5100 1: 477.1500 556.1700 477.4900 556.5100 1     LEF Description:  SPACING 0.230000 
+13	0x7f1e0f90d2b0	{480.06 574.47 480.2 574.675}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[0][nfast_hit_packed][357] Actual: 0.205000 Required: 0.230000 Type: ParallelRunLength Spacing # 205 230 3 2 : 479.8250 574.6750 480.2000 575.0500 1: 480.0600 574.1900 480.3400 574.4700 1     LEF Description:  SPACING 0.230000 
+14	0x7f1e0f90d2e0	{480.34 574.09 480.51 574.43}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[0][nfast_hit_packed][357] Actual: 0.170000 Required: 0.230000 Type: ParallelRunLength Spacing # 170 230 3 2 : 480.0600 574.0900 480.3400 574.4300 1: 480.5100 574.0900 480.8500 574.4300 1     LEF Description:  SPACING 0.230000 
+15	0x7f1e0f90d310	{483.98 567.725 484.26 567.93}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][357] Actual: 0.205000 Required: 0.230000 Type: ParallelRunLength Spacing # 205 230 3 2 : 483.9800 567.3500 484.2600 567.7250 1: 483.9800 567.9300 484.2600 568.2100 1     LEF Description:  SPACING 0.230000 
+16	0x7f1e0f90d340	{484.26 568.06 484.34 568.31}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_4 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][357] Actual: 0.080000 Required: 0.230000 Type: ParallelRunLength Spacing # 80 230 3 2 : 483.9800 568.0300 484.2600 568.3100 1: 484.3400 568.0600 484.5900 568.3100 1     LEF Description:  SPACING 0.230000 
+17	0x7f1e0cb27ca0	{219.58 683.2 219.58 683.2}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+18	0x7f1e0cb27a00	{219.58 692.16 219.58 692.16}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+19	0x7f1e0cb27a60	{219.58 701.12 219.58 701.12}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+20	0x7f1e0cb27ac0	{219.58 710.08 219.58 710.08}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+21	0x7f1e0cb27b20	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+22	0x7f1e0cb279a0	{219.58 660.8 219.58 660.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+23	0x7f1e0cb270d0	{219.58 669.76 219.58 669.76}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+24	0x7f1e0cb27100	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+25	0x7f1e0f90dbb0	{200.16 645.82 220.76 646.1}	MET3	Geometry	Metal_Short	Regular Wire of Net CTS_9 & Special Wire of Net VDD Type: Metal Short # -1 -1 9 2 : 200.1600 645.8200 220.7600 646.1000 3: 200.1600 645.8200 220.7600 646.1000 3
+26	0x7f1e0f90dbe0	{210.7 645.56 210.98 646.1}	MET3	Geometry	Metal_Short	Regular Wire of Net CTS_9 & Special Wire of Net VDD Type: Metal Short # -1 -1 9 2 : 210.7000 645.5600 210.9800 646.1000 3: 210.7000 645.5600 210.9800 646.1000 3
+27	0x7f1e0cb27ee0	{50.17 665.28 50.17 665.28}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+28	0x7f1e0cb27f10	{50.17 674.24 50.17 674.24}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+29	0x7f1e0cb279d0	{50.17 683.2 50.17 683.2}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+30	0x7f1e0cb27a30	{50.17 692.16 50.17 692.16}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+31	0x7f1e0cb27a90	{50.17 701.12 50.17 701.12}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+32	0x7f1e0cb27af0	{50.17 710.08 50.17 710.08}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+33	0x7f1e0cb27b50	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+34	0x7f1e0cb27130	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+35	0x7f1e0cb271f0	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+36	0x7f1e0f90da90	{482.86 224.65 483.14 225.03}	MET1	Geometry	Minimal_Area	Regular Wire of Net CTS_19 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+37	0x7f1e0f90dac0	{482.86 224.65 483.14 224.855}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_19 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][83] Type: Metal Short # -1 -1 9 2 : 482.8600 224.6500 483.1400 224.8550 1: 482.8600 224.6500 483.1400 224.8550 1
+38	0x7f1e0f90daf0	{482.915 224.65 483.14 224.95}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_19 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][83] Type: Metal Short # -1 -1 9 2 : 482.9150 224.6500 483.1400 224.9500 1: 482.9150 224.6500 483.1400 224.9500 1
+39	0x7f1e0f90db20	{482.725 225.03 482.86 225.07}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_19 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][83] Actual: 0.135000 Required: 0.230000 Type: ParallelRunLength Spacing # 135 230 3 2 : 482.4950 225.0700 482.7250 225.3000 1: 482.8600 224.7500 483.1400 225.0300 1     LEF Description:  SPACING 0.230000 
+40	0x7f1e0f90db50	{482.84 225.03 482.86 225.09}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_19 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][83] Actual: 0.060000 Required: 0.230000 Type: ParallelRunLength Spacing # 60 230 3 2 : 482.6250 225.0900 482.8400 225.3050 1: 482.8600 224.7500 483.1400 225.0300 1     LEF Description:  SPACING 0.230000 
+41	0x7f1e0f90db80	{482.86 225.03 482.895 225.205}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_19 & Blockage of Cell u_core_u_ctx_bank_ctx_snapshot_q_reg[1][nfast_hit_packed][83] Actual: 0.175000 Required: 0.230000 Type: ParallelRunLength Spacing # 175 230 3 2 : 482.8000 225.2050 482.8950 225.3000 1: 482.8600 224.7500 483.1400 225.0300 1     LEF Description:  SPACING 0.230000 
+42	0x7f1e0cb27250	{145.74 385.93 146.02 386.31}	MET1	Geometry	Minimal_Area	Regular Wire of Net CTS_14 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+43	0x7f1e0cb27280	{145.74 385.93 146.02 386.135}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_14 & Blockage of Cell u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][212] Type: Metal Short # -1 -1 9 2 : 145.7400 385.9300 146.0200 386.1350 1: 145.7400 385.9300 146.0200 386.1350 1
+44	0x7f1e0cb272b0	{145.795 385.93 146.02 386.23}	MET1	Geometry	Metal_Short	Regular Wire of Net CTS_14 & Blockage of Cell u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][212] Type: Metal Short # -1 -1 9 2 : 145.7950 385.9300 146.0200 386.2300 1: 145.7950 385.9300 146.0200 386.2300 1
+45	0x7f1e0cb272e0	{145.605 386.31 145.74 386.35}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_14 & Blockage of Cell u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][212] Actual: 0.135000 Required: 0.230000 Type: ParallelRunLength Spacing # 135 230 3 2 : 145.3750 386.3500 145.6050 386.5800 1: 145.7400 386.0300 146.0200 386.3100 1     LEF Description:  SPACING 0.230000 
+46	0x7f1e0cb27310	{145.72 386.31 145.74 386.37}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_14 & Blockage of Cell u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][212] Actual: 0.060000 Required: 0.230000 Type: ParallelRunLength Spacing # 60 230 3 2 : 145.5100 386.3700 145.7200 386.5800 1: 145.7400 386.0300 146.0200 386.3100 1     LEF Description:  SPACING 0.230000 
+47	0x7f1e0cb270a0	{145.74 386.31 145.775 386.485}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_14 & Blockage of Cell u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][212] Actual: 0.175000 Required: 0.230000 Type: ParallelRunLength Spacing # 175 230 3 2 : 145.6750 386.4850 145.7750 386.5850 1: 145.7400 386.0300 146.0200 386.3100 1     LEF Description:  SPACING 0.230000 
+48	0x7f1e0cb27be0	{201.16 233.62 201.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+49	0x7f1e0f90da60	{203.93 235.88 205.38 235.9}	MET3	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net CTS_20 & Special Wire of Net VDD Actual: 0.020000 Required: 0.280000 Type: ParallelRunLength Spacing # 20 280 3 2 : 203.9300 235.0800 205.3800 235.8800 3: 203.9300 235.9000 205.3800 236.1800 3     LEF Description:  SPACING 0.280000 
+50	0x7f1e0cb27cd0	{219.58 172.48 219.58 172.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+51	0x7f1e0cb27d60	{219.58 181.44 219.58 181.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+52	0x7f1e0cb27dc0	{219.58 190.4 219.58 190.4}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+53	0x7f1e0cb27e20	{219.58 199.36 219.58 199.36}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+54	0x7f1e0cb27b80	{221.75 201.16 221.75 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+55	0x7f1e0cb27c10	{219.58 212.8 219.58 212.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+56	0x7f1e0cb27160	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+57	0x7f1e0cb271c0	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+58	0x7f1e0cb27d30	{50.17 172.48 50.17 172.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+59	0x7f1e0cb27d90	{50.17 181.44 50.17 181.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+60	0x7f1e0cb27df0	{50.17 190.4 50.17 190.4}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+61	0x7f1e0cb27e50	{50.17 199.36 50.17 199.36}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+62	0x7f1e0cb27e80	{50.17 208.32 50.17 208.32}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+63	0x7f1e0cb27eb0	{50.17 217.28 50.17 217.28}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+64	0x7f1e0cb27bb0	{48.0 201.16 48.0 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+65	0x7f1e0cb27190	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+66	0x7f1e0cb27220	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
