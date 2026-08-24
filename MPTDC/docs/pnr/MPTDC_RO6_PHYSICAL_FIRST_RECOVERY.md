@@ -3,8 +3,8 @@
 ## Starting Point
 
 The design has exactly two buffered debug outputs, `ro_slow_tap0_o` and
-`ro_fast_tap0_o`, placed on the south edge on MET3. The latest published
-physical run, `20260824_mptdc_bufftap0_tempblk_physical_143726`, proved that
+`ro_fast_tap0_o`, placed on the south edge on MET3. The earlier physical run
+`20260824_mptdc_bufftap0_tempblk_physical_143726` proved that
 the named temporary METTP blockage was created for signal routing and removed
 before final verification. The lifecycle is no longer the blocker.
 
@@ -56,15 +56,22 @@ marker is VSS at `(219.580, 660.800)` on MET1, immediately outside the slow RO
 right edge. The original 34 marker signatures are unchanged; cross-net PG
 shorts and fatal special-connectivity findings remain zero.
 
-The next replay therefore uses the explicit, PnR-LEF-only continuation bound of
-35. This is not final PG acceptance: the driver permits 35 only when the
-hash-bound LEF summary proves exactly 13 MET2 plus 13 MET3 access windows, and
-the final route gate still requires raw special connectivity, all DRC, all
-shorts, regular connectivity, and unrouted nets to be exactly zero.
+The completed 35-tail replay,
+`20260824_154115_mptdc_bufftap0_pnrlef35_physical`, reached the final route
+gate. The custom PnR LEF eliminated the complete 18-short RO access family.
+Only three logical geometry violations remain: one MET1 minimum-area marker on
+`u_core_n_57563`, one MET2 VDD-spacing marker on `u_core_n_67240`, and one
+MET2 VSS short on `u_core_n_66687`. Regular connectivity is clean, both tap0
+pins remain present, and special connectivity contains 12 RO-area
+`IMPVFC-94` dangling tails. The saved `04_route_failed.enc.dat` checkpoint is
+therefore the bounded repair source; do not rerun floorplan, placement, CTS, or
+full detail route for this experiment.
 
 This recovery keeps ordinary and phase routing on MET1 through MET3 while still
-allowing special VDD/VSS routing on METTP. It does not reuse the dirty route
-checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.
+allowing special VDD/VSS routing on METTP. It restores the published failed
+route checkpoint once in a fresh Innovus process, deletes only DRC-bearing
+regular wires on the three named nets, and reroutes only those selected nets.
+It does not hand-patch marker 57556 or stream GDS from a run with shorts.
 
 ## Acceptance Order
 
@@ -76,17 +83,21 @@ checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.
 3. Generate one fresh PnR-only RO LEF from the failed run's pre-sroute MET3
    marker snapshot. Require all nine signal pin classes, both MET2 and MET3
    access windows, no unexpected pin windows, and at least one OBS trim.
-4. Run a fresh physical-first PnR with that exact LEF and require Innovus DRC,
-   shorts, regular connectivity, special connectivity, and unrouted nets all
-   zero. The single custom-LEF replay may continue past pre-route with exactly
-   35 classified dangling-only tails; this bound is discarded at final route.
-5. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
+4. Run a fresh physical-first PnR with that exact LEF. The completed replay
+   reduced the route debt to the exact three-marker class recorded above.
+5. Restore its failed-route checkpoint once and apply the bounded three-net
+   geometry repair. Require final DRC 0, shorts 0, regular connectivity 0, and
+   exactly two tap pins before considering any PG-tail repair.
+6. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
    temporary METTP blockage was created and removed, and both tap pins exist.
-6. Restore only that clean `04_route.enc.dat` checkpoint and merge the real RO
+7. Require raw special connectivity zero. A geometry-clean result with only
+   the same or fewer classified `IMPVFC-94` tails is an intermediate checkpoint,
+   not route closure and not permission to launch PVS.
+8. Restore only a fully clean route checkpoint and merge the real RO
    OA GDS.
-7. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
+9. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
    MATCH on the same hashed inputs.
-8. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
+10. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
    IR/EM, and final tapeout remain outside this physical-first gate.
 
 ## Step Decisions and Evidence
@@ -102,6 +113,7 @@ log tails are what make remote analysis possible.
 | PG proof | wrapper RC 0, sroute PASS, PG cross-net shorts 0, non-RO failures 0, and either raw clean or bounded classified `IMPVFC-94` only | `innovus` |
 | PnR LEF preparation | preparation PASS, `S[0:7]` plus `rstb` present, MET2/MET3 windows nonzero, unexpected-pin count 0, OBS trims nonzero | bundled into physical `innovus` snapshot |
 | Physical PnR | pre-route status PASS with the audited PnR-LEF-only bound 35, requested/imported PnR LEF path and hash match, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every final DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
+| Route geometry repair | exact published 3-DRC/1-short source signature, fresh single restore, final DRC 0, shorts 0, regular connectivity 0, saved checkpoint present, exactly two tap0 pins | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
 | Base DRC | gate PASS, variant BASE, both report totals 0 | `pvs` |
@@ -210,11 +222,11 @@ is `/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_tempblk_met3_20260824_1
 with SHA-256
 `6788f856561a3e8c002dc7f2536ac338b16fc76b56aaae9d2062f4dccfec8469`.
 
-#### 2A. Current Next Command: Replay with the Audited 35-Tail Bound
+#### 2A. Completed 35-Tail Replay Reference
 
-Run this block once. It starts a fresh Innovus process from the Genus handoff,
-reuses the exact generated LEF and sidecar summary, publishes pass or failure
-evidence automatically, and leaves the SSH shell open on failure.
+Do not rerun this block. It produced
+`20260824_154115_mptdc_bufftap0_pnrlef35_physical` and is retained only as an
+audit reference for the exact handoff, PnR LEF, and 35-tail continuation.
 
 ```bash
 set +e
@@ -280,11 +292,92 @@ grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPEC
 cat "$PNR_DIR/reports/operator_gate_physical_pnr.rpt" 2>/dev/null
 ```
 
-Continue to PVS only when the final lines show `PNR_DRIVER_RC=0`,
-`DECISION=PASS_CONTINUE`, `PUBLISH_RC=0`, and `NEXT_STAGE=PVS`. A nonzero result
-is already published when `PUBLISH_RC=0`; send only `PNR_RUN` and `FINAL_HEAD`.
+The completed result is intentionally `DECISION=FAIL_STOP`: DRC is 3, shorts are
+1, regular connectivity is 0, and special connectivity contains 12 dangling
+tails. Its failed-route checkpoint is the source for the active command below.
 
-#### 2B. Completed PnR-LEF Generation Reference
+#### 2B. Current Next Command: Bounded Route Geometry Repair
+
+Run this block once. The driver refuses any source other than the tracked exact
+three-marker signature, restores the source checkpoint once in a fresh Innovus
+process, reroutes only the three named regular nets, evaluates fresh DRC and
+connectivity, and publishes the result automatically. A failed guard returns to
+the SSH prompt; it does not close the login shell.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+SOURCE_PNR_RUN=20260824_154115_mptdc_bufftap0_pnrlef35_physical
+TAG=$(date +%Y%m%d_%H%M%S)
+REPAIR_RUN=${TAG}_mptdc_bufftap0_route_geometry_repair
+REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
+DRIVER_LOG=/tmp/${REPAIR_RUN}.driver.log
+
+SYNC_RC=99
+REPAIR_DRIVER_RC=99
+REPO_READY=0
+
+if [ -d "$REPO/.git" ]; then
+  cd "$REPO"
+  git checkout SPADMIC_test
+  git pull --ff-only origin SPADMIC_test
+  SYNC_RC=$?
+  [ "$SYNC_RC" -eq 0 ] && REPO_READY=1
+else
+  echo "STOP: repository missing: $REPO"
+fi
+
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+if [ "$REPO_READY" -eq 1 ] && [ -z "$TRACKED_STATUS" ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
+    --stage route-geometry-repair \
+    --run-id "$REPAIR_RUN" \
+    --source-pnr-run-id "$SOURCE_PNR_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  REPAIR_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync or tracked-tree gate failed"
+  [ -n "$TRACKED_STATUS" ] && printf '%s\n' "$TRACKED_STATUS"
+fi
+
+echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "SOURCE_PNR_RUN=$SOURCE_PNR_RUN"
+echo "REPAIR_RUN=$REPAIR_RUN"
+echo "REPAIR_DRIVER_RC=$REPAIR_DRIVER_RC"
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_REPAIR_RUN_ID|NEXT_REQUIRED_PNR_RUN_ID)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -20
+cat "$REPAIR_DIR/reports/operator_gate_route_geometry_repair.rpt" 2>/dev/null
+```
+
+The geometry step passes only when fresh Innovus evidence reports:
+
+```text
+INITIAL_DRC=3
+INITIAL_SHORTS=1
+INITIAL_REGULAR_CONNECTIVITY_BAD=0
+INITIAL_SPECIAL_DANGLING_COUNT=12
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_CHECKPOINT_DAT_EXISTS=1
+RO_TAP_OBSERVABILITY_PIN_COUNT=2
+DECISION=PASS_CONTINUE
+PUBLISH_RC=0
+```
+
+If `GEOMETRY_REPAIR_GATE_MODE=GEOMETRY_REGULAR_CLEAN_PG_DANGLING_REVIEW`, stop
+after publication and send the short result block. Geometry is then repaired,
+but the remaining PG-tail class still needs its own isolated repair before PVS.
+Only `GEOMETRY_REPAIR_GATE_MODE=FULL_ROUTE_GATE_CLEAN` with `NEXT_STAGE=PVS`
+permits direct continuation to PVS.
+
+#### 2C. Completed PnR-LEF Generation Reference
 
 Do not rerun this block while the exact generated LEF and summary above remain
 readable. It is retained only to reproduce the file if server scratch storage
@@ -453,7 +546,7 @@ PUBLISH_RC=0
 Do not paste full Innovus or PVS logs into chat. Send only:
 
 ```text
-STEP=<PG_PROOF, PHYSICAL_PNR, or PVS>
+STEP=<PG_PROOF, PHYSICAL_PNR, ROUTE_GEOMETRY_REPAIR, or PVS>
 RUN_ID=<NEXT_REQUIRED_*_RUN_ID or PVS_RUN_ID>
 DRIVER_RC=<printed driver RC>
 DECISION=<printed decision>
@@ -463,7 +556,8 @@ HEAD=<printed repository HEAD>
 
 For `PG_PROOF`, also send `PG_GATE_MODE` and
 `POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT`. No full Innovus log needs to be
-pasted when `PUBLISH_RC=0`.
+pasted when `PUBLISH_RC=0`. For `ROUTE_GEOMETRY_REPAIR`, also send
+`GEOMETRY_REPAIR_GATE_MODE` and `FINAL_SPECIAL_DANGLING_COUNT`.
 
 When publication succeeds, the pushed snapshot contains all authoritative
 small reports and manifests plus filtered diagnostic log tails. The local GDS,

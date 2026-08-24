@@ -20,11 +20,18 @@ git -C "$REPO" config user.email 'mptdc-recovery@example.invalid'
 PRE_GATE="$REPO/MPTDC/docs/server_snapshots/genus/genus_fixture_prepnr_20260824_120000/reports/operator_gate_pre_pnr.rpt"
 PG_GATE="$REPO/MPTDC/docs/server_snapshots/innovus/pg_prior/reports/operator_gate_pg_proof.rpt"
 FAILED_PG_GATE="$REPO/MPTDC/docs/server_snapshots/innovus/pg_failed/reports/operator_gate_pg_proof.rpt"
+SOURCE_PNR_ID="pnr_three_marker_source"
+SOURCE_PNR_ROOT="$REPO/MPTDC/docs/server_snapshots/innovus/$SOURCE_PNR_ID"
+SOURCE_PNR_GATE="$SOURCE_PNR_ROOT/reports/operator_gate_physical_pnr.rpt"
+SOURCE_PNR_ROUTE="$SOURCE_PNR_ROOT/reports/route_status.rpt"
+SOURCE_PNR_MARKERS="$SOURCE_PNR_ROOT/reports/route_drc_markers.tsv"
 mkdir -p \
   "$(dirname "$PRE_GATE")" \
   "$(dirname "$PG_GATE")" \
   "$(dirname "$FAILED_PG_GATE")" \
-  "$WORK/innovus/pg_failed/checkpoints/03_cts.enc.dat"
+  "$WORK/innovus/pg_failed/checkpoints/03_cts.enc.dat" \
+  "$WORK/innovus/$SOURCE_PNR_ID/checkpoints/04_route_failed.enc.dat" \
+  "$SOURCE_PNR_ROOT/reports"
 cat > "$PRE_GATE" <<'EOF'
 STEP=PRE_PNR
 PACKAGE_RC=0
@@ -62,6 +69,41 @@ POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=1
 POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_RAW_BAD=1
 POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 DECISION=FAIL_STOP
+EOF
+cat > "$SOURCE_PNR_GATE" <<'EOF'
+STEP=PHYSICAL_PNR
+PNR_RC=1
+ROUTE_STATUS=FAIL
+INNOVUS_VERIFY_DRC_STATUS=FAIL
+GEOMETRY_DRC_VIOLATIONS=3
+SHORTS=1
+REGULAR_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_BAD=1
+SPECIAL_NET_CONNECTIVITY_RAW_BAD=1
+SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
+ro_slow_tap0_o_COUNT=1
+ro_fast_tap0_o_COUNT=1
+RO_TAP_OBSERVABILITY_PIN_COUNT=2
+DECISION=FAIL_STOP
+EOF
+cat > "$SOURCE_PNR_ROUTE" <<'EOF'
+ROUTE_STATUS=FAIL
+INNOVUS_VERIFY_DRC_STATUS=FAIL
+GEOMETRY_DRC_VIOLATIONS=3
+SHORTS=1
+REGULAR_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_BAD=1
+SPECIAL_NET_CONNECTIVITY_RAW_BAD=1
+SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
+ROUTE_GATE_FAILURE_CHECKPOINT_DAT_EXISTS=1
+EOF
+cat > "$SOURCE_PNR_MARKERS" <<'EOF'
+idx	marker_handle	box	layer	type	subType	message
+1	0x1	{364.65 328.3 365.03 328.58}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57563 Actual: 0.10640000 Required: 0.20200000
+2	0x2	{219.94 223.775 219.96 224.505}	MET2	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_67240 & Special Wire of Net VDD
+3	0x3	{219.94 223.775 219.96 224.505}	MET2	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_67240 & Special Wire of Net VDD
+4	0x4	{220.5 179.29 220.76 180.015}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_n_66687 & Special Wire of Net VSS
+5	0x5	{220.5 179.29 220.76 180.015}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_n_66687 & Special Wire of Net VSS
 EOF
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
@@ -268,6 +310,89 @@ done
 EOF
 chmod +x "$FAKE_SWEEP_LAUNCHER"
 
+FAKE_REPAIR_LAUNCHER="$TMP_ROOT/fake_repair_launcher.sh"
+cat > "$FAKE_REPAIR_LAUNCHER" <<'EOF'
+#!/usr/bin/env bash
+set -eu
+run_id=""
+checkpoint=""
+commands_file=""
+work=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --run-id) run_id="$2"; shift 2 ;;
+    --checkpoint) checkpoint="$2"; shift 2 ;;
+    --commands-file) commands_file="$2"; shift 2 ;;
+    --innovus-work) work="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+test -d "$checkpoint"
+test -s "$commands_file"
+grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_66687' "$commands_file"
+grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_67240' "$commands_file"
+grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_57563' "$commands_file"
+test "$(grep -c 'selected_drc_wire_repair$' "$commands_file")" = 3
+grep -qx 'mptdc_ckpt_assert_geometry_regular_clean' "$commands_file"
+
+run="$work/$run_id"
+mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
+initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
+final_special="$run/reports/final_verify_connectivity_special.rpt"
+for report in "$initial_special" "$final_special"; do
+  {
+    for idx in $(seq 1 6); do
+      echo "Net VDD: dangling Wire at ($idx.000, 1.000) ($idx.000, 1.000) on layer: MET3"
+    done
+    for idx in $(seq 1 6); do
+      echo "Net VSS: dangling Wire at ($idx.000, 2.000) ($idx.000, 2.000) on layer: MET3"
+    done
+    echo '    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).'
+  } > "$report"
+done
+
+final_drc=0
+final_shorts=0
+final_status=PASS_GEOMETRY_REVIEW_CONNECTIVITY
+if [[ "${FAKE_REPAIR_DIRTY:-0}" == 1 ]]; then
+  final_drc=1
+  final_status=REVIEW_REQUIRED
+fi
+cat > "$run/def/repaired_route.def" <<'DEF'
+VERSION 5.8 ;
+PINS 2 ;
+- ro_slow_tap0_o + NET ro_slow_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 1000 0 ) N ;
+- ro_fast_tap0_o + NET ro_fast_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 2000 0 ) N ;
+END PINS
+END DESIGN
+DEF
+cat > "$run/reports/checkpoint_repair_status.rpt" <<RPT
+INITIAL_DRC=3
+INITIAL_SHORTS=1
+INITIAL_REGULAR_CONNECTIVITY_BAD=0
+INITIAL_SPECIAL_CONNECTIVITY_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+INITIAL_SPECIAL_CONNECTIVITY_REPORT=$initial_special
+FINAL_DRC=$final_drc
+FINAL_SHORTS=$final_shorts
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_UNROUTED_NETS=0
+FINAL_ROUTE_GATE_PASS=0
+FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
+FINAL_DEF=$run/def/repaired_route.def
+FINAL_CHECKPOINT_DAT_EXISTS=1
+CHECKPOINT_REPAIR_STATUS=$final_status
+RPT
+exit 0
+EOF
+chmod +x "$FAKE_REPAIR_LAUNCHER"
+
 FAKE_PUBLISHER="$TMP_ROOT/fake_publisher.sh"
 cat > "$FAKE_PUBLISHER" <<'EOF'
 #!/usr/bin/env bash
@@ -282,6 +407,7 @@ COMMON_ENV=(
   MPTDC_RECOVERY_REPO_ROOT="$REPO"
   MPTDC_RECOVERY_LAUNCHER="$FAKE_LAUNCHER"
   MPTDC_RECOVERY_SWEEP_LAUNCHER="$FAKE_SWEEP_LAUNCHER"
+  MPTDC_RECOVERY_REPAIR_LAUNCHER="$FAKE_REPAIR_LAUNCHER"
   MPTDC_RECOVERY_PUBLISHER="$FAKE_PUBLISHER"
   MPTDC_CADENCE_ENV="$FAKE_CADENCE_ENV"
   MPTDC_WORK_ROOT="$WORK"
@@ -430,5 +556,35 @@ set -e
 test "$DIRTY_RC" -ne 0
 grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_dirty/reports/operator_gate_physical_pnr.rpt"
 grep -q 'innovus route_dirty .* PHYSICAL_PNR' "$PUBLISH_CALLS"
+
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-geometry-repair --run-id geometry_repair_clean \
+  --source-pnr-run-id "$SOURCE_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/geometry_repair_clean.stdout"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/geometry_repair_clean.stdout"
+grep -qx 'INITIAL_DRC=3' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'FINAL_DRC=0' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'FINAL_SHORTS=0' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'FINAL_REGULAR_CONNECTIVITY_BAD=0' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'FINAL_SPECIAL_DANGLING_COUNT=12' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'GEOMETRY_REPAIR_GATE_MODE=GEOMETRY_REGULAR_CLEAN_PG_DANGLING_REVIEW' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -q 'innovus geometry_repair_clean .* ROUTE_GEOMETRY_REPAIR' "$PUBLISH_CALLS"
+grep -qx 'NEXT_STAGE=PG_DANGLING_REPAIR_REVIEW' "$TMP_ROOT/geometry_repair_clean.stdout"
+grep -qx 'NEXT_REQUIRED_REPAIR_RUN_ID=geometry_repair_clean' "$TMP_ROOT/geometry_repair_clean.stdout"
+
+set +e
+env "${COMMON_ENV[@]}" FAKE_REPAIR_DIRTY=1 bash "$DRIVER" \
+  --stage route-geometry-repair --run-id geometry_repair_dirty \
+  --source-pnr-run-id "$SOURCE_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/geometry_repair_dirty.stdout"
+GEOMETRY_REPAIR_DIRTY_RC=$?
+set -e
+test "$GEOMETRY_REPAIR_DIRTY_RC" -ne 0
+grep -qx 'FINAL_DRC=1' "$WORK/innovus/geometry_repair_dirty/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'GEOMETRY_REPAIR_GATE_MODE=FAIL' "$WORK/innovus/geometry_repair_dirty/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/geometry_repair_dirty/reports/operator_gate_route_geometry_repair.rpt"
+grep -q 'innovus geometry_repair_dirty .* ROUTE_GEOMETRY_REPAIR' "$PUBLISH_CALLS"
+grep -qx 'NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE' "$TMP_ROOT/geometry_repair_dirty.stdout"
 
 echo "MPTDC_RO6_RECOVERY_STAGE_DRIVER_TEST=PASS"
