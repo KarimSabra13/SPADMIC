@@ -16,14 +16,17 @@ checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.
 
 1. Reuse the latest buffered-tap Genus handoff; do not resynthesize.
 2. Run a fresh strict simple-PG proof and require raw special connectivity zero.
-3. Run a fresh physical-first PnR and require Innovus DRC, shorts, regular
+3. If that proof fails only on special PG topology, sweep isolated sroute
+   candidates from its clean `03_cts.enc.dat`; review and replay a strict
+   winner before physical PnR.
+4. Run a fresh physical-first PnR and require Innovus DRC, shorts, regular
    connectivity, special connectivity, and unrouted nets all zero.
-4. Confirm the router command top layer is MET3 and both tap pins are present.
-5. Restore only that clean `04_route.enc.dat` checkpoint and merge the real RO
+5. Confirm the router command top layer is MET3 and both tap pins are present.
+6. Restore only that clean `04_route.enc.dat` checkpoint and merge the real RO
    OA GDS.
-6. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
+7. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
    MATCH on the same hashed inputs.
-7. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
+8. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
    IR/EM, and final tapeout remain outside this physical-first gate.
 
 ## Step Decisions and Evidence
@@ -37,6 +40,7 @@ log tails are what make remote analysis possible.
 |---|---|---|
 | Pre-PnR | package RC 0, pre-PnR RC 0, `PRE_PNR_GATE=PASS` | `genus` |
 | Strict PG proof | wrapper RC 0, sroute PASS, special bad/raw bad/non-RO failures all 0 | `innovus` |
+| PG sroute sweep | all 10 isolated candidates complete and at least one has raw special connectivity 0, special bad 0, and shorts 0; stop for canonical replay | `innovus` |
 | Physical PnR | wrapper RC 0, router top MET3, route/DRC PASS, every DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
@@ -117,13 +121,57 @@ NEXT_REQUIRED_PG_RUN_ID=<new PG run id>
 ```
 
 Save the printed `NEXT_REQUIRED_PG_RUN_ID`; it is the only value needed by the
-next command. On any other result, stop. If `PUBLISH_RC=0`, send the run id and
-printed HEAD so the pushed failure evidence can be reviewed remotely.
+next command. On a different failure, stop. If the published failure is the
+known isolated special-PG case, use step 1B rather than rerunning the full
+proof. If `PUBLISH_RC=0`, send the run id and printed HEAD so the pushed failure
+evidence can be reviewed remotely.
 
 `RECOVERY_PREFLIGHT=PASS` alone does not mean Innovus launched. The driver must
 next print `CADENCE_ENV_STATUS=PASS`. A missing status means the checkout still
 has the older startup bug; `CADENCE_ENV_STATUS=FAIL` means the Cadence site
 setup itself failed. In either case, stop before retrying.
+
+### 1B. Isolated PG SRoute Sweep
+
+Use this only after a published strict-PG proof failed with raw special
+connectivity debt. Every candidate starts in a fresh Innovus process from the
+failed run's clean `03_cts.enc.dat`; the contaminated
+`03b_postplace_pre_route_sroute_failed.enc.dat` is rejected.
+
+For the current failure, this block is ready to paste unchanged:
+
+```bash
+set +e
+
+FAILED_PG_RUN_ID=20260824_mptdc_bufftap0_simplepg_pgproof_112900
+
+bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
+  --stage pg-sweep \
+  --source-pg-run-id "$FAILED_PG_RUN_ID"
+
+SWEEP_DRIVER_RC=$?
+echo "SWEEP_DRIVER_RC=$SWEEP_DRIVER_RC"
+echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+A usable result requires all of these markers:
+
+```text
+CADENCE_ENV_STATUS=PASS
+CANDIDATE_COUNT=10
+STRICT_PASS_COUNT=<one or more>
+STRICT_PASS_CANDIDATES=<candidate name or comma-separated names>
+DECISION=PASS_CONTINUE
+PUBLISH_RC=0
+NEXT_STAGE=REVIEW_AND_REPLAY_PG_CANDIDATE
+SWEEP_DRIVER_RC=0
+```
+
+This is candidate discovery, not authorization for physical PnR. Stop after
+the sweep so the winning candidate can be reviewed and replayed through the
+canonical strict-PG proof. If `STRICT_PASS_COUNT=0`, the command still
+publishes all bounded candidate evidence and returns nonzero; do not rerun full
+PnR or accept an RO-filtered/dangling-only result.
 
 ### 2. Physical PnR
 
@@ -197,13 +245,16 @@ PUBLISH_RC=0
 Do not paste full Innovus or PVS logs into chat. Send only:
 
 ```text
-STEP=<PG, PHYSICAL_PNR, or PVS>
+STEP=<PG, PG_SWEEP, PHYSICAL_PNR, or PVS>
 RUN_ID=<NEXT_REQUIRED_*_RUN_ID or PVS_RUN_ID>
 DRIVER_RC=<printed driver RC>
 DECISION=<printed decision>
 PUBLISH_RC=<printed publish RC, when present>
 HEAD=<printed repository HEAD>
 ```
+
+For `PG_SWEEP`, also send `STRICT_PASS_CANDIDATES`. No full Innovus log needs
+to be pasted when `PUBLISH_RC=0`.
 
 When publication succeeds, the pushed snapshot contains all authoritative
 small reports and manifests plus filtered diagnostic log tails. The local GDS,
