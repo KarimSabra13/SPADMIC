@@ -1,0 +1,4 @@
+# MPTDC Optional Post-Route Optimization Status
+POSTROUTE_OPT_STATUS=SKIPPED
+POSTROUTE_OPT_REASON=disabled_by_default_for_tc_only_single_non_ocv
+POSTROUTE_OPT_ENABLE_ENV=MPTDC_ENABLE_POSTROUTE_OPT

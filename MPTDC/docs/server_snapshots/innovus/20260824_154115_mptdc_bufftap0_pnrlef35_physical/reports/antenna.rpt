@@ -1,0 +1,11 @@
+
+******* START VERIFY ANTENNA ********
+Report File: mptdc_axis_core.antenna.rpt
+LEF Macro File: mptdc_axis_core.antenna.lef
+5000 nets processed: 35 violations
+10000 nets processed: 35 violations
+15000 nets processed: 35 violations
+Verification Complete: 35 Violations
+******* DONE VERIFY ANTENNA ********
+(CPU Time: 0:00:01.0  MEM: 0.000M)
+
