@@ -135,19 +135,23 @@ run_route_geometry_repair_stage() {
 
   mkdir -p "$RUN_DIR/reports" "$RUN_DIR/logs" "$RUN_DIR/manifests"
   cat > "$commands_file" <<'COMMANDS'
+mptdc_ckpt_set_net_route_layers u_core_n_66687 MET3 MET3
 mptdc_ckpt_delete_regular_drc_wires u_core_n_66687
-mptdc_ckpt_route_selected_nets_with_commands {u_core_n_66687} {{globalDetailRoute -select} {detailRoute -select} {ecoRoute -fix_drc}} selected_drc_wire_repair
+mptdc_ckpt_route_selected_nets_route_design {u_core_n_66687}
+mptdc_ckpt_set_net_route_layers u_core_n_67240 MET3 MET3
 mptdc_ckpt_delete_regular_drc_wires u_core_n_67240
-mptdc_ckpt_route_selected_nets_with_commands {u_core_n_67240} {{globalDetailRoute -select} {detailRoute -select} {ecoRoute -fix_drc}} selected_drc_wire_repair
+mptdc_ckpt_route_selected_nets_route_design {u_core_n_67240}
+mptdc_ckpt_set_net_route_layers u_core_n_57563 MET2 MET3
 mptdc_ckpt_delete_regular_drc_wires u_core_n_57563
-mptdc_ckpt_route_selected_nets_with_commands {u_core_n_57563} {{globalDetailRoute -select} {detailRoute -select} {ecoRoute -fix_drc}} selected_drc_wire_repair
+mptdc_ckpt_route_selected_nets_route_design {u_core_n_57563}
 mptdc_ckpt_assert_geometry_regular_clean
 COMMANDS
   {
     echo "# Exact bounded command payload supplied to Innovus"
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
-    echo "REPAIR_METHOD=DELETE_DRC_WIRE_AND_SELECTED_NET_REROUTE"
+    echo "REPAIR_METHOD=PREFERRED_LAYER_CONSTRAINED_ROUTE_DESIGN_SELECTED_V2"
+    echo "REPAIR_LAYER_POLICY=u_core_n_66687:MET3-MET3,u_core_n_67240:MET3-MET3,u_core_n_57563:MET2-MET3"
     cat "$commands_file"
   } > "$commands_evidence"
 
@@ -229,7 +233,8 @@ COMMANDS
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
     echo "REPAIR_RC=$repair_rc"
-    echo "REPAIR_METHOD=DELETE_DRC_WIRE_AND_SELECTED_NET_REROUTE"
+    echo "REPAIR_METHOD=PREFERRED_LAYER_CONSTRAINED_ROUTE_DESIGN_SELECTED_V2"
+    echo "REPAIR_LAYER_POLICY=u_core_n_66687:MET3-MET3,u_core_n_67240:MET3-MET3,u_core_n_57563:MET2-MET3"
     echo "REPAIR_NETS=u_core_n_66687,u_core_n_67240,u_core_n_57563"
     echo "INITIAL_DRC=$initial_drc"
     echo "INITIAL_SHORTS=$initial_shorts"

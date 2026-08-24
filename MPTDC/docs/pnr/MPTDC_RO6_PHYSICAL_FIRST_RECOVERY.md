@@ -67,11 +67,19 @@ pins remain present, and special connectivity contains 12 RO-area
 therefore the bounded repair source; do not rerun floorplan, placement, CTS, or
 full detail route for this experiment.
 
-This recovery keeps ordinary and phase routing on MET1 through MET3 while still
-allowing special VDD/VSS routing on METTP. It restores the published failed
-route checkpoint once in a fresh Innovus process, deletes only DRC-bearing
-regular wires on the three named nets, and reroutes only those selected nets.
-It does not hand-patch marker 57556 or stream GDS from a run with shorts.
+The first checkpoint repair,
+`20260824_161415_mptdc_bufftap0_route_geometry_repair`, proved that deleting
+each DRC-bearing wire removes its marker. Its unconstrained selected reroute
+then recreated all three original markers at the same coordinates. Repeating
+that candidate cannot improve the result.
+
+The active repair keeps ordinary and phase routing on MET1 through MET3 while
+still allowing special VDD/VSS routing on METTP. It restores the published
+failed route checkpoint once in a fresh Innovus process, constrains the two
+PG-adjacent nets to MET3 and the minimum-area net to MET2-MET3, deletes only
+their DRC-bearing regular wires, and invokes `routeDesign -selected` for each
+net. It does not run broad `ecoRoute -fix_drc`, hand-patch marker 57556, or
+stream GDS from a run with shorts.
 
 ## Acceptance Order
 
@@ -296,13 +304,20 @@ The completed result is intentionally `DECISION=FAIL_STOP`: DRC is 3, shorts are
 1, regular connectivity is 0, and special connectivity contains 12 dangling
 tails. Its failed-route checkpoint is the source for the active command below.
 
-#### 2B. Current Next Command: Bounded Route Geometry Repair
+#### 2B. Current Next Command: Layer-Constrained Route Geometry Repair
 
 Run this block once. The driver refuses any source other than the tracked exact
 three-marker signature, restores the source checkpoint once in a fresh Innovus
-process, reroutes only the three named regular nets, evaluates fresh DRC and
-connectivity, and publishes the result automatically. A failed guard returns to
-the SSH prompt; it does not close the login shell.
+process, applies the exact per-net layer policy recorded below, reroutes only
+the three named regular nets with selected-net `routeDesign`, evaluates fresh
+DRC and connectivity, and publishes the result automatically. A failed guard
+returns to the SSH prompt; it does not close the login shell.
+
+```text
+u_core_n_66687  MET3-MET3  previous MET2 VSS short
+u_core_n_67240  MET3-MET3  previous MET2 VDD spacing
+u_core_n_57563  MET2-MET3  previous MET1 minimum area
+```
 
 ```bash
 set +e

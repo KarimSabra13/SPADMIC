@@ -158,6 +158,51 @@ proc mptdc_ckpt_select_nets {nets} {
     return $selected
 }
 
+proc mptdc_ckpt_set_net_route_layers {net bottom_layer top_layer} {
+    set net [string trim $net]
+    set bottom_layer [string trim $bottom_layer]
+    set top_layer [string trim $top_layer]
+    if {$net eq "" || $bottom_layer eq "" || $top_layer eq ""} {
+        error "mptdc_ckpt_set_net_route_layers requires net, bottom layer, and top layer"
+    }
+
+    set objects {}
+    if {[catch {set objects [get_nets -quiet $net]} err] || [llength $objects] == 0} {
+        error "mptdc_ckpt_set_net_route_layers found no net object for $net: $err"
+    }
+
+    set methods {}
+    set failures {}
+    foreach spec [list \
+        [list BOTTOM .bottom_preferred_routing_layer -bottom_preferred_routing_layer $bottom_layer] \
+        [list TOP .top_preferred_routing_layer -top_preferred_routing_layer $top_layer] \
+        [list EFFORT .preferred_routing_layer_effort -preferred_routing_layer_effort high]] {
+        lassign $spec label db_attribute legacy_option value
+        if {![catch {set_db $objects $db_attribute $value} db_err]} {
+            lappend methods "$label:set_db"
+            continue
+        }
+        if {![catch {setAttribute -net $net $legacy_option $value} legacy_err]} {
+            lappend methods "$label:setAttribute"
+            continue
+        }
+        lappend failures "$label:set_db={$db_err};setAttribute={$legacy_err}"
+    }
+
+    puts "MPTDC_CKPT_ROUTE_LAYER_NET=$net"
+    puts "MPTDC_CKPT_ROUTE_LAYER_BOTTOM=$bottom_layer"
+    puts "MPTDC_CKPT_ROUTE_LAYER_TOP=$top_layer"
+    puts "MPTDC_CKPT_ROUTE_LAYER_METHODS=[join $methods ,]"
+    if {[llength $failures] > 0} {
+        error "failed to apply preferred routing layers for $net: [join $failures {; }]"
+    }
+    return [dict create \
+        net $net \
+        bottom_layer $bottom_layer \
+        top_layer $top_layer \
+        methods $methods]
+}
+
 proc mptdc_ckpt_route_selected_nets_with_commands {nets route_commands route_label} {
     set selected [mptdc_ckpt_select_nets $nets]
     puts "MPTDC_CKPT_ROUTE_SELECTED_NET_COUNT=[llength $selected]"
