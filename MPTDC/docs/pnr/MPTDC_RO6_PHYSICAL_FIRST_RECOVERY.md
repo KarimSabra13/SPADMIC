@@ -73,13 +73,22 @@ each DRC-bearing wire removes its marker. Its unconstrained selected reroute
 then recreated all three original markers at the same coordinates. Repeating
 that candidate cannot improve the result.
 
-The active repair keeps ordinary and phase routing on MET1 through MET3 while
-still allowing special VDD/VSS routing on METTP. It restores the published
-failed route checkpoint once in a fresh Innovus process, constrains the two
-PG-adjacent nets to MET3 and the minimum-area net to MET2-MET3, deletes only
-their DRC-bearing regular wires, and invokes `routeDesign -selected` for each
-net. It does not run broad `ecoRoute -fix_drc`, hand-patch marker 57556, or
-stream GDS from a run with shorts.
+The second checkpoint repair,
+`20260824_163028_mptdc_bufftap0_route_geometry_repair_v2`, proved that preferred
+layers alone are not a hard pin-access constraint. It moved the VSS short by
+only 0.56 um, moved the VDD-spacing segment by 0.42 um, and added one MET1
+cell-obstruction spacing marker. The minimum-area marker was unchanged. Do not
+repeat either selected-route candidate.
+
+The active repair keeps the same signal-layer policy but adds three temporary,
+named local route blockages over only the recurrence corridors. The VSS repair
+blocks MET2 around its exact special-wire overlap; the VDD repair blocks MET1
+and MET2 across both its PG-spacing corridor and the newly observed cell-OBS
+corridor; the minimum-area repair blocks the center of the old MET1 segment so
+the selected router must take a longer path. Each blockage is queried after
+creation, removed after its net is routed, and queried again before the final
+gate. It does not modify VDD/VSS special wires, move cells, run global routing,
+waive DRC, or stream GDS from a run with shorts.
 
 ## Acceptance Order
 
@@ -304,19 +313,20 @@ The completed result is intentionally `DECISION=FAIL_STOP`: DRC is 3, shorts are
 1, regular connectivity is 0, and special connectivity contains 12 dangling
 tails. Its failed-route checkpoint is the source for the active command below.
 
-#### 2B. Current Next Command: Layer-Constrained Route Geometry Repair
+#### 2B. Current Next Command: Local-Keepout Route Geometry Repair
 
 Run this block once. The driver refuses any source other than the tracked exact
 three-marker signature, restores the source checkpoint once in a fresh Innovus
-process, applies the exact per-net layer policy recorded below, reroutes only
-the three named regular nets with selected-net `routeDesign`, evaluates fresh
+process, applies the exact per-net layer policy and three named local keepouts
+recorded below, reroutes only the three named regular nets with selected-net
+`routeDesign`, removes and verifies removal of every keepout, evaluates fresh
 DRC and connectivity, and publishes the result automatically. A failed guard
 returns to the SSH prompt; it does not close the login shell.
 
 ```text
-u_core_n_66687  MET3-MET3  previous MET2 VSS short
-u_core_n_67240  MET3-MET3  previous MET2 VDD spacing
-u_core_n_57563  MET2-MET3  previous MET1 minimum area
+u_core_n_66687  MET3-MET3  block MET2      {220.10 177.80 221.20 181.20}
+u_core_n_67240  MET3-MET3  block MET1/MET2 {219.30 222.80 221.20 225.90}
+u_core_n_57563  MET2-MET3  block MET1      {364.79 328.10 364.89 328.78}
 ```
 
 ```bash
@@ -325,7 +335,7 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260824_154115_mptdc_bufftap0_pnrlef35_physical
 TAG=$(date +%Y%m%d_%H%M%S)
-REPAIR_RUN=${TAG}_mptdc_bufftap0_route_geometry_repair
+REPAIR_RUN=${TAG}_mptdc_bufftap0_local_keepout_repair_v3
 REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
 DRIVER_LOG=/tmp/${REPAIR_RUN}.driver.log
 

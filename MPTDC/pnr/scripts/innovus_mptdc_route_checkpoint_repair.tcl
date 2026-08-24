@@ -203,6 +203,124 @@ proc mptdc_ckpt_set_net_route_layers {net bottom_layer top_layer} {
         methods $methods]
 }
 
+proc mptdc_ckpt_query_named_route_blockage {name} {
+    set errors {}
+    foreach cmd [list \
+        [list dbGet -e top.fPlan.rBlkgs.name $name -p] \
+        [list dbGet top.fPlan.rBlkgs.name $name -p] \
+        [list dbGet -e top.fplan.rBlkgs.name $name -p] \
+        [list get_db route_blockages -if ".name == $name"]] {
+        if {[catch {set raw [uplevel #0 $cmd]} err]} {
+            lappend errors "$cmd: $err"
+            continue
+        }
+        set handles {}
+        foreach handle $raw {
+            if {$handle ni {"" 0x0 NULL null nil}} {
+                lappend handles $handle
+            }
+        }
+        return [dict create status PASS command $cmd handles $handles errors $errors]
+    }
+    return [dict create status UNKNOWN command {} handles {} errors $errors]
+}
+
+proc mptdc_ckpt_create_route_blockage {name layers box} {
+    set name [string trim $name]
+    if {$name eq "" || ![regexp {^[A-Za-z0-9_]+$} $name]} {
+        error "mptdc_ckpt_create_route_blockage requires a safe non-empty name"
+    }
+    if {[llength $layers] == 0} {
+        error "mptdc_ckpt_create_route_blockage requires at least one layer"
+    }
+    if {[llength $box] != 4} {
+        error "mptdc_ckpt_create_route_blockage requires box {x1 y1 x2 y2}"
+    }
+    foreach value $box {
+        if {![string is double -strict $value]} {
+            error "mptdc_ckpt_create_route_blockage box must be numeric: $box"
+        }
+    }
+    lassign $box llx lly urx ury
+    if {$llx >= $urx || $lly >= $ury} {
+        error "mptdc_ckpt_create_route_blockage requires an ordered box: $box"
+    }
+
+    set before [mptdc_ckpt_query_named_route_blockage $name]
+    if {[dict get $before status] ne "PASS"} {
+        error "cannot query route blockage $name before creation: [dict get $before errors]"
+    }
+    if {[llength [dict get $before handles]] != 0} {
+        error "route blockage already exists: $name"
+    }
+
+    set attempts [list \
+        [concat [list createRouteBlk -name $name -box] $box [list -layer $layers]] \
+        [list createRouteBlk -name $name -box $box -layer $layers]]
+    set used {}
+    set errors {}
+    foreach cmd $attempts {
+        if {![catch {uplevel #0 $cmd} err]} {
+            set used $cmd
+            break
+        }
+        lappend errors "$cmd: $err"
+    }
+    if {$used eq ""} {
+        error "failed to create route blockage $name: [join $errors {; }]"
+    }
+
+    set after [mptdc_ckpt_query_named_route_blockage $name]
+    set count [llength [dict get $after handles]]
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_NAME=$name"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_LAYERS=$layers"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_BOX=$box"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_CREATE_COMMAND=$used"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_CREATE_COUNT=$count"
+    if {[dict get $after status] ne "PASS" || $count != 1} {
+        error "route blockage creation could not be verified for $name: status=[dict get $after status] count=$count"
+    }
+    return [dict create name $name layers $layers box $box command $used count $count]
+}
+
+proc mptdc_ckpt_delete_route_blockage {name} {
+    set name [string trim $name]
+    if {$name eq "" || ![regexp {^[A-Za-z0-9_]+$} $name]} {
+        error "mptdc_ckpt_delete_route_blockage requires a safe non-empty name"
+    }
+
+    set before [mptdc_ckpt_query_named_route_blockage $name]
+    set before_count [llength [dict get $before handles]]
+    if {[dict get $before status] ne "PASS" || $before_count != 1} {
+        error "expected exactly one route blockage before deleting $name: status=[dict get $before status] count=$before_count"
+    }
+
+    set used {}
+    set errors {}
+    foreach cmd [list \
+        [list deleteRouteBlk -name $name] \
+        [list deleteRouteBlk $name]] {
+        if {![catch {uplevel #0 $cmd} err]} {
+            set used $cmd
+            break
+        }
+        lappend errors "$cmd: $err"
+    }
+    if {$used eq ""} {
+        error "failed to delete route blockage $name: [join $errors {; }]"
+    }
+
+    set after [mptdc_ckpt_query_named_route_blockage $name]
+    set after_count [llength [dict get $after handles]]
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_DELETE_NAME=$name"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_DELETE_COMMAND=$used"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_DELETE_COUNT=$after_count"
+    if {[dict get $after status] ne "PASS" || $after_count != 0} {
+        error "route blockage deletion could not be verified for $name: status=[dict get $after status] count=$after_count"
+    }
+    return [dict create name $name command $used count $after_count]
+}
+
 proc mptdc_ckpt_route_selected_nets_with_commands {nets route_commands route_label} {
     set selected [mptdc_ckpt_select_nets $nets]
     puts "MPTDC_CKPT_ROUTE_SELECTED_NET_COUNT=[llength $selected]"
