@@ -1,0 +1,14 @@
+ROUTE_COMMAND=routeDesign -placementCheck
+ROUTE_DESIGN_PLACEMENT_CHECK=1
+SIGNAL_TOP_ROUTE_BLOCKAGE_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260824_mptdc_bufftap0_mettpfix_physical_140734/reports/signal_top_route_blockage_status.rpt
+ROUTE_COMMAND_STATUS=FAIL
+ROUTE_COMMAND_ERROR=0
+ROUTE_COMMAND_ERRORCODE=NONE
+ROUTE_COMMAND_ERRORINFO_BEGIN
+0
+    while executing
+"routeDesign -placementCheck"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $route_cmd"
+ROUTE_COMMAND_ERRORINFO_END
