@@ -1,0 +1,9 @@
+=============
+pin: Lef Port
+-------------
+allShapes: objList(layerShape shapeVia), List of pointers to layerShapes and shapeVias that define the terminal pin geometries.
+class: enum(bump core none undefined), Pin class
+layerShapeShapes: objList(layerShape), List of pointers to layerShapes that define the terminal pin geometries.
+objType: enum(antennaData antennaModel bndry bump bumpGrid bumpTerm bus busGuide busSinkGroup cellDensity densityShape fPlan foreign gCellGridDef group guiLine guiPoly guiRect guiText hInst hInstTerm hNet hTerm head inst instTerm io layer layerRule layerShape libCell marker net netGroup pBlkg pWire pd pgInstTerm pin pinGroup pinGuide pinShape pkgComponent pkgObject prop ptn ptnCell ptnPinBlkg rBlkg resistor resizeBlkg routeType row rule sViaInst sWire sdp shape shapeVia site stackViaRule term text topCell trackDef vCell vWire via viaInst viaRuleGenerate whatIfVia whatIfWire wire), Object type: Pin
+portNumber: int, The port number for geometries under the pin.
+shapeViaShapes: objList(shapeVia), List of pointers to shapeVias that define the terminal pin geometries.
