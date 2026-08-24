@@ -15,6 +15,7 @@ Optional environment:
   MPTDC_SNAPSHOT_SOURCE_DIR      Override source directory, required for many drygds/pvs runs.
   MPTDC_SNAPSHOT_INCLUDE_NETLIST Set to 1 to include mptdc_axis_core.postsyn.v.
   MPTDC_SNAPSHOT_INCLUDE_DEF     Set to 1 to include DEF files from Innovus snapshots.
+  MPTDC_SNAPSHOT_MAX_TEXT_BYTES  Largest copied text file. Default: 2097152.
 
 Run this from the repository checkout on the server after the corresponding run
 finishes. Stage only the snapshot directory printed by this script.
@@ -34,6 +35,12 @@ MPTDC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_ROOT/.." && pwd)"
 WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 SNAPSHOT_ROOT="${MPTDC_SNAPSHOT_ROOT:-$MPTDC_ROOT/docs/server_snapshots}"
+MAX_TEXT_BYTES="${MPTDC_SNAPSHOT_MAX_TEXT_BYTES:-2097152}"
+
+if [[ ! "$MAX_TEXT_BYTES" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ERROR: MPTDC_SNAPSHOT_MAX_TEXT_BYTES must be a positive integer" >&2
+  exit 2
+fi
 
 case "$KIND" in
   genus)   SRC_DIR="${MPTDC_SNAPSHOT_SOURCE_DIR:-$WORK_ROOT/genus/$RUN_ID}" ;;
@@ -110,12 +117,58 @@ copy_text_tree() {
   [[ -d "$root" ]] || return 0
   while IFS= read -r file; do
     local rel="${file#"$root"/}"
-    copy_file "$file" "$dst_prefix/$rel"
+    local size
+    size="$(wc -c < "$file")"
+    if (( size <= MAX_TEXT_BYTES )); then
+      copy_file "$file" "$dst_prefix/$rel"
+    else
+      printf '%s\t%s\n' "$size" "$file" >> "$DST_DIR/skipped_large_text.tmp"
+    fi
   done < <(
     find "$root" -type f \
       \( -name '*.rpt' -o -name '*.csv' -o -name '*.tsv' -o -name '*.txt' \
          -o -name '*.md' -o -name '*.sum' -o -name '*.shorts' -o -name '*.out' \
-         -o -name '*.err' \) 2>/dev/null | sort
+         -o -name '*.err' -o -name '*.rep' -o -name '*.RPT' -o -name '*.CSV' \
+         -o -name '*.TSV' -o -name '*.TXT' -o -name '*.MD' -o -name '*.SUM' \
+         -o -name '*.SHORTS' -o -name '*.OUT' -o -name '*.ERR' \
+         -o -name '*.REP' \) 2>/dev/null | sort
+  )
+}
+
+copy_console_tails() {
+  local root="$1"
+  local dst_prefix="$2"
+  [[ -d "$root" ]] || return 0
+  while IFS= read -r file; do
+    local rel="${file#"$root"/}"
+    copy_matching_tail "$file" "$dst_prefix/${rel}.messages.tail" \
+      '(^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT|match|MATCH|mismatch|MISMATCH)\b)' 500
+  done < <(
+    find "$root" -type f \
+      \( -name '*.stdout' -o -name '*.out' -o -name '*.OUT' \
+         -o -name '*.err' -o -name '*.ERR' -o -name '*.log' \
+         -o -name '*.LOG' \) 2>/dev/null | sort
+  )
+}
+
+copy_pvs_controls() {
+  local root="$1"
+  local dst_prefix="$2"
+  [[ -d "$root" ]] || return 0
+  while IFS= read -r file; do
+    local rel="${file#"$root"/}"
+    local size
+    size="$(wc -c < "$file")"
+    if (( size <= MAX_TEXT_BYTES )); then
+      copy_file "$file" "$dst_prefix/$rel"
+    else
+      printf '%s\t%s\n' "$size" "$file" >> "$DST_DIR/skipped_large_text.tmp"
+    fi
+  done < <(
+    find "$root" -type f \
+      \( -name 'run.pvs' -o -name 'pvsdrcctl' -o -name 'pvslvsctl' \
+         -o -name '.config.rul' -o -name '.technology.rul' \
+         -o -name 'cell_tree.txt' \) 2>/dev/null | sort
   )
 }
 
@@ -171,6 +224,10 @@ case "$KIND" in
     copy_text_tree "$SRC_DIR/pvs_drc" "pvs_drc"
     copy_text_tree "$SRC_DIR/outputs" "outputs"
     copy_log_tails "$SRC_DIR/logs" "logs"
+    copy_pvs_controls "$SRC_DIR/pvs_drc" "pvs_drc"
+    copy_pvs_controls "$SRC_DIR/pvs_lvs" "pvs_lvs"
+    copy_console_tails "$SRC_DIR/pvs_drc" "pvs_drc"
+    copy_console_tails "$SRC_DIR/pvs_lvs" "pvs_lvs"
     ;;
 esac
 
@@ -186,16 +243,28 @@ esac
   echo "- Created UTC: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
   echo
   echo "## Included Files"
-  find "$DST_DIR" -type f | sed "s#^$DST_DIR/##" | sort | sed 's/^/- `/' | sed 's/$/`/'
+  find "$DST_DIR" -type f ! -name 'skipped_large_text.tmp' \
+    | sed "s#^$DST_DIR/##" | sort | sed 's/^/- `/' | sed 's/$/`/'
   echo
   echo "## Excluded By Policy"
   echo
   echo "- Innovus checkpoints and databases;"
   echo "- raw GDS/OAS files;"
   echo "- full raw logs unless converted to message tails;"
+  echo "- text files larger than $MAX_TEXT_BYTES bytes;"
   echo "- large binary artifacts;"
   echo "- server work directories outside this snapshot."
+  if [[ -f "$DST_DIR/skipped_large_text.tmp" ]]; then
+    echo
+    echo "## Skipped Large Text Files"
+    echo
+    echo '```text'
+    cat "$DST_DIR/skipped_large_text.tmp"
+    echo '```'
+  fi
 } > "$DST_DIR/README.md"
+
+rm -f "$DST_DIR/skipped_large_text.tmp"
 
 echo "Snapshot created: $DST_DIR"
 echo
