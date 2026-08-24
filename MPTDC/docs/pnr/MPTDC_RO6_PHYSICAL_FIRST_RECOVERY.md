@@ -49,6 +49,164 @@ diagnostic tails. It excludes checkpoints, databases, GDS/OAS, and DEF by
 default, and skips text files larger than 2 MiB. Do not manually add those
 excluded artifacts to Git.
 
+## Recommended Short Server Commands
+
+Use these commands for the next run. They replace the long manual blocks later
+in this document. Each driver runs one fresh physical process, evaluates the
+authoritative reports, writes an `operator_gate_*.rpt`, and publishes only the
+bounded evidence directory. The PVS driver applies the same rule independently
+to preparation, template audit, base DRC, density DRC, and LVS.
+
+The many historical untracked files in the server checkout do not block these
+commands. The drivers inspect tracked changes with
+`git status --short --untracked-files=no`. Do not run `git add -A`, do not clean
+the checkout, and do not add the historical untracked files.
+
+### 0. Synchronize Once
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+SYNC_RC=99
+
+if [ -d "$REPO/.git" ]; then
+  cd "$REPO"
+  git checkout SPADMIC_test
+  git pull --ff-only origin SPADMIC_test
+  SYNC_RC=$?
+else
+  echo "STOP: repository missing: $REPO"
+fi
+
+echo "SYNC_RC=$SYNC_RC"
+echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
+echo "TRACKED_STATUS_BEGIN"
+git status --short --untracked-files=no 2>/dev/null
+echo "TRACKED_STATUS_END"
+```
+
+Continue only when `SYNC_RC=0` and there is no line between the two tracked
+status markers. The drivers also enforce `SPADMIC_test` and require local HEAD
+to match `origin/SPADMIC_test` when no explicit hash is supplied.
+
+### 1. Strict PG Proof
+
+```bash
+set +e
+
+bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
+  --stage pg-proof \
+  --genus-run-id MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623 \
+  --handoff-dir /sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+
+PG_DRIVER_RC=$?
+echo "PG_DRIVER_RC=$PG_DRIVER_RC"
+echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Pass requires all of these final lines:
+
+```text
+PG_DRIVER_RC=0
+DECISION=PASS_CONTINUE
+PUBLISH_RC=0
+NEXT_STAGE=PHYSICAL_PNR
+NEXT_REQUIRED_PG_RUN_ID=<new PG run id>
+```
+
+Save the printed `NEXT_REQUIRED_PG_RUN_ID`; it is the only value needed by the
+next command. On any other result, stop. If `PUBLISH_RC=0`, send the run id and
+printed HEAD so the pushed failure evidence can be reviewed remotely.
+
+### 2. Physical PnR
+
+Replace only `REPLACE_WITH_PG_RUN_ID` with the value printed by step 1.
+
+```bash
+set +e
+
+bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
+  --stage physical-pnr \
+  --pg-run-id REPLACE_WITH_PG_RUN_ID \
+  --genus-run-id MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623 \
+  --handoff-dir /sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+
+PNR_DRIVER_RC=$?
+echo "PNR_DRIVER_RC=$PNR_DRIVER_RC"
+echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Pass requires:
+
+```text
+PNR_DRIVER_RC=0
+DECISION=PASS_CONTINUE
+PUBLISH_RC=0
+NEXT_STAGE=PVS
+NEXT_REQUIRED_PNR_RUN_ID=<new physical PnR run id>
+```
+
+The driver independently requires router top `MET3`, zero Innovus DRC and
+shorts, zero regular and special connectivity debt, zero unrouted nets, and
+exactly the two south-edge MET3 buffered tap pins. It publishes a failed route
+as evidence but never promotes it to PVS.
+
+### 3. PVS Preparation, DRC, and LVS
+
+Replace only `REPLACE_WITH_PNR_RUN_ID` with the value printed by step 2. The RO
+GDS path below is the known real-OA export; stop and replace it if the OA layout
+has changed since that export.
+
+```bash
+set +e
+
+bash MPTDC/scripts/pvs/server_run_mptdc_ro6_recovery_pvs.sh \
+  --pnr-run-id REPLACE_WITH_PNR_RUN_ID \
+  --ro-gds /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds
+
+PVS_DRIVER_RC=$?
+echo "PVS_DRIVER_RC=$PVS_DRIVER_RC"
+echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+The command stops at the first failed PVS gate. Full success requires:
+
+```text
+PVS_DRIVER_RC=0
+PVS_RECOVERY_STATUS=PASS
+PVS_PREPARATION=PASS
+PVS_TEMPLATE_AUDIT=PASS
+PVS_DRC_BASE=PASS
+PVS_DRC_DENSITY=PASS
+PVS_LVS=MATCH
+DECISION=PASS_CONTINUE
+PUBLISH_RC=0
+```
+
+### What to Send After Each Command
+
+Do not paste full Innovus or PVS logs into chat. Send only:
+
+```text
+STEP=<PG, PHYSICAL_PNR, or PVS>
+RUN_ID=<NEXT_REQUIRED_*_RUN_ID or PVS_RUN_ID>
+DRIVER_RC=<printed driver RC>
+DECISION=<printed decision>
+PUBLISH_RC=<printed publish RC, when present>
+HEAD=<printed repository HEAD>
+```
+
+When publication succeeds, the pushed snapshot contains all authoritative
+small reports and manifests plus filtered diagnostic log tails. The local GDS,
+DEF, checkpoints, databases, and oversized full logs remain under `/sim`; they
+are intentionally not pushed to Git. If publication itself fails, stop and send
+the final `EVIDENCE_*` lines so the existing snapshot can be recovered without
+rerunning the EDA stage.
+
+The detailed blocks below remain as manual debugging reference. Do not mix
+their shell variables with the short driver commands during a normal run.
+
 ### Reuse an Already Collected Snapshot
 
 If collection succeeded but commit or push failed, do not recollect or rerun the
