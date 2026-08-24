@@ -16,6 +16,14 @@ also exposed three independent VDD-to-VSS METTP shorts made by the old broad
 canonical run uses exactly two ring-aligned VDD/VSS pins and explicitly gates
 the VDD/VSS cross-net-short count at zero.
 
+The published retry `20260824_mptdc_bufftap0_simplepg_pgproof_134641` did not
+launch Innovus and contains no new physical result. Its shared wrapper returned
+`TOOL_RC=4` because the PG policy guard still required
+`mesh_lr_vdd_vss` after the launcher selected the supported
+`ring_aligned_vdd_vss_pair` style. The guard now accepts those two safe styles
+and continues to reject the broad legacy pair styles. Rerun PG proof once after
+synchronizing the branch; do not treat the failed retry as a PG candidate.
+
 This recovery keeps ordinary and phase routing on MET1 through MET3 while still
 allowing special VDD/VSS routing on METTP. It does not reuse the dirty route
 checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.

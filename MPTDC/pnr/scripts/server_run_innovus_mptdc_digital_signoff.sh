@@ -216,9 +216,13 @@ guard_pg_policy() {
   fi
   local failures=()
   local pg_strategy="${MPTDC_PG_STRATEGY:-conservative_ro_hookup}"
-  if [[ "${MPTDC_BLOCK_PG_PIN_STYLE:-}" != "mesh_lr_vdd_vss" ]]; then
-    failures+=("MPTDC_BLOCK_PG_PIN_STYLE=${MPTDC_BLOCK_PG_PIN_STYLE:-unset} expected mesh_lr_vdd_vss")
-  fi
+  local pg_pin_style="${MPTDC_BLOCK_PG_PIN_STYLE:-}"
+  case "$pg_pin_style" in
+    mesh_lr_vdd_vss|ring_aligned_vdd_vss_pair) ;;
+    *)
+      failures+=("MPTDC_BLOCK_PG_PIN_STYLE=${pg_pin_style:-unset} expected mesh_lr_vdd_vss or ring_aligned_vdd_vss_pair")
+      ;;
+  esac
   if is_truthy "${MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES:-0}"; then
     failures+=("MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0")
   fi

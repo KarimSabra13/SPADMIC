@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LAUNCHER="$(cd "$SCRIPT_DIR/.." && pwd)/server_run_mptdc_ro6_latestlef_simplepg.sh"
+SIGNOFF_WRAPPER="$(cd "$SCRIPT_DIR/.." && pwd)/server_run_innovus_mptdc_digital_signoff.sh"
 
 require_line() {
   local expected="$1"
@@ -21,6 +22,16 @@ require_line 'export MPTDC_PNR_PHASE_TOP_LAYER_IDX=3'
 require_line 'export MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP=1'
 require_line 'export MPTDC_BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair'
 require_line 'export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0'
+
+grep -Fqx '    mesh_lr_vdd_vss|ring_aligned_vdd_vss_pair) ;;' "$SIGNOFF_WRAPPER" || {
+  echo "ERROR: shared PG policy guard does not accept the ring-aligned style" >&2
+  exit 1
+}
+
+if grep -Fq 'simple_vdd_vss_pair)' "$SIGNOFF_WRAPPER"; then
+  echo "ERROR: shared PG policy guard accepts the unsafe broad simple pair style" >&2
+  exit 1
+fi
 
 if grep -Fqx 'export MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES=1' "$LAUNCHER"; then
   echo "ERROR: ordinary routing is still promoted to METTP" >&2
