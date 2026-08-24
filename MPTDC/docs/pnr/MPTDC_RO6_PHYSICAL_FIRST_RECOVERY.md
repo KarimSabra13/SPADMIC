@@ -49,6 +49,36 @@ diagnostic tails. It excludes checkpoints, databases, GDS/OAS, and DEF by
 default, and skips text files larger than 2 MiB. Do not manually add those
 excluded artifacts to Git.
 
+### Reuse an Already Collected Snapshot
+
+If collection succeeded but commit or push failed, do not recollect or rerun the
+EDA step. After pulling any publisher fix, reuse the existing snapshot:
+
+```bash
+set +e
+
+SNAPSHOT_KIND=genus
+SNAPSHOT_ID=REPLACE_WITH_EXISTING_SNAPSHOT_DIRECTORY_NAME
+SOURCE_DIR=REPLACE_WITH_ORIGINAL_HANDOFF_OR_RESULT_DIRECTORY
+STEP_LABEL=PRE_PNR
+SNAPSHOT_REL=MPTDC/docs/server_snapshots/$SNAPSHOT_KIND/$SNAPSHOT_ID
+
+git restore --staged "$SNAPSHOT_REL" 2>/dev/null
+git pull --ff-only origin SPADMIC_test
+
+MPTDC_SNAPSHOT_REUSE_EXISTING=1 \
+bash MPTDC/ci/publish_mptdc_server_snapshot.sh \
+  "$SNAPSHOT_KIND" "$SNAPSHOT_ID" "$SOURCE_DIR" "$STEP_LABEL"
+RECOVERY_PUBLISH_RC=$?
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+
+echo "RECOVERY_PUBLISH_RC=$RECOVERY_PUBLISH_RC"
+echo "NEXT_EXPECTED_HEAD=$EXPECTED_HEAD"
+```
+
+Generated reports are committed verbatim. Trailing whitespace in a Cadence
+report is not a publication failure and is not altered.
+
 ## Strict PG Proof
 
 The commands are foreground-only. They avoid `set -e` and shell-level `exit`,
@@ -83,65 +113,12 @@ mptdc_publish_snapshot() {
   local snapshot_id="$2"
   local source_dir="$3"
   local step_label="$4"
-  local snapshot_rel="MPTDC/docs/server_snapshots/$snapshot_kind/$snapshot_id"
-  local collect_rc=99
-  local check_rc=99
-  local commit_rc=99
-  local push_rc=99
-  local snapshot_commit="NONE"
-
-  if [ ! -d "$source_dir" ]; then
-    echo "ERROR: snapshot source missing: $source_dir"
-  elif [ -e "$snapshot_rel" ]; then
-    echo "ERROR: snapshot destination already exists: $snapshot_rel"
-  else
-    MPTDC_SNAPSHOT_SOURCE_DIR="$source_dir" \
-    MPTDC_SNAPSHOT_MAX_TEXT_BYTES=2097152 \
-    bash MPTDC/ci/collect_mptdc_server_snapshot.sh \
-      "$snapshot_kind" "$snapshot_id"
-    collect_rc=$?
-  fi
-
-  if [ "$collect_rc" -eq 0 ]; then
-    git add "$snapshot_rel"
-    git diff --cached --check -- "$snapshot_rel"
-    check_rc=$?
-  fi
-
-  if [ "$check_rc" -eq 0 ]; then
-    if git commit -m "docs: add MPTDC $step_label evidence $snapshot_id" -- "$snapshot_rel"; then
-      commit_rc=0
-      snapshot_commit="$(git rev-parse HEAD 2>/dev/null)"
-    else
-      commit_rc=$?
-    fi
-  fi
-
-  if [ "$commit_rc" -eq 0 ]; then
-    if git push origin SPADMIC_test; then
-      push_rc=0
-    else
-      push_rc=$?
-    fi
-  fi
-
+  MPTDC_SNAPSHOT_MAX_TEXT_BYTES=2097152 \
+  bash MPTDC/ci/publish_mptdc_server_snapshot.sh \
+    "$snapshot_kind" "$snapshot_id" "$source_dir" "$step_label"
+  local publish_rc=$?
   EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
-  LAST_EVIDENCE_ID="$snapshot_id"
-  LAST_EVIDENCE_COMMIT="$snapshot_commit"
-  LAST_EVIDENCE_PUSH_RC="$push_rc"
-  echo "EVIDENCE_STEP=$step_label"
-  echo "EVIDENCE_ID=$snapshot_id"
-  echo "EVIDENCE_COLLECT_RC=$collect_rc"
-  echo "EVIDENCE_CHECK_RC=$check_rc"
-  echo "EVIDENCE_COMMIT_RC=$commit_rc"
-  echo "EVIDENCE_PUSH_RC=$push_rc"
-  echo "EVIDENCE_COMMIT=$snapshot_commit"
-  echo "NEXT_EXPECTED_HEAD=$EXPECTED_HEAD"
-
-  if [ "$push_rc" -eq 0 ]; then
-    return 0
-  fi
-  return 1
+  return "$publish_rc"
 }
 
 GENUS_DIR="$(ls -td "$MPTDC_GENUS_WORK"/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_* 2>/dev/null | sed -n '1p')"
