@@ -187,15 +187,15 @@ def read_audit_rows(path: Path) -> list[dict[str, str]]:
 
 
 def infer_pin_name(row: dict[str, str]) -> str:
-    nearest = row.get("nearest_pin_same_layer", "")
-    if nearest:
-        return nearest.split(":", 1)[0]
     message = row.get("message", "")
     match = re.search(r"phase_raw\[(\d+)\]", message)
     if match:
         return f"S[{match.group(1)}]"
     if re.search(r"fe_osc_.*_en|rstb", message):
         return "rstb"
+    nearest = row.get("nearest_pin_same_layer", "")
+    if nearest:
+        return nearest.split(":", 1)[0]
     return ""
 
 

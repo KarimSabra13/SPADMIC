@@ -6,6 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN=""
 SOURCE_LEF="${O1_RO_SOURCE_LEF_PATH:-/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef}"
 OUT_LEF=""
+MARKERS=""
+FAILED_DEF=""
 MACRO="RO_tune6"
 X_MARGIN="0.45"
 Y_MARGIN="0.45"
@@ -21,6 +23,10 @@ Options:
                              then /group/.../RO_tune6.lef.
   --out-lef <path>           Generated PnR-only LEF path. Defaults under
                              /sim/ksabra/SPADMIC_work/lef using the run id.
+  --markers <path>           Marker TSV used to derive access windows. Defaults to
+                             <run>/reports/route_drc_markers.tsv.
+  --failed-def <path>        Routed DEF used for RO placement/orientation. Defaults
+                             to <run>/def/04_route_failed.def.
   --macro <name>             Macro name. Default: RO_tune6.
   --x-margin-um <value>      OBS access trim x margin. Default: 0.45.
   --y-margin-um <value>      OBS access trim y margin. Default: 0.45.
@@ -45,6 +51,14 @@ while (($#)); do
       ;;
     --out-lef)
       OUT_LEF="${2:-}"
+      shift 2
+      ;;
+    --markers)
+      MARKERS="${2:-}"
+      shift 2
+      ;;
+    --failed-def)
+      FAILED_DEF="${2:-}"
       shift 2
       ;;
     --macro)
@@ -92,8 +106,8 @@ if [[ ! -r "$SOURCE_LEF" ]]; then
 fi
 
 RUN_ID="$(basename "$RUN")"
-MARKERS="$RUN/reports/route_drc_markers.tsv"
-FAILED_DEF="$RUN/def/04_route_failed.def"
+MARKERS="${MARKERS:-$RUN/reports/route_drc_markers.tsv}"
+FAILED_DEF="${FAILED_DEF:-$RUN/def/04_route_failed.def}"
 LOC="$RUN/local_route_drc_probe_v2"
 
 if [[ ! -r "$MARKERS" ]]; then
@@ -108,6 +122,17 @@ fi
 
 if [[ -z "$OUT_LEF" ]]; then
   OUT_LEF="/sim/ksabra/SPADMIC_work/lef/${MACRO}_pnr_pin_access_${RUN_ID}_v2.lef"
+fi
+
+SOURCE_LEF_REAL="$(readlink -f "$SOURCE_LEF" 2>/dev/null || printf '%s' "$SOURCE_LEF")"
+OUT_LEF_REAL="$(readlink -m "$OUT_LEF" 2>/dev/null || printf '%s' "$OUT_LEF")"
+if [[ "$SOURCE_LEF_REAL" == "$OUT_LEF_REAL" ]]; then
+  echo "ERROR: refusing to overwrite the source LEF: $SOURCE_LEF" >&2
+  exit 1
+fi
+if [[ -e "$OUT_LEF" ]]; then
+  echo "ERROR: output LEF already exists; choose a fresh path: $OUT_LEF" >&2
+  exit 1
 fi
 
 OUT_SUMMARY="${OUT_LEF%.lef}.summary.txt"
@@ -138,11 +163,59 @@ python3 "$SCRIPT_DIR/generate_ro_pnr_lef_access.py" \
   --x-margin-um "$X_MARGIN" \
   --y-margin-um "$Y_MARGIN"
 
+summary_count() {
+  local kind="$1"
+  local name="$2"
+  awk -v kind="$kind" -v name="$name" \
+    '$1 == kind && $2 == name {count += $3} END {print count + 0}' "$OUT_SUMMARY"
+}
+
+PREP_STATUS=PASS
+REQUIRED_PIN_SET_STATUS=PASS
+UNEXPECTED_ACCESS_PIN_COUNT="$(awk '
+  $1 == "ACCESS_WINDOWS_BY_PIN" &&
+  $2 !~ /^S\[[0-7]\]$/ && $2 != "rstb" {count += $3}
+  END {print count + 0}
+' "$OUT_SUMMARY")"
+MET2_WINDOW_COUNT="$(summary_count ACCESS_WINDOWS_BY_LAYER MET2)"
+MET3_WINDOW_COUNT="$(summary_count ACCESS_WINDOWS_BY_LAYER MET3)"
+OBS_RECTS_TOUCHED="$(sed -n 's/^OBS_RECTS_TOUCHED=//p' "$OUT_SUMMARY" | tail -1)"
+
+for pin in 'S[0]' 'S[1]' 'S[2]' 'S[3]' 'S[4]' 'S[5]' 'S[6]' 'S[7]' rstb; do
+  count="$(summary_count ACCESS_WINDOWS_BY_PIN "$pin")"
+  if [[ "$count" -lt 1 ]]; then
+    REQUIRED_PIN_SET_STATUS=FAIL
+    PREP_STATUS=FAIL
+  fi
+done
+if [[ "$UNEXPECTED_ACCESS_PIN_COUNT" -ne 0 || "$MET2_WINDOW_COUNT" -lt 1 || \
+      "$MET3_WINDOW_COUNT" -lt 1 || ! "$OBS_RECTS_TOUCHED" =~ ^[1-9][0-9]*$ ]]; then
+  PREP_STATUS=FAIL
+fi
+
+SOURCE_LEF_SHA256="$(sha256sum "$SOURCE_LEF" | awk '{print $1}')"
+OUT_LEF_SHA256="$(sha256sum "$OUT_LEF" | awk '{print $1}')"
+{
+  echo
+  echo "MARKERS=$MARKERS"
+  echo "FAILED_DEF=$FAILED_DEF"
+  echo "SOURCE_LEF_SHA256=$SOURCE_LEF_SHA256"
+  echo "OUTPUT_LEF_SHA256=$OUT_LEF_SHA256"
+  echo "REQUIRED_ACCESS_PIN_SET=S[0],S[1],S[2],S[3],S[4],S[5],S[6],S[7],rstb"
+  echo "REQUIRED_ACCESS_PIN_SET_STATUS=$REQUIRED_PIN_SET_STATUS"
+  echo "UNEXPECTED_ACCESS_PIN_COUNT=$UNEXPECTED_ACCESS_PIN_COUNT"
+  echo "MET2_ACCESS_WINDOW_COUNT=$MET2_WINDOW_COUNT"
+  echo "MET3_ACCESS_WINDOW_COUNT=$MET3_WINDOW_COUNT"
+  echo "PNR_LEF_PREP_STATUS=$PREP_STATUS"
+} >> "$OUT_SUMMARY"
+
 {
   echo "# RO_tune6 PnR LEF preparation"
   echo "RUN=$RUN"
   echo "RUN_ID=$RUN_ID"
   echo "SOURCE_LEF=$SOURCE_LEF"
+  echo "MARKERS=$MARKERS"
+  echo "FAILED_DEF=$FAILED_DEF"
   echo "OUT_LEF=$OUT_LEF"
   echo "OUT_SUMMARY=$OUT_SUMMARY"
   echo "LOCAL_PROBE_DIR=$LOC"
@@ -157,10 +230,17 @@ python3 "$SCRIPT_DIR/generate_ro_pnr_lef_access.py" \
   sed -n '1,120p' "$OUT_SUMMARY"
 } | tee "$LOC/prepare_ro_pnr_lef_summary.txt"
 
+if [[ "$PREP_STATUS" != PASS ]]; then
+  echo "ERROR: generated PnR LEF failed the bounded access-window gate" >&2
+  exit 1
+fi
+
 cat <<EOF
 
 Generated PnR-only LEF:
   $OUT_LEF
+
+PNR_LEF_PREP_STATUS=PASS
 
 Use this for the next focused diagnostic:
   export O1_RO_SOURCE_LEF_PATH=$SOURCE_LEF

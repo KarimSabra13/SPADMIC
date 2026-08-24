@@ -20,6 +20,9 @@ EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 GENUS_RUN_ID="${MPTDC_GENUS_RUN_ID:-$DEFAULT_GENUS_RUN}"
 HANDOFF_DIR="${MPTDC_GENUS_HANDOFF_DIR:-}"
 SOURCE_LEF=""
+PNR_LEF=""
+PNR_LEF_SUMMARY=""
+PNR_LEF_SUMMARY_BINDING_STATUS=NOT_REQUESTED
 
 usage() {
   cat <<'USAGE'
@@ -37,6 +40,8 @@ Options:
   --innovus-work <path>  Innovus result root.
   --work-root <path>     SPADMIC server work root.
   --source-lef <path>    Override the RO_tune6 LEF passed to the launcher.
+  --pnr-lef <path>       PnR-only RO_tune6 LEF for physical-pnr. The imported
+                         path and copied evidence hash must match exactly.
   -h, --help             Show this help.
 
 The stage runs in the foreground, writes an operator_gate report, and publishes
@@ -176,6 +181,34 @@ report_value() {
   else
     printf 'MISSING\n'
   fi
+}
+
+file_sha256() {
+  local path="$1"
+  if [[ -r "$path" ]]; then
+    sha256sum "$path" | awk '{print $1}'
+  else
+    printf 'MISSING\n'
+  fi
+}
+
+copy_pnr_lef_evidence() {
+  local lef="$1"
+  local summary="$2"
+  local summary_sha=MISSING
+
+  [[ -r "$lef" && -r "$summary" && -d "$RUN_DIR" ]] || return 1
+
+  mkdir -p "$RUN_DIR/outputs"
+  cp "$lef" "$RUN_DIR/outputs/RO_tune6_pnr_lef_used.txt" || return 1
+  cp "$summary" "$RUN_DIR/outputs/RO_tune6_pnr_lef_summary.txt" || return 1
+  summary_sha="$(file_sha256 "$summary")"
+  {
+    echo "PNR_LEF=$lef"
+    echo "PNR_LEF_SHA256=$(file_sha256 "$lef")"
+    echo "PNR_LEF_SUMMARY=$summary"
+    echo "PNR_LEF_SUMMARY_SHA256=$summary_sha"
+  } > "$RUN_DIR/outputs/RO_tune6_pnr_lef_evidence_manifest.txt"
 }
 
 load_cadence_env() {
@@ -339,6 +372,7 @@ while [[ $# -gt 0 ]]; do
     --innovus-work) INNOVUS_WORK="${2:?missing --innovus-work value}"; shift 2 ;;
     --work-root) WORK_ROOT="${2:?missing --work-root value}"; shift 2 ;;
     --source-lef) SOURCE_LEF="${2:?missing --source-lef value}"; shift 2 ;;
+    --pnr-lef) PNR_LEF="${2:?missing --pnr-lef value}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -364,6 +398,31 @@ if [[ -z "$RUN_ID" ]]; then
 fi
 RUN_DIR="$INNOVUS_WORK/$RUN_ID"
 
+if [[ -n "$PNR_LEF" && -r "$PNR_LEF" ]]; then
+  PNR_LEF="$(readlink -f "$PNR_LEF" 2>/dev/null || printf '%s' "$PNR_LEF")"
+  if [[ "$PNR_LEF" == *.lef ]]; then
+    PNR_LEF_SUMMARY="${PNR_LEF%.lef}.summary.txt"
+  else
+    PNR_LEF_SUMMARY="${PNR_LEF}.summary.txt"
+  fi
+  if [[ -r "$PNR_LEF_SUMMARY" ]]; then
+    SUMMARY_OUTPUT_LEF="$(report_value "$PNR_LEF_SUMMARY" OUTPUT_LEF)"
+    SUMMARY_OUTPUT_SHA256="$(report_value "$PNR_LEF_SUMMARY" OUTPUT_LEF_SHA256)"
+    if [[ -r "$SUMMARY_OUTPUT_LEF" ]]; then
+      SUMMARY_OUTPUT_LEF="$(readlink -f "$SUMMARY_OUTPUT_LEF" 2>/dev/null || printf '%s' "$SUMMARY_OUTPUT_LEF")"
+    fi
+    if [[ "$(report_value "$PNR_LEF_SUMMARY" PNR_LEF_PREP_STATUS)" == PASS && \
+          "$SUMMARY_OUTPUT_LEF" == "$PNR_LEF" && \
+          "$SUMMARY_OUTPUT_SHA256" == "$(file_sha256 "$PNR_LEF")" ]]; then
+      PNR_LEF_SUMMARY_BINDING_STATUS=PASS
+    else
+      PNR_LEF_SUMMARY_BINDING_STATUS=FAIL
+    fi
+  else
+    PNR_LEF_SUMMARY_BINDING_STATUS=FAIL
+  fi
+fi
+
 cd "$REPO_ROOT" || exit 3
 ACTUAL_HEAD="$(git rev-parse HEAD 2>/dev/null)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
@@ -377,6 +436,9 @@ echo "RUN_DIR=$RUN_DIR"
 echo "GENUS_RUN_ID=$GENUS_RUN_ID"
 echo "HANDOFF_DIR=$HANDOFF_DIR"
 echo "SOURCE_PG_RUN_ID=${SOURCE_PG_RUN_ID:-NONE}"
+echo "PNR_LEF=${PNR_LEF:-NOT_REQUESTED}"
+echo "PNR_LEF_SUMMARY=${PNR_LEF_SUMMARY:-NOT_REQUESTED}"
+echo "PNR_LEF_SUMMARY_BINDING_STATUS=$PNR_LEF_SUMMARY_BINDING_STATUS"
 echo "BRANCH=$BRANCH"
 echo "ACTUAL_HEAD=$ACTUAL_HEAD"
 echo "ORIGIN_HEAD=${ORIGIN_HEAD:-MISSING}"
@@ -429,6 +491,18 @@ else
     echo "STOP: tracked accepted PG proof snapshot is missing or failed: $PG_RUN_ID"
     PREFLIGHT=FAIL
   fi
+  if [[ -n "$PNR_LEF" ]]; then
+    [[ -r "$PNR_LEF" ]] || { echo "STOP: PnR LEF is not readable: $PNR_LEF"; PREFLIGHT=FAIL; }
+    [[ -r "$PNR_LEF_SUMMARY" ]] || { echo "STOP: PnR LEF summary is not readable: $PNR_LEF_SUMMARY"; PREFLIGHT=FAIL; }
+    if [[ "$PNR_LEF_SUMMARY_BINDING_STATUS" != PASS ]]; then
+      echo "STOP: PnR LEF summary does not bind PASS status to the requested path and hash"
+      PREFLIGHT=FAIL
+    fi
+  fi
+fi
+if [[ -n "$PNR_LEF" && "$STAGE" != "physical-pnr" ]]; then
+  echo "STOP: --pnr-lef is only valid for physical-pnr"
+  PREFLIGHT=FAIL
 fi
 
 echo "RECOVERY_PREFLIGHT=$PREFLIGHT"
@@ -463,6 +537,9 @@ LAUNCH_ARGS=(
 if [[ -n "$SOURCE_LEF" ]]; then
   LAUNCH_ARGS+=(--source-lef "$SOURCE_LEF")
 fi
+if [[ -n "$PNR_LEF" ]]; then
+  LAUNCH_ARGS+=(--pnr-lef "$PNR_LEF")
+fi
 if [[ "$STAGE" == "pg-proof" ]]; then
   LAUNCH_ARGS+=(--stage pg_proof --no-signal-top-route-blockage)
 else
@@ -474,6 +551,17 @@ set +e
 bash "$LAUNCHER" "${LAUNCH_ARGS[@]}"
 TOOL_RC=$?
 set +e
+
+PNR_LEF_EVIDENCE_STATUS=NOT_REQUESTED
+PNR_LEF_REQUESTED_SHA256=NOT_REQUESTED
+if [[ "$STAGE" == "physical-pnr" && -n "$PNR_LEF" ]]; then
+  PNR_LEF_REQUESTED_SHA256="$(file_sha256 "$PNR_LEF")"
+  if copy_pnr_lef_evidence "$PNR_LEF" "$PNR_LEF_SUMMARY"; then
+    PNR_LEF_EVIDENCE_STATUS=PASS
+  else
+    PNR_LEF_EVIDENCE_STATUS=FAIL
+  fi
+fi
 
 DECISION=FAIL_STOP
 STEP_LABEL=UNKNOWN
@@ -549,6 +637,7 @@ else
   ROUTE_INTENT_REPORT="$RUN_DIR/reports/route_layer_intent.rpt"
   ROUTE_COMMAND_REPORT="$RUN_DIR/reports/route_command_status.rpt"
   SIGNAL_TOP_BLOCKAGE_REPORT="$RUN_DIR/reports/signal_top_route_blockage_status.rpt"
+  RO_IMPORT_REPORT="$RUN_DIR/reports/ro_import_source_gate.rpt"
   IO_PIN_SUMMARY="$RUN_DIR/reports/io_pin_placement_summary.md"
   IO_PIN_CSV="$RUN_DIR/reports/io_pin_placement.csv"
   ROUTE_STATUS="$(report_value "$ROUTE_REPORT" ROUTE_STATUS)"
@@ -567,6 +656,28 @@ else
   SIGNAL_TOP_BLOCKAGE_CREATE="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS)"
   SIGNAL_TOP_BLOCKAGE_REMOVE="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS)"
   SIGNAL_TOP_BLOCKAGE_STATUS="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS)"
+  ACTUAL_PNR_LEF="$(report_value "$RO_IMPORT_REPORT" O1_RO_LEF_PATH)"
+  PNR_LEF_PATH_MATCH_STATUS=NOT_REQUESTED
+  PNR_LEF_ACTUAL_SHA256=NOT_REQUESTED
+  PNR_LEF_GATE_STATUS=PASS
+  if [[ -n "$PNR_LEF" ]]; then
+    if [[ -r "$ACTUAL_PNR_LEF" ]]; then
+      ACTUAL_PNR_LEF="$(readlink -f "$ACTUAL_PNR_LEF" 2>/dev/null || printf '%s' "$ACTUAL_PNR_LEF")"
+      PNR_LEF_ACTUAL_SHA256="$(file_sha256 "$ACTUAL_PNR_LEF")"
+    else
+      PNR_LEF_ACTUAL_SHA256=MISSING
+    fi
+    if [[ "$ACTUAL_PNR_LEF" == "$PNR_LEF" && \
+          "$PNR_LEF_ACTUAL_SHA256" == "$PNR_LEF_REQUESTED_SHA256" ]]; then
+      PNR_LEF_PATH_MATCH_STATUS=PASS
+    else
+      PNR_LEF_PATH_MATCH_STATUS=FAIL
+    fi
+    if [[ "$PNR_LEF_SUMMARY_BINDING_STATUS" != PASS || \
+          "$PNR_LEF_PATH_MATCH_STATUS" != PASS || "$PNR_LEF_EVIDENCE_STATUS" != PASS ]]; then
+      PNR_LEF_GATE_STATUS=FAIL
+    fi
+  fi
   IO_PIN_STATUS="$(report_value "$IO_PIN_SUMMARY" REPORT_STATUS)"
   TAP_SLOW_PLAN="$(tap_plan_count "$IO_PIN_CSV" ro_slow_tap0_o)"
   TAP_FAST_PLAN="$(tap_plan_count "$IO_PIN_CSV" ro_fast_tap0_o)"
@@ -588,7 +699,8 @@ else
         "$UNROUTED" == 0 && "$SIGNAL_TOP" == MET3 && "$ROUTER_TOP" == METTP && \
         "$ROUTE_COMMAND_STATUS" == PASS && "$SIGNAL_TOP_BLOCKAGE_TEMPORARY" == 1 && \
         "$SIGNAL_TOP_BLOCKAGE_CREATE" == PASS && "$SIGNAL_TOP_BLOCKAGE_REMOVE" == PASS && \
-        "$SIGNAL_TOP_BLOCKAGE_STATUS" == REMOVED && "$IO_PIN_STATUS" == OK && \
+        "$SIGNAL_TOP_BLOCKAGE_STATUS" == REMOVED && "$PNR_LEF_GATE_STATUS" == PASS && \
+        "$IO_PIN_STATUS" == OK && \
         "$TAP_SLOW_PLAN" == 1 && "$TAP_FAST_PLAN" == 1 && "$TAP_SLOW_COUNT" == 1 && \
         "$TAP_FAST_COUNT" == 1 && "$TAP_TOTAL_COUNT" == 2 ]]; then
     DECISION=PASS_CONTINUE
@@ -620,6 +732,15 @@ else
       echo "SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=$SIGNAL_TOP_BLOCKAGE_CREATE"
       echo "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=$SIGNAL_TOP_BLOCKAGE_REMOVE"
       echo "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=$SIGNAL_TOP_BLOCKAGE_STATUS"
+      echo "PNR_LEF_REQUESTED=${PNR_LEF:-NOT_REQUESTED}"
+      echo "PNR_LEF_SUMMARY=${PNR_LEF_SUMMARY:-NOT_REQUESTED}"
+      echo "PNR_LEF_SUMMARY_BINDING_STATUS=$PNR_LEF_SUMMARY_BINDING_STATUS"
+      echo "PNR_LEF_ACTUAL=$ACTUAL_PNR_LEF"
+      echo "PNR_LEF_PATH_MATCH_STATUS=$PNR_LEF_PATH_MATCH_STATUS"
+      echo "PNR_LEF_EVIDENCE_STATUS=$PNR_LEF_EVIDENCE_STATUS"
+      echo "PNR_LEF_REQUESTED_SHA256=$PNR_LEF_REQUESTED_SHA256"
+      echo "PNR_LEF_ACTUAL_SHA256=$PNR_LEF_ACTUAL_SHA256"
+      echo "PNR_LEF_GATE_STATUS=$PNR_LEF_GATE_STATUS"
       echo "IO_PIN_PLACEMENT_STATUS=$IO_PIN_STATUS"
       echo "ro_slow_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_SLOW_PLAN"
       echo "ro_fast_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_FAST_PLAN"

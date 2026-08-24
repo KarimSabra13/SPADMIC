@@ -10,6 +10,8 @@ REPO="$TMP_ROOT/repo"
 WORK="$TMP_ROOT/work"
 HANDOFF="$WORK/handoff/genus_typical_pnrcompat/genus_fixture"
 PUBLISH_CALLS="$TMP_ROOT/publish.calls"
+PNR_LEF="$TMP_ROOT/RO_tune6_marker_access.lef"
+PNR_LEF_SUMMARY="$TMP_ROOT/RO_tune6_marker_access.summary.txt"
 mkdir -p "$REPO" "$HANDOFF" "$WORK/innovus"
 git init -q -b SPADMIC_test "$REPO"
 git -C "$REPO" config user.name 'MPTDC recovery test'
@@ -65,6 +67,13 @@ git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
+printf 'MACRO RO_tune6\nEND RO_tune6\n' > "$PNR_LEF"
+cat > "$PNR_LEF_SUMMARY" <<EOF
+OUTPUT_LEF=$PNR_LEF
+OUTPUT_LEF_SHA256=$(sha256sum "$PNR_LEF" | awk '{print $1}')
+PNR_LEF_PREP_STATUS=PASS
+EOF
+
 FAKE_CADENCE_ENV="$TMP_ROOT/fake_cadence_env.sh"
 cat > "$FAKE_CADENCE_ENV" <<'EOF'
 : "$MPTDC_CADENCE_FIXTURE_UNSET"
@@ -84,6 +93,7 @@ work=""
 strict_special_clean=0
 dangling_only_max=""
 temporary_signal_top_blockage=0
+pnr_lef=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id) run_id="$2"; shift 2 ;;
@@ -92,6 +102,7 @@ while [[ $# -gt 0 ]]; do
     --strict-special-clean) strict_special_clean=1; shift ;;
     --dangling-only-max) dangling_only_max="$2"; shift 2 ;;
     --temporary-signal-top-route-blockage) temporary_signal_top_blockage=1; shift ;;
+    --pnr-lef) pnr_lef="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
@@ -144,6 +155,13 @@ fi
 shorts=0
 tool_rc=0
 if [[ "${FAKE_DIRTY_ROUTE:-0}" == 1 ]]; then shorts=1; tool_rc=1; fi
+actual_pnr_lef="${pnr_lef:-/fixture/RO_tune6.lef}"
+if [[ "${FAKE_PNR_LEF_MISMATCH:-0}" == 1 ]]; then
+  actual_pnr_lef="${actual_pnr_lef}.mismatch"
+fi
+cat > "$run/reports/ro_import_source_gate.rpt" <<RPT
+O1_RO_LEF_PATH=$actual_pnr_lef
+RPT
 cat > "$run/reports/route_status.rpt" <<RPT
 ROUTE_STATUS=$([[ "$shorts" == 0 ]] && echo PASS || echo FAIL)
 INNOVUS_VERIFY_DRC_STATUS=$([[ "$shorts" == 0 ]] && echo PASS || echo FAIL)
@@ -326,13 +344,33 @@ grep -qx 'NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE' "$TMP_ROOT/sweep_no_pas
 
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage physical-pnr --run-id route_fixture --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" \
   --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/route.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'signal_top_layer=MET3' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'router_command_top_layer=METTP' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PNR_LEF_PATH_MATCH_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PNR_LEF_EVIDENCE_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PNR_LEF_SUMMARY_BINDING_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PNR_LEF_GATE_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$WORK/innovus/route_fixture/reports/tap_pin_def_excerpt.rpt"
+test -s "$WORK/innovus/route_fixture/outputs/RO_tune6_pnr_lef_used.txt"
+test -s "$WORK/innovus/route_fixture/outputs/RO_tune6_pnr_lef_summary.txt"
+
+set +e
+env "${COMMON_ENV[@]}" FAKE_PNR_LEF_MISMATCH=1 bash "$DRIVER" \
+  --stage physical-pnr --run-id route_lef_mismatch --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_lef_mismatch.stdout"
+LEF_MISMATCH_RC=$?
+set -e
+test "$LEF_MISMATCH_RC" -ne 0
+grep -qx 'PNR_LEF_PATH_MATCH_STATUS=FAIL' "$WORK/innovus/route_lef_mismatch/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PNR_LEF_GATE_STATUS=FAIL' "$WORK/innovus/route_lef_mismatch/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_lef_mismatch/reports/operator_gate_physical_pnr.rpt"
 
 set +e
 env "${COMMON_ENV[@]}" FAKE_DIRTY_ROUTE=1 bash "$DRIVER" \

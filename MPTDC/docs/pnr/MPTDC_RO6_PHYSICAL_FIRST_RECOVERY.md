@@ -3,10 +3,25 @@
 ## Starting Point
 
 The design has exactly two buffered debug outputs, `ro_slow_tap0_o` and
-`ro_fast_tap0_o`, placed on the south edge on MET3. The last buffered PnR run
-reached route with clean regular connectivity but failed with 18 real METTP
-shorts. The markers were ordinary raw-phase and oscillator-control wires
-crossing `RO_tune6` METTP blockages, not acceptable PG exceptions.
+`ro_fast_tap0_o`, placed on the south edge on MET3. The latest published
+physical run, `20260824_mptdc_bufftap0_tempblk_physical_143726`, proved that
+the named temporary METTP blockage was created for signal routing and removed
+before final verification. The lifecycle is no longer the blocker.
+
+That run still failed with 22 geometry DRCs and 19 shorts. Eighteen shorts are
+the same bounded RO signal-access family: `S[0:7]` and `rstb` for each of the
+two `RO_tune6` instances. The pre-sroute `ecoRoute -target` marker snapshot
+shows those 18 failures on MET3 at the macro edges; later repair merely moved
+them to METTP. One independent MET2 signal/VSS short and three MET2 spacing
+markers remain. Regular connectivity is clean, but raw special connectivity is
+not final-clean. Therefore another routing-layer or `sroute` sweep is not the
+next experiment.
+
+The next bounded action is to generate a fresh marker-derived PnR-only
+`RO_tune6` LEF from the pre-sroute MET3 markers. It may open OBS access only for
+`S[0:7]` and `rstb`; VDD, VSS, code pins, and unknown-pin windows are rejected.
+The canonical `/group/.../RO_tune6.lef` remains read-only and is still the
+physical source identity.
 
 The published sweep `20260824_mptdc_bufftap0_pgsweep_125418` completed all 10
 isolated `sroute` candidates and found no raw-clean candidate. Every mode kept
@@ -42,15 +57,19 @@ checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.
    either raw-clean special connectivity or no more than 34 classified
    `IMPVFC-94` dangling mesh tails, only when fatal connectivity findings and
    VDD/VSS cross-net shorts are both zero.
-3. Run a fresh physical-first PnR and require Innovus DRC, shorts, regular
-   connectivity, special connectivity, and unrouted nets all zero.
-4. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
+3. Generate one fresh PnR-only RO LEF from the failed run's pre-sroute MET3
+   marker snapshot. Require all nine signal pin classes, both MET2 and MET3
+   access windows, no unexpected pin windows, and at least one OBS trim.
+4. Run a fresh physical-first PnR with that exact LEF and require Innovus DRC,
+   shorts, regular connectivity, special connectivity, and unrouted nets all
+   zero.
+5. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
    temporary METTP blockage was created and removed, and both tap pins exist.
-5. Restore only that clean `04_route.enc.dat` checkpoint and merge the real RO
+6. Restore only that clean `04_route.enc.dat` checkpoint and merge the real RO
    OA GDS.
-6. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
+7. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
    MATCH on the same hashed inputs.
-7. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
+8. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
    IR/EM, and final tapeout remain outside this physical-first gate.
 
 ## Step Decisions and Evidence
@@ -64,7 +83,8 @@ log tails are what make remote analysis possible.
 |---|---|---|
 | Pre-PnR | package RC 0, pre-PnR RC 0, `PRE_PNR_GATE=PASS` | `genus` |
 | PG proof | wrapper RC 0, sroute PASS, PG cross-net shorts 0, non-RO failures 0, and either raw clean or bounded classified `IMPVFC-94` only | `innovus` |
-| Physical PnR | wrapper RC 0, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
+| PnR LEF preparation | preparation PASS, `S[0:7]` plus `rstb` present, MET2/MET3 windows nonzero, unexpected-pin count 0, OBS trims nonzero | bundled into physical `innovus` snapshot |
+| Physical PnR | wrapper RC 0, requested/imported PnR LEF path and hash match, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
 | Base DRC | gate PASS, variant BASE, both report totals 0 | `pvs` |
@@ -164,32 +184,113 @@ The isolated sweep is complete and has no winner. Its published decision is
 pre-route continuation in step 1 is not final connectivity acceptance. Step 2
 still requires raw special connectivity, all DRC, and all shorts to be zero.
 
-### 2. Physical PnR
+### 2. Prepare the PnR LEF and Run Physical PnR
 
-Replace only `REPLACE_WITH_PG_RUN_ID` with the value printed by step 1. This
-must identify the newly published `PG_PROOF`, not the failed proof or sweep.
+This is the current next command. It reuses the accepted PG proof
+`20260824_mptdc_bufftap0_simplepg_pgproof_135116` and the exact pre-sroute MET3
+marker snapshot from the latest failed physical run. Run the whole block once.
+It does not modify the canonical RO LEF, does not reuse a dirty route
+checkpoint, and does not close the SSH shell on failure.
 
 ```bash
 set +e
 
-bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
-  --stage physical-pnr \
-  --pg-run-id REPLACE_WITH_PG_RUN_ID \
-  --genus-run-id MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623 \
-  --handoff-dir /sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+FAILED_PNR_RUN=20260824_mptdc_bufftap0_tempblk_physical_143726
+FAILED_PNR_DIR=/sim/ksabra/SPADMIC_work/innovus/$FAILED_PNR_RUN
+MARKERS=$FAILED_PNR_DIR/reports/POST_FILLER_PRE_SROUTE_ecoRoute_target_markers.tsv
+FAILED_DEF=$FAILED_PNR_DIR/def/04_route_failed.def
+SOURCE_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+PG_RUN_ID=20260824_mptdc_bufftap0_simplepg_pgproof_135116
+GENUS_RUN_ID=MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
+HANDOFF=/sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/$GENUS_RUN_ID
+TAG=$(date +%Y%m%d_%H%M%S)
+PNR_LEF=/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_tempblk_met3_$TAG.lef
+PNR_LEF_SUMMARY=${PNR_LEF%.lef}.summary.txt
+PNR_RUN=${TAG}_mptdc_bufftap0_pnrlef_physical
+PNR_DIR=/sim/ksabra/SPADMIC_work/innovus/$PNR_RUN
 
-PNR_DRIVER_RC=$?
+LEF_PREP_RC=99
+PREP_STATUS=MISSING
+PNR_DRIVER_RC=99
+REPO_READY=0
+
+if [ -d "$REPO/.git" ]; then
+  cd "$REPO"
+  [ "$?" -eq 0 ] && REPO_READY=1
+else
+  echo "STOP: repository missing: $REPO"
+fi
+
+if [ "$REPO_READY" -eq 1 ] && [ -r "$MARKERS" ] && \
+   [ -r "$FAILED_DEF" ] && [ -r "$SOURCE_LEF" ]; then
+  bash MPTDC/pnr/scripts/server_prepare_ro_tune6_pnr_lef.sh \
+    --run "$FAILED_PNR_DIR" \
+    --source-lef "$SOURCE_LEF" \
+    --markers "$MARKERS" \
+    --failed-def "$FAILED_DEF" \
+    --out-lef "$PNR_LEF"
+  LEF_PREP_RC=$?
+else
+  echo "STOP: marker, failed DEF, or canonical source LEF is missing"
+fi
+
+PREP_STATUS="$(sed -n 's/^PNR_LEF_PREP_STATUS=//p' "$PNR_LEF_SUMMARY" 2>/dev/null | tail -1)"
+
+if [ "$LEF_PREP_RC" -eq 0 ] && [ "$PREP_STATUS" = PASS ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
+    --stage physical-pnr \
+    --run-id "$PNR_RUN" \
+    --pg-run-id "$PG_RUN_ID" \
+    --genus-run-id "$GENUS_RUN_ID" \
+    --handoff-dir "$HANDOFF" \
+    --source-lef "$SOURCE_LEF" \
+    --pnr-lef "$PNR_LEF"
+  PNR_DRIVER_RC=$?
+else
+  echo "STOP: PnR LEF preparation failed; Innovus was not launched"
+fi
+
+echo "===== SEND BACK ====="
+echo "LEF_PREP_RC=$LEF_PREP_RC"
+echo "PREP_STATUS=$PREP_STATUS"
+echo "PNR_LEF=$PNR_LEF"
+echo "PNR_RUN=$PNR_RUN"
 echo "PNR_DRIVER_RC=$PNR_DRIVER_RC"
-echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+tail -40 "$PNR_LEF_SUMMARY" 2>/dev/null
+cat "$PNR_DIR/reports/operator_gate_physical_pnr.rpt" 2>/dev/null
 ```
 
-Pass requires:
+LEF preparation passes only with:
+
+```text
+LEF_PREP_RC=0
+PREP_STATUS=PASS
+REQUIRED_ACCESS_PIN_SET_STATUS=PASS
+UNEXPECTED_ACCESS_PIN_COUNT=0
+MET2_ACCESS_WINDOW_COUNT=<nonzero>
+MET3_ACCESS_WINDOW_COUNT=<nonzero>
+PNR_LEF_PREP_STATUS=PASS
+```
+
+A local reconstruction with the published marker TSV, recorded RO placements,
+and checked-in Option-A abstract produced 26 windows: 13 on MET2, 13 on MET3,
+all nine required pin classes, zero unexpected pins, and 15 touched OBS
+rectangles. The server-side status gate is authoritative because it hashes the
+actual canonical source and generated output.
+
+Physical PnR passes only with:
 
 ```text
 CADENCE_ENV_STATUS=PASS
 PNR_DRIVER_RC=0
 DECISION=PASS_CONTINUE
 PUBLISH_RC=0
+PNR_LEF_SUMMARY_BINDING_STATUS=PASS
+PNR_LEF_PATH_MATCH_STATUS=PASS
+PNR_LEF_EVIDENCE_STATUS=PASS
+PNR_LEF_GATE_STATUS=PASS
 signal_top_layer=MET3
 router_command_top_layer=METTP
 ROUTE_COMMAND_STATUS=PASS
@@ -201,11 +302,12 @@ NEXT_STAGE=PVS
 NEXT_REQUIRED_PNR_RUN_ID=<new physical PnR run id>
 ```
 
-The driver independently requires ordinary signal top `MET3`, NanoRoute top
-`METTP`, confirmed temporary-blockage removal, zero Innovus DRC and shorts,
-zero regular and special connectivity debt, zero unrouted nets, and exactly the
-two south-edge MET3 buffered tap pins. It publishes a failed route as evidence
-but never promotes it to PVS.
+The driver independently requires zero Innovus DRC and shorts, zero regular
+and special connectivity debt, zero unrouted nets, and exactly the two
+south-edge MET3 buffered tap pins. It copies the exact generated LEF and its
+summary into the bounded evidence snapshot before publishing. On failure,
+send only `PNR_RUN`, `FINAL_HEAD`, and the final driver lines; the reports are
+already on GitHub when `PUBLISH_RC=0`. Do not run PVS after a failed decision.
 
 ### 3. PVS Preparation, DRC, and LVS
 
