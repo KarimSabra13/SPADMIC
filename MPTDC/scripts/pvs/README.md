@@ -1,77 +1,100 @@
 # MPTDC PVS Replay Flow
 
-This directory contains reproducible wrappers for the MPTDC dryGDS/PVS DRC/LVS
-debug path. The scripts intentionally replay GUI-generated `run.pvs` templates
-instead of guessing low-level PVS command-line syntax.
+These wrappers replay known GUI-generated PVS controls on one immutable MPTDC
+layout/source tuple. A zero shell return code is never treated as DRC or LVS
+closure by itself.
 
-## Source Checkpoint
+The full RO6 recovery sequence is documented in
+[`MPTDC_RO6_PHYSICAL_FIRST_RECOVERY.md`](../../docs/pnr/MPTDC_RO6_PHYSICAL_FIRST_RECOVERY.md).
 
-For the current four-marker route issue, use the untouched route checkpoint:
+## Required Input
 
-```sh
-export EXPECTED_HEAD=761cae1e1115479169f62ce021de4ad1b322abca
-export FAILED_RUN_ID=20260707_mptdc_tc_ro6_coordproxy_free_digital_strict_130549
-export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
-export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
-export SOURCE_CKPT=$MPTDC_INNOVUS_WORK/$FAILED_RUN_ID/checkpoints/04_route_failed.enc.dat
+Start only from an Innovus `04_route.enc.dat` checkpoint whose route report has:
+
+```text
+ROUTE_STATUS=PASS
+INNOVUS_VERIFY_DRC_STATUS=PASS
+GEOMETRY_DRC_VIOLATIONS=0
+SHORTS=0
+REGULAR_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_RAW_BAD=0
+SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
+UNROUTED_NETS=0
 ```
 
-Do not use the manual MET1 patch checkpoint as a PVS source. That checkpoint has
-real shorts and dangling-wire failures.
+The preparation step also requires an explicitly selected GDS export of the
+real `RO_tune6` OA layout. A proxy, LEF-generated shell, or no-RO streamout is
+not an acceptable substitute.
 
-## Typical Server Sequence
+## Replay Sequence
 
-```sh
-cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
-source /eda/cadence/eda_2023-2024
-source .venv/bin/activate 2>/dev/null || true
+Run in the foreground after sourcing the Cadence environment:
 
-git checkout SPADMIC_test
-git pull --ff-only
-test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
-
-export PVS_RUN_ID=${FAILED_RUN_ID}_pvs_drc_reality_$(date +%Y%m%d_%H%M%S)
+```bash
+set +e
 
 MPTDC/scripts/pvs/00_prepare_pvs_inputs_from_checkpoint.sh \
   --checkpoint "$SOURCE_CKPT" \
   --run-id "$PVS_RUN_ID" \
+  --ro-gds "$RO_GDS" \
+  --strict-attribution \
   --expected-head "$EXPECTED_HEAD"
+PREP_RC=$?
 
-export PVS_DIR="$MPTDC_INNOVUS_WORK/$PVS_RUN_ID"
+PVS_DIR="$MPTDC_INNOVUS_WORK/$PVS_RUN_ID"
 
-MPTDC/scripts/pvs/01_audit_pvs_templates.sh \
-  --result-dir "$PVS_DIR" \
-  --expected-head "$EXPECTED_HEAD"
+if [ "$PREP_RC" -eq 0 ]; then
+  MPTDC/scripts/pvs/01_audit_pvs_templates.sh \
+    --result-dir "$PVS_DIR" \
+    --expected-head "$EXPECTED_HEAD"
+  AUDIT_RC=$?
+else
+  AUDIT_RC=99
+fi
 
-MPTDC/scripts/pvs/02_replay_pvs_drc_from_template.sh \
-  --prepared-dir "$PVS_DIR" \
-  --expected-head "$EXPECTED_HEAD"
+if [ "$AUDIT_RC" -eq 0 ]; then
+  MPTDC/scripts/pvs/02_replay_pvs_drc_from_template.sh \
+    --prepared-dir "$PVS_DIR" \
+    --variant base \
+    --expected-head "$EXPECTED_HEAD"
+  DRC_BASE_RC=$?
+else
+  DRC_BASE_RC=99
+fi
 
-sed -n '1,220p' "$PVS_DIR/reports/pvs_drc_status.rpt"
-sed -n '1,260p' "$PVS_DIR/reports/pvs_drc_vs_innovus_mar4.rpt"
-sed -n '1,260p' "$PVS_DIR/reports/pvs_drc_result_scan.txt"
+if [ "$DRC_BASE_RC" -eq 0 ]; then
+  MPTDC/scripts/pvs/02_replay_pvs_drc_from_template.sh \
+    --prepared-dir "$PVS_DIR" \
+    --variant density \
+    --expected-head "$EXPECTED_HEAD"
+  DRC_DENSITY_RC=$?
+else
+  DRC_DENSITY_RC=99
+fi
+
+if [ "$DRC_BASE_RC" -eq 0 ] && [ "$DRC_DENSITY_RC" -eq 0 ]; then
+  MPTDC/scripts/pvs/03_replay_pvs_lvs_from_template.sh \
+    --prepared-dir "$PVS_DIR" \
+    --expected-head "$EXPECTED_HEAD"
+  LVS_RC=$?
+else
+  LVS_RC=99
+fi
 ```
 
-Run LVS only after the DRC result is understood:
+## Passing Evidence
 
-```sh
-MPTDC/scripts/pvs/03_replay_pvs_lvs_from_template.sh \
-  --prepared-dir "$PVS_DIR" \
-  --expected-head "$EXPECTED_HEAD"
+- `reports/tap_pin_contract.rpt`: exactly one slow and one fast buffered tap-0
+  top pin, both output pins on MET3.
+- `manifests/pvs_input_hashes.rpt`: exact GDS, source, CDL, HCell, DEF, map,
+  and real-RO hashes.
+- `reports/pvs_drc_base_status.rpt`: `PVS_DRC_STATUS=PASS` and both totals zero.
+- `reports/pvs_drc_density_status.rpt`: the same, with `DENSITY` proven enabled.
+- `reports/pvs_lvs_status.rpt`: `PVS_LVS_STATUS=MATCH` with explicit
+  report-level match evidence.
 
-sed -n '1,220p' "$PVS_DIR/reports/pvs_lvs_status.rpt"
-sed -n '1,320p' "$PVS_DIR/reports/pvs_lvs_result_scan.txt"
-sed -n '1,120p' "$PVS_DIR/reports/pvs_lvs_SHORTSDB_rule_id.txt"
-```
-
-## Gates
-
-- `PVS_REPRODUCES_INNOVUS_MAR4=YES`: fix the route/pin-access/root cause
-  upstream. Do not hand-draw patch metal.
-- `PVS_REPRODUCES_INNOVUS_MAR4=NO`: preserve the Innovus/PVS mismatch evidence
-  and decide LVS continuation separately.
-- Any PVS DRC/LVS fatal, missing GDS/source/HCell, stale old template path, or
-  `/usr/sbin/pvs` path issue is a hard stop.
-
-Final tapeout remains `NO` until PVS DRC/LVS, Innovus DRC/connectivity, timing,
-and other deferred physical gates are independently clean.
+Any missing control, stale path, hash mismatch, nonzero report-level DRC total,
+or missing explicit LVS MATCH fails closed. These results are a TC-only
+physical package gate; they do not claim MMMC timing, IR/EM, PEX, or final
+tapeout readiness.

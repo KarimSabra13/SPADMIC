@@ -88,6 +88,7 @@ REPORT="$REPORT_DIR/pvs_template_audit.rpt"
   echo "## Required Template Files"
   for f in \
     "$DRC_TEMPLATE/run.pvs" \
+    "$DRC_TEMPLATE/pvsdrcctl" \
     "$DRC_TEMPLATE/.config.rul" \
     "$DRC_TEMPLATE/.technology.rul" \
     "$LVS_TEMPLATE/run.pvs" \
@@ -108,7 +109,7 @@ REPORT="$REPORT_DIR/pvs_template_audit.rpt"
   echo
   echo "## DRC Template Path Scan"
   grep -RniE 'GDS|gds|DRC|drc|rulesFile|xh018|mptdc_axis_core|metalswitch' \
-    "$DRC_TEMPLATE/run.pvs" "$DRC_TEMPLATE/.config.rul" "$DRC_TEMPLATE/.technology.rul" \
+    "$DRC_TEMPLATE/run.pvs" "$DRC_TEMPLATE/pvsdrcctl" "$DRC_TEMPLATE/.config.rul" "$DRC_TEMPLATE/.technology.rul" \
     2>/dev/null | sed -n '1,260p' || true
   echo
   echo "## LVS Template Path Scan"
@@ -119,6 +120,7 @@ REPORT="$REPORT_DIR/pvs_template_audit.rpt"
 
 for f in \
   "$DRC_TEMPLATE/run.pvs" \
+  "$DRC_TEMPLATE/pvsdrcctl" \
   "$DRC_TEMPLATE/.config.rul" \
   "$DRC_TEMPLATE/.technology.rul" \
   "$LVS_TEMPLATE/run.pvs" \
@@ -128,5 +130,9 @@ for f in \
 do
   mptdc_pvs_require_existing_file "$f"
 done
+
+if grep -q -- '-cell_tree' "$DRC_TEMPLATE/run.pvs"; then
+  mptdc_pvs_require_existing_file "$DRC_TEMPLATE/cell_tree.txt"
+fi
 
 echo "PVS_TEMPLATE_AUDIT_STATUS=PASS" | tee "$MANIFEST_DIR/pvs_template_audit.status"

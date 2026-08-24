@@ -71,6 +71,30 @@ mptdc_pvs_require_clean_tracked_tree() {
   fi
 }
 
+mptdc_pvs_sha256() {
+  local path="$1"
+  mptdc_pvs_require_file "$path"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$path" | awk '{print $1}'
+    return 0
+  fi
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$path" | awk '{print $1}'
+    return 0
+  fi
+  mptdc_pvs_die "no SHA-256 tool found for $path"
+}
+
+mptdc_pvs_append_hash() {
+  local manifest="$1"
+  local label="$2"
+  local path="$3"
+  local digest
+  digest="$(mptdc_pvs_sha256 "$path")"
+  printf '%s_PATH=%s\n' "$label" "$path" >> "$manifest"
+  printf '%s_SHA256=%s\n' "$label" "$digest" >> "$manifest"
+}
+
 mptdc_pvs_copy_template_file() {
   local src="$1"
   local dst="$2"

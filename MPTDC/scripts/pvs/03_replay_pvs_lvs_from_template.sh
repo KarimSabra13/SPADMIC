@@ -130,6 +130,9 @@ mptdc_pvs_require_file "$DCELL_CDL"
 for f in "$OLD_LVS_RUN/run.pvs" "$OLD_LVS_RUN/.config.rul" "$OLD_LVS_RUN/.technology.rul" "$OLD_LVS_RUN/pvslvsctl"; do
   mptdc_pvs_require_existing_file "$f"
 done
+if grep -q -- '-cell_tree' "$OLD_LVS_RUN/run.pvs"; then
+  mptdc_pvs_require_existing_file "$OLD_LVS_RUN/cell_tree.txt"
+fi
 
 if [[ -e "$NEW_LVS_RUN" ]]; then
   mptdc_pvs_die "new LVS run directory already exists: $NEW_LVS_RUN"
@@ -140,9 +143,11 @@ cp -p "$OLD_LVS_RUN/run.pvs" "$NEW_LVS_RUN/run.pvs"
 cp -p "$OLD_LVS_RUN/pvslvsctl" "$NEW_LVS_RUN/pvslvsctl"
 cp -p "$OLD_LVS_RUN/.config.rul" "$NEW_LVS_RUN/.config.rul"
 cp -p "$OLD_LVS_RUN/.technology.rul" "$NEW_LVS_RUN/.technology.rul"
+[[ -f "$OLD_LVS_RUN/cell_tree.txt" ]] && cp -p "$OLD_LVS_RUN/cell_tree.txt" "$NEW_LVS_RUN/cell_tree.txt"
 [[ -f "$OLD_LVS_RUN/.preset.autosave" ]] && cp -p "$OLD_LVS_RUN/.preset.autosave" "$NEW_LVS_RUN/.preset.autosave"
 
 PATCH_FILES=("$NEW_LVS_RUN/run.pvs" "$NEW_LVS_RUN/pvslvsctl" "$NEW_LVS_RUN/.config.rul" "$NEW_LVS_RUN/.technology.rul")
+[[ -f "$NEW_LVS_RUN/cell_tree.txt" ]] && PATCH_FILES+=("$NEW_LVS_RUN/cell_tree.txt")
 [[ -f "$NEW_LVS_RUN/.preset.autosave" ]] && PATCH_FILES+=("$NEW_LVS_RUN/.preset.autosave")
 
 for f in "${PATCH_FILES[@]}"; do
@@ -190,14 +195,23 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
+for variant in base density; do
+  drc_status="$NEW_BASE/reports/pvs_drc_${variant}_status.rpt"
+  mptdc_pvs_require_file "$drc_status"
+  grep -qx 'PVS_DRC_STATUS=PASS' "$drc_status" || \
+    mptdc_pvs_die "LVS blocked because $variant DRC is not PASS: $drc_status"
+done
+
 mptdc_pvs_prepend_known_cadence_bins
 mptdc_pvs_forbid_bare_linux_lvm_pvs
+set +e
 (
   cd "$NEW_LVS_RUN"
   bash ./run.pvs
 ) 2>&1 | tee "$NEW_LVS_RUN/pvs_lvs_replay.stdout"
 PVS_RC=${PIPESTATUS[0]}
-echo "PVS_LVS_RC=$PVS_RC" | tee "$NEW_BASE/reports/pvs_lvs_status.rpt"
+set -e
+echo "PVS_LVS_RC=$PVS_RC" | tee "$NEW_BASE/reports/pvs_lvs_tool_status.rpt"
 
 grep -RIna --binary-files=without-match \
   --exclude='*.rdb' \
@@ -211,4 +225,26 @@ grep -RIna --binary-files=without-match \
 find "$NEW_LVS_RUN" -path '*/SHORTSDB/rule.id' -type f -exec cat {} \; \
   | tee "$NEW_BASE/reports/pvs_lvs_SHORTSDB_rule_id.txt" || true
 
-exit "$PVS_RC"
+HASH_MANIFEST="$NEW_BASE/manifests/pvs_input_hashes.rpt"
+GATE_REPORT="$NEW_BASE/reports/pvs_lvs_status.rpt"
+INVENTORY="$NEW_BASE/reports/pvs_lvs_evidence_inventory.tsv"
+set +e
+python3 "$SCRIPT_DIR/06_gate_pvs_lvs.py" \
+  --run-dir "$NEW_LVS_RUN" \
+  --tool-rc "$PVS_RC" \
+  --gds "$NEW_GDS" \
+  --source "$NEW_SRC" \
+  --cdl "$DCELL_CDL" \
+  --hcell "$NEW_HCELL" \
+  --hash-manifest "$HASH_MANIFEST" \
+  --layout-top mptdc_axis_core \
+  --source-top mptdc_axis_core \
+  --out "$GATE_REPORT" \
+  --inventory "$INVENTORY"
+GATE_RC=$?
+set -e
+
+if [[ "$PVS_RC" -ne 0 ]]; then
+  exit "$PVS_RC"
+fi
+exit "$GATE_RC"

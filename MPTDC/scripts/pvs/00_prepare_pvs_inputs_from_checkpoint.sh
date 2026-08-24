@@ -13,6 +13,7 @@ DEFAULT_OLD_PROOF="/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsep
 DEFAULT_OLD_PROOF_CKPT="/sim/ksabra/SPADMIC_work/innovus/20260702_mptdc_pvs_pg_short_surgical_proof_145940/checkpoints/repaired_route.enc.dat"
 DEFAULT_DCELL_GDS="/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/gds/xh018_D_CELLS_JIHD.gds"
 DEFAULT_DCELL_CDL="/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/cdl/xh018_D_CELLS_JIHD.cdl"
+DEFAULT_STREAM_MAP="/data/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_1131/pnr_streamout.map"
 
 SOURCE_CHECKPOINT=""
 RUN_ID=""
@@ -28,7 +29,9 @@ DCELL_GDS="${MPTDC_PVS_DCELL_GDS:-$DEFAULT_DCELL_GDS}"
 DCELL_CDL="${MPTDC_PVS_DCELL_CDL:-$DEFAULT_DCELL_CDL}"
 RO_GDS="${MPTDC_PVS_RO_GDS:-$DEFAULT_OLD_BASE/merge_libs/RO_tune6_from_OA.gds}"
 ALLOW_GENERATED_STREAMOUT="${MPTDC_PVS_ALLOW_GENERATED_STREAMOUT:-0}"
-STREAM_MAP="${MPTDC_PVS_STREAM_MAP:-}"
+STREAM_MAP="${MPTDC_PVS_STREAM_MAP:-$DEFAULT_STREAM_MAP}"
+STRICT_ATTRIBUTION="${MPTDC_PVS_STRICT_ATTRIBUTION:-0}"
+RO_GDS_EXPLICIT=0
 
 usage() {
   cat <<'USAGE'
@@ -48,7 +51,9 @@ Options:
   --dcell-gds <path>           D_CELLS GDS merged into layout.
   --dcell-cdl <path>           D_CELLS CDL used by PVS LVS.
   --ro-gds <path>              RO_tune6 GDS merged into layout.
-  --stream-map <path>          Optional streamOut map for generated fallback.
+  --stream-map <path>          Official streamOut map. Defaults to XH018_1131.
+  --strict-attribution         Require an explicitly supplied RO GDS and write
+                               fail-closed pin/hash attribution evidence.
   -h, --help                   Show this help.
 
 Default behavior replays a known-good streamout Tcl template after patching
@@ -106,11 +111,16 @@ while [[ $# -gt 0 ]]; do
       ;;
     --ro-gds)
       RO_GDS="$(mptdc_pvs_abs_path "$REPO_ROOT" "${2:?missing --ro-gds value}")"
+      RO_GDS_EXPLICIT=1
       shift 2
       ;;
     --stream-map)
       STREAM_MAP="$(mptdc_pvs_abs_path "$REPO_ROOT" "${2:?missing --stream-map value}")"
       shift 2
+      ;;
+    --strict-attribution)
+      STRICT_ATTRIBUTION=1
+      shift
       ;;
     -h|--help)
       usage
@@ -135,6 +145,11 @@ mptdc_pvs_require_dir "$SOURCE_CHECKPOINT"
 mptdc_pvs_require_file "$DCELL_GDS"
 mptdc_pvs_require_file "$DCELL_CDL"
 mptdc_pvs_require_file "$RO_GDS"
+mptdc_pvs_require_file "$STREAM_MAP"
+
+if [[ "$STRICT_ATTRIBUTION" == "1" && "$RO_GDS_EXPLICIT" != "1" ]]; then
+  mptdc_pvs_die "--strict-attribution requires an explicit --ro-gds exported from the current RO_tune6 OA layout"
+fi
 
 if [[ -e "$RESULT_DIR" ]]; then
   mptdc_pvs_die "result directory already exists: $RESULT_DIR"
@@ -166,6 +181,7 @@ PHYS_PG_V="$OUTPUT_DIR/${TOP_CELL}_pnr_lvs_phys_with_pg.v"
 FILTERED_V="$OUTPUT_DIR/${TOP_CELL}_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v"
 HCELL="$OUTPUT_DIR/pvs_hcell_ro6.txt"
 FILTER_REPORT="$REPORT_DIR/lvs_source_filter.rpt"
+FINAL_DEF="$OUTPUT_DIR/${TOP_CELL}.def"
 
 {
   echo "# MPTDC PVS Input Preparation"
@@ -183,6 +199,8 @@ FILTER_REPORT="$REPORT_DIR/lvs_source_filter.rpt"
   echo "dcell_cdl: $DCELL_CDL"
   echo "original_ro_gds: $ORIGINAL_RO_GDS"
   echo "local_ro_gds: $RO_GDS"
+  echo "stream_map: $STREAM_MAP"
+  echo "strict_attribution: $STRICT_ATTRIBUTION"
   echo "top_only_gds: $TOP_ONLY_GDS"
   echo "merged_gds: $MERGED_GDS"
   echo "pg_verilog: $PG_V"
@@ -199,6 +217,7 @@ if [[ -f "$STREAMOUT_TEMPLATE" ]]; then
   mptdc_pvs_patch_file_paths "$PATCHED_STREAMOUT" \
     "$OLD_PROOF_CKPT=$SOURCE_CHECKPOINT" \
     "$DEFAULT_OLD_BASE/merge_libs/RO_tune6_from_OA.gds=$RO_GDS" \
+    "$DEFAULT_STREAM_MAP=$STREAM_MAP" \
     "$OLD_PROOF_BASE=$RESULT_DIR" \
     "$OLD_BASE=$RESULT_DIR" \
     "$DEFAULT_DCELL_GDS=$DCELL_GDS" \
@@ -206,6 +225,10 @@ if [[ -f "$STREAMOUT_TEMPLATE" ]]; then
   mptdc_pvs_fail_if_contains_old_path "streamout old proof checkpoint" "$OLD_PROOF_CKPT" "$PATCHED_STREAMOUT"
   mptdc_pvs_fail_if_contains_old_path "streamout old proof base" "$OLD_PROOF_BASE" "$PATCHED_STREAMOUT"
   mptdc_pvs_fail_if_contains_old_path "streamout old base" "$OLD_BASE" "$PATCHED_STREAMOUT"
+  grep -Fq -- '-mapFile' "$PATCHED_STREAMOUT" || \
+    mptdc_pvs_die "streamout template does not apply an explicit -mapFile: $PATCHED_STREAMOUT"
+  grep -Fq -- "$STREAM_MAP" "$PATCHED_STREAMOUT" || \
+    mptdc_pvs_die "streamout template does not reference the selected map: $STREAM_MAP"
 fi
 
 GENERATED_TCL="$WORK_DIR/prepare_pvs_inputs.tcl"
@@ -275,11 +298,13 @@ if ! command -v innovus >/dev/null 2>&1; then
   mptdc_pvs_die "innovus not found in PATH; run this on the server after sourcing Cadence"
 fi
 
+set +e
 (
   cd "$REPO_ROOT"
   innovus -nowin -init "$GENERATED_TCL" -log "$LOG_DIR/innovus_prepare_pvs_inputs.log"
 ) 2>&1 | tee -a "$RUN_LOG"
 INNOVUS_RC=${PIPESTATUS[0]}
+set -e
 echo "INNOVUS_RC=$INNOVUS_RC" | tee -a "$RUN_LOG"
 [[ "$INNOVUS_RC" -eq 0 ]] || exit "$INNOVUS_RC"
 
@@ -288,11 +313,81 @@ if [[ ! -s "$TOP_ONLY_GDS" ]]; then
 fi
 mptdc_pvs_require_file "$MERGED_GDS"
 mptdc_pvs_require_file "$PG_V"
+mptdc_pvs_require_file "$FINAL_DEF"
 "$SCRIPT_DIR/01_generate_lvs_source_pg_filtered.py" \
   --input "$PG_V" \
   --output "$FILTERED_V" \
   --hcell "$HCELL" \
   --report "$FILTER_REPORT"
+
+TAP_PIN_REPORT="$REPORT_DIR/tap_pin_contract.rpt"
+{
+  echo "# MPTDC final DEF tap-pin contract"
+  echo "DEF=$FINAL_DEF"
+  tap_pin_status=PASS
+  tap_pin_total="$(awk '
+    /^PINS[[:space:]]/ {in_pins=1; next}
+    /^END PINS/ {in_pins=0}
+    in_pins && /^-[[:space:]]/ && $2 ~ /^ro_(slow|fast)_tap[0-9]+_o$/ {count++}
+    END {print count + 0}
+  ' "$FINAL_DEF")"
+  echo "RO_TAP_OBSERVABILITY_PIN_COUNT=$tap_pin_total"
+  if [[ "$tap_pin_total" != "2" ]]; then
+    tap_pin_status=FAIL
+  fi
+  for pin in ro_slow_tap0_o ro_fast_tap0_o; do
+    record="$(awk -v wanted="$pin" '
+      /^PINS[[:space:]]/ {in_pins=1; next}
+      /^END PINS/ {in_pins=0}
+      in_pins && /^-[[:space:]]/ {
+        if (active) {print record}
+        active=($2 == wanted)
+        record=$0
+        next
+      }
+      in_pins && active {record=record " " $0}
+      END {if (active) print record}
+    ' "$FINAL_DEF")"
+    count="$(printf '%s\n' "$record" | sed '/^[[:space:]]*$/d' | wc -l)"
+    direction_status=FAIL
+    layer_status=FAIL
+    [[ "$record" == *"+ DIRECTION OUTPUT"* ]] && direction_status=PASS
+    [[ "$record" == *"+ LAYER MET3"* ]] && layer_status=PASS
+    echo "${pin}_COUNT=$count"
+    echo "${pin}_DIRECTION_STATUS=$direction_status"
+    echo "${pin}_LAYER_STATUS=$layer_status"
+    echo "${pin}_DEF_RECORD=$record"
+    if [[ "$count" != "1" || "$direction_status" != "PASS" || "$layer_status" != "PASS" ]]; then
+      tap_pin_status=FAIL
+    fi
+  done
+  echo "TAP_PIN_CONTRACT_STATUS=$tap_pin_status"
+} | tee "$TAP_PIN_REPORT"
+
+grep -qx 'TAP_PIN_CONTRACT_STATUS=PASS' "$TAP_PIN_REPORT" || \
+  mptdc_pvs_die "final DEF tap-pin contract failed: $TAP_PIN_REPORT"
+
+HASH_MANIFEST="$MANIFEST_DIR/pvs_input_hashes.rpt"
+{
+  echo "# MPTDC immutable PVS input hashes"
+  echo "GIT_HEAD=$(git rev-parse HEAD)"
+  echo "TOP_CELL=$TOP_CELL"
+  echo "SOURCE_CHECKPOINT=$SOURCE_CHECKPOINT"
+  echo "STRICT_ATTRIBUTION=$STRICT_ATTRIBUTION"
+} > "$HASH_MANIFEST"
+mptdc_pvs_append_hash "$HASH_MANIFEST" MERGED_GDS "$MERGED_GDS"
+if [[ -s "$TOP_ONLY_GDS" ]]; then
+  mptdc_pvs_append_hash "$HASH_MANIFEST" TOP_ONLY_GDS "$TOP_ONLY_GDS"
+fi
+mptdc_pvs_append_hash "$HASH_MANIFEST" LVS_SOURCE_FILTERED "$FILTERED_V"
+mptdc_pvs_append_hash "$HASH_MANIFEST" LVS_HCELL "$HCELL"
+mptdc_pvs_append_hash "$HASH_MANIFEST" DCELL_GDS "$DCELL_GDS"
+mptdc_pvs_append_hash "$HASH_MANIFEST" DCELL_CDL "$DCELL_CDL"
+mptdc_pvs_append_hash "$HASH_MANIFEST" ORIGINAL_RO_GDS "$ORIGINAL_RO_GDS"
+mptdc_pvs_append_hash "$HASH_MANIFEST" RO_GDS "$RO_GDS"
+mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP "$STREAM_MAP"
+mptdc_pvs_append_hash "$HASH_MANIFEST" FINAL_DEF "$FINAL_DEF"
+mptdc_pvs_append_hash "$HASH_MANIFEST" TAP_PIN_REPORT "$TAP_PIN_REPORT"
 
 {
   echo "# MPTDC PVS Prepared Inputs"
@@ -308,4 +403,7 @@ mptdc_pvs_require_file "$PG_V"
   echo "ORIGINAL_RO_GDS=$ORIGINAL_RO_GDS"
   echo "RO_GDS=$RO_GDS"
   echo "FILTER_REPORT=$FILTER_REPORT"
+  echo "TAP_PIN_REPORT=$TAP_PIN_REPORT"
+  echo "INPUT_HASH_MANIFEST=$HASH_MANIFEST"
+  echo "STRICT_ATTRIBUTION=$STRICT_ATTRIBUTION"
 } | tee "$REPORT_DIR/pvs_prepared_inputs.rpt"
