@@ -26,7 +26,7 @@ FREE_ALL_INTERNAL_VALUE="${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-1}"
 ENABLE_FINAL_FILLER_VALUE="${MPTDC_ENABLE_FINAL_FILLER:-1}"
 ENABLE_POST_FILLER_SROUTE_VALUE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-0}"
 ALLOW_DANGLING_ONLY_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-1}"
-DANGLING_ONLY_MAX_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX:-64}"
+DANGLING_ONLY_MAX_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX:-34}"
 SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE="${MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE:-0}"
 LOCAL_PHASE_PREPLACE_VALUE="${MPTDC_SIMPLEPG_LOCAL_PHASE_PREPLACE:-0}"
 POSTROUTE_OPT_VALUE="${MPTDC_SIMPLEPG_POSTROUTE_OPT:-1}"
@@ -74,18 +74,18 @@ Options:
   -h, --help             Show this help.
 
 This is the latest-LEF simple-PG launcher:
-  - one top-level VDD and one top-level VSS block PG pin;
+  - one ring-aligned top-level VDD and one top-level VSS block PG pin;
   - native Innovus blockPin/corePin sroute;
   - custom RO via-stack hookup disabled;
-  - strict post-place/pre-route special connectivity gate.
+  - bounded post-place/pre-route special connectivity gate.
 
 The default pre-route gate accepts only bounded IMPVFC-94 dangling wires. This
 matches native Innovus sroute behavior after the latest METTP RO LEF: it still
 fails on opens, shorts, unconnected terminals, missing reports, or dangling
 counts above --dangling-only-max.
 
-Run pg_proof first. Run full_closure only after pg_proof reports clean special
-connectivity.
+Run pg_proof first. Run full_closure only after the recovery driver accepts the
+published PG proof. The final route gate still requires raw connectivity zero.
 USAGE
 }
 
@@ -326,9 +326,9 @@ export O1_RO_SOURCE_LEF_PATH="$FINAL_LEF_VALUE"
 export O1_RO_LEF_PATH="$PNR_LEF_VALUE"
 export O1_RO_LIBERTY_PATH="$REPO_ROOT/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib"
 
-# This guard bypass is intentional and narrow: it allows the supported simple
-# pair style so the block exposes VDD/VSS instead of VDD_LEFT/VSS_LEFT/etc.
-export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=1
+# The two-pin ring-aligned style is an explicitly supported topology. It keeps
+# the external names VDD/VSS without bypassing the PG policy guard.
+export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0
 export MPTDC_PG_STRATEGY=innovus_sroute_golden_ro
 
 # The router command remains compatible with existing METTP PG shapes.  Do not
@@ -348,7 +348,7 @@ export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER=METTP
 export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_SCOPE=core
 
 export MPTDC_ENABLE_BLOCK_PG_PINS=1
-export MPTDC_BLOCK_PG_PIN_STYLE=simple_vdd_vss_pair
+export MPTDC_BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair
 export MPTDC_BLOCK_PG_PIN_LAYER=METTP
 export MPTDC_BLOCK_PG_PIN_WIDTH_UM=4.0
 export MPTDC_BLOCK_PG_PIN_DEPTH_UM=28.0

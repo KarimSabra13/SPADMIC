@@ -1024,8 +1024,8 @@ proc mptdc_signoff_pg_policy_guard {} {
         lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, manual_ro_pg_core_sroute, manual_ro_pg_exception, or protected_ro_pg_via_stack"
     }
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair]]
-    if {[lsearch -exact {mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss simple_vdd_vss_pair vdd_vss_pair left_vdd_right_vss} $style] < 0} {
-        lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected mesh_lr_vdd_vss or a supported legacy simple pair style"
+    if {[lsearch -exact {ring_aligned_vdd_vss_pair mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss simple_vdd_vss_pair vdd_vss_pair left_vdd_right_vss} $style] < 0} {
+        lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected ring_aligned_vdd_vss_pair, mesh_lr_vdd_vss, or a supported legacy simple pair style"
     }
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0]} {
         lappend failures "MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0"
@@ -2844,6 +2844,19 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
         [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_topology_after_sroute.rpt] \
         POSTPLACE_PRE_ROUTE_AFTER_SROUTE]
     puts $fh "POSTPLACE_PRE_ROUTE_PG_TOPOLOGY_AFTER=$pg_topology_post"
+    set pg_drc_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_verify_drc.rpt]
+    set pg_drc_capture_ok [mptdc_signoff_capture_candidates $pg_drc_rpt \
+        "post-place pre-route PG verify_drc" [list {verify_drc} {verifyGeometry}]]
+    set pg_drc_marker_rpt [mptdc_signoff_dump_drc_markers \
+        [file join [mptdc_signoff_report_dir] postplace_pre_route_verify_drc_markers.tsv]]
+    set pg_cross_net_shorts [mptdc_signoff_pg_cross_net_short_status $pg_drc_marker_rpt]
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_DRC_CAPTURE_STATUS=[expr {$pg_drc_capture_ok ? "PASS" : "FAIL"}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_DRC_REPORT=$pg_drc_rpt"
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_DRC_MARKER_REPORT=$pg_drc_marker_rpt"
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_STATUS=[dict get $pg_cross_net_shorts status]"
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_REASON=[dict get $pg_cross_net_shorts reason]"
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=[dict get $pg_cross_net_shorts count]"
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_LINES=[dict get $pg_cross_net_shorts lines]"
     set summary [mptdc_signoff_sroute_attempt_summary POSTPLACE_PRE_ROUTE_SROUTE]
     set summary_status [dict get $summary status]
     set wires [dict get $summary wires]
@@ -2928,6 +2941,11 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
         set status PASS
         set verify_clean_override 1
     }
+    if {!$pg_drc_capture_ok ||
+        [dict get $pg_cross_net_shorts status] ne "PASS" ||
+        [dict get $pg_cross_net_shorts count] != 0} {
+        set status FAIL
+    }
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS_BEFORE_VERIFY=$status_before_verify"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_VERIFY_CLEAN_OVERRIDE=$verify_clean_override"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_DANGLING_ONLY_OVERRIDE=$dangling_only_override"
@@ -2983,6 +3001,7 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
 proc mptdc_signoff_block_pg_pin_specs {} {
     set style [mptdc_signoff_block_pg_pin_style]
     switch -- $style {
+        ring_aligned_vdd_vss_pair -
         simple_vdd_vss_pair -
         vdd_vss_pair -
         left_vdd_right_vss {
@@ -3047,7 +3066,7 @@ proc mptdc_signoff_block_pg_pin_style {} {
 
 proc mptdc_signoff_block_pg_pin_style_is_mesh {} {
     set style [mptdc_signoff_block_pg_pin_style]
-    return [expr {$style in {mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss}}]
+    return [expr {$style in {ring_aligned_vdd_vss_pair mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss}}]
 }
 
 proc mptdc_signoff_pg_ring_width {} {
@@ -3319,8 +3338,10 @@ proc mptdc_signoff_create_block_pg_pins {} {
         return [list 0 $rpt]
     }
 
+    set pin_specs [mptdc_signoff_block_pg_pin_specs]
+    puts $fh "BLOCK_PG_PIN_REQUESTED_COUNT=[llength $pin_specs]"
     set failures [list]
-    foreach spec [mptdc_signoff_block_pg_pin_specs] {
+    foreach spec $pin_specs {
         set net [lindex $spec 0]
         set side [lindex $spec 1]
         set pin_layer $layer
@@ -5563,6 +5584,45 @@ proc mptdc_signoff_dump_drc_markers {path} {
     }
     close $fh
     return $path
+}
+
+proc mptdc_signoff_pg_cross_net_short_status {path} {
+    set result [dict create status FAIL reason missing_marker_report count UNKNOWN lines [list]]
+    if {![file exists $path]} {
+        return $result
+    }
+
+    set fh [open $path r]
+    set saw_header 0
+    set lines [list]
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {$trimmed eq ""} { continue }
+        if {$trimmed eq "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"} {
+            set saw_header 1
+            continue
+        }
+        set fields [split $line "\t"]
+        if {[llength $fields] < 7} { continue }
+        set subtype [lindex $fields 5]
+        set message [join [lrange $fields 6 end] "\t"]
+        if {[string equal -nocase $subtype Metal_Short] &&
+            [regexp -nocase {Special Wire of Net VDD} $message] &&
+            [regexp -nocase {Special Wire of Net VSS} $message]} {
+            lappend lines $trimmed
+        }
+    }
+    close $fh
+
+    if {!$saw_header} {
+        dict set result reason invalid_marker_report_header
+        return $result
+    }
+    dict set result status PASS
+    dict set result reason parsed_marker_report
+    dict set result count [llength $lines]
+    dict set result lines $lines
+    return $result
 }
 
 proc mptdc_signoff_parse_report_route_unrouted {path} {

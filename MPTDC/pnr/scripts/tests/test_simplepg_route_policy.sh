@@ -19,14 +19,23 @@ require_line 'export MPTDC_PNR_PHASE_METTP_EXCEPTION=0'
 require_line 'export MPTDC_PNR_PHASE_TOP_LAYER=MET3'
 require_line 'export MPTDC_PNR_PHASE_TOP_LAYER_IDX=3'
 require_line 'export MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP=1'
+require_line 'export MPTDC_BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair'
+require_line 'export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0'
 
 if grep -Fqx 'export MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES=1' "$LAUNCHER"; then
   echo "ERROR: ordinary routing is still promoted to METTP" >&2
   exit 1
 fi
 
+if grep -Fqx 'export MPTDC_BLOCK_PG_PIN_STYLE=simple_vdd_vss_pair' "$LAUNCHER"; then
+  echo "ERROR: unsafe broad simple VDD/VSS pin rectangles are still enabled" >&2
+  exit 1
+fi
+
 HELP="$($LAUNCHER --help)"
 grep -Fq -- '--local-phase-preplace' <<< "$HELP"
 grep -Fq -- '--physical-first' <<< "$HELP"
+
+tclsh "$SCRIPT_DIR/test_block_pg_pin_geometry.tcl"
 
 echo "MPTDC_SIMPLEPG_ROUTE_POLICY_TEST=PASS"

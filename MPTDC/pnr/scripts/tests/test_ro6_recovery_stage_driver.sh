@@ -31,12 +31,25 @@ PRE_PNR_GATE=PASS
 DECISION=PASS_CONTINUE
 EOF
 cat > "$PG_GATE" <<'EOF'
-STEP=STRICT_PG_PROOF
+STEP=PG_PROOF
 PG_RC=0
 POSTPLACE_PRE_ROUTE_SROUTE_STATUS=PASS
-POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=0
-POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_RAW_BAD=0
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=1
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_RAW_BAD=1
 POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_STATUS=DANGLING_ONLY
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_REASON=only_impvfc_94_dangling
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_COUNT=34
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX=34
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT=0
+POSTPLACE_PRE_ROUTE_SROUTE_DANGLING_ONLY_OVERRIDE=1
+POSTPLACE_PRE_ROUTE_PG_DRC_CAPTURE_STATUS=PASS
+POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_STATUS=PASS
+POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=0
+BLOCK_PG_PIN_STATUS=PASS
+BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair
+BLOCK_PG_PIN_REQUESTED_COUNT=2
+PG_GATE_MODE=BOUNDED_DANGLING_CONTINUATION
 DECISION=PASS_CONTINUE
 EOF
 cat > "$FAILED_PG_GATE" <<'EOF'
@@ -68,22 +81,58 @@ test "${MPTDC_CADENCE_FIXTURE_LOADED:-0}" = 1
 run_id=""
 stage=""
 work=""
+strict_special_clean=0
+dangling_only_max=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id) run_id="$2"; shift 2 ;;
     --stage) stage="$2"; shift 2 ;;
     --innovus-work) work="$2"; shift 2 ;;
+    --strict-special-clean) strict_special_clean=1; shift ;;
+    --dangling-only-max) dangling_only_max="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
+test "$strict_special_clean" = 0
+test "$dangling_only_max" = 34
 run="$work/$run_id"
 mkdir -p "$run/reports" "$run/def" "$run/checkpoints/04_route.enc.dat"
 if [[ "$stage" == pg_proof ]]; then
-  cat > "$run/reports/postplace_pre_route_sroute_status.rpt" <<'RPT'
+  cat > "$run/reports/block_pg_pin_status.rpt" <<'RPT'
+BLOCK_PG_PIN_STATUS=PASS
+BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair
+BLOCK_PG_PIN_REQUESTED_COUNT=2
+RPT
+  if [[ "${FAKE_PG_RAW_CLEAN:-0}" == 1 ]]; then
+    pg_bad=0
+    pg_raw_bad=0
+    dangling_status=FAIL
+    dangling_reason=no_dangling_evidence
+    dangling_count=0
+    dangling_override=0
+  else
+    pg_bad=1
+    pg_raw_bad=1
+    dangling_status=DANGLING_ONLY
+    dangling_reason=only_impvfc_94_dangling
+    dangling_count=34
+    dangling_override=1
+  fi
+  cross_short_count="${FAKE_PG_CROSS_SHORT_COUNT:-0}"
+  cat > "$run/reports/postplace_pre_route_sroute_status.rpt" <<RPT
 POSTPLACE_PRE_ROUTE_SROUTE_STATUS=PASS
-POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=0
-POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_RAW_BAD=0
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=$pg_bad
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_RAW_BAD=$pg_raw_bad
 POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_STATUS=$dangling_status
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_REASON=$dangling_reason
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_COUNT=$dangling_count
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX=34
+POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT=0
+POSTPLACE_PRE_ROUTE_SROUTE_DANGLING_ONLY_OVERRIDE=$dangling_override
+POSTPLACE_PRE_ROUTE_PG_DRC_CAPTURE_STATUS=PASS
+POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_STATUS=PASS
+POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=$cross_short_count
 RPT
   exit 0
 fi
@@ -200,7 +249,26 @@ env "${COMMON_ENV[@]}" bash "$DRIVER" \
   > "$TMP_ROOT/pg.stdout"
 grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/pg.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/pg_fixture/reports/operator_gate_pg_proof.rpt"
-grep -q 'innovus pg_fixture .* STRICT_PG_PROOF' "$PUBLISH_CALLS"
+grep -qx 'PG_GATE_MODE=BOUNDED_DANGLING_CONTINUATION' "$WORK/innovus/pg_fixture/reports/operator_gate_pg_proof.rpt"
+grep -q 'innovus pg_fixture .* PG_PROOF' "$PUBLISH_CALLS"
+
+env "${COMMON_ENV[@]}" FAKE_PG_RAW_CLEAN=1 bash "$DRIVER" \
+  --stage pg-proof --run-id pg_raw_fixture --expected-head "$HEAD_SHA" \
+  --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/pg_raw.stdout"
+grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/pg_raw_fixture/reports/operator_gate_pg_proof.rpt"
+grep -qx 'PG_GATE_MODE=RAW_CLEAN' "$WORK/innovus/pg_raw_fixture/reports/operator_gate_pg_proof.rpt"
+
+set +e
+env "${COMMON_ENV[@]}" FAKE_PG_CROSS_SHORT_COUNT=1 bash "$DRIVER" \
+  --stage pg-proof --run-id pg_cross_short --expected-head "$HEAD_SHA" \
+  --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/pg_cross_short.stdout"
+PG_CROSS_SHORT_RC=$?
+set -e
+test "$PG_CROSS_SHORT_RC" -ne 0
+grep -qx 'POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=1' "$WORK/innovus/pg_cross_short/reports/operator_gate_pg_proof.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/pg_cross_short/reports/operator_gate_pg_proof.rpt"
 
 set +e
 env "${COMMON_ENV[@]}" MPTDC_CADENCE_ENV="$FAILING_CADENCE_ENV" bash "$DRIVER" \
