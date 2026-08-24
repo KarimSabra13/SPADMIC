@@ -1,0 +1,6 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260824_mptdc_bufftap0_simplepg_pgproof_134641/logs/digital_signoff_wrapper.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+ERROR: stale or unsafe PG topology environment detected.
+ERROR: MPTDC_BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair expected mesh_lr_vdd_vss
+ERROR: unset the stale MPTDC_* variables or set MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=1 only for explicit debug bypass.
