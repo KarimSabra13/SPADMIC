@@ -1,0 +1,5 @@
+ROUTE_COMMAND=routeDesign -placementCheck
+ROUTE_DESIGN_PLACEMENT_CHECK=1
+SIGNAL_TOP_ROUTE_BLOCKAGE_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260824_mptdc_bufftap0_tempblk_physical_143726/reports/signal_top_route_blockage_status.rpt
+ROUTE_COMMAND_STATUS=PASS
+SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_CALL_STATUS=PASS

@@ -1,0 +1,44 @@
+==========================================================
+sWire: Special wire (equivalent to DEF SPECIALNETS wiring)
+----------------------------------------------------------
+area: area, Area of the special wire as defined by the LEF MACRO SIZE or OVERLAP information
+beginExt: coord, Extension of path at the first point (only on path type)
+box(settable): rect, Bounding box for shapes, actual shape for geomType = rect
+boxTrimMetal: rect, The box of this special wire trim metal
+boxTrimMetal_area: area, Area of the box of this special wire trim metal
+boxTrimMetal_ll: pt, Lower left (ll) of the box of this special wire trim metal
+boxTrimMetal_llx: coord, Lower left X (llx) of the box of this special wire trim metal
+boxTrimMetal_lly: coord, Lower left Y (lly) of the box of this special wire trim metal
+boxTrimMetal_size: pt, Size of the box of this special wire trim metal
+boxTrimMetal_sizex: coord, Size X of the box of this special wire trim metal
+boxTrimMetal_sizey: coord, Size Y of the box of this special wire trim metal
+boxTrimMetal_ur: pt, Upper right (ur) of the box of this special wire trim metal
+boxTrimMetal_urx: coord, Upper Right X (urx) of the box of this special wire trim metal
+boxTrimMetal_ury: coord, Upper Right Y (ury) of the box of this special wire trim metal
+box_area: area, Area of bounding box for shapes, actual shape for geomType = rect
+box_ll(settable): pt, Lower left (ll) of bounding box for shapes, actual shape for geomType = rect
+box_llx(settable): coord, Lower left X (llx) of bounding box for shapes, actual shape for geomType = rect
+box_lly(settable): coord, Lower left Y (lly) of bounding box for shapes, actual shape for geomType = rect
+box_size(settable): pt, Size of bounding box for shapes, actual shape for geomType = rect
+box_sizex(settable): coord, Size X of bounding box for shapes, actual shape for geomType = rect
+box_sizey(settable): coord, Size Y of bounding box for shapes, actual shape for geomType = rect
+box_ur(settable): pt, Upper right (ur) of bounding box for shapes, actual shape for geomType = rect
+box_urx(settable): coord, Upper Right X (urx) of bounding box for shapes, actual shape for geomType = rect
+box_ury(settable): coord, Upper Right Y (ury) of bounding box for shapes, actual shape for geomType = rect
+colorTrimMetal: int, The color of this specical wire trim metal
+endExt: coord, Extension of path at the last point (only on path type)
+geomType: enum(path pathSeg poly rect), Type of shape (rect, polygon, etc.)
+hasTrimMetal: bool, Indicates the speical wire has trim metal or not
+isPatch: bool, Indicates the special wire is patch wire
+layer(settable): obj(layer), Pointer to layer
+mask(settable): int, Indicates mask number for multiple mask layer usage. Refer to layer's .numMask attribute for legal range, 0 indicates uncolored.
+net: obj(net), Pointer to net that the sWire belongs to
+objType: enum(antennaData antennaModel bndry bump bumpGrid bumpTerm bus busGuide busSinkGroup cellDensity densityShape fPlan foreign gCellGridDef group guiLine guiPoly guiRect guiText hInst hInstTerm hNet hTerm head inst instTerm io layer layerRule layerShape libCell marker net netGroup pBlkg pWire pd pgInstTerm pin pinGroup pinGuide pinShape pkgComponent pkgObject prop ptn ptnCell ptnPinBlkg rBlkg resistor resizeBlkg routeType row rule sViaInst sWire sdp shape shapeVia site stackViaRule term text topCell trackDef vCell vWire via viaInst viaRuleGenerate whatIfVia whatIfWire wire), Object type: Special Wire
+polyPts: list(pt), Polygon boundary for the object, the first point is not repeated as the last point in the list
+props: objList(prop), List of pointers to properties
+pts: list(pt), 2 points for pathSeg center-line, n points for path center-line, n points for polygon, null for rect
+shape(settable): enum(blockRing blockagewire blockwire corewire drcfill fillopc fillwire followpin iowire notype padRing ring stripe), DEF SPECIALNETS + SHAPE equivalents (ring, stripe, etc.)
+shieldNet: obj(net), Pointer to net that is shielded if status is shieldNet
+status(settable): enum(cover fixed routed shield unknown), Wiring status (equivalent to DEF SPECIALNETS special wiring status)
+userClass(settable): string, Subclass value ({} is returned if no subClass is specified)
+width(settable): coord, Width of path/pathSeg type

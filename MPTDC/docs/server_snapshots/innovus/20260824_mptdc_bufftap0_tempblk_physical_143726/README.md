@@ -1,0 +1,167 @@
+# MPTDC Server Snapshot
+
+- Kind: `innovus`
+- Run ID: `20260824_mptdc_bufftap0_tempblk_physical_143726`
+- Source directory: `/sim/ksabra/SPADMIC_work/innovus/20260824_mptdc_bufftap0_tempblk_physical_143726`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/docs/server_snapshots/innovus/20260824_mptdc_bufftap0_tempblk_physical_143726`
+- Collection branch: `SPADMIC_test`
+- Collection commit: `4245047cacc451bad158041410dd1f47a90ce9b4`
+- Created UTC: `2026-08-24T12:57:09Z`
+
+## Included Files
+- `README.md`
+- `logs/digital_signoff_wrapper.log.messages.tail`
+- `logs/innovus_mptdc_digital_signoff.log.messages.tail`
+- `manifests/row_infra_policy_manifest.rpt`
+- `manifests/run_manifest.txt`
+- `manifests/stage_trace.csv`
+- `manifests/tool_versions.rpt`
+- `reports/POSTPLACE_PRE_ROUTE_SROUTE_sroute_1.rpt`
+- `reports/POSTPLACE_PRE_ROUTE_SROUTE_sroute_2.rpt`
+- `reports/POSTPLACE_PRE_ROUTE_SROUTE_sroute_3.rpt`
+- `reports/POST_FILLER_POST_SROUTE_ecoRoute_fix_drc.rpt`
+- `reports/POST_FILLER_POST_SROUTE_ecoRoute_fix_drc_markers.tsv`
+- `reports/POST_FILLER_POST_SROUTE_ecoRoute_fix_drc_markers_schema.rpt`
+- `reports/POST_FILLER_PRE_SROUTE_ecoRoute_target.rpt`
+- `reports/POST_FILLER_PRE_SROUTE_ecoRoute_target_markers.tsv`
+- `reports/POST_FILLER_PRE_SROUTE_ecoRoute_target_markers_schema.rpt`
+- `reports/POST_FILLER_SROUTE_sroute_1.rpt`
+- `reports/antenna.rpt`
+- `reports/block_pg_pin_status.rpt`
+- `reports/block_pg_stitch_status.rpt`
+- `reports/check_place_post_place.rpt`
+- `reports/check_place_pre_route.rpt`
+- `reports/check_place_ro_phase_overlap.rpt`
+- `reports/check_place_ro_phase_overlap_pre_place.rpt`
+- `reports/check_timing_tc_post_import.rpt`
+- `reports/clock_tree_summary.rpt`
+- `reports/cts_clk_sys_constraint_cleanup.rpt`
+- `reports/cts_clk_sys_root_post_ccopt.rpt`
+- `reports/cts_clk_sys_root_post_cts_opt.rpt`
+- `reports/cts_clk_sys_root_pre_ccopt.rpt`
+- `reports/cts_clk_sys_root_pre_ccopt_selected_spec.rpt`
+- `reports/cts_clk_sys_root_pre_cts_policy.rpt`
+- `reports/cts_clk_sys_spec_audit.rpt`
+- `reports/cts_clk_sys_spec_source.rpt`
+- `reports/cts_clock_tree_detail.rpt`
+- `reports/cts_measured_status.rpt`
+- `reports/cts_policy.rpt`
+- `reports/digital_pnr_signoff_status.rpt`
+- `reports/effective_sdc_audit.rpt`
+- `reports/fast_tag_column_placement.rpt`
+- `reports/filler_mode_status.rpt`
+- `reports/filler_status.rpt`
+- `reports/floorplan_intent.rpt`
+- `reports/floorplan_status.rpt`
+- `reports/hold_post_cts.rpt`
+- `reports/innovus_fatal_message_audit.rpt`
+- `reports/io_pin_placement.csv`
+- `reports/io_pin_placement_summary.md`
+- `reports/io_status.rpt`
+- `reports/operator_gate_physical_pnr.rpt`
+- `reports/pd_matrix_floorplan.rpt`
+- `reports/pd_matrix_status.rpt`
+- `reports/pd_physical_matrix_status.rpt`
+- `reports/pd_physical_matrix_tiles.csv`
+- `reports/pg_connectivity_commands.rpt`
+- `reports/pg_connectivity_gate.rpt`
+- `reports/pg_physical_status.rpt`
+- `reports/pg_postroute_connectivity_status.rpt`
+- `reports/pg_verify_connectivity_all.rpt`
+- `reports/pg_verify_connectivity_special.rpt`
+- `reports/phase_buffer_placement_constraints.rpt`
+- `reports/phase_buffer_status.rpt`
+- `reports/phase_rc_parser_selftest.rpt`
+- `reports/phase_rc_parser_selftest_detailed.csv`
+- `reports/phase_rc_parser_selftest_fixture.csv`
+- `reports/phase_rc_parser_selftest_status.rpt`
+- `reports/placement_pre_route_status.rpt`
+- `reports/placement_status.rpt`
+- `reports/pnr_sdc_sanitization.rpt`
+- `reports/post_filler_verify_connectivity_all.rpt`
+- `reports/post_filler_verify_connectivity_special.rpt`
+- `reports/post_filler_verify_drc.rpt`
+- `reports/post_filler_verify_drc_markers.tsv`
+- `reports/post_filler_verify_drc_markers_schema.rpt`
+- `reports/post_import_integrity_gate.rpt`
+- `reports/postplace_pre_route_block_pg_stitch_status.rpt`
+- `reports/postplace_pre_route_pg_objects_after_sroute.rpt`
+- `reports/postplace_pre_route_pg_objects_before_sroute.rpt`
+- `reports/postplace_pre_route_pg_objects_before_stitch.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup_marker_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup_pinShape_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup_pin_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup_sWire_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup_term_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup_verify_special.console.rpt`
+- `reports/postplace_pre_route_pg_topology_after_ro_pg_hookup_verify_special.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute_marker_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute_pinShape_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute_pin_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute_sWire_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute_term_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute_verify_special.console.rpt`
+- `reports/postplace_pre_route_pg_topology_after_sroute_verify_special.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute_marker_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute_pinShape_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute_pin_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute_sWire_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute_term_schema.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute_verify_special.console.rpt`
+- `reports/postplace_pre_route_pg_topology_before_sroute_verify_special.rpt`
+- `reports/postplace_pre_route_sroute_status.rpt`
+- `reports/postplace_pre_route_verify_connectivity_special.rpt`
+- `reports/postplace_pre_route_verify_drc.rpt`
+- `reports/postplace_pre_route_verify_drc_markers.tsv`
+- `reports/postplace_pre_route_verify_drc_markers_schema.rpt`
+- `reports/postroute_opt_status.rpt`
+- `reports/pre_pnr_gate.rpt`
+- `reports/report_route.rpt`
+- `reports/ro_halo_status.rpt`
+- `reports/ro_import_source_gate.rpt`
+- `reports/ro_macro_status.rpt`
+- `reports/ro_pg_hookup_status.rpt`
+- `reports/ro_pg_probe_after_hookup.rpt`
+- `reports/ro_pg_probe_before_hookup.rpt`
+- `reports/ro_phase_overlap_audit.rpt`
+- `reports/ro_phase_overlap_pre_place_audit.rpt`
+- `reports/ro_route_blockage_status.rpt`
+- `reports/route_command_status.rpt`
+- `reports/route_connectivity_regular.rpt`
+- `reports/route_connectivity_special.rpt`
+- `reports/route_connectivity_special_command.rpt`
+- `reports/route_connectivity_special_detailed.console.rpt`
+- `reports/route_connectivity_special_detailed.rpt`
+- `reports/route_drc.rpt`
+- `reports/route_drc_markers.tsv`
+- `reports/route_drc_markers_schema.rpt`
+- `reports/route_failed.rpt`
+- `reports/route_gate_failure_drc_markers.tsv`
+- `reports/route_gate_failure_drc_markers_schema.rpt`
+- `reports/route_layer_audit.rpt`
+- `reports/route_layer_intent.rpt`
+- `reports/route_layer_limits.rpt`
+- `reports/route_recovery_status.rpt`
+- `reports/route_status.rpt`
+- `reports/row_infra_insertion.rpt`
+- `reports/row_infra_policy.rpt`
+- `reports/signal_top_route_blockage_status.rpt`
+- `reports/source_check.rpt`
+- `reports/tap_pin_def_excerpt.rpt`
+- `reports/timing_post_cts.rpt`
+- `reports/timing_tc_post_import.rpt`
+- `reports/timing_tc_post_import_top20.rpt`
+- `reports/timing_tc_pre_cts.rpt`
+- `reports/timing_tc_pre_cts_top100.rpt`
+
+## Excluded By Policy
+
+- Innovus checkpoints and databases;
+- raw GDS/OAS files;
+- full raw logs unless converted to message tails;
+- text files larger than 2097152 bytes;
+- large binary artifacts;
+- server work directories outside this snapshot.
