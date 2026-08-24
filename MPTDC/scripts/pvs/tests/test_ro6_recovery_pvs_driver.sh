@@ -44,10 +44,19 @@ git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
+FAKE_CADENCE_ENV="$TMP_ROOT/fake_cadence_env.sh"
+cat > "$FAKE_CADENCE_ENV" <<'EOF'
+: "$MPTDC_CADENCE_FIXTURE_UNSET"
+export MPTDC_CADENCE_FIXTURE_LOADED=1
+EOF
+FAILING_CADENCE_ENV="$TMP_ROOT/failing_cadence_env.sh"
+printf 'return 23\n' > "$FAILING_CADENCE_ENV"
+
 FAKE_PREP="$TMP_ROOT/fake_prep.sh"
 cat > "$FAKE_PREP" <<'EOF'
 #!/usr/bin/env bash
 set -eu
+test "${MPTDC_CADENCE_FIXTURE_LOADED:-0}" = 1
 run_id=""; work=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -128,7 +137,7 @@ run_driver() {
     MPTDC_RECOVERY_PVS_AUDIT="$FAKE_AUDIT" \
     MPTDC_RECOVERY_PVS_DRC="$FAKE_DRC" \
     MPTDC_RECOVERY_PVS_LVS="$FAKE_LVS" \
-    MPTDC_CADENCE_ENV="$TMP_ROOT/no-cadence-env" \
+    MPTDC_CADENCE_ENV="$FAKE_CADENCE_ENV" \
     MPTDC_INNOVUS_WORK="$WORK" \
     PUBLISH_CALLS="$calls" \
     "$@" \
@@ -138,9 +147,23 @@ run_driver() {
 
 PASS_CALLS="$TMP_ROOT/pass.calls"
 run_driver pvs_pass "$PASS_CALLS" > "$TMP_ROOT/pass.stdout"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 test "$(wc -l < "$PASS_CALLS")" -eq 5
 grep -qx 'DECISION=PASS_CONTINUE' "$WORK/pvs_pass/reports/operator_gate_pvs_lvs.rpt"
 grep -qx 'PVS_RECOVERY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+
+ENV_FAIL_CALLS="$TMP_ROOT/env_fail.calls"
+set +e
+run_driver pvs_env_fail "$ENV_FAIL_CALLS" \
+  MPTDC_CADENCE_ENV="$FAILING_CADENCE_ENV" > "$TMP_ROOT/env_fail.stdout"
+ENV_FAIL_RC=$?
+set -e
+test "$ENV_FAIL_RC" -eq 5
+grep -qx 'CADENCE_ENV_RC=23' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'CADENCE_ENV_STATUS=FAIL' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/env_fail.stdout"
+test ! -e "$WORK/pvs_env_fail"
+test ! -e "$ENV_FAIL_CALLS"
 
 FAIL_CALLS="$TMP_ROOT/fail.calls"
 set +e

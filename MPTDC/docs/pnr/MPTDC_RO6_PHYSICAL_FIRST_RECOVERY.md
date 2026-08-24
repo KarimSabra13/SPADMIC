@@ -105,9 +105,10 @@ echo "PG_DRIVER_RC=$PG_DRIVER_RC"
 echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```
 
-Pass requires all of these final lines:
+Pass requires all of these markers:
 
 ```text
+CADENCE_ENV_STATUS=PASS
 PG_DRIVER_RC=0
 DECISION=PASS_CONTINUE
 PUBLISH_RC=0
@@ -118,6 +119,11 @@ NEXT_REQUIRED_PG_RUN_ID=<new PG run id>
 Save the printed `NEXT_REQUIRED_PG_RUN_ID`; it is the only value needed by the
 next command. On any other result, stop. If `PUBLISH_RC=0`, send the run id and
 printed HEAD so the pushed failure evidence can be reviewed remotely.
+
+`RECOVERY_PREFLIGHT=PASS` alone does not mean Innovus launched. The driver must
+next print `CADENCE_ENV_STATUS=PASS`. A missing status means the checkout still
+has the older startup bug; `CADENCE_ENV_STATUS=FAIL` means the Cadence site
+setup itself failed. In either case, stop before retrying.
 
 ### 2. Physical PnR
 
@@ -140,6 +146,7 @@ echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
 Pass requires:
 
 ```text
+CADENCE_ENV_STATUS=PASS
 PNR_DRIVER_RC=0
 DECISION=PASS_CONTINUE
 PUBLISH_RC=0
@@ -173,6 +180,7 @@ echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
 The command stops at the first failed PVS gate. Full success requires:
 
 ```text
+CADENCE_ENV_STATUS=PASS
 PVS_DRIVER_RC=0
 PVS_RECOVERY_STATUS=PASS
 PVS_PREPARATION=PASS

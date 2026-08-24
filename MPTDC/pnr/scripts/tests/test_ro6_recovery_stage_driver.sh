@@ -38,10 +38,19 @@ git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
+FAKE_CADENCE_ENV="$TMP_ROOT/fake_cadence_env.sh"
+cat > "$FAKE_CADENCE_ENV" <<'EOF'
+: "$MPTDC_CADENCE_FIXTURE_UNSET"
+export MPTDC_CADENCE_FIXTURE_LOADED=1
+EOF
+FAILING_CADENCE_ENV="$TMP_ROOT/failing_cadence_env.sh"
+printf 'return 23\n' > "$FAILING_CADENCE_ENV"
+
 FAKE_LAUNCHER="$TMP_ROOT/fake_launcher.sh"
 cat > "$FAKE_LAUNCHER" <<'EOF'
 #!/usr/bin/env bash
 set -eu
+test "${MPTDC_CADENCE_FIXTURE_LOADED:-0}" = 1
 run_id=""
 stage=""
 work=""
@@ -113,7 +122,7 @@ COMMON_ENV=(
   MPTDC_RECOVERY_REPO_ROOT="$REPO"
   MPTDC_RECOVERY_LAUNCHER="$FAKE_LAUNCHER"
   MPTDC_RECOVERY_PUBLISHER="$FAKE_PUBLISHER"
-  MPTDC_CADENCE_ENV="$TMP_ROOT/no-cadence-env"
+  MPTDC_CADENCE_ENV="$FAKE_CADENCE_ENV"
   MPTDC_WORK_ROOT="$WORK"
   MPTDC_INNOVUS_WORK="$WORK/innovus"
 )
@@ -122,8 +131,22 @@ env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage pg-proof --run-id pg_fixture --expected-head "$HEAD_SHA" \
   --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/pg.stdout"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/pg.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/pg_fixture/reports/operator_gate_pg_proof.rpt"
 grep -q 'innovus pg_fixture .* STRICT_PG_PROOF' "$PUBLISH_CALLS"
+
+set +e
+env "${COMMON_ENV[@]}" MPTDC_CADENCE_ENV="$FAILING_CADENCE_ENV" bash "$DRIVER" \
+  --stage pg-proof --run-id pg_env_fail --expected-head "$HEAD_SHA" \
+  --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/pg_env_fail.stdout"
+ENV_FAIL_RC=$?
+set -e
+test "$ENV_FAIL_RC" -eq 5
+grep -qx 'CADENCE_ENV_RC=23' "$TMP_ROOT/pg_env_fail.stdout"
+grep -qx 'CADENCE_ENV_STATUS=FAIL' "$TMP_ROOT/pg_env_fail.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/pg_env_fail.stdout"
+test ! -e "$WORK/innovus/pg_env_fail"
 
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage physical-pnr --run-id route_fixture --pg-run-id pg_prior \

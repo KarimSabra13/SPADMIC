@@ -53,6 +53,38 @@ report_value() {
   fi
 }
 
+load_cadence_env() {
+  local env_file="$1"
+  local source_rc=0
+
+  echo "CADENCE_ENV=$env_file"
+  if [[ ! -r "$env_file" ]]; then
+    echo "CADENCE_ENV_RC=0"
+    echo "CADENCE_ENV_STATUS=SKIPPED_NOT_READABLE"
+    return 0
+  fi
+
+  # Site setup files are written for interactive shells and may read unset
+  # variables. Keep the recovery driver's nounset policy outside this boundary.
+  set +u
+  set +e
+  # shellcheck disable=SC1090
+  source "$env_file" >/dev/null 2>&1
+  source_rc=$?
+  set +e
+  set -u
+  set -o pipefail
+
+  echo "CADENCE_ENV_RC=$source_rc"
+  if [[ "$source_rc" -eq 0 ]]; then
+    echo "CADENCE_ENV_STATUS=PASS"
+    return 0
+  fi
+
+  echo "CADENCE_ENV_STATUS=FAIL"
+  return "$source_rc"
+}
+
 tracked_report_passes() {
   local report="$1"
   shift
@@ -223,9 +255,10 @@ if [[ "$PREFLIGHT" != "PASS" ]]; then
 fi
 
 CADENCE_ENV="${MPTDC_CADENCE_ENV:-/eda/cadence/eda_2023-2024}"
-if [[ -r "$CADENCE_ENV" ]]; then
-  # shellcheck disable=SC1090
-  source "$CADENCE_ENV" >/dev/null 2>&1 || true
+if ! load_cadence_env "$CADENCE_ENV"; then
+  echo "STOP: failed to source Cadence environment: $CADENCE_ENV"
+  echo "DECISION=FAIL_STOP"
+  exit 5
 fi
 
 LAUNCH_ARGS=(
