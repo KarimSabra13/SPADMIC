@@ -1,0 +1,5 @@
+# Exact read-only command payload supplied to Innovus
+SOURCE_PNR_RUN_ID=20260824_154115_mptdc_bufftap0_pnrlef35_physical
+SOURCE_CHECKPOINT=/sim/ksabra/SPADMIC_work/innovus/20260824_154115_mptdc_bufftap0_pnrlef35_physical/checkpoints/04_route_failed.enc.dat
+PROBE_METHOD=READ_ONLY_TARGET_NET_PIN_WIRE_VIA_PG_GEOMETRY
+mptdc_ckpt_probe_target_geometry {u_core_n_66687 u_core_n_67240 u_core_n_57563}

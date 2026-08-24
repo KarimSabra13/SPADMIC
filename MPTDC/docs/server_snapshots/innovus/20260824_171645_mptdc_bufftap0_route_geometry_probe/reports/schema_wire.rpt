@@ -1,0 +1,27 @@
+==========================================================================================
+wire: Wire (symbolic wire type, equivalent to DEF NETS wiring). Represents a wire segment.
+------------------------------------------------------------------------------------------
+area: area, Area of the wire as defined by the LEF MACRO SIZE or OVERLAP information
+beginExt(settable): coord, Extension of wire at the first point
+box: rect, Bounding box of the shape
+box_area: area, Area of bounding box of the shape
+box_ll: pt, Lower left (ll) of bounding box of the shape
+box_llx: coord, Lower left X (llx) of bounding box of the shape
+box_lly: coord, Lower left Y (lly) of bounding box of the shape
+box_size: pt, Size of bounding box of the shape
+box_sizex: coord, Size X of bounding box of the shape
+box_sizey: coord, Size Y of bounding box of the shape
+box_ur: pt, Upper right (ur) of bounding box of the shape
+box_urx: coord, Upper Right X (urx) of bounding box of the shape
+box_ury: coord, Upper Right Y (ury) of bounding box of the shape
+direction: enum(Horizontal Other Vertical), Direction of wire, consistent with layer direction from LEF/OpenAccess
+endExt(settable): coord, Extension of wire at the second point
+layer: obj(layer), Pointer to layer of wire
+length: coord, Centerline length of wire between the endpoints (not the box width/height)
+mask(settable): int, Indicates mask number for multiple mask layer usage. Refer to layer's .numMask attribute for legal range, 0 indicates uncolored.
+net: obj(net), Pointer to net that the wire belongs to
+objType: enum(antennaData antennaModel bndry bump bumpGrid bumpTerm bus busGuide busSinkGroup cellDensity densityShape fPlan foreign gCellGridDef group guiLine guiPoly guiRect guiText hInst hInstTerm hNet hTerm head inst instTerm io layer layerRule layerShape libCell marker net netGroup pBlkg pWire pd pgInstTerm pin pinGroup pinGuide pinShape pkgComponent pkgObject prop ptn ptnCell ptnPinBlkg rBlkg resistor resizeBlkg routeType row rule sViaInst sWire sdp shape shapeVia site stackViaRule term text topCell trackDef vCell vWire via viaInst viaRuleGenerate whatIfVia whatIfWire wire), Object type: Wire
+pts: list(pt), 2 points (center-line) for the wire
+rule: obj(rule), Pointer to non-default rule corresponding to the wire, wires with the default routing rule will return NULL (0x0).
+status(settable): enum(cover fixed noshield routed unknown), Wiring status (equivalent to DEF NETS regular wiring status)
+width: coord, Width of wire

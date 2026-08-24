@@ -1,0 +1,16 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_probe_target_geometry {u_core_n_66687 u_core_n_67240 u_core_n_57563}
+REPORT_STATUS=FAILED
+ERROR=route geometry probe evidence is incomplete: report=/sim/ksabra/SPADMIC_work/innovus/20260824_171645_mptdc_bufftap0_route_geometry_probe/reports/route_geometry_target_probe.rpt
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+route geometry probe evidence is incomplete: report=/sim/ksabra/SPADMIC_work/innovus/20260824_171645_mptdc_bufftap0_route_geometry_probe/reports/route_geometry_target_probe.rpt
+    while executing
+"error "route geometry probe evidence is incomplete: report=$probe_rpt""
+    (procedure "mptdc_ckpt_probe_target_geometry" line 277)
+    invoked from within
+"mptdc_ckpt_probe_target_geometry {u_core_n_66687 u_core_n_67240 u_core_n_57563}"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
