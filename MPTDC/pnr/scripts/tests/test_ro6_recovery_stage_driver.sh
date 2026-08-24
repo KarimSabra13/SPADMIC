@@ -83,6 +83,7 @@ stage=""
 work=""
 strict_special_clean=0
 dangling_only_max=""
+temporary_signal_top_blockage=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id) run_id="$2"; shift 2 ;;
@@ -90,11 +91,15 @@ while [[ $# -gt 0 ]]; do
     --innovus-work) work="$2"; shift 2 ;;
     --strict-special-clean) strict_special_clean=1; shift ;;
     --dangling-only-max) dangling_only_max="$2"; shift 2 ;;
+    --temporary-signal-top-route-blockage) temporary_signal_top_blockage=1; shift ;;
     *) shift ;;
   esac
 done
 test "$strict_special_clean" = 0
 test "$dangling_only_max" = 34
+if [[ "$stage" == full_closure ]]; then
+  test "$temporary_signal_top_blockage" = 1
+fi
 run="$work/$run_id"
 mkdir -p "$run/reports" "$run/def" "$run/checkpoints/04_route.enc.dat"
 if [[ "$stage" == pg_proof ]]; then
@@ -150,7 +155,17 @@ SPECIAL_NET_CONNECTIVITY_RAW_BAD=0
 SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
 UNROUTED_NETS=0
 RPT
-printf 'router_command_top_layer=MET3\n' > "$run/reports/route_layer_intent.rpt"
+cat > "$run/reports/route_layer_intent.rpt" <<'RPT'
+signal_top_layer=MET3
+router_command_top_layer=METTP
+RPT
+printf 'ROUTE_COMMAND_STATUS=PASS\n' > "$run/reports/route_command_status.rpt"
+cat > "$run/reports/signal_top_route_blockage_status.rpt" <<'RPT'
+SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=1
+SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=PASS
+SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=PASS
+SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED
+RPT
 printf 'REPORT_STATUS=OK\n' > "$run/reports/io_pin_placement_summary.md"
 cat > "$run/reports/io_pin_placement.csv" <<'CSV'
 pin,direction,side,layer,status
@@ -314,6 +329,9 @@ env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/route.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'signal_top_layer=MET3' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'router_command_top_layer=METTP' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$WORK/innovus/route_fixture/reports/tap_pin_def_excerpt.rpt"
 
 set +e

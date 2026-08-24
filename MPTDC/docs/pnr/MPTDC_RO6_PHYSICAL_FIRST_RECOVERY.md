@@ -16,13 +16,20 @@ also exposed three independent VDD-to-VSS METTP shorts made by the old broad
 canonical run uses exactly two ring-aligned VDD/VSS pins and explicitly gates
 the VDD/VSS cross-net-short count at zero.
 
-The published retry `20260824_mptdc_bufftap0_simplepg_pgproof_134641` did not
-launch Innovus and contains no new physical result. Its shared wrapper returned
-`TOOL_RC=4` because the PG policy guard still required
-`mesh_lr_vdd_vss` after the launcher selected the supported
-`ring_aligned_vdd_vss_pair` style. The guard now accepts those two safe styles
-and continues to reject the broad legacy pair styles. Rerun PG proof once after
-synchronizing the branch; do not treat the failed retry as a PG candidate.
+The published PG proof
+`20260824_mptdc_bufftap0_simplepg_pgproof_135116` is accepted for the next
+physical run. It uses exactly two ring-aligned PG pins, has zero VDD/VSS
+cross-net shorts, and bounds the remaining 34 pre-route `IMPVFC-94` dangling
+tails. This is permission to attempt routing, not final PG closure.
+
+The first physical retry
+`20260824_mptdc_bufftap0_mettpfix_physical_140734` did not start detailed
+routing. NanoRoute rejected global top layer MET3 with `NRDB-954` because legal
+special PG wires already exist on METTP (layer 4). The corrected policy keeps
+NanoRoute's global command ceiling at METTP, creates one named temporary METTP
+blockage during signal routing, and removes it before filler PG work and final
+DRC. This preserves an ordinary signal top of MET3 without leaving the broad
+blockage in the final database.
 
 This recovery keeps ordinary and phase routing on MET1 through MET3 while still
 allowing special VDD/VSS routing on METTP. It does not reuse the dirty route
@@ -37,7 +44,8 @@ checkpoint, hand-patch marker 57556, or stream GDS from a run with shorts.
    VDD/VSS cross-net shorts are both zero.
 3. Run a fresh physical-first PnR and require Innovus DRC, shorts, regular
    connectivity, special connectivity, and unrouted nets all zero.
-4. Confirm the router command top layer is MET3 and both tap pins are present.
+4. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
+   temporary METTP blockage was created and removed, and both tap pins exist.
 5. Restore only that clean `04_route.enc.dat` checkpoint and merge the real RO
    OA GDS.
 6. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
@@ -56,7 +64,7 @@ log tails are what make remote analysis possible.
 |---|---|---|
 | Pre-PnR | package RC 0, pre-PnR RC 0, `PRE_PNR_GATE=PASS` | `genus` |
 | PG proof | wrapper RC 0, sroute PASS, PG cross-net shorts 0, non-RO failures 0, and either raw clean or bounded classified `IMPVFC-94` only | `innovus` |
-| Physical PnR | wrapper RC 0, router top MET3, route/DRC PASS, every DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
+| Physical PnR | wrapper RC 0, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
 | Base DRC | gate PASS, variant BASE, both report totals 0 | `pvs` |
@@ -182,14 +190,22 @@ CADENCE_ENV_STATUS=PASS
 PNR_DRIVER_RC=0
 DECISION=PASS_CONTINUE
 PUBLISH_RC=0
+signal_top_layer=MET3
+router_command_top_layer=METTP
+ROUTE_COMMAND_STATUS=PASS
+SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=1
+SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=PASS
+SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=PASS
+SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED
 NEXT_STAGE=PVS
 NEXT_REQUIRED_PNR_RUN_ID=<new physical PnR run id>
 ```
 
-The driver independently requires router top `MET3`, zero Innovus DRC and
-shorts, zero regular and special connectivity debt, zero unrouted nets, and
-exactly the two south-edge MET3 buffered tap pins. It publishes a failed route
-as evidence but never promotes it to PVS.
+The driver independently requires ordinary signal top `MET3`, NanoRoute top
+`METTP`, confirmed temporary-blockage removal, zero Innovus DRC and shorts,
+zero regular and special connectivity debt, zero unrouted nets, and exactly the
+two south-edge MET3 buffered tap pins. It publishes a failed route as evidence
+but never promotes it to PVS.
 
 ### 3. PVS Preparation, DRC, and LVS
 
@@ -477,7 +493,7 @@ if [ "$PG_DECISION" = "PASS_CONTINUE" ] && \
     --physical-first \
     --strict-special-clean \
     --post-filler-sroute \
-    --no-signal-top-route-blockage
+    --temporary-signal-top-route-blockage
   PNR_RC=$?
 else
   echo "STOP: strict PG proof did not pass; full route not launched"
@@ -486,6 +502,8 @@ fi
 
 ROUTE_REPORT="$PNR_DIR/reports/route_status.rpt"
 ROUTE_INTENT_REPORT="$PNR_DIR/reports/route_layer_intent.rpt"
+ROUTE_COMMAND_REPORT="$PNR_DIR/reports/route_command_status.rpt"
+SIGNAL_TOP_BLOCKAGE_REPORT="$PNR_DIR/reports/signal_top_route_blockage_status.rpt"
 IO_PIN_SUMMARY="$PNR_DIR/reports/io_pin_placement_summary.md"
 IO_PIN_CSV="$PNR_DIR/reports/io_pin_placement.csv"
 ROUTE_PASS="$(sed -n 's/^ROUTE_STATUS=//p' "$ROUTE_REPORT" 2>/dev/null | tail -1)"
@@ -498,6 +516,12 @@ SPECIAL_RAW_BAD="$(sed -n 's/^SPECIAL_NET_CONNECTIVITY_RAW_BAD=//p' "$ROUTE_REPO
 SPECIAL_NON_RO_BAD="$(sed -n 's/^SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=//p' "$ROUTE_REPORT" 2>/dev/null | tail -1)"
 UNROUTED="$(sed -n 's/^UNROUTED_NETS=//p' "$ROUTE_REPORT" 2>/dev/null | tail -1)"
 ROUTER_TOP="$(sed -n 's/^router_command_top_layer=//p' "$ROUTE_INTENT_REPORT" 2>/dev/null | tail -1)"
+SIGNAL_TOP="$(sed -n 's/^signal_top_layer=//p' "$ROUTE_INTENT_REPORT" 2>/dev/null | tail -1)"
+ROUTE_COMMAND_STATUS="$(sed -n 's/^ROUTE_COMMAND_STATUS=//p' "$ROUTE_COMMAND_REPORT" 2>/dev/null | tail -1)"
+SIGNAL_TOP_BLOCKAGE_TEMPORARY="$(sed -n 's/^SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=//p' "$SIGNAL_TOP_BLOCKAGE_REPORT" 2>/dev/null | tail -1)"
+SIGNAL_TOP_BLOCKAGE_CREATE="$(sed -n 's/^SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=//p' "$SIGNAL_TOP_BLOCKAGE_REPORT" 2>/dev/null | tail -1)"
+SIGNAL_TOP_BLOCKAGE_REMOVE="$(sed -n 's/^SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=//p' "$SIGNAL_TOP_BLOCKAGE_REPORT" 2>/dev/null | tail -1)"
+SIGNAL_TOP_BLOCKAGE_STATUS="$(sed -n 's/^SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=//p' "$SIGNAL_TOP_BLOCKAGE_REPORT" 2>/dev/null | tail -1)"
 IO_PIN_STATUS="$(sed -n 's/^REPORT_STATUS=//p' "$IO_PIN_SUMMARY" 2>/dev/null | tail -1)"
 TAP_SLOW_SOUTH_PLAN_COUNT="$(awk -F, '$1 == "\"ro_slow_tap0_o\"" && $3 == "SOUTH" && $4 == "MET3" && $5 == "REQUESTED" {count++} END {print count + 0}' "$IO_PIN_CSV" 2>/dev/null)"
 TAP_FAST_SOUTH_PLAN_COUNT="$(awk -F, '$1 == "\"ro_fast_tap0_o\"" && $3 == "SOUTH" && $4 == "MET3" && $5 == "REQUESTED" {count++} END {print count + 0}' "$IO_PIN_CSV" 2>/dev/null)"
@@ -547,7 +571,13 @@ if [ "$PNR_RC" -eq 0 ] && \
    [ "$SPECIAL_RAW_BAD" = "0" ] && \
    [ "$SPECIAL_NON_RO_BAD" = "0" ] && \
    [ "$UNROUTED" = "0" ] && \
-   [ "$ROUTER_TOP" = "MET3" ] && \
+   [ "$SIGNAL_TOP" = "MET3" ] && \
+   [ "$ROUTER_TOP" = "METTP" ] && \
+   [ "$ROUTE_COMMAND_STATUS" = "PASS" ] && \
+   [ "$SIGNAL_TOP_BLOCKAGE_TEMPORARY" = "1" ] && \
+   [ "$SIGNAL_TOP_BLOCKAGE_CREATE" = "PASS" ] && \
+   [ "$SIGNAL_TOP_BLOCKAGE_REMOVE" = "PASS" ] && \
+   [ "$SIGNAL_TOP_BLOCKAGE_STATUS" = "REMOVED" ] && \
    [ "$IO_PIN_STATUS" = "OK" ] && \
    [ "$TAP_SLOW_SOUTH_PLAN_COUNT" = "1" ] && \
    [ "$TAP_FAST_SOUTH_PLAN_COUNT" = "1" ] && \
@@ -594,7 +624,13 @@ if [ -d "$PNR_DIR" ]; then
     echo "SPECIAL_NET_CONNECTIVITY_RAW_BAD=$SPECIAL_RAW_BAD"
     echo "SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=$SPECIAL_NON_RO_BAD"
     echo "UNROUTED_NETS=$UNROUTED"
+    echo "signal_top_layer=$SIGNAL_TOP"
     echo "router_command_top_layer=$ROUTER_TOP"
+    echo "ROUTE_COMMAND_STATUS=$ROUTE_COMMAND_STATUS"
+    echo "SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=$SIGNAL_TOP_BLOCKAGE_TEMPORARY"
+    echo "SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=$SIGNAL_TOP_BLOCKAGE_CREATE"
+    echo "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=$SIGNAL_TOP_BLOCKAGE_REMOVE"
+    echo "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=$SIGNAL_TOP_BLOCKAGE_STATUS"
     echo "IO_PIN_PLACEMENT_STATUS=$IO_PIN_STATUS"
     echo "ro_slow_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_SLOW_SOUTH_PLAN_COUNT"
     echo "ro_fast_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_FAST_SOUTH_PLAN_COUNT"

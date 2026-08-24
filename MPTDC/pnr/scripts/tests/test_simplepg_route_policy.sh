@@ -15,11 +15,12 @@ require_line() {
 
 require_line 'export MPTDC_PNR_SIGNAL_TOP_LAYER=MET3'
 require_line 'export MPTDC_PNR_PROMOTE_SIGNAL_TOP_TO_EFFECTIVE_FLOOR=0'
-require_line 'export MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES=0'
+require_line 'export MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES="$KEEP_ROUTER_TOP_AT_FLOOR_VALUE"'
 require_line 'export MPTDC_PNR_PHASE_METTP_EXCEPTION=0'
 require_line 'export MPTDC_PNR_PHASE_TOP_LAYER=MET3'
 require_line 'export MPTDC_PNR_PHASE_TOP_LAYER_IDX=3'
 require_line 'export MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP=1'
+require_line 'export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY="$SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY_VALUE"'
 require_line 'export MPTDC_BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair'
 require_line 'export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0'
 
@@ -46,7 +47,9 @@ fi
 HELP="$($LAUNCHER --help)"
 grep -Fq -- '--local-phase-preplace' <<< "$HELP"
 grep -Fq -- '--physical-first' <<< "$HELP"
+grep -Fq -- '--temporary-signal-top-route-blockage' <<< "$HELP"
 
 tclsh "$SCRIPT_DIR/test_block_pg_pin_geometry.tcl"
+tclsh "$SCRIPT_DIR/test_signal_top_route_blockage_lifecycle.tcl"
 
 echo "MPTDC_SIMPLEPG_ROUTE_POLICY_TEST=PASS"

@@ -28,6 +28,8 @@ ENABLE_POST_FILLER_SROUTE_VALUE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-0}"
 ALLOW_DANGLING_ONLY_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-1}"
 DANGLING_ONLY_MAX_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX:-34}"
 SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE="${MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE:-0}"
+SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY_VALUE="${MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY:-0}"
+KEEP_ROUTER_TOP_AT_FLOOR_VALUE="${MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES:-0}"
 LOCAL_PHASE_PREPLACE_VALUE="${MPTDC_SIMPLEPG_LOCAL_PHASE_PREPLACE:-0}"
 POSTROUTE_OPT_VALUE="${MPTDC_SIMPLEPG_POSTROUTE_OPT:-1}"
 
@@ -60,14 +62,18 @@ Options:
                           dangling markers at the pre-route PG proof gate.
                           Default accepts only bounded IMPVFC-94 dangling.
   --signal-top-route-blockage
-                         Add a METTP route blockage over the selected scope.
-                         This is off by default because the 2026-07-08 topblk
-                         run proved that a broad METTP blockage can short
-                         against special PG stripes and block PG pins.
+                         Add a persistent METTP route blockage over the scope.
+                         This remains a debug option and is not accepted by the
+                         physical recovery gate.
+  --temporary-signal-top-route-blockage
+                         Keep NanoRoute globally compatible with existing
+                         METTP PG, block ordinary METTP routing only while
+                         routeDesign/route optimization runs, then remove the
+                         blockage before filler PG work and final DRC.
   --no-signal-top-route-blockage
-                         Keep the router compatible with existing METTP PG
-                         shapes without creating a broad METTP route blockage.
-                         This is the default.
+                         Disable the blockage and leave the command ceiling at
+                         MET3. This is the PG-proof default; a full route with
+                         existing METTP PG can stop with NRDB-954.
   --dangling-only-max <n> Maximum bounded dangling markers accepted when the
                           report has no opens, shorts, unconnected terminals,
                           or other fatal special connectivity lines.
@@ -227,10 +233,20 @@ while [[ $# -gt 0 ]]; do
       ;;
     --signal-top-route-blockage)
       SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE=1
+      SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY_VALUE=0
+      KEEP_ROUTER_TOP_AT_FLOOR_VALUE=1
+      shift
+      ;;
+    --temporary-signal-top-route-blockage)
+      SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE=1
+      SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY_VALUE=1
+      KEEP_ROUTER_TOP_AT_FLOOR_VALUE=1
       shift
       ;;
     --no-signal-top-route-blockage)
       SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE=0
+      SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY_VALUE=0
+      KEEP_ROUTER_TOP_AT_FLOOR_VALUE=0
       shift
       ;;
     --strict-special-clean)
@@ -331,21 +347,21 @@ export O1_RO_LIBERTY_PATH="$REPO_ROOT/MPTDC/syn/macros/RO_tune6_real_layout_shel
 export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0
 export MPTDC_PG_STRATEGY=innovus_sroute_golden_ro
 
-# The router command remains compatible with existing METTP PG shapes.  Do not
-# add a broad METTP route blockage by default: the 2026-07-08 topblk run showed
-# that a core-wide METTP blockage is reported as shorts against special PG
-# stripes and edge PG pins.
+# Ordinary/phase signal intent remains MET3. The physical recovery option raises
+# only NanoRoute's command ceiling to METTP and removes its temporary METTP
+# signal blockage before final filler/PG cleanup and authoritative DRC.
 export MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
 export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=METTP
 export MPTDC_PNR_PROMOTE_SIGNAL_TOP_TO_EFFECTIVE_FLOOR=0
 export MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP=1
-export MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES=0
+export MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES="$KEEP_ROUTER_TOP_AT_FLOOR_VALUE"
 export MPTDC_PNR_PHASE_METTP_EXCEPTION=0
 export MPTDC_PNR_PHASE_TOP_LAYER=MET3
 export MPTDC_PNR_PHASE_TOP_LAYER_IDX=3
 export MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE="$SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE"
 export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER=METTP
 export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_SCOPE=core
+export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY="$SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY_VALUE"
 
 export MPTDC_ENABLE_BLOCK_PG_PINS=1
 export MPTDC_BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair
@@ -496,6 +512,7 @@ echo "MPTDC_PNR_PHASE_TOP_LAYER=$MPTDC_PNR_PHASE_TOP_LAYER"
 echo "MPTDC_PNR_PHASE_TOP_LAYER_IDX=$MPTDC_PNR_PHASE_TOP_LAYER_IDX"
 echo "MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE=$MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE"
 echo "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER=$MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER"
+echo "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=$MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY"
 echo "MPTDC_BLOCK_PG_PIN_STYLE=$MPTDC_BLOCK_PG_PIN_STYLE"
 echo "MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=$MPTDC_ALLOW_LEGACY_PG_TOPOLOGY"
 echo "MPTDC_ENABLE_RO_PG_HOOKUP=$MPTDC_ENABLE_RO_PG_HOOKUP"

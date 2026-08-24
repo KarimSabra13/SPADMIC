@@ -1411,16 +1411,20 @@ proc mptdc_signoff_create_ro_route_blockages {{path ""}} {
 
 proc mptdc_signoff_apply_signal_top_route_blockage {{path ""}} {
     set enabled [mptdc_signoff_env_truthy MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE 0]
+    set temporary [mptdc_signoff_env_truthy MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY 0]
     set layer [mptdc_signoff_env MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER [mptdc_signoff_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]]
     set scope [mptdc_signoff_env MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_SCOPE core]
+    set name "MPTDC_SIGNAL_TOP_ROUTE_BLK_${layer}"
     if {$path eq ""} {
         set path [file join [mptdc_signoff_report_dir] signal_top_route_blockage_status.rpt]
     }
     set fh [open $path w]
     puts $fh "# MPTDC Signal Top Route Blockage Status"
     puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_ENABLED=[expr {$enabled ? 1 : 0}]"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=[expr {$temporary ? 1 : 0}]"
     puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER=$layer"
     puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_SCOPE=$scope"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_NAME=$name"
     puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REASON=keep_regular_signal_routes_off_reserved_top_pg_layer"
     if {!$enabled} {
         puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=SKIPPED"
@@ -1438,7 +1442,6 @@ proc mptdc_signoff_apply_signal_top_route_blockage {{path ""}} {
         error "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_FAILED: invalid_core_bbox report=$path"
     }
 
-    set name "MPTDC_SIGNAL_TOP_ROUTE_BLK_${layer}"
     set llx [lindex $box 0]
     set lly [lindex $box 1]
     set urx [lindex $box 2]
@@ -1446,14 +1449,20 @@ proc mptdc_signoff_apply_signal_top_route_blockage {{path ""}} {
     set commands [list \
         [list createRouteBlk -name $name -box $llx $lly $urx $ury -layer [list $layer]] \
         [list createRouteBlk -name $name -box $box -layer [list $layer]] \
-        [list createRouteBlk -name $name -box $box -layer $layer] \
-        [list createRouteBlk -box $llx $lly $urx $ury -layer [list $layer]] \
-        [list createRouteBlk -box $box -layer [list $layer]] \
-        [list createRouteBlk -box $box -layer $layer]]
+        [list createRouteBlk -name $name -box $box -layer $layer]]
+    if {!$temporary} {
+        lappend commands \
+            [list createRouteBlk -box $llx $lly $urx $ury -layer [list $layer]] \
+            [list createRouteBlk -box $box -layer [list $layer]] \
+            [list createRouteBlk -box $box -layer $layer]
+    }
     foreach cmd $commands {
         puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_COMMAND=$cmd"
         if {![catch {{*}$cmd} err]} {
-            puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=PASS"
+            puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=PASS"
+            puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_COMMAND=$cmd"
+            puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_REQUIRED=[expr {$temporary ? 1 : 0}]"
+            puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=ACTIVE_FOR_ROUTE"
             close $fh
             return $path
         }
@@ -1462,6 +1471,112 @@ proc mptdc_signoff_apply_signal_top_route_blockage {{path ""}} {
     puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=FAIL"
     close $fh
     error "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_FAILED: createRouteBlk_failed report=$path"
+}
+
+proc mptdc_signoff_query_named_route_blockage {name} {
+    set errors [list]
+    foreach cmd [list \
+        [list dbGet -e top.fPlan.rBlkgs.name $name -p] \
+        [list dbGet top.fPlan.rBlkgs.name $name -p] \
+        [list dbGet -e top.fplan.rBlkgs.name $name -p] \
+        [list get_db route_blockages -if ".name == $name"]] {
+        if {[catch {set raw [uplevel #0 $cmd]} err]} {
+            lappend errors "$cmd: $err"
+            continue
+        }
+        set handles [list]
+        foreach handle $raw {
+            if {$handle ni {"" 0x0 NULL null nil}} {
+                lappend handles $handle
+            }
+        }
+        return [dict create status PASS command $cmd handles $handles errors $errors]
+    }
+    return [dict create status UNKNOWN command "" handles [list] errors $errors]
+}
+
+proc mptdc_signoff_remove_signal_top_route_blockage {path} {
+    set enabled [mptdc_signoff_env_truthy MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE 0]
+    set temporary [mptdc_signoff_env_truthy MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY 0]
+    set layer [mptdc_signoff_env MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER [mptdc_signoff_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]]
+    set name "MPTDC_SIGNAL_TOP_ROUTE_BLK_${layer}"
+    set fh [open $path a]
+    if {!$enabled} {
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=SKIPPED_DISABLED"
+        close $fh
+        return $path
+    }
+    if {!$temporary} {
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=SKIPPED_PERSISTENT"
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=PERSISTENT"
+        close $fh
+        return $path
+    }
+
+    set before [mptdc_signoff_query_named_route_blockage $name]
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_QUERY_BEFORE_STATUS=[dict get $before status]"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_QUERY_BEFORE_COMMAND=[dict get $before command]"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_QUERY_BEFORE_COUNT=[llength [dict get $before handles]]"
+
+    set removed 0
+    set remove_errors [list]
+    foreach cmd [list \
+        [list deleteRouteBlk -name $name] \
+        [list deleteRouteBlk $name]] {
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_COMMAND=$cmd"
+        if {![catch {uplevel #0 $cmd} err]} {
+            puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_USED=$cmd"
+            set removed 1
+            break
+        }
+        lappend remove_errors "$cmd: $err"
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_ATTEMPT_ERROR=$err"
+    }
+
+    if {!$removed && [dict get $before status] eq "PASS"} {
+        set handles [dict get $before handles]
+        if {[llength $handles] > 0} {
+            set removed 1
+            foreach handle $handles {
+                set handle_removed 0
+                foreach cmd [list \
+                    [list dbDeleteObj $handle] \
+                    [list delete_obj $handle] \
+                    [list delete_db $handle]] {
+                    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_COMMAND=$cmd"
+                    if {![catch {uplevel #0 $cmd} err]} {
+                        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_USED=$cmd"
+                        set handle_removed 1
+                        break
+                    }
+                    lappend remove_errors "$cmd: $err"
+                    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_ATTEMPT_ERROR=$err"
+                }
+                if {!$handle_removed} {
+                    set removed 0
+                    break
+                }
+            }
+        }
+    }
+
+    set after [mptdc_signoff_query_named_route_blockage $name]
+    set after_count [llength [dict get $after handles]]
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_QUERY_AFTER_STATUS=[dict get $after status]"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_QUERY_AFTER_COMMAND=[dict get $after command]"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_QUERY_AFTER_COUNT=$after_count"
+    if {$removed && ([dict get $after status] ne "PASS" || $after_count == 0)} {
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=PASS"
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED"
+        close $fh
+        return $path
+    }
+
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=FAIL"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_ERRORS=$remove_errors"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=FAIL"
+    close $fh
+    error "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_FAILED: name=$name report=$path"
 }
 
 proc mptdc_signoff_set_phase_origin_env {stable value force} {
@@ -9101,9 +9216,16 @@ proc mptdc_signoff_route_design {} {
     puts $rcfh "SIGNAL_TOP_ROUTE_BLOCKAGE_REPORT=$signal_top_blockage_rpt"
     close $rcfh
     if {[catch {uplevel #0 $route_cmd} route_err route_opts]} {
+        set blockage_remove_rc [catch {
+            mptdc_signoff_remove_signal_top_route_blockage $signal_top_blockage_rpt
+        } blockage_remove_err]
         set rcfh [open $route_cmd_rpt a]
         puts $rcfh "ROUTE_COMMAND_STATUS=FAIL"
         puts $rcfh "ROUTE_COMMAND_ERROR=$route_err"
+        puts $rcfh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_CALL_STATUS=[expr {$blockage_remove_rc ? "FAIL" : "PASS"}]"
+        if {$blockage_remove_rc} {
+            puts $rcfh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_CALL_ERROR=$blockage_remove_err"
+        }
         if {[dict exists $route_opts -errorcode]} {
             puts $rcfh "ROUTE_COMMAND_ERRORCODE=[dict get $route_opts -errorcode]"
         }
@@ -9118,9 +9240,24 @@ proc mptdc_signoff_route_design {} {
     set rcfh [open $route_cmd_rpt a]
     puts $rcfh "ROUTE_COMMAND_STATUS=PASS"
     close $rcfh
-    set antenna_rpt [file join [mptdc_signoff_report_dir] antenna.rpt]
-    mptdc_signoff_run_optional_postroute_opt
+    set postroute_opt_rc [catch {mptdc_signoff_run_optional_postroute_opt} postroute_opt_err]
+    set blockage_remove_rc [catch {
+        mptdc_signoff_remove_signal_top_route_blockage $signal_top_blockage_rpt
+    } blockage_remove_err]
+    set rcfh [open $route_cmd_rpt a]
+    puts $rcfh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_CALL_STATUS=[expr {$blockage_remove_rc ? "FAIL" : "PASS"}]"
+    if {$blockage_remove_rc} {
+        puts $rcfh "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_CALL_ERROR=$blockage_remove_err"
+    }
+    close $rcfh
+    if {$blockage_remove_rc} {
+        error "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_FAILED: report=$signal_top_blockage_rpt error=$blockage_remove_err"
+    }
+    if {$postroute_opt_rc} {
+        error "MPTDC_POSTROUTE_OPT_FAILED: error=$postroute_opt_err"
+    }
     mptdc_signoff_insert_final_fillers
+    set antenna_rpt [file join [mptdc_signoff_report_dir] antenna.rpt]
     set antenna_status PROVISIONAL
     if {![catch {verifyProcessAntenna > $antenna_rpt} antenna_err]} {
         set antenna_status PROVISIONAL_WITH_LEF_ANTENNA_COMPLETENESS_REVIEW

@@ -758,6 +758,7 @@ fi
   echo "keep_router_top_at_effective_floor_for_existing_routes: ${MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES:-unset}"
   echo "signal_top_route_blockage: ${MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE:-unset}"
   echo "signal_top_route_blockage_layer: ${MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER:-unset}"
+  echo "signal_top_route_blockage_temporary: ${MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY:-unset}"
   echo "ro_handoff_env: ${MPTDC_RO_HANDOFF_ENV_SOURCED:-unset}"
   echo "ro_handoff_override_status: ${MPTDC_RO_HANDOFF_OVERRIDE_STATUS:-unset}"
   echo "O1_USE_REAL_RO_ABSTRACT: ${O1_USE_REAL_RO_ABSTRACT:-unset}"

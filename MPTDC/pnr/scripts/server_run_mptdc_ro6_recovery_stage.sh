@@ -459,15 +459,15 @@ LAUNCH_ARGS=(
   --no-free-all
   --local-phase-preplace
   --dangling-only-max 34
-  --no-signal-top-route-blockage
 )
 if [[ -n "$SOURCE_LEF" ]]; then
   LAUNCH_ARGS+=(--source-lef "$SOURCE_LEF")
 fi
 if [[ "$STAGE" == "pg-proof" ]]; then
-  LAUNCH_ARGS+=(--stage pg_proof)
+  LAUNCH_ARGS+=(--stage pg_proof --no-signal-top-route-blockage)
 else
-  LAUNCH_ARGS+=(--stage full_closure --physical-first --post-filler-sroute)
+  LAUNCH_ARGS+=(--stage full_closure --physical-first --post-filler-sroute \
+    --temporary-signal-top-route-blockage)
 fi
 
 set +e
@@ -547,6 +547,8 @@ else
   STEP_LABEL=PHYSICAL_PNR
   ROUTE_REPORT="$RUN_DIR/reports/route_status.rpt"
   ROUTE_INTENT_REPORT="$RUN_DIR/reports/route_layer_intent.rpt"
+  ROUTE_COMMAND_REPORT="$RUN_DIR/reports/route_command_status.rpt"
+  SIGNAL_TOP_BLOCKAGE_REPORT="$RUN_DIR/reports/signal_top_route_blockage_status.rpt"
   IO_PIN_SUMMARY="$RUN_DIR/reports/io_pin_placement_summary.md"
   IO_PIN_CSV="$RUN_DIR/reports/io_pin_placement.csv"
   ROUTE_STATUS="$(report_value "$ROUTE_REPORT" ROUTE_STATUS)"
@@ -559,6 +561,12 @@ else
   SPECIAL_NON_RO_BAD="$(report_value "$ROUTE_REPORT" SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES)"
   UNROUTED="$(report_value "$ROUTE_REPORT" UNROUTED_NETS)"
   ROUTER_TOP="$(report_value "$ROUTE_INTENT_REPORT" router_command_top_layer)"
+  SIGNAL_TOP="$(report_value "$ROUTE_INTENT_REPORT" signal_top_layer)"
+  ROUTE_COMMAND_STATUS="$(report_value "$ROUTE_COMMAND_REPORT" ROUTE_COMMAND_STATUS)"
+  SIGNAL_TOP_BLOCKAGE_TEMPORARY="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY)"
+  SIGNAL_TOP_BLOCKAGE_CREATE="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS)"
+  SIGNAL_TOP_BLOCKAGE_REMOVE="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS)"
+  SIGNAL_TOP_BLOCKAGE_STATUS="$(report_value "$SIGNAL_TOP_BLOCKAGE_REPORT" SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS)"
   IO_PIN_STATUS="$(report_value "$IO_PIN_SUMMARY" REPORT_STATUS)"
   TAP_SLOW_PLAN="$(tap_plan_count "$IO_PIN_CSV" ro_slow_tap0_o)"
   TAP_FAST_PLAN="$(tap_plan_count "$IO_PIN_CSV" ro_fast_tap0_o)"
@@ -577,7 +585,10 @@ else
   if [[ "$TOOL_RC" -eq 0 && "$ROUTE_STATUS" == PASS && "$DRC_STATUS" == PASS && \
         "$GEOMETRY_DRC" == 0 && "$SHORTS" == 0 && "$REGULAR_BAD" == 0 && \
         "$SPECIAL_BAD" == 0 && "$SPECIAL_RAW_BAD" == 0 && "$SPECIAL_NON_RO_BAD" == 0 && \
-        "$UNROUTED" == 0 && "$ROUTER_TOP" == MET3 && "$IO_PIN_STATUS" == OK && \
+        "$UNROUTED" == 0 && "$SIGNAL_TOP" == MET3 && "$ROUTER_TOP" == METTP && \
+        "$ROUTE_COMMAND_STATUS" == PASS && "$SIGNAL_TOP_BLOCKAGE_TEMPORARY" == 1 && \
+        "$SIGNAL_TOP_BLOCKAGE_CREATE" == PASS && "$SIGNAL_TOP_BLOCKAGE_REMOVE" == PASS && \
+        "$SIGNAL_TOP_BLOCKAGE_STATUS" == REMOVED && "$IO_PIN_STATUS" == OK && \
         "$TAP_SLOW_PLAN" == 1 && "$TAP_FAST_PLAN" == 1 && "$TAP_SLOW_COUNT" == 1 && \
         "$TAP_FAST_COUNT" == 1 && "$TAP_TOTAL_COUNT" == 2 ]]; then
     DECISION=PASS_CONTINUE
@@ -602,7 +613,13 @@ else
       echo "SPECIAL_NET_CONNECTIVITY_RAW_BAD=$SPECIAL_RAW_BAD"
       echo "SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=$SPECIAL_NON_RO_BAD"
       echo "UNROUTED_NETS=$UNROUTED"
+      echo "signal_top_layer=$SIGNAL_TOP"
       echo "router_command_top_layer=$ROUTER_TOP"
+      echo "ROUTE_COMMAND_STATUS=$ROUTE_COMMAND_STATUS"
+      echo "SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=$SIGNAL_TOP_BLOCKAGE_TEMPORARY"
+      echo "SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=$SIGNAL_TOP_BLOCKAGE_CREATE"
+      echo "SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=$SIGNAL_TOP_BLOCKAGE_REMOVE"
+      echo "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=$SIGNAL_TOP_BLOCKAGE_STATUS"
       echo "IO_PIN_PLACEMENT_STATUS=$IO_PIN_STATUS"
       echo "ro_slow_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_SLOW_PLAN"
       echo "ro_fast_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_FAST_PLAN"
