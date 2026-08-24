@@ -1,0 +1,17 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7f04904fbd60	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+2	0x7f04904fbdc0	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7f04904fbe50	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+4	0x7f04904fbeb0	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+5	0x7f04904fbf10	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+6	0x7f04904fb8b0	{364.65 328.3 365.03 328.58}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57563 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0 
+7	0x7f04904fb940	{220.5 179.29 220.76 180.015}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_n_66687 & Special Wire of Net VSS Type: Metal Short # -1 -1 9 2 : 220.5000 179.2900 220.7600 180.0150 2: 220.5000 179.2900 220.7600 180.0150 2
+8	0x7f04904fbd90	{48.0 201.16 48.0 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+9	0x7f04904fbdf0	{221.75 201.16 221.75 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+10	0x7f04904fbe20	{201.16 233.62 201.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+11	0x7f04904fbe80	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7f04904fbee0	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+13	0x7f04904fbf40	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+14	0x7f04904fbf70	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+15	0x7f04904fbfa0	{220.5 179.29 220.76 180.015}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_n_66687 & Special Wire of Net VSS Type: Metal Short # -1 -1 9 2 : 220.5000 179.2900 220.7600 180.0150 2: 220.5000 179.2900 220.7600 180.0150 2
+16	0x7f0492794020	{364.65 328.3 365.03 328.58}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57563 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 

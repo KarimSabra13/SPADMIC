@@ -1,0 +1,117 @@
+# MPTDC Server Snapshot
+
+- Kind: `innovus`
+- Run ID: `20260824_161415_mptdc_bufftap0_route_geometry_repair`
+- Source directory: `/sim/ksabra/SPADMIC_work/innovus/20260824_161415_mptdc_bufftap0_route_geometry_repair`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/docs/server_snapshots/innovus/20260824_161415_mptdc_bufftap0_route_geometry_repair`
+- Collection branch: `SPADMIC_test`
+- Collection commit: `03ff15a192ce8521bf2966f2a6205db6a1893d95`
+- Created UTC: `2026-08-24T14:17:32Z`
+
+## Included Files
+- `README.md`
+- `logs/checkpoint_repair_wrapper.log.messages.tail`
+- `logs/innovus_route_checkpoint_repair.log.messages.tail`
+- `logs/route_geometry_repair_driver.log.messages.tail`
+- `manifests/route_geometry_repair_commands.rpt`
+- `manifests/run_manifest.txt`
+- `reports/00_initial_report_route.rpt`
+- `reports/00_initial_verify_connectivity_regular.rpt`
+- `reports/00_initial_verify_connectivity_special.rpt`
+- `reports/00_initial_verify_connectivity_special_command.rpt`
+- `reports/00_initial_verify_connectivity_special_detailed.console.rpt`
+- `reports/00_initial_verify_connectivity_special_detailed.rpt`
+- `reports/00_initial_verify_drc.rpt`
+- `reports/00_initial_verify_drc_markers.tsv`
+- `reports/00_initial_verify_drc_markers_schema.rpt`
+- `reports/01_after_command_report_route.rpt`
+- `reports/01_after_command_verify_connectivity_regular.rpt`
+- `reports/01_after_command_verify_connectivity_special.rpt`
+- `reports/01_after_command_verify_connectivity_special_command.rpt`
+- `reports/01_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/01_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/01_after_command_verify_drc.rpt`
+- `reports/01_after_command_verify_drc_markers.tsv`
+- `reports/01_after_command_verify_drc_markers_schema.rpt`
+- `reports/01_command_mptdc_ckpt_delete_regular_drc_wires_u_core_n_66687.rpt`
+- `reports/02_after_command_report_route.rpt`
+- `reports/02_after_command_verify_connectivity_regular.rpt`
+- `reports/02_after_command_verify_connectivity_special.rpt`
+- `reports/02_after_command_verify_connectivity_special_command.rpt`
+- `reports/02_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/02_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/02_after_command_verify_drc.rpt`
+- `reports/02_after_command_verify_drc_markers.tsv`
+- `reports/02_after_command_verify_drc_markers_schema.rpt`
+- `reports/02_command_mptdc_ckpt_route_selected_nets_with_commands_u_core_n_66687_globalDetailRoute_-select_detailRoute_-select_ecoRoute_-fix_drc_selected_drc_wire_repair.rpt`
+- `reports/03_after_command_report_route.rpt`
+- `reports/03_after_command_verify_connectivity_regular.rpt`
+- `reports/03_after_command_verify_connectivity_special.rpt`
+- `reports/03_after_command_verify_connectivity_special_command.rpt`
+- `reports/03_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/03_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/03_after_command_verify_drc.rpt`
+- `reports/03_after_command_verify_drc_markers.tsv`
+- `reports/03_after_command_verify_drc_markers_schema.rpt`
+- `reports/03_command_mptdc_ckpt_delete_regular_drc_wires_u_core_n_67240.rpt`
+- `reports/04_after_command_report_route.rpt`
+- `reports/04_after_command_verify_connectivity_regular.rpt`
+- `reports/04_after_command_verify_connectivity_special.rpt`
+- `reports/04_after_command_verify_connectivity_special_command.rpt`
+- `reports/04_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/04_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/04_after_command_verify_drc.rpt`
+- `reports/04_after_command_verify_drc_markers.tsv`
+- `reports/04_after_command_verify_drc_markers_schema.rpt`
+- `reports/04_command_mptdc_ckpt_route_selected_nets_with_commands_u_core_n_67240_globalDetailRoute_-select_detailRoute_-select_ecoRoute_-fix_drc_selected_drc_wire_repair.rpt`
+- `reports/05_after_command_report_route.rpt`
+- `reports/05_after_command_verify_connectivity_regular.rpt`
+- `reports/05_after_command_verify_connectivity_special.rpt`
+- `reports/05_after_command_verify_connectivity_special_command.rpt`
+- `reports/05_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/05_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/05_after_command_verify_drc.rpt`
+- `reports/05_after_command_verify_drc_markers.tsv`
+- `reports/05_after_command_verify_drc_markers_schema.rpt`
+- `reports/05_command_mptdc_ckpt_delete_regular_drc_wires_u_core_n_57563.rpt`
+- `reports/06_after_command_report_route.rpt`
+- `reports/06_after_command_verify_connectivity_regular.rpt`
+- `reports/06_after_command_verify_connectivity_special.rpt`
+- `reports/06_after_command_verify_connectivity_special_command.rpt`
+- `reports/06_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/06_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/06_after_command_verify_drc.rpt`
+- `reports/06_after_command_verify_drc_markers.tsv`
+- `reports/06_after_command_verify_drc_markers_schema.rpt`
+- `reports/06_command_mptdc_ckpt_route_selected_nets_with_commands_u_core_n_57563_globalDetailRoute_-select_detailRoute_-select_ecoRoute_-fix_drc_selected_drc_wire_repair.rpt`
+- `reports/07_after_command_report_route.rpt`
+- `reports/07_after_command_verify_connectivity_regular.rpt`
+- `reports/07_after_command_verify_connectivity_special.rpt`
+- `reports/07_after_command_verify_connectivity_special_command.rpt`
+- `reports/07_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/07_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/07_after_command_verify_drc.rpt`
+- `reports/07_after_command_verify_drc_markers.tsv`
+- `reports/07_after_command_verify_drc_markers_schema.rpt`
+- `reports/07_command_mptdc_ckpt_assert_geometry_regular_clean.rpt`
+- `reports/checkpoint_repair_status.rpt`
+- `reports/inline_01_assert_geometry_regular_report_route.rpt`
+- `reports/inline_01_assert_geometry_regular_verify_connectivity_regular.rpt`
+- `reports/inline_01_assert_geometry_regular_verify_connectivity_special.rpt`
+- `reports/inline_01_assert_geometry_regular_verify_connectivity_special_command.rpt`
+- `reports/inline_01_assert_geometry_regular_verify_connectivity_special_detailed.console.rpt`
+- `reports/inline_01_assert_geometry_regular_verify_connectivity_special_detailed.rpt`
+- `reports/inline_01_assert_geometry_regular_verify_drc.rpt`
+- `reports/inline_01_assert_geometry_regular_verify_drc_markers.tsv`
+- `reports/inline_01_assert_geometry_regular_verify_drc_markers_schema.rpt`
+- `reports/operator_gate_route_geometry_repair.rpt`
+- `reports/tap_pin_def_excerpt.rpt`
+
+## Excluded By Policy
+
+- Innovus checkpoints and databases;
+- raw GDS/OAS files;
+- full raw logs unless converted to message tails;
+- text files larger than 2097152 bytes;
+- large binary artifacts;
+- server work directories outside this snapshot.

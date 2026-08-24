@@ -1,0 +1,4 @@
+# checkpoint repair command 3
+COMMAND=mptdc_ckpt_delete_regular_drc_wires u_core_n_67240
+HELPER_RESULT=u_core_n_67240
+REPORT_STATUS=PASS

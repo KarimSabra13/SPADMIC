@@ -1,0 +1,11 @@
+# Exact bounded command payload supplied to Innovus
+SOURCE_PNR_RUN_ID=20260824_154115_mptdc_bufftap0_pnrlef35_physical
+SOURCE_CHECKPOINT=/sim/ksabra/SPADMIC_work/innovus/20260824_154115_mptdc_bufftap0_pnrlef35_physical/checkpoints/04_route_failed.enc.dat
+REPAIR_METHOD=DELETE_DRC_WIRE_AND_SELECTED_NET_REROUTE
+mptdc_ckpt_delete_regular_drc_wires u_core_n_66687
+mptdc_ckpt_route_selected_nets_with_commands {u_core_n_66687} {{globalDetailRoute -select} {detailRoute -select} {ecoRoute -fix_drc}} selected_drc_wire_repair
+mptdc_ckpt_delete_regular_drc_wires u_core_n_67240
+mptdc_ckpt_route_selected_nets_with_commands {u_core_n_67240} {{globalDetailRoute -select} {detailRoute -select} {ecoRoute -fix_drc}} selected_drc_wire_repair
+mptdc_ckpt_delete_regular_drc_wires u_core_n_57563
+mptdc_ckpt_route_selected_nets_with_commands {u_core_n_57563} {{globalDetailRoute -select} {detailRoute -select} {ecoRoute -fix_drc}} selected_drc_wire_repair
+mptdc_ckpt_assert_geometry_regular_clean
