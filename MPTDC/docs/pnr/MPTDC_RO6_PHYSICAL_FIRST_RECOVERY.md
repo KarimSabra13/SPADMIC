@@ -80,15 +80,27 @@ only 0.56 um, moved the VDD-spacing segment by 0.42 um, and added one MET1
 cell-obstruction spacing marker. The minimum-area marker was unchanged. Do not
 repeat either selected-route candidate.
 
-The active repair keeps the same signal-layer policy but adds three temporary,
-named local route blockages over only the recurrence corridors. The VSS repair
-blocks MET2 around its exact special-wire overlap; the VDD repair blocks MET1
-and MET2 across both its PG-spacing corridor and the newly observed cell-OBS
-corridor; the minimum-area repair blocks the center of the old MET1 segment so
-the selected router must take a longer path. Each blockage is queried after
-creation, removed after its net is routed, and queried again before the final
-gate. It does not modify VDD/VSS special wires, move cells, run global routing,
-waive DRC, or stream GDS from a run with shorts.
+The third checkpoint repair,
+`20260824_164921_mptdc_bufftap0_local_keepout_repair_v3`, is rejected. It
+completed only the first net: after `u_core_n_66687` was deleted and rerouted,
+the same MET2/VSS short moved from `{220.50 179.29 220.76 180.015}` to
+approximately `{220.50 178.73 220.78 179.455}`. This is a pin-access-constrained
+topology, not evidence that a larger keepout will work. Command 7 then stopped
+because Innovus correctly created two blockage objects for the requested
+`{MET1 MET2}` layers while the helper incorrectly expected one object total.
+The reported final 5 DRCs and 3 shorts include the still-active two-layer
+blockage and are not five canonical route defects. Do not restore the v3 output
+checkpoint and do not rerun or enlarge any of its keepouts.
+
+The helper now verifies one created blockage object per requested layer and can
+delete all same-name layer objects, but that correction is diagnostic tooling,
+not permission to retry v3. The active next step is one read-only probe of the
+original `20260824_154115_mptdc_bufftap0_pnrlef35_physical` failed-route
+checkpoint. It records exact endpoint instances and pins, pin shapes, regular
+wire/via objects, nearby VDD/VSS special-wire shapes, and the installed Innovus
+command help and DB schemas. It makes no route edit. The published probe will
+be used to write one explicit manual geometry ECO instead of another router
+trial.
 
 ## Acceptance Order
 
@@ -102,19 +114,24 @@ waive DRC, or stream GDS from a run with shorts.
    access windows, no unexpected pin windows, and at least one OBS trim.
 4. Run a fresh physical-first PnR with that exact LEF. The completed replay
    reduced the route debt to the exact three-marker class recorded above.
-5. Restore its failed-route checkpoint once and apply the bounded three-net
-   geometry repair. Require final DRC 0, shorts 0, regular connectivity 0, and
-   exactly two tap pins before considering any PG-tail repair.
-6. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
+5. Restore its failed-route checkpoint once in a fresh process and run the
+   read-only three-net geometry probe. Require the initial and final tuples to
+   remain exactly 3 DRC, 1 short, regular connectivity 0, special raw bad 1
+   with 12 classified tails, and exactly two tap pins. This is evidence only.
+6. Review the published pin/wire/via/PG geometry and installed command syntax,
+   then apply one explicit manual geometry ECO from the original checkpoint.
+   Require final DRC 0, shorts 0, regular connectivity 0, and exactly two tap
+   pins before considering any PG-tail repair.
+7. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
    temporary METTP blockage was created and removed, and both tap pins exist.
-7. Require raw special connectivity zero. A geometry-clean result with only
+8. Require raw special connectivity zero. A geometry-clean result with only
    the same or fewer classified `IMPVFC-94` tails is an intermediate checkpoint,
    not route closure and not permission to launch PVS.
-8. Restore only a fully clean route checkpoint and merge the real RO
+9. Restore only a fully clean route checkpoint and merge the real RO
    OA GDS.
-9. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
+10. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
    MATCH on the same hashed inputs.
-10. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
+11. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
    IR/EM, and final tapeout remain outside this physical-first gate.
 
 ## Step Decisions and Evidence
@@ -130,6 +147,7 @@ log tails are what make remote analysis possible.
 | PG proof | wrapper RC 0, sroute PASS, PG cross-net shorts 0, non-RO failures 0, and either raw clean or bounded classified `IMPVFC-94` only | `innovus` |
 | PnR LEF preparation | preparation PASS, `S[0:7]` plus `rstb` present, MET2/MET3 windows nonzero, unexpected-pin count 0, OBS trims nonzero | bundled into physical `innovus` snapshot |
 | Physical PnR | pre-route status PASS with the audited PnR-LEF-only bound 35, requested/imported PnR LEF path and hash match, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every final DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
+| Route geometry probe | exact published 3-DRC/1-short source signature, fresh single restore, no route-edit command, identical initial/final physical tuple, all three target nets and endpoint terms found, nearby PG shapes captured, command help/schema evidence present, exactly two tap0 pins | `innovus` |
 | Route geometry repair | exact published 3-DRC/1-short source signature, fresh single restore, final DRC 0, shorts 0, regular connectivity 0, saved checkpoint present, exactly two tap0 pins | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
@@ -313,21 +331,20 @@ The completed result is intentionally `DECISION=FAIL_STOP`: DRC is 3, shorts are
 1, regular connectivity is 0, and special connectivity contains 12 dangling
 tails. Its failed-route checkpoint is the source for the active command below.
 
-#### 2B. Current Next Command: Local-Keepout Route Geometry Repair
+#### 2B. Current Next Command: Read-Only Route Geometry Probe
 
-Run this block once. The driver refuses any source other than the tracked exact
-three-marker signature, restores the source checkpoint once in a fresh Innovus
-process, applies the exact per-net layer policy and three named local keepouts
-recorded below, reroutes only the three named regular nets with selected-net
-`routeDesign`, removes and verifies removal of every keepout, evaluates fresh
-DRC and connectivity, and publishes the result automatically. A failed guard
-returns to the SSH prompt; it does not close the login shell.
+Run this block once. It refuses any source other than the tracked exact
+three-marker signature and restores the original failed-route checkpoint once
+in a fresh Innovus process. The only supplied command is the read-only
+`mptdc_ckpt_probe_target_geometry` helper. It records endpoint cells and pins,
+pin shapes, regular wire/via objects, nearby VDD/VSS special-wire shapes, and
+the installed command help and DB schemas. It does not delete or create routing,
+change preferred layers, create blockages, move cells, waive DRC, or launch PVS.
 
-```text
-u_core_n_66687  MET3-MET3  block MET2      {220.10 177.80 221.20 181.20}
-u_core_n_67240  MET3-MET3  block MET1/MET2 {219.30 222.80 221.20 225.90}
-u_core_n_57563  MET2-MET3  block MET1      {364.79 328.10 364.89 328.78}
-```
+The driver verifies that the full initial/final physical tuple is unchanged,
+writes `operator_gate_route_geometry_probe.rpt`, publishes the bounded evidence
+automatically, and returns to the SSH prompt. `DECISION=PASS_CONTINUE` means the
+probe evidence is complete enough for review; it does not mean route closure.
 
 ```bash
 set +e
@@ -335,12 +352,12 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260824_154115_mptdc_bufftap0_pnrlef35_physical
 TAG=$(date +%Y%m%d_%H%M%S)
-REPAIR_RUN=${TAG}_mptdc_bufftap0_local_keepout_repair_v3
-REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
-DRIVER_LOG=/tmp/${REPAIR_RUN}.driver.log
+PROBE_RUN=${TAG}_mptdc_bufftap0_route_geometry_probe
+PROBE_DIR=/sim/ksabra/SPADMIC_work/innovus/$PROBE_RUN
+DRIVER_LOG=/tmp/${PROBE_RUN}.driver.log
 
 SYNC_RC=99
-REPAIR_DRIVER_RC=99
+PROBE_DRIVER_RC=99
 REPO_READY=0
 
 if [ -d "$REPO/.git" ]; then
@@ -358,12 +375,12 @@ TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
 
 if [ "$REPO_READY" -eq 1 ] && [ -z "$TRACKED_STATUS" ]; then
   bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
-    --stage route-geometry-repair \
-    --run-id "$REPAIR_RUN" \
+    --stage route-geometry-probe \
+    --run-id "$PROBE_RUN" \
     --source-pnr-run-id "$SOURCE_PNR_RUN" \
     --expected-head "$EXPECTED_HEAD" \
     2>&1 | tee "$DRIVER_LOG"
-  REPAIR_DRIVER_RC=${PIPESTATUS[0]}
+  PROBE_DRIVER_RC=${PIPESTATUS[0]}
 else
   echo "STOP: sync or tracked-tree gate failed"
   [ -n "$TRACKED_STATUS" ] && printf '%s\n' "$TRACKED_STATUS"
@@ -372,35 +389,45 @@ fi
 echo "===== SEND BACK ====="
 echo "SYNC_RC=$SYNC_RC"
 echo "SOURCE_PNR_RUN=$SOURCE_PNR_RUN"
-echo "REPAIR_RUN=$REPAIR_RUN"
-echo "REPAIR_DRIVER_RC=$REPAIR_DRIVER_RC"
+echo "PROBE_RUN=$PROBE_RUN"
+echo "PROBE_DRIVER_RC=$PROBE_DRIVER_RC"
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
-grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_REPAIR_RUN_ID|NEXT_REQUIRED_PNR_RUN_ID)=' \
+grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PROBE_RUN_ID)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -20
-cat "$REPAIR_DIR/reports/operator_gate_route_geometry_repair.rpt" 2>/dev/null
+cat "$PROBE_DIR/reports/operator_gate_route_geometry_probe.rpt" 2>/dev/null
 ```
 
-The geometry step passes only when fresh Innovus evidence reports:
+The probe step passes only when fresh Innovus evidence reports:
 
 ```text
 INITIAL_DRC=3
 INITIAL_SHORTS=1
 INITIAL_REGULAR_CONNECTIVITY_BAD=0
 INITIAL_SPECIAL_DANGLING_COUNT=12
-FINAL_DRC=0
-FINAL_SHORTS=0
+FINAL_DRC=3
+FINAL_SHORTS=1
 FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_DANGLING_COUNT=12
+PROBE_STATUS=PASS
+TARGET_NET_COUNT=3
+TARGET_NET_WITH_INSTTERMS_COUNT=3
+TARGET_NET_WITH_PIN_GEOMETRY_COUNT=3
+NEARBY_PG_SHAPE_COUNT=<positive integer>
+HELP_CAPTURE_STATUS=PASS
+SCHEMA_CAPTURE_STATUS=PASS
 FINAL_CHECKPOINT_DAT_EXISTS=1
 RO_TAP_OBSERVABILITY_PIN_COUNT=2
+PROBE_GATE_MODE=READ_ONLY_BASELINE_PRESERVED
 DECISION=PASS_CONTINUE
 PUBLISH_RC=0
+NEXT_STAGE=REVIEW_ROUTE_GEOMETRY_PROBE
 ```
 
-If `GEOMETRY_REPAIR_GATE_MODE=GEOMETRY_REGULAR_CLEAN_PG_DANGLING_REVIEW`, stop
-after publication and send the short result block. Geometry is then repaired,
-but the remaining PG-tail class still needs its own isolated repair before PVS.
-Only `GEOMETRY_REPAIR_GATE_MODE=FULL_ROUTE_GATE_CLEAN` with `NEXT_STAGE=PVS`
-permits direct continuation to PVS.
+After publication, stop and send only the `SEND BACK` block. The pushed snapshot
+contains the detailed reports, so no large log paste is needed. The next command
+will be written only after those exact objects and installed Innovus command
+forms are reviewed. Do not use any v1/v2/v3 repaired checkpoint, and do not
+continue to PVS or GDS from this probe.
 
 #### 2C. Completed PnR-LEF Generation Reference
 

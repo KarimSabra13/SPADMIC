@@ -329,6 +329,71 @@ while [[ $# -gt 0 ]]; do
 done
 test -d "$checkpoint"
 test -s "$commands_file"
+if grep -qx 'mptdc_ckpt_probe_target_geometry {u_core_n_66687 u_core_n_67240 u_core_n_57563}' "$commands_file"; then
+  test "$(wc -l < "$commands_file")" -eq 1
+  run="$work/$run_id"
+  mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
+  initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
+  final_special="$run/reports/01_after_command_verify_connectivity_special.rpt"
+  for report in "$initial_special" "$final_special"; do
+    {
+      for idx in $(seq 1 6); do
+        echo "Net VDD: dangling Wire at ($idx.000, 1.000) ($idx.000, 1.000) on layer: MET3"
+      done
+      for idx in $(seq 1 6); do
+        echo "Net VSS: dangling Wire at ($idx.000, 2.000) ($idx.000, 2.000) on layer: MET3"
+      done
+      echo '    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).'
+    } > "$report"
+  done
+  cat > "$run/reports/route_geometry_target_probe.rpt" <<'RPT'
+PROBE_MODE=READ_ONLY_NO_ROUTE_EDITS
+TARGET_NET_COUNT=3
+TARGET_NET_WITH_INSTTERMS_COUNT=3
+TARGET_NET_WITH_PIN_GEOMETRY_COUNT=3
+TARGET_INSTTERM_COUNT=6
+TARGET_INSTTERM_PIN_GEOMETRY_COUNT=6
+TARGET_WIRE_COUNT=9
+TARGET_VIA_COUNT=2
+NEARBY_PG_SHAPE_COUNT=4
+HELP_CAPTURE_PASS_COUNT=8
+HELP_CAPTURE_STATUS=PASS
+SCHEMA_CAPTURE_PASS_COUNT=7
+SCHEMA_CAPTURE_STATUS=PASS
+PROBE_STATUS=PASS
+RPT
+  cat > "$run/def/repaired_route.def" <<'DEF'
+VERSION 5.8 ;
+PINS 2 ;
+- ro_slow_tap0_o + NET ro_slow_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 1000 0 ) N ;
+- ro_fast_tap0_o + NET ro_fast_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 2000 0 ) N ;
+END PINS
+END DESIGN
+DEF
+  cat > "$run/reports/checkpoint_repair_status.rpt" <<RPT
+INITIAL_DRC=3
+INITIAL_SHORTS=1
+INITIAL_REGULAR_CONNECTIVITY_BAD=0
+INITIAL_SPECIAL_CONNECTIVITY_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+INITIAL_SPECIAL_CONNECTIVITY_REPORT=$initial_special
+COMMAND_1_STATUS=PASS
+FINAL_DRC=3
+FINAL_SHORTS=1
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
+FINAL_DEF=$run/def/repaired_route.def
+FINAL_CHECKPOINT_DAT_EXISTS=1
+CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
+RPT
+  exit 0
+fi
 grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_66687' "$commands_file"
 grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_67240' "$commands_file"
 grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_57563' "$commands_file"
@@ -568,6 +633,26 @@ set -e
 test "$DIRTY_RC" -ne 0
 grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_dirty/reports/operator_gate_physical_pnr.rpt"
 grep -q 'innovus route_dirty .* PHYSICAL_PNR' "$PUBLISH_CALLS"
+
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-geometry-probe --run-id geometry_probe \
+  --source-pnr-run-id "$SOURCE_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/geometry_probe.stdout"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/geometry_probe.stdout"
+grep -qx 'INITIAL_DRC=3' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'FINAL_DRC=3' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'FINAL_SHORTS=1' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'PROBE_STATUS=PASS' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'TARGET_NET_COUNT=3' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'TARGET_NET_WITH_INSTTERMS_COUNT=3' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'TARGET_NET_WITH_PIN_GEOMETRY_COUNT=3' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'HELP_CAPTURE_STATUS=PASS' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'SCHEMA_CAPTURE_STATUS=PASS' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'PROBE_GATE_MODE=READ_ONLY_BASELINE_PRESERVED' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/geometry_probe/reports/operator_gate_route_geometry_probe.rpt"
+grep -q 'innovus geometry_probe .* ROUTE_GEOMETRY_PROBE' "$PUBLISH_CALLS"
+grep -qx 'NEXT_STAGE=REVIEW_ROUTE_GEOMETRY_PROBE' "$TMP_ROOT/geometry_probe.stdout"
+grep -qx 'NEXT_REQUIRED_PROBE_RUN_ID=geometry_probe' "$TMP_ROOT/geometry_probe.stdout"
 
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage route-geometry-repair --run-id geometry_repair_clean \

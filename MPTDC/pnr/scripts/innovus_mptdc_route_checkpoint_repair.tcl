@@ -272,15 +272,17 @@ proc mptdc_ckpt_create_route_blockage {name layers box} {
 
     set after [mptdc_ckpt_query_named_route_blockage $name]
     set count [llength [dict get $after handles]]
+    set expected_count [llength $layers]
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_NAME=$name"
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_LAYERS=$layers"
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_BOX=$box"
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_CREATE_COMMAND=$used"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_CREATE_EXPECTED_COUNT=$expected_count"
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_CREATE_COUNT=$count"
-    if {[dict get $after status] ne "PASS" || $count != 1} {
-        error "route blockage creation could not be verified for $name: status=[dict get $after status] count=$count"
+    if {[dict get $after status] ne "PASS" || $count != $expected_count} {
+        error "route blockage creation could not be verified for $name: status=[dict get $after status] expected=$expected_count count=$count"
     }
-    return [dict create name $name layers $layers box $box command $used count $count]
+    return [dict create name $name layers $layers box $box command $used expected_count $expected_count count $count]
 }
 
 proc mptdc_ckpt_delete_route_blockage {name} {
@@ -291,8 +293,8 @@ proc mptdc_ckpt_delete_route_blockage {name} {
 
     set before [mptdc_ckpt_query_named_route_blockage $name]
     set before_count [llength [dict get $before handles]]
-    if {[dict get $before status] ne "PASS" || $before_count != 1} {
-        error "expected exactly one route blockage before deleting $name: status=[dict get $before status] count=$before_count"
+    if {[dict get $before status] ne "PASS" || $before_count < 1} {
+        error "expected at least one route blockage before deleting $name: status=[dict get $before status] count=$before_count"
     }
 
     set used {}
@@ -314,11 +316,366 @@ proc mptdc_ckpt_delete_route_blockage {name} {
     set after_count [llength [dict get $after handles]]
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_DELETE_NAME=$name"
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_DELETE_COMMAND=$used"
+    puts "MPTDC_CKPT_ROUTE_BLOCKAGE_DELETE_BEFORE_COUNT=$before_count"
     puts "MPTDC_CKPT_ROUTE_BLOCKAGE_DELETE_COUNT=$after_count"
     if {[dict get $after status] ne "PASS" || $after_count != 0} {
         error "route blockage deletion could not be verified for $name: status=[dict get $after status] count=$after_count"
     }
-    return [dict create name $name command $used count $after_count]
+    return [dict create name $name command $used before_count $before_count count $after_count]
+}
+
+proc mptdc_ckpt_probe_valid_handles {values} {
+    set out {}
+    foreach value $values {
+        if {$value ni {"" 0x0 NULL null nil}} {
+            lappend out $value
+        }
+    }
+    return $out
+}
+
+proc mptdc_ckpt_probe_value_has_data {value} {
+    set text [string trim $value]
+    return [expr {$text ne "" && $text ni {0x0 NULL null nil {}}}]
+}
+
+proc mptdc_ckpt_probe_dbget {fh key expression} {
+    set command [list dbGet $expression]
+    puts $fh "${key}_COMMAND=$command"
+    if {[catch {set value [uplevel #0 $command]} err]} {
+        puts $fh "${key}_STATUS=FAIL"
+        puts $fh "${key}_ERROR=[mptdc_signoff_report_value $err]"
+        return [dict create status FAIL value {} error $err]
+    }
+    puts $fh "${key}_STATUS=PASS"
+    puts $fh "${key}_VALUE=[mptdc_signoff_report_value $value]"
+    return [dict create status PASS value $value error {}]
+}
+
+proc mptdc_ckpt_probe_handle {fh prefix handle attributes} {
+    puts $fh "${prefix}_HANDLE=[mptdc_signoff_report_value $handle]"
+    foreach spec $attributes {
+        lassign $spec key attribute
+        mptdc_ckpt_probe_dbget $fh "${prefix}_${key}" "${handle}.${attribute}"
+    }
+}
+
+proc mptdc_ckpt_probe_capture_redirect {kind name command path} {
+    file mkdir [file dirname $path]
+    set ok 1
+    set err ""
+    if {[catch {uplevel #0 "$command > \"$path\""} err]} {
+        set ok 0
+        mptdc_ckpt_write_text $path "# $kind $name\nCOMMAND=$command\nREPORT_STATUS=FAIL\nERROR=[mptdc_signoff_report_value $err]\n"
+    } elseif {![file exists $path] || [file size $path] == 0} {
+        set ok 0
+        set err "command produced no report"
+        mptdc_ckpt_write_text $path "# $kind $name\nCOMMAND=$command\nREPORT_STATUS=FAIL\nERROR=$err\n"
+    }
+    return [dict create status [expr {$ok ? "PASS" : "FAIL"}] path $path error $err]
+}
+
+proc mptdc_ckpt_probe_boxes_overlap {lhs rhs} {
+    set lhs [mptdc_signoff_flat_box $lhs]
+    set rhs [mptdc_signoff_flat_box $rhs]
+    if {![mptdc_signoff_box_valid $lhs] || ![mptdc_signoff_box_valid $rhs]} {
+        return 0
+    }
+    return [expr {
+        [lindex $lhs 0] <= [lindex $rhs 2] &&
+        [lindex $lhs 2] >= [lindex $rhs 0] &&
+        [lindex $lhs 1] <= [lindex $rhs 3] &&
+        [lindex $lhs 3] >= [lindex $rhs 1]
+    }]
+}
+
+proc mptdc_ckpt_probe_target_geometry {nets} {
+    set expected_nets {u_core_n_66687 u_core_n_67240 u_core_n_57563}
+    if {$nets ne $expected_nets} {
+        error "mptdc_ckpt_probe_target_geometry requires the exact bounded target set: $expected_nets"
+    }
+
+    set report_dir [mptdc_signoff_report_dir]
+    set probe_rpt [file join $report_dir route_geometry_target_probe.rpt]
+    set help_status_rpt [file join $report_dir route_geometry_command_help_status.rpt]
+    set schema_status_rpt [file join $report_dir route_geometry_db_schema_status.rpt]
+    set fh [open $probe_rpt w]
+    puts $fh "# MPTDC Read-Only Route Geometry Probe"
+    puts $fh "PROBE_MODE=READ_ONLY_NO_ROUTE_EDITS"
+    puts $fh "TARGET_NETS=[join $nets ,]"
+
+    set windows [dict create \
+        u_core_n_66687 {214.0 173.0 226.0 185.0} \
+        u_core_n_67240 {214.0 218.0 226.0 230.0} \
+        u_core_n_57563 {359.0 323.0 371.0 334.0}]
+    set target_net_count 0
+    set target_with_instterms_count 0
+    set target_with_pin_geometry_count 0
+    set target_instterm_count 0
+    set target_instterm_pin_geometry_count 0
+    set target_wire_count 0
+    set target_via_count 0
+
+    foreach net $nets {
+        set token [string toupper $net]
+        puts $fh ""
+        puts $fh "TARGET_${token}_BEGIN"
+        puts $fh "TARGET_${token}_WINDOW=[dict get $windows $net]"
+        set handles {}
+        puts $fh "TARGET_${token}_LOOKUP_COMMAND=dbGet -e top.nets.name $net -p"
+        if {[catch {set raw [dbGet -e top.nets.name $net -p]} err]} {
+            puts $fh "TARGET_${token}_LOOKUP_STATUS=FAIL"
+            puts $fh "TARGET_${token}_LOOKUP_ERROR=[mptdc_signoff_report_value $err]"
+        } else {
+            set handles [mptdc_ckpt_probe_valid_handles $raw]
+            puts $fh "TARGET_${token}_LOOKUP_STATUS=PASS"
+            puts $fh "TARGET_${token}_LOOKUP_HANDLES=[mptdc_signoff_report_value $handles]"
+        }
+        if {[llength $handles] != 1} {
+            puts $fh "TARGET_${token}_STATUS=FAIL_NET_HANDLE_COUNT_[llength $handles]"
+            puts $fh "TARGET_${token}_END"
+            continue
+        }
+
+        incr target_net_count
+        set nh [lindex $handles 0]
+        mptdc_ckpt_probe_handle $fh "TARGET_${token}_NET" $nh {
+            {NAME name}
+            {OBJTYPE objType}
+            {BOX box}
+            {INPUT_TERM_COUNT numInputTerms}
+            {OUTPUT_TERM_COUNT numOutputTerms}
+            {STATUS status}
+            {BOTTOM_PREFERRED_LAYER bottomPreferredLayer.name}
+            {TOP_PREFERRED_LAYER topPreferredLayer.name}
+        }
+
+        set instterms_result [mptdc_ckpt_probe_dbget $fh "TARGET_${token}_INSTTERMS" "${nh}.instTerms"]
+        set instterms {}
+        if {[dict get $instterms_result status] eq "PASS"} {
+            set instterms [mptdc_ckpt_probe_valid_handles [dict get $instterms_result value]]
+        }
+        puts $fh "TARGET_${token}_INSTTERM_COUNT=[llength $instterms]"
+        if {[llength $instterms] > 0} {
+            incr target_with_instterms_count
+            incr target_instterm_count [llength $instterms]
+        }
+        set term_idx 0
+        set net_has_pin_geometry 0
+        foreach term $instterms {
+            incr term_idx
+            mptdc_ckpt_probe_handle $fh "TARGET_${token}_INSTTERM_${term_idx}" $term {
+                {NAME name}
+                {NET_NAME net.name}
+                {INST_NAME inst.name}
+                {INST_CELL inst.cell.name}
+                {INST_ORIENT inst.orient}
+                {INST_PT inst.pt}
+                {INST_BOX inst.box}
+                {TERM_NAME term.name}
+            }
+            set term_has_pin_geometry 0
+            foreach spec {
+                {PIN_LAYERS pins.allShapes.layer.name 0}
+                {PIN_SHAPE_BOXES pins.allShapes.shapes.box 1}
+                {PIN_BOXES pins.allShapes.box 1}
+                {PIN_SHAPE_RECTS pins.allShapes.shapes.rect 1}
+                {PIN_RECTS pins.allShapes.rect 1}
+                {SINGLE_PIN_LAYERS pin.allShapes.layer.name 0}
+                {SINGLE_PIN_BOXES pin.allShapes.shapes.box 1}
+                {DIRECT_SHAPE_LAYERS allShapes.layer.name 0}
+                {DIRECT_SHAPE_BOXES allShapes.shapes.box 1}
+                {LIBTERM_PIN_LAYERS term.pins.allShapes.layer.name 0}
+                {LIBTERM_PIN_BOXES term.pins.allShapes.shapes.box 1}
+            } {
+                lassign $spec key attribute is_geometry
+                set result [mptdc_ckpt_probe_dbget $fh \
+                    "TARGET_${token}_INSTTERM_${term_idx}_${key}" \
+                    "${term}.${attribute}"]
+                if {$is_geometry && [dict get $result status] eq "PASS" &&
+                    [mptdc_ckpt_probe_value_has_data [dict get $result value]]} {
+                    set term_has_pin_geometry 1
+                }
+            }
+            puts $fh "TARGET_${token}_INSTTERM_${term_idx}_PIN_GEOMETRY_STATUS=[expr {$term_has_pin_geometry ? "PASS" : "FAIL"}]"
+            if {$term_has_pin_geometry} {
+                incr target_instterm_pin_geometry_count
+                set net_has_pin_geometry 1
+            }
+        }
+        if {$net_has_pin_geometry} {
+            incr target_with_pin_geometry_count
+        }
+
+        foreach route_kind {wires vias} {
+            set route_result [mptdc_ckpt_probe_dbget $fh "TARGET_${token}_[string toupper $route_kind]" "${nh}.${route_kind}"]
+            set route_handles {}
+            if {[dict get $route_result status] eq "PASS"} {
+                set route_handles [mptdc_ckpt_probe_valid_handles [dict get $route_result value]]
+            }
+            puts $fh "TARGET_${token}_[string toupper $route_kind]_COUNT=[llength $route_handles]"
+            if {$route_kind eq "wires"} {
+                incr target_wire_count [llength $route_handles]
+                set attributes {
+                    {NET_NAME net.name}
+                    {LAYER layer.name}
+                    {BOX box}
+                    {PTS pts}
+                    {WIDTH width}
+                    {STATUS status}
+                    {SHAPE shape}
+                    {RULE rule.name}
+                }
+            } else {
+                incr target_via_count [llength $route_handles]
+                set attributes {
+                    {NET_NAME net.name}
+                    {VIA_NAME via.name}
+                    {PT pt}
+                    {BOX box}
+                    {STATUS status}
+                    {BOTTOM_LAYER bottomLayer.name}
+                    {TOP_LAYER topLayer.name}
+                    {ORIENT orient}
+                }
+            }
+            set route_idx 0
+            foreach route_handle $route_handles {
+                incr route_idx
+                mptdc_ckpt_probe_handle $fh \
+                    "TARGET_${token}_[string toupper $route_kind]_${route_idx}" \
+                    $route_handle $attributes
+            }
+        }
+        puts $fh "TARGET_${token}_STATUS=PASS"
+        puts $fh "TARGET_${token}_END"
+    }
+
+    set nearby_pg_shape_count 0
+    puts $fh ""
+    puts $fh "NEARBY_PG_SHAPES_BEGIN"
+    foreach pg_net {VDD VSS} {
+        set pg_handles {}
+        if {![catch {set raw [dbGet -e top.nets.name $pg_net -p]}]} {
+            set pg_handles [mptdc_ckpt_probe_valid_handles $raw]
+        }
+        foreach pg_handle $pg_handles {
+            set swires {}
+            if {![catch {set raw [dbGet ${pg_handle}.sWires]}]} {
+                set swires [mptdc_ckpt_probe_valid_handles $raw]
+            }
+            set swire_idx 0
+            foreach swire $swires {
+                incr swire_idx
+                set box {}
+                catch {set box [mptdc_signoff_flat_box [dbGet ${swire}.box]]}
+                set matches {}
+                foreach net $nets {
+                    if {[mptdc_ckpt_probe_boxes_overlap $box [dict get $windows $net]]} {
+                        lappend matches $net
+                    }
+                }
+                if {[llength $matches] == 0} {
+                    continue
+                }
+                incr nearby_pg_shape_count
+                set prefix "NEARBY_PG_${pg_net}_${nearby_pg_shape_count}"
+                puts $fh "${prefix}_TARGET_WINDOWS=[join $matches ,]"
+                mptdc_ckpt_probe_handle $fh $prefix $swire {
+                    {NET_NAME net.name}
+                    {LAYER layer.name}
+                    {BOX box}
+                    {PTS pts}
+                    {WIDTH width}
+                    {STATUS status}
+                    {SHAPE shape}
+                    {GEOM_TYPE geomType}
+                }
+            }
+        }
+    }
+    puts $fh "NEARBY_PG_SHAPES_END"
+    puts $fh "TARGET_NET_COUNT=$target_net_count"
+    puts $fh "TARGET_NET_WITH_INSTTERMS_COUNT=$target_with_instterms_count"
+    puts $fh "TARGET_NET_WITH_PIN_GEOMETRY_COUNT=$target_with_pin_geometry_count"
+    puts $fh "TARGET_INSTTERM_COUNT=$target_instterm_count"
+    puts $fh "TARGET_INSTTERM_PIN_GEOMETRY_COUNT=$target_instterm_pin_geometry_count"
+    puts $fh "TARGET_WIRE_COUNT=$target_wire_count"
+    puts $fh "TARGET_VIA_COUNT=$target_via_count"
+    puts $fh "NEARBY_PG_SHAPE_COUNT=$nearby_pg_shape_count"
+    close $fh
+
+    set help_fh [open $help_status_rpt w]
+    puts $help_fh "# Installed Innovus command help capture"
+    set help_pass_count 0
+    set help_fail_count 0
+    foreach command_name {
+        dbCreateWire dbCreateVia editAddRoute editCommitRoute editAddVia
+        setViaEdit editDelete setAttribute create_route_rule
+        set_route_attributes routeDesign dbQuery
+    } {
+        set safe [mptdc_ckpt_sanitize $command_name]
+        set path [file join $report_dir "help_${safe}.rpt"]
+        set result [mptdc_ckpt_probe_capture_redirect HELP $command_name [list help $command_name] $path]
+        puts $help_fh "HELP_${safe}_STATUS=[dict get $result status]"
+        puts $help_fh "HELP_${safe}_REPORT=$path"
+        if {[dict get $result status] eq "PASS"} {
+            incr help_pass_count
+        } else {
+            incr help_fail_count
+            puts $help_fh "HELP_${safe}_ERROR=[mptdc_signoff_report_value [dict get $result error]]"
+        }
+    }
+    puts $help_fh "HELP_CAPTURE_PASS_COUNT=$help_pass_count"
+    puts $help_fh "HELP_CAPTURE_FAIL_COUNT=$help_fail_count"
+    puts $help_fh "HELP_CAPTURE_STATUS=[expr {$help_pass_count > 0 ? "PASS" : "FAIL"}]"
+    close $help_fh
+
+    set schema_fh [open $schema_status_rpt w]
+    puts $schema_fh "# Installed Innovus DB schema capture"
+    set schema_pass_count 0
+    set schema_fail_count 0
+    foreach object_name {net wire viaInst instTerm pin pinShape sWire} {
+        set safe [mptdc_ckpt_sanitize $object_name]
+        set path [file join $report_dir "schema_${safe}.rpt"]
+        set result [mptdc_ckpt_probe_capture_redirect SCHEMA $object_name [list dbSchema $object_name] $path]
+        puts $schema_fh "SCHEMA_${safe}_STATUS=[dict get $result status]"
+        puts $schema_fh "SCHEMA_${safe}_REPORT=$path"
+        if {[dict get $result status] eq "PASS"} {
+            incr schema_pass_count
+        } else {
+            incr schema_fail_count
+            puts $schema_fh "SCHEMA_${safe}_ERROR=[mptdc_signoff_report_value [dict get $result error]]"
+        }
+    }
+    puts $schema_fh "SCHEMA_CAPTURE_PASS_COUNT=$schema_pass_count"
+    puts $schema_fh "SCHEMA_CAPTURE_FAIL_COUNT=$schema_fail_count"
+    puts $schema_fh "SCHEMA_CAPTURE_STATUS=[expr {$schema_pass_count > 0 ? "PASS" : "FAIL"}]"
+    close $schema_fh
+
+    set probe_status [expr {
+        $target_net_count == [llength $expected_nets] &&
+        $target_with_instterms_count == [llength $expected_nets] &&
+        $target_with_pin_geometry_count == [llength $expected_nets] &&
+        $nearby_pg_shape_count > 0 &&
+        $help_pass_count > 0 &&
+        $schema_pass_count > 0
+    }]
+    set fh [open $probe_rpt a]
+    puts $fh "HELP_STATUS_REPORT=$help_status_rpt"
+    puts $fh "HELP_CAPTURE_PASS_COUNT=$help_pass_count"
+    puts $fh "HELP_CAPTURE_STATUS=[expr {$help_pass_count > 0 ? "PASS" : "FAIL"}]"
+    puts $fh "SCHEMA_STATUS_REPORT=$schema_status_rpt"
+    puts $fh "SCHEMA_CAPTURE_PASS_COUNT=$schema_pass_count"
+    puts $fh "SCHEMA_CAPTURE_STATUS=[expr {$schema_pass_count > 0 ? "PASS" : "FAIL"}]"
+    puts $fh "PROBE_STATUS=[expr {$probe_status ? "PASS" : "FAIL"}]"
+    close $fh
+
+    if {!$probe_status} {
+        error "route geometry probe evidence is incomplete: report=$probe_rpt"
+    }
+    puts "MPTDC_CKPT_ROUTE_GEOMETRY_PROBE_REPORT=$probe_rpt"
+    return [dict create status PASS report $probe_rpt]
 }
 
 proc mptdc_ckpt_route_selected_nets_with_commands {nets route_commands route_label} {
