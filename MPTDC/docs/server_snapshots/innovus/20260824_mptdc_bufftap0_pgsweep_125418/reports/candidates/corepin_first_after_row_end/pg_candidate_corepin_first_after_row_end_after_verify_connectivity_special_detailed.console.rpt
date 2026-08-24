@@ -1,0 +1,29 @@
+VERIFY_CONNECTIVITY use new engine.
+
+******** Start: VERIFY CONNECTIVITY ********
+Start Time: Mon Aug 24 12:55:53 2026
+
+Design Name: mptdc_axis_core
+Database Units: 1000
+Design Boundary: (0.0000, 0.0000) (1168.7200, 882.5600)
+Error Limit = 1000; Warning Limit = 50
+Check specified nets
+*** Checking Net VDD
+Net VDD: has an unconnected terminal, has special routes with opens, dangling Wire.
+*** Checking Net VSS
+Net VSS: has an unconnected terminal, has special routes with opens, dangling Wire.
+
+Begin Summary 
+    4 Problem(s) (IMPVFC-96): Terminal(s) are not connected.
+    2 Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.
+    34 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+    40 total info(s) created.
+End Summary
+
+End Time: Mon Aug 24 12:55:54 2026
+Time Elapsed: 0:00:01.0
+
+******** End: VERIFY CONNECTIVITY ********
+  Verification Complete : 40 Viols.  0 Wrngs.
+  (CPU Time: 0:00:00.2  MEM: 0.000M)
+

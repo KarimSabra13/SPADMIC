@@ -1,0 +1,4 @@
+source_pg_run_id: 20260824_mptdc_bufftap0_simplepg_pgproof_112900
+source_checkpoint: /sim/ksabra/SPADMIC_work/innovus/20260824_mptdc_bufftap0_simplepg_pgproof_112900/checkpoints/03_cts.enc.dat
+head: 1d150b887fc25a1d093321cd1e1b83d397477b18
+candidate_process_isolation: one fresh Innovus restore per candidate

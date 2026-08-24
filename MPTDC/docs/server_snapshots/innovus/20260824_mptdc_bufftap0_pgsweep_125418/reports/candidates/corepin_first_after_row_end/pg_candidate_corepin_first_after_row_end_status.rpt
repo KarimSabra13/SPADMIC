@@ -1,0 +1,7 @@
+# MPTDC PG isolated candidate
+CANDIDATE=corepin_first_after_row_end
+MODE_COMMAND=NONE
+SROUTE_COMMAND=sroute -connect {corePin} -nets {VDD VSS} -corePinTarget firstAfterRowEnd -allowLayerChange 1
+CORE_PIN_STOP_ROUTE_STATUS=PASS
+MODE_STATUS=SKIPPED
+SROUTE_STATUS=PASS

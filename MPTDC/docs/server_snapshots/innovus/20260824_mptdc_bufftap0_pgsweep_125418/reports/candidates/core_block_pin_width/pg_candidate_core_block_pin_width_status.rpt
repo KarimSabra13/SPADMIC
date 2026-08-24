@@ -1,0 +1,7 @@
+# MPTDC PG isolated candidate
+CANDIDATE=core_block_pin_width
+MODE_COMMAND=setSrouteMode -blockPinRouteWithPinWidth true
+SROUTE_COMMAND=sroute -connect {corePin blockPin} -nets {VDD VSS} -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -allowLayerChange 1
+CORE_PIN_STOP_ROUTE_STATUS=PASS
+MODE_STATUS=PASS
+SROUTE_STATUS=PASS

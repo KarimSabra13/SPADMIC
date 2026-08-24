@@ -1,0 +1,89 @@
+VERIFY_CONNECTIVITY use new engine.
+
+******** Start: VERIFY CONNECTIVITY ********
+Start Time: Mon Aug 24 12:59:13 2026
+
+Design Name: mptdc_axis_core
+Database Units: 1000
+Design Boundary: (0.0000, 0.0000) (1168.7200, 882.5600)
+Error Limit = 1000; Warning Limit = 50
+Check specified nets
+Net async_rst_n: Found a geometry with bounding box (1167.18,-0.14) (1167.46,0.42) outside the design boundary.
+Violations for such geometries will be reported.
+Net FE_OCPN68861_u_core_n_1533: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN68859_n: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN68858_n: has an unconnected terminal, has regular routing with opens.
+Net FE_OCPN68793_u_core_fast_tag_col_1__0: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN68763_u_core_fast_tag_col_3__4: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN68724_u_core_n_1545: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN68715_FE_DBTN14_u_core_n_1550: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN68705_u_core_fast_tag_col_4__3: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN460_u_core_u_meas_ctrl_n_128: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_47: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_31: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_22: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_33: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_32: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_18: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_14: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_13: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_12: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_21: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_20: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_7: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_6: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net CTS_11: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN438_u_core_fast_tag_col_4__4: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN437_u_core_fast_tag_col_4__3: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN433_u_core_fast_tag_col_3__4: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN389_u_core_n_1533: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OCPN382_u_core_n_1545: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN139_u_core_u_stop_epoch_capture_n_392_BAR: has an unconnected terminal, has regular routing with opens.
+Net FE_OFN137_u_core_n_41714: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN132_u_core_drain_read_ctx_0: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN130_u_core_drain_read_ctx_0: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN128_u_core_drain_read_ctx_0: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN123_u_core_fast_tag_col_4__0: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN120_u_core_fast_tag_col_1__0: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN109_u_core_u_meas_ctrl_n_128: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_OFN75_u_core_n_68100: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_DBTN14_u_core_n_1550: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net FE_DBTN4_u_core_n_1551: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_pd_nfast_hit_packed[209]: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_pd_nfast_hit_packed[200]: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_fast_phase[5]: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_fast_tag_col[1][4]: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_fast_tag_col[4][4]: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_fast_tag_col[4][3]: has an unconnected terminal, has regular routing with opens, dangling Wire.
+**** 12:59:13 **** Processed 5000 nets.
+Net n_1668: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net n_1672: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net n_1674: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net n_1686: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net n_4729: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_gen_fast_tag_col[1].u_fast_tag_n_41: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_n_1533: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_n_1545: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_n_1551: has an unconnected terminal, has regular routing with opens, dangling Wire.
+**** 12:59:13 **** Processed 10000 nets.
+Net u_core_n_67823: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_n_69403: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_gen_pd_row[0].gen_pd_col[1].u_pd/n_4: has an unconnected terminal, has regular routing with opens, dangling Wire.
+**** 12:59:13 **** Processed 15000 nets.
+Net u_core_gen_pd_row[3].gen_pd_col[5].u_pd/n_6: has an unconnected terminal, has regular routing with opens, dangling Wire.
+Net u_core_gen_pd_row[3].gen_pd_col[5].u_pd/n_24: has an unconnected terminal, has regular routing with opens, dangling Wire.
+
+Begin Summary 
+    96 Problem(s) (IMPVFC-96): Terminal(s) are not connected.
+    59 Problem(s) (IMPVFC-92): Pieces of the net are not connected together.
+    92 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+    247 total info(s) created.
+End Summary
+
+End Time: Mon Aug 24 12:59:13 2026
+Time Elapsed: 0:00:00.0
+
+******** End: VERIFY CONNECTIVITY ********
+  Verification Complete : 247 Viols.  0 Wrngs.
+  (CPU Time: 0:00:00.6  MEM: 0.000M)
+
