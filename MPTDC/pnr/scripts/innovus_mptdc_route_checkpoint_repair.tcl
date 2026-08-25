@@ -1047,6 +1047,33 @@ proc mptdc_ckpt_manual_delete_regular_wire_area {fh label net layer area min_bef
     }
 }
 
+proc mptdc_ckpt_manual_delete_drc_wire_area {fh label net layer area} {
+    if {![mptdc_signoff_box_valid $area]} {
+        error "$label requires a valid bounded DRC-wire deletion area"
+    }
+    mptdc_ckpt_manual_log_command $fh "${label}_DELETE" \
+        [list editDelete -net $net -layer $layer -area $area \
+            -type Regular -regular_wire_with_drc]
+}
+
+proc mptdc_ckpt_manual_assert_snapshot_tuple {fh label snapshot expected_drc expected_shorts expected_regular} {
+    set actual_drc [dict get $snapshot total_violations]
+    set actual_shorts [dict get $snapshot shorts]
+    set actual_regular [dict get $snapshot regular_bad]
+    set actual_special_non_ro [dict get $snapshot special_non_ro_failures]
+    puts $fh "${label}_DRC=$actual_drc"
+    puts $fh "${label}_SHORTS=$actual_shorts"
+    puts $fh "${label}_REGULAR_CONNECTIVITY_BAD=$actual_regular"
+    puts $fh "${label}_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=$actual_special_non_ro"
+    if {$actual_drc != $expected_drc ||
+        $actual_shorts != $expected_shorts ||
+        $actual_regular != $expected_regular ||
+        $actual_special_non_ro != 0} {
+        error "$label expected tuple DRC=$expected_drc SHORTS=$expected_shorts REGULAR=$expected_regular SPECIAL_NON_RO=0, found DRC=$actual_drc SHORTS=$actual_shorts REGULAR=$actual_regular SPECIAL_NON_RO=$actual_special_non_ro"
+    }
+    return $snapshot
+}
+
 proc mptdc_ckpt_manual_add_single_via1 {fh label net point} {
     if {[llength [mptdc_ckpt_manual_vias_at $net $point]] != 0} {
         error "$label expected no existing vias at the new point $point"
@@ -1082,23 +1109,28 @@ proc mptdc_ckpt_manual_add_single_via1 {fh label net point} {
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
-    error "manual geometry ECO V4 is retired after editDelete selected no vias; use mptdc_ckpt_manual_three_marker_eco_v6"
+    error "manual geometry ECO V4 is retired after editDelete selected no vias; use mptdc_ckpt_manual_three_marker_eco_v7"
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v5 {} {
-    error "manual geometry ECO V5 is retired after coincident VIA2 insertion was a no-op; use mptdc_ckpt_manual_three_marker_eco_v6"
+    error "manual geometry ECO V5 is retired after coincident VIA2 insertion was a no-op; use mptdc_ckpt_manual_three_marker_eco_v7"
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
+    error "manual geometry ECO V6 is retired after net.wires could not see the DRC-owned MET2 shape; use mptdc_ckpt_manual_three_marker_eco_v7"
+}
+
+proc mptdc_ckpt_manual_three_marker_eco_v7 {} {
     set report_dir [mptdc_signoff_report_dir]
-    set report [file join $report_dir manual_geometry_eco_v6.rpt]
+    set report [file join $report_dir manual_geometry_eco_v7.rpt]
     set fh [open $report w]
-    puts $fh "# MPTDC Exact Three-Marker Manual Geometry ECO V6"
-    puts $fh "MANUAL_ECO_MODE=REMOTE_MET2_TRUNK_SPLICE_AND_MIN_AREA_PATCH"
+    puts $fh "# MPTDC Exact Three-Marker Manual Geometry ECO V7"
+    puts $fh "MANUAL_ECO_MODE=STAGED_BOUNDED_DRC_WIRE_DELETE_AND_MET2_TRUNK_SPLICE"
     puts $fh "VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL"
-    puts $fh "OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY"
+    puts $fh "OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_WITH_DRC"
     puts $fh "OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY"
     puts $fh "VIA_INSERT_MODE=SINGLE_VIA1_ONLY"
+    puts $fh "STAGED_TUPLE_GATES=ENABLED"
     puts $fh "REMOTE_VIA2_DELETE=u_core_n_66687:VIA2_o@224.84,179.48;u_core_n_67240:VIA2_o@229.32,225.40"
     puts $fh "REMOTE_MET2_TRUNK_SPLICE=u_core_n_66687:224.84,179.48;u_core_n_67240:229.32,225.40"
     puts $fh "SOURCE_BASELINE=DRC_3_SHORTS_1_REGULAR_0_SPECIAL_NON_RO_0"
@@ -1107,17 +1139,8 @@ proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
     puts $fh "TARGET_NETS=u_core_n_66687,u_core_n_67240,u_core_n_57563"
 
     set body_status [catch {
-        set baseline [mptdc_ckpt_verify_snapshot manual_v6_pre]
-        puts $fh "PRE_DRC=[dict get $baseline total_violations]"
-        puts $fh "PRE_SHORTS=[dict get $baseline shorts]"
-        puts $fh "PRE_REGULAR_CONNECTIVITY_BAD=[dict get $baseline regular_bad]"
-        puts $fh "PRE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[dict get $baseline special_non_ro_failures]"
-        if {[dict get $baseline total_violations] != 3 ||
-            [dict get $baseline shorts] != 1 ||
-            [dict get $baseline regular_bad] != 0 ||
-            [dict get $baseline special_non_ro_failures] != 0} {
-            error "manual V6 source baseline mismatch"
-        }
+        set baseline [mptdc_ckpt_verify_snapshot manual_v7_pre]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 3 1 0
 
         if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {220.64 179.48}] ||
             ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {224.84 179.48}] ||
@@ -1135,8 +1158,16 @@ proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
 
         mptdc_ckpt_manual_delete_via_stack $fh N66687_OLD_STACK \
             u_core_n_66687 {220.64 179.48} {VIA1_o VIA2_o}
-        mptdc_ckpt_manual_delete_regular_wire_area $fh N66687_OLD_MET2_LANDING \
-            u_core_n_66687 MET2 {220.45 179.25 220.85 180.05} 1
+        set n66687_stack_deleted [mptdc_ckpt_verify_snapshot \
+            manual_v7_n66687_stack_deleted]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh N66687_STACK_DELETED \
+            $n66687_stack_deleted 3 1 1
+        mptdc_ckpt_manual_delete_drc_wire_area $fh N66687_OLD_MET2_LANDING \
+            u_core_n_66687 MET2 {220.45 179.25 220.85 180.05}
+        set n66687_landing_deleted [mptdc_ckpt_verify_snapshot \
+            manual_v7_n66687_drc_wire_deleted]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh N66687_DRC_WIRE_DELETED \
+            $n66687_landing_deleted 2 0 1
         mptdc_ckpt_manual_delete_via_stack $fh N66687_REMOTE_VIA2 \
             u_core_n_66687 {224.84 179.48} {VIA2_o}
         mptdc_ckpt_manual_delete_regular_wire_area $fh N66687_OBSOLETE_MET3 \
@@ -1149,11 +1180,34 @@ proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
         mptdc_ckpt_manual_add_wire_path $fh N66687_MET2_REMOTE_BRIDGE \
             u_core_n_66687 MET2 0.28 \
             {{221.20 178.92} {224.84 178.92} {224.84 179.48}}
+        mptdc_ckpt_manual_assert_single_via1 $fh N66687_NEW_VIA1_POST \
+            u_core_n_66687 {221.20 178.92}
+        mptdc_ckpt_manual_assert_via_names $fh N66687_REMOTE_VIA2_POST \
+            u_core_n_66687 {224.84 179.48} {}
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {221.20 178.92}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {221.20 178.92}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {224.84 179.48}] ||
+            [mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {220.64 179.48}] ||
+            [mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {224.84 179.48}]} {
+            error "u_core_n_66687 staged remote-MET2 splice did not materialize"
+        }
+        set n66687_reconnected [mptdc_ckpt_verify_snapshot \
+            manual_v7_n66687_reconnected]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh N66687_RECONNECTED \
+            $n66687_reconnected 2 0 0
 
         mptdc_ckpt_manual_delete_via_stack $fh N67240_OLD_STACK \
             u_core_n_67240 {219.80 224.14} {VIA1_Y_so VIA2_so}
-        mptdc_ckpt_manual_delete_regular_wire_area $fh N67240_OLD_MET2_LANDING \
-            u_core_n_67240 MET2 {219.62 223.73 219.98 224.55} 1
+        set n67240_stack_deleted [mptdc_ckpt_verify_snapshot \
+            manual_v7_n67240_stack_deleted]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh N67240_STACK_DELETED \
+            $n67240_stack_deleted 2 0 1
+        mptdc_ckpt_manual_delete_drc_wire_area $fh N67240_OLD_MET2_LANDING \
+            u_core_n_67240 MET2 {219.62 223.73 219.98 224.55}
+        set n67240_landing_deleted [mptdc_ckpt_verify_snapshot \
+            manual_v7_n67240_drc_wire_deleted]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh N67240_DRC_WIRE_DELETED \
+            $n67240_landing_deleted 1 0 1
         mptdc_ckpt_manual_delete_via_stack $fh N67240_REMOTE_VIA2 \
             u_core_n_67240 {229.32 225.40} {VIA2_o}
         mptdc_ckpt_manual_delete_regular_wire_area $fh N67240_OBSOLETE_MET3 \
@@ -1166,6 +1220,21 @@ proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
         mptdc_ckpt_manual_add_wire_path $fh N67240_MET2_REMOTE_BRIDGE \
             u_core_n_67240 MET2 0.28 \
             {{221.20 223.58} {229.32 223.58} {229.32 225.40}}
+        mptdc_ckpt_manual_assert_single_via1 $fh N67240_NEW_VIA1_POST \
+            u_core_n_67240 {221.20 223.58}
+        mptdc_ckpt_manual_assert_via_names $fh N67240_REMOTE_VIA2_POST \
+            u_core_n_67240 {229.32 225.40} {}
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET1 {221.20 223.58}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {221.20 223.58}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {229.32 225.40}] ||
+            [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {219.80 224.14}] ||
+            [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {229.32 225.40}]} {
+            error "u_core_n_67240 staged remote-MET2 splice did not materialize"
+        }
+        set n67240_reconnected [mptdc_ckpt_verify_snapshot \
+            manual_v7_n67240_reconnected]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh N67240_RECONNECTED \
+            $n67240_reconnected 1 0 0
 
         set min_area_vias [mptdc_ckpt_manual_vias_at u_core_n_57563 {364.84 328.44}]
         set min_area_names {}
@@ -1179,46 +1248,12 @@ proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
         mptdc_ckpt_manual_add_wire_path $fh N57563_MET1_LANDING_PATCH \
             u_core_n_57563 MET1 0.28 {{364.84 328.44} {365.40 328.44}}
 
-        mptdc_ckpt_manual_assert_single_via1 $fh N66687_NEW_VIA1_POST \
-            u_core_n_66687 {221.20 178.92}
-        mptdc_ckpt_manual_assert_single_via1 $fh N67240_NEW_VIA1_POST \
-            u_core_n_67240 {221.20 223.58}
-        mptdc_ckpt_manual_assert_via_names $fh N66687_REMOTE_VIA2_POST \
-            u_core_n_66687 {224.84 179.48} {}
-        mptdc_ckpt_manual_assert_via_names $fh N67240_REMOTE_VIA2_POST \
-            u_core_n_67240 {229.32 225.40} {}
-
-        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {221.20 178.92}] ||
-            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {221.20 178.92}] ||
-            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {224.84 179.48}]} {
-            error "u_core_n_66687 remote-MET2 bridge did not materialize"
-        }
-        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET1 {221.20 223.58}] ||
-            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {221.20 223.58}] ||
-            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {229.32 225.40}]} {
-            error "u_core_n_67240 remote-MET2 bridge did not materialize"
-        }
-        if {[mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {220.64 179.48}] ||
-            [mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {224.84 179.48}] ||
-            [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {219.80 224.14}] ||
-            [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {229.32 225.40}]} {
-            error "obsolete MET3 branch remained after remote-MET2 splice"
-        }
         if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57563 MET1 {365.12 328.44}]} {
             error "u_core_n_57563 MET1 landing patch did not materialize"
         }
 
-        set final [mptdc_ckpt_verify_snapshot manual_v6_post]
-        puts $fh "POST_DRC=[dict get $final total_violations]"
-        puts $fh "POST_SHORTS=[dict get $final shorts]"
-        puts $fh "POST_REGULAR_CONNECTIVITY_BAD=[dict get $final regular_bad]"
-        puts $fh "POST_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[dict get $final special_non_ro_failures]"
-        if {[dict get $final total_violations] != 0 ||
-            [dict get $final shorts] != 0 ||
-            [dict get $final regular_bad] != 0 ||
-            [dict get $final special_non_ro_failures] != 0} {
-            error "manual V6 final physical gate failed"
-        }
+        set final [mptdc_ckpt_verify_snapshot manual_v7_post]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
     } body_error body_opts]
 
     catch {uiSetTool select}
@@ -1232,7 +1267,7 @@ proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
     puts $fh "MANUAL_ECO_STATUS=PASS"
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
-    puts "MPTDC_CKPT_MANUAL_GEOMETRY_ECO_V6_REPORT=$report"
+    puts "MPTDC_CKPT_MANUAL_GEOMETRY_ECO_V7_REPORT=$report"
     return [dict create status PASS report $report]
 }
 

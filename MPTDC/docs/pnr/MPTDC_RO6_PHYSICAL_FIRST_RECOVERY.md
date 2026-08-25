@@ -361,7 +361,7 @@ PG geometry already identifies all three edits:
 No PG shape, cell placement, broad router command, route blockage, waiver, or
 prior v1/v2/v3 repaired checkpoint is part of this repair.
 
-#### 2C. Current Next Command: Remote-MET2 Trunk Splice Repair V6
+#### 2C. Current Next Command: Staged Bounded DRC-Wire Repair V7
 
 V4 completed as a verified no-op. Innovus accepted the point-sized
 `editDelete` command, but retained both vias because the `-area` box did not
@@ -369,21 +369,35 @@ fully contain their routed geometry. The V4 pre/post tuples remained
 `DRC=3`, `SHORTS=1`, regular connectivity zero, and special non-RO failures
 zero; no replacement wire, PG edit, or placement edit ran.
 
-V5 proved that the geometry-bounded deletion works: both old
+V5 proved that the geometry-bounded via deletion works: both old
 `u_core_n_66687` vias were removed. It then inserted one `VIA1_o`, but the
 coincident `editAddVia` intended for VIA2 returned success without creating a
 second via. The helper stopped immediately, so `u_core_n_67240` and
 `u_core_n_57563` were not edited. That generated checkpoint is rejected and is
-not a source for V6.
+not a source for V6 or V7.
 
-V6 avoids coincident via-stack construction. It restores the original source,
-uses the proven named-via deletion, deletes only the bounded old MET2 landing
-wire on each affected net, and inserts exactly one new VIA1 per net. A local
-MET2 bridge splices each VIA1 directly into an existing routed MET2 trunk. The
-now-redundant remote VIA2 and bounded MET3 branch are removed from each net;
-otherwise that old branch would remain a predictable `dangling Wire`. The
-one-track-lower MET1 escape also avoids the DFRQJIHDX1 blockage exposed by the
-V5 marker.
+V6 proved that the exact VIA1/VIA2 stack deletion works. It then stopped before
+its old-MET2-landing delete because `net.wires` returned zero bounded rows. The
+post-command evidence retained the same three geometry markers but reported one
+open regular net. This is an Innovus object-ownership mismatch, not another
+coordinate error: `verify_drc` still owned the MET2 violation marker, while the
+generic `net.wires` collection could not enumerate its regular-wire shape. The
+V6 checkpoint is rejected and is not a source for V7.
+
+V7 restores the original source and uses Innovus's documented
+`editDelete -regular_wire_with_drc` selector, bounded simultaneously by the
+exact net, MET2 layer, and marker box. It does not use a `net.wires`
+precondition for those two DRC-owned landings. After each stack deletion,
+DRC-wire deletion, and net reconstruction, a fresh DRC and connectivity snapshot
+must match an exact tuple before the next action runs. This makes any unexpected
+selector scope immediately fatal instead of allowing a partially understood ECO
+to continue.
+
+The reconstruction still inserts exactly one new VIA1 per affected net, splices
+it on MET2 into the existing remote MET2 trunk, and removes the superseded
+remote VIA2 and bounded MET3 branch. The one-track-lower MET1 escape avoids the
+DFRQJIHDX1 blockage exposed by V5. The third edit remains the bounded MET1
+minimum-area patch on `u_core_n_57563`.
 
 Run this block once in the foreground. It always restores the original
 `20260824_154115_mptdc_bufftap0_pnrlef35_physical` failed-route checkpoint in a
@@ -398,7 +412,7 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260824_154115_mptdc_bufftap0_pnrlef35_physical
 TAG=$(date +%Y%m%d_%H%M%S)
-REPAIR_RUN=${TAG}_mptdc_bufftap0_manual_geometry_repair_v6
+REPAIR_RUN=${TAG}_mptdc_bufftap0_manual_geometry_repair_v7
 REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
 DRIVER_LOG=/tmp/${REPAIR_RUN}.driver.log
 
@@ -439,7 +453,7 @@ if [ "$REPO_READY" -eq 1 ]; then
     2>&1 | tee "$DRIVER_LOG"
   REPAIR_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: V6 repair was not launched"
+  echo "STOP: V7 repair was not launched"
 fi
 
 echo "===== SEND BACK ====="
@@ -452,8 +466,8 @@ grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPEC
   "$DRIVER_LOG" 2>/dev/null | tail -20
 grep -E '^(STEP|REPAIR_RC|MANUAL_ECO_STATUS|INITIAL_DRC|INITIAL_SHORTS|INITIAL_REGULAR_CONNECTIVITY_BAD|INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES|FINAL_DRC|FINAL_SHORTS|FINAL_REGULAR_CONNECTIVITY_BAD|FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES|FINAL_CHECKPOINT_DAT_EXISTS|RO_TAP_OBSERVABILITY_PIN_COUNT|GEOMETRY_REPAIR_GATE_MODE|DECISION)=' \
   "$REPAIR_DIR/reports/operator_gate_route_geometry_repair.rpt" 2>/dev/null
-grep -E '^(MANUAL_ECO_MODE|VIA_DELETE_MODE|OLD_MET2_LANDING_DELETE_MODE|OBSOLETE_MET3_DELETE_MODE|VIA_INSERT_MODE|REMOTE_VIA2_DELETE|REMOTE_MET2_TRUNK_SPLICE|N(66687|67240)_(OLD_STACK_POST_DELETE_VIA_COUNT|OLD_MET2_LANDING_(DELETE_STATUS|POST_DELETE_WIRE_COUNT)|NEW_VIA1_(VIA1_COUNT|VIA2_COUNT)|REMOTE_VIA2_(POST_DELETE_VIA_COUNT|POST_VIA_NAMES)|OBSOLETE_MET3_(DELETE_STATUS|POST_DELETE_WIRE_COUNT))|POST_DRC|POST_SHORTS|POST_REGULAR_CONNECTIVITY_BAD|POST_SPECIAL_CONNECTIVITY_NON_RO_FAILURES|MANUAL_ECO_STATUS|MANUAL_ECO_ERROR)=' \
-  "$REPAIR_DIR/reports/manual_geometry_eco_v6.rpt" 2>/dev/null
+grep -E '^(MANUAL_ECO_MODE|VIA_DELETE_MODE|OLD_MET2_LANDING_DELETE_MODE|OBSOLETE_MET3_DELETE_MODE|VIA_INSERT_MODE|STAGED_TUPLE_GATES|REMOTE_VIA2_DELETE|REMOTE_MET2_TRUNK_SPLICE|N(66687|67240)_(STACK_DELETED_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD)|DRC_WIRE_DELETED_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD)|RECONNECTED_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD)|OLD_STACK_POST_DELETE_VIA_COUNT|NEW_VIA1_(VIA1_COUNT|VIA2_COUNT)|REMOTE_VIA2_(POST_DELETE_VIA_COUNT|POST_VIA_NAMES)|OBSOLETE_MET3_(DELETE_STATUS|POST_DELETE_WIRE_COUNT))|POST_DRC|POST_SHORTS|POST_REGULAR_CONNECTIVITY_BAD|POST_SPECIAL_CONNECTIVITY_NON_RO_FAILURES|MANUAL_ECO_STATUS|MANUAL_ECO_ERROR)=' \
+  "$REPAIR_DIR/reports/manual_geometry_eco_v7.rpt" 2>/dev/null
 ```
 
 The repair passes the geometry stage only when the reports show all of the
@@ -463,15 +477,30 @@ following:
 TOOL_RC=0
 MANUAL_ECO_STATUS=PASS
 VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL
-OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY
+OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_WITH_DRC
 OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY
 VIA_INSERT_MODE=SINGLE_VIA1_ONLY
+STAGED_TUPLE_GATES=ENABLED
 N66687_OLD_STACK_POST_DELETE_VIA_COUNT=0
 N67240_OLD_STACK_POST_DELETE_VIA_COUNT=0
-N66687_OLD_MET2_LANDING_DELETE_STATUS=PASS
-N67240_OLD_MET2_LANDING_DELETE_STATUS=PASS
-N66687_OLD_MET2_LANDING_POST_DELETE_WIRE_COUNT=0
-N67240_OLD_MET2_LANDING_POST_DELETE_WIRE_COUNT=0
+N66687_STACK_DELETED_DRC=3
+N66687_STACK_DELETED_SHORTS=1
+N66687_STACK_DELETED_REGULAR_CONNECTIVITY_BAD=1
+N66687_DRC_WIRE_DELETED_DRC=2
+N66687_DRC_WIRE_DELETED_SHORTS=0
+N66687_DRC_WIRE_DELETED_REGULAR_CONNECTIVITY_BAD=1
+N66687_RECONNECTED_DRC=2
+N66687_RECONNECTED_SHORTS=0
+N66687_RECONNECTED_REGULAR_CONNECTIVITY_BAD=0
+N67240_STACK_DELETED_DRC=2
+N67240_STACK_DELETED_SHORTS=0
+N67240_STACK_DELETED_REGULAR_CONNECTIVITY_BAD=1
+N67240_DRC_WIRE_DELETED_DRC=1
+N67240_DRC_WIRE_DELETED_SHORTS=0
+N67240_DRC_WIRE_DELETED_REGULAR_CONNECTIVITY_BAD=1
+N67240_RECONNECTED_DRC=1
+N67240_RECONNECTED_SHORTS=0
+N67240_RECONNECTED_REGULAR_CONNECTIVITY_BAD=0
 N66687_NEW_VIA1_VIA1_COUNT=1
 N66687_NEW_VIA1_VIA2_COUNT=0
 N67240_NEW_VIA1_VIA1_COUNT=1

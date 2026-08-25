@@ -266,11 +266,6 @@ proc uiSetTool {tool} {
 
 proc editDelete {args} {
     lappend ::mptdc_test_manual_command_calls [linsert $args 0 editDelete]
-    set object_idx [lsearch -exact $args -object_type]
-    if {$object_idx < 0} {
-        error "manual fixture requires an object_type filter"
-    }
-    set object_type [lindex $args [expr {$object_idx + 1}]]
     set net_idx [lsearch -exact $args -net]
     set area_idx [lsearch -exact $args -area]
     if {$net_idx < 0 || $area_idx < 0} {
@@ -279,6 +274,24 @@ proc editDelete {args} {
     set net [lindex $args [expr {$net_idx + 1}]]
     set area [lindex $args [expr {$area_idx + 1}]]
     lassign $area llx lly urx ury
+
+    if {[lsearch -exact $args -regular_wire_with_drc] >= 0} {
+        set layer_idx [lsearch -exact $args -layer]
+        set type_idx [lsearch -exact $args -type]
+        if {$layer_idx < 0 || $type_idx < 0 ||
+            [lindex $args [expr {$type_idx + 1}]] ne "Regular" ||
+            [lsearch -exact $args -object_type] >= 0} {
+            error "manual fixture requires a bounded regular DRC-wire selector"
+        }
+        set ::mptdc_test_manual_drc_wire_deleted($net) 1
+        return {}
+    }
+
+    set object_idx [lsearch -exact $args -object_type]
+    if {$object_idx < 0} {
+        error "manual fixture requires an object_type filter"
+    }
+    set object_type [lindex $args [expr {$object_idx + 1}]]
 
     if {$object_type eq "Wire"} {
         set layer_idx [lsearch -exact $args -layer]
@@ -521,9 +534,6 @@ set ::mptdc_test_manual_wires [list \
         box {220.45 179.34 225.03 179.62} width 0.28 \
         points {{220.64 179.48} {224.84 179.48}}] \
     [dict create net u_core_n_66687 layer MET2 \
-        box {220.50 179.29 220.76 180.015} width 0.28 \
-        points {{220.64 179.48} {220.64 179.875}}] \
-    [dict create net u_core_n_66687 layer MET2 \
         box {224.70 179.29 224.98 190.82} width 0.28 \
         points {{224.84 179.48} {224.84 190.68}}] \
     [dict create net u_core_n_67240 layer MET3 \
@@ -539,22 +549,39 @@ set ::mptdc_test_manual_wires [list \
         box {220.78 225.26 229.51 225.54} width 0.28 \
         points {{220.92 225.40} {229.32 225.40}}] \
     [dict create net u_core_n_67240 layer MET2 \
-        box {219.66 223.775 219.94 224.505} width 0.28 \
-        points {{219.80 224.14} {219.80 224.365}}] \
-    [dict create net u_core_n_67240 layer MET2 \
         box {229.18 225.21 229.46 237.35} width 0.28 \
         points {{229.32 225.40} {229.32 237.16}}]]
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_manual_verify_count 0
+array set ::mptdc_test_manual_drc_wire_deleted {
+    u_core_n_66687 0
+    u_core_n_67240 0
+}
+set ::mptdc_test_manual_snapshot_tuples [dict create \
+    manual_v7_pre {3 1 0} \
+    manual_v7_n66687_stack_deleted {3 1 1} \
+    manual_v7_n66687_drc_wire_deleted {2 0 1} \
+    manual_v7_n66687_reconnected {2 0 0} \
+    manual_v7_n67240_stack_deleted {2 0 1} \
+    manual_v7_n67240_drc_wire_deleted {1 0 1} \
+    manual_v7_n67240_reconnected {1 0 0} \
+    manual_v7_post {0 0 0}]
 proc mptdc_ckpt_verify_snapshot {tag} {
     incr ::mptdc_test_manual_verify_count
-    if {$::mptdc_test_manual_verify_count == 1} {
-        return [dict create \
-            total_violations 3 shorts 1 regular_bad 0 \
-            special_non_ro_failures 0]
+    if {![dict exists $::mptdc_test_manual_snapshot_tuples $tag]} {
+        error "manual fixture received unexpected snapshot tag: $tag"
     }
+    if {$tag eq "manual_v7_n66687_drc_wire_deleted" &&
+        !$::mptdc_test_manual_drc_wire_deleted(u_core_n_66687)} {
+        error "n66687 DRC-wire snapshot occurred before the bounded deletion"
+    }
+    if {$tag eq "manual_v7_n67240_drc_wire_deleted" &&
+        !$::mptdc_test_manual_drc_wire_deleted(u_core_n_67240)} {
+        error "n67240 DRC-wire snapshot occurred before the bounded deletion"
+    }
+    lassign [dict get $::mptdc_test_manual_snapshot_tuples $tag] drc shorts regular
     return [dict create \
-        total_violations 0 shorts 0 regular_bad 0 \
+        total_violations $drc shorts $shorts regular_bad $regular \
         special_non_ro_failures 0]
 }
 if {![catch {mptdc_ckpt_manual_three_marker_eco_v4} err] ||
@@ -565,9 +592,16 @@ if {![catch {mptdc_ckpt_manual_three_marker_eco_v5} err] ||
     ![string match "*retired*" $err]} {
     error "manual V5 retirement guard did not fail as expected: $err"
 }
-set manual [mptdc_ckpt_manual_three_marker_eco_v6]
+if {![catch {mptdc_ckpt_manual_three_marker_eco_v6} err] ||
+    ![string match "*retired*" $err]} {
+    error "manual V6 retirement guard did not fail as expected: $err"
+}
+set manual [mptdc_ckpt_manual_three_marker_eco_v7]
 if {[dict get $manual status] ne "PASS" || ![file exists [dict get $manual report]]} {
     error "manual three-marker ECO helper did not pass: $manual"
+}
+if {$::mptdc_test_manual_verify_count != 8} {
+    error "manual ECO expected eight staged verification tuples, found $::mptdc_test_manual_verify_count"
 }
 if {[llength [mptdc_ckpt_manual_vias_at u_core_n_66687 {220.64 179.48}]] != 0 ||
     [llength [mptdc_ckpt_manual_vias_at u_core_n_67240 {219.80 224.14}]] != 0} {
@@ -616,13 +650,20 @@ set fh [open [dict get $manual report] r]
 set manual_text [read $fh]
 close $fh
 foreach expected {
-    {MANUAL_ECO_MODE=REMOTE_MET2_TRUNK_SPLICE_AND_MIN_AREA_PATCH}
+    {MANUAL_ECO_MODE=STAGED_BOUNDED_DRC_WIRE_DELETE_AND_MET2_TRUNK_SPLICE}
     {VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL}
-    {OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY}
+    {OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_WITH_DRC}
     {OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY}
     {VIA_INSERT_MODE=SINGLE_VIA1_ONLY}
+    {STAGED_TUPLE_GATES=ENABLED}
     {REMOTE_VIA2_DELETE=u_core_n_66687:VIA2_o@224.84,179.48;u_core_n_67240:VIA2_o@229.32,225.40}
     {REMOTE_MET2_TRUNK_SPLICE=u_core_n_66687:224.84,179.48;u_core_n_67240:229.32,225.40}
+    {N66687_STACK_DELETED_DRC=3}
+    {N66687_DRC_WIRE_DELETED_DRC=2}
+    {N66687_RECONNECTED_REGULAR_CONNECTIVITY_BAD=0}
+    {N67240_STACK_DELETED_DRC=2}
+    {N67240_DRC_WIRE_DELETED_DRC=1}
+    {N67240_RECONNECTED_REGULAR_CONNECTIVITY_BAD=0}
     {PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED}
     {PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED}
     {POST_DRC=0}
@@ -636,10 +677,23 @@ foreach expected {
 set delete_call_count 0
 set via_delete_call_count 0
 set wire_delete_call_count 0
+set drc_wire_delete_call_count 0
+set drc_wire_delete_calls {}
 set via_add_call_count 0
 foreach call $::mptdc_test_manual_command_calls {
     if {[lindex $call 0] eq "editDelete"} {
         incr delete_call_count
+        if {[lsearch -exact $call -regular_wire_with_drc] >= 0} {
+            incr drc_wire_delete_call_count
+            lappend drc_wire_delete_calls $call
+            if {[lsearch -exact $call -layer] < 0 ||
+                [lsearch -exact $call -area] < 0 ||
+                [lsearch -exact $call -net] < 0 ||
+                [lsearch -exact $call -object_type] >= 0} {
+                error "manual ECO DRC-wire deletion was not exactly bounded: $call"
+            }
+            continue
+        }
         set object_idx [lsearch -exact $call -object_type]
         set object_type [lindex $call [expr {$object_idx + 1}]]
         if {$object_type eq "Via"} {
@@ -665,8 +719,18 @@ foreach call $::mptdc_test_manual_command_calls {
     }
 }
 if {$delete_call_count != 10 || $via_delete_call_count != 6 ||
-    $wire_delete_call_count != 4} {
-    error "manual ECO expected six via and four wire deletions, found $via_delete_call_count/$wire_delete_call_count"
+    $wire_delete_call_count != 2 || $drc_wire_delete_call_count != 2} {
+    error "manual ECO expected six via, two visible-wire, and two DRC-wire deletions; found $via_delete_call_count/$wire_delete_call_count/$drc_wire_delete_call_count"
+}
+set expected_drc_wire_delete_calls [list \
+    [list editDelete -net u_core_n_66687 -layer MET2 \
+        -area {220.45 179.25 220.85 180.05} \
+        -type Regular -regular_wire_with_drc] \
+    [list editDelete -net u_core_n_67240 -layer MET2 \
+        -area {219.62 223.73 219.98 224.55} \
+        -type Regular -regular_wire_with_drc]]
+if {$drc_wire_delete_calls ne $expected_drc_wire_delete_calls} {
+    error "manual ECO DRC-wire commands changed scope: $drc_wire_delete_calls"
 }
 if {$via_add_call_count != 2} {
     error "manual ECO expected exactly two single-VIA1 insertions, found $via_add_call_count"
