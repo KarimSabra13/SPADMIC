@@ -1,0 +1,25 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_three_marker_eco_v7
+REPORT_STATUS=FAILED
+ERROR=
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+
+    while executing
+"editDelete -net u_core_n_66687 -layer MET2 -area {220.45 179.25 220.85 180.05} -type Regular -regular_wire_with_drc"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $command"
+    (procedure "mptdc_ckpt_manual_log_command" line 4)
+    invoked from within
+"mptdc_ckpt_manual_log_command $fh "${label}_DELETE"  [list editDelete -net $net -layer $layer -area $area  -type Regular -regular_wire_with_drc]"
+    (procedure "mptdc_ckpt_manual_delete_drc_wire_area" line 5)
+    invoked from within
+"mptdc_ckpt_manual_delete_drc_wire_area $fh N66687_OLD_MET2_LANDING  u_core_n_66687 MET2 {220.45 179.25 220.85 180.05}"
+    (procedure "mptdc_ckpt_manual_three_marker_eco_v7" line 38)
+    invoked from within
+"mptdc_ckpt_manual_three_marker_eco_v7"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
