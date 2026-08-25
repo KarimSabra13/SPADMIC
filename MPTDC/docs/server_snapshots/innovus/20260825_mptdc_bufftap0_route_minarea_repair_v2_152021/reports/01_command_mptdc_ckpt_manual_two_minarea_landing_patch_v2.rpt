@@ -1,0 +1,19 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_two_minarea_landing_patch_v2
+REPORT_STATUS=FAILED
+ERROR=N57556_LANDING_BASE expected exactly one VIA1 at 385.56 328.44, found 
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N57556_LANDING_BASE expected exactly one VIA1 at 385.56 328.44, found 
+    while executing
+"error "$label expected exactly one VIA1 at $point, found $names""
+    (procedure "mptdc_ckpt_manual_assert_single_via1" line 12)
+    invoked from within
+"mptdc_ckpt_manual_assert_single_via1 $fh N57556_LANDING_BASE  u_core_n_57556 {385.56 328.44}"
+    (procedure "mptdc_ckpt_manual_two_minarea_landing_patch_v2" line 28)
+    invoked from within
+"mptdc_ckpt_manual_two_minarea_landing_patch_v2"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
