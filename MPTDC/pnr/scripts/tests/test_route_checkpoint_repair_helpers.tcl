@@ -122,6 +122,10 @@ proc dbGet {args} {
             switch -- $attribute {
                 pt { return [dict get $row point] }
                 via.name { return [dict get $row name] }
+                status { return [dict get $row status] }
+                botRects { return [dict get $row bot_rects] }
+                cutRects { return [dict get $row cut_rects] }
+                topRects { return [dict get $row top_rects] }
                 default { return 0x0 }
             }
         }
@@ -268,19 +272,35 @@ proc editDelete {args} {
     }
     set net_idx [lsearch -exact $args -net]
     set area_idx [lsearch -exact $args -area]
+    set via_cell_idx [lsearch -exact $args -via_cell]
+    if {$net_idx < 0 || $area_idx < 0 || $via_cell_idx < 0} {
+        error "manual fixture requires net, area, and exact via_cell filters"
+    }
     set net [lindex $args [expr {$net_idx + 1}]]
     set area [lindex $args [expr {$area_idx + 1}]]
+    set via_cell [lindex $args [expr {$via_cell_idx + 1}]]
     lassign $area llx lly urx ury
     set retained {}
     foreach row $::mptdc_test_manual_vias {
-        lassign [dict get $row point] x y
-        if {[dict get $row net] eq $net &&
-            $x >= $llx && $x <= $urx && $y >= $lly && $y <= $ury} {
-            continue
+        set delete_row [expr {
+            [dict get $row net] eq $net && [dict get $row name] eq $via_cell
+        }]
+        if {$delete_row} {
+            foreach key {bot_rects cut_rects top_rects} {
+                foreach rect [mptdc_ckpt_manual_rects_from_value [dict get $row $key]] {
+                    if {[lindex $rect 0] < $llx || [lindex $rect 1] < $lly ||
+                        [lindex $rect 2] > $urx || [lindex $rect 3] > $ury} {
+                        set delete_row 0
+                    }
+                }
+            }
         }
-        lappend retained $row
+        if {!$delete_row} {
+            lappend retained $row
+        }
     }
     set ::mptdc_test_manual_vias $retained
+    return {}
 }
 
 proc editAddRoute {x y} {
@@ -323,13 +343,24 @@ proc editAddVia {x y} {
         default { error "unsupported manual fixture via pair: $pair" }
     }
     lappend ::mptdc_test_manual_vias [dict create \
-        net $::mptdc_test_manual_edit_net name $name point [list $x $y]]
+        net $::mptdc_test_manual_edit_net name $name point [list $x $y] \
+        status routed \
+        bot_rects [list [list [expr {$x - 0.12}] [expr {$y - 0.12}] \
+            [expr {$x + 0.12}] [expr {$y + 0.12}]]] \
+        cut_rects [list [list [expr {$x - 0.08}] [expr {$y - 0.08}] \
+            [expr {$x + 0.08}] [expr {$y + 0.08}]]] \
+        top_rects [list [list [expr {$x - 0.14}] [expr {$y - 0.14}] \
+            [expr {$x + 0.14}] [expr {$y + 0.14}]]]]
 }
 
 source $helper
 
 if {[mptdc_ckpt_manual_flat_point 220.64] ne {}} {
     error "manual point normalizer accepted a scalar coordinate"
+}
+if {[llength [mptdc_ckpt_manual_rects_from_value \
+        {{{1.0 2.0 3.0 4.0}} {{5.0 6.0 7.0 8.0}}}]] != 2} {
+    error "manual rectangle normalizer rejected nested via geometry"
 }
 
 set result [mptdc_ckpt_set_net_route_layers u_net_a MET3 MET3]
@@ -424,11 +455,26 @@ set ::mptdc_test_probe_mode 0
 
 set ::mptdc_test_manual_mode 1
 set ::mptdc_test_manual_vias [list \
-    [dict create net u_core_n_66687 name VIA1_o point {220.64 179.48}] \
-    [dict create net u_core_n_66687 name VIA2_o point {220.64 179.48}] \
-    [dict create net u_core_n_67240 name VIA1_Y_so point {219.80 224.14}] \
-    [dict create net u_core_n_67240 name VIA2_so point {219.80 224.14}] \
-    [dict create net u_core_n_57563 name VIA1_X_so point {364.84 328.44}]]
+    [dict create net u_core_n_66687 name VIA1_o point {220.64 179.48} status routed \
+        bot_rects {{{220.525 179.365 220.755 179.595}}} \
+        cut_rects {{{220.58 179.42 220.70 179.54}}} \
+        top_rects {{{220.50 179.29 220.76 179.67}}}] \
+    [dict create net u_core_n_66687 name VIA2_o point {220.64 179.48} status routed \
+        bot_rects {{{220.50 179.29 220.76 179.67}}} \
+        cut_rects {{{220.58 179.40 220.70 179.56}}} \
+        top_rects {{{220.48 179.25 220.80 179.71}}}] \
+    [dict create net u_core_n_67240 name VIA1_Y_so point {219.80 224.14} status routed \
+        bot_rects {{{219.66 223.775 219.94 224.505}}} \
+        cut_rects {{{219.72 224.05 219.88 224.23}}} \
+        top_rects {{{219.64 223.75 219.96 224.53}}}] \
+    [dict create net u_core_n_67240 name VIA2_so point {219.80 224.14} status routed \
+        bot_rects {{{219.64 223.75 219.96 224.53}}} \
+        cut_rects {{{219.72 224.04 219.88 224.24}}} \
+        top_rects {{{219.62 223.73 219.98 224.55}}}] \
+    [dict create net u_core_n_57563 name VIA1_X_so point {364.84 328.44} status routed \
+        bot_rects {{{364.72 328.32 364.96 328.56}}} \
+        cut_rects {{{364.76 328.36 364.92 328.52}}} \
+        top_rects {{{364.70 328.30 364.98 328.58}}}]]
 set ::mptdc_test_manual_wires [list \
     [dict create net u_core_n_66687 layer MET1 \
         box {220.525 179.365 220.78 179.595} width 0.23 \
@@ -452,7 +498,11 @@ proc mptdc_ckpt_verify_snapshot {tag} {
         total_violations 0 shorts 0 regular_bad 0 \
         special_non_ro_failures 0]
 }
-set manual [mptdc_ckpt_manual_three_marker_eco_v4]
+if {![catch {mptdc_ckpt_manual_three_marker_eco_v4} err] ||
+    ![string match "*retired*" $err]} {
+    error "manual V4 retirement guard did not fail as expected: $err"
+}
+set manual [mptdc_ckpt_manual_three_marker_eco_v5]
 if {[dict get $manual status] ne "PASS" || ![file exists [dict get $manual report]]} {
     error "manual three-marker ECO helper did not pass: $manual"
 }
@@ -478,7 +528,8 @@ set fh [open [dict get $manual report] r]
 set manual_text [read $fh]
 close $fh
 foreach expected {
-    {MANUAL_ECO_MODE=EXACT_VIA_ESCAPE_AND_MIN_AREA_PATCH}
+    {MANUAL_ECO_MODE=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH}
+    {VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL}
     {PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED}
     {PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED}
     {POST_DRC=0}
@@ -489,10 +540,20 @@ foreach expected {
         error "manual ECO report is missing $expected"
     }
 }
+set delete_call_count 0
 foreach call $::mptdc_test_manual_command_calls {
+    if {[lindex $call 0] eq "editDelete"} {
+        incr delete_call_count
+        if {[lsearch -exact $call -via_cell] < 0} {
+            error "manual ECO via deletion omitted exact via_cell filter: $call"
+        }
+    }
     if {[lindex $call 0] in {routeDesign globalDetailRoute detailRoute ecoRoute createRouteBlk editPowerVia}} {
         error "manual ECO invoked a prohibited broad or PG command: $call"
     }
+}
+if {$delete_call_count != 4} {
+    error "manual ECO expected four geometry-bounded via deletions, found $delete_call_count"
 }
 set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir

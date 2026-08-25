@@ -355,7 +355,20 @@ PG geometry already identifies all three edits:
 No PG shape, cell placement, broad router command, route blockage, waiver, or
 prior v1/v2/v3 repaired checkpoint is part of this repair.
 
-#### 2C. Current Next Command: Exact Manual Geometry Repair V4
+#### 2C. Current Next Command: Geometry-Bounded Manual Repair V5
+
+V4 completed as a verified no-op. Innovus accepted the point-sized
+`editDelete` command, but retained both vias because the `-area` box did not
+fully contain their routed geometry. The V4 pre/post tuples remained
+`DRC=3`, `SHORTS=1`, regular connectivity zero, and special non-RO failures
+zero; no replacement wire, PG edit, or placement edit ran.
+
+V5 keeps the same three physical edits and the same original source
+checkpoint. For each old stack it queries `botRects`, `cutRects`, and
+`topRects`, forms a padded union box, and deletes each named via cell with a
+separate `editDelete -via_cell` command. It verifies that exactly one via was
+removed after every command and stops before adding replacement metal on any
+mismatch.
 
 Run this block once in the foreground. It always restores the original
 `20260824_154115_mptdc_bufftap0_pnrlef35_physical` failed-route checkpoint in a
@@ -370,7 +383,7 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260824_154115_mptdc_bufftap0_pnrlef35_physical
 TAG=$(date +%Y%m%d_%H%M%S)
-REPAIR_RUN=${TAG}_mptdc_bufftap0_manual_geometry_repair_v4
+REPAIR_RUN=${TAG}_mptdc_bufftap0_manual_geometry_repair_v5
 REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
 DRIVER_LOG=/tmp/${REPAIR_RUN}.driver.log
 
@@ -411,7 +424,7 @@ if [ "$REPO_READY" -eq 1 ]; then
     2>&1 | tee "$DRIVER_LOG"
   REPAIR_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: V4 repair was not launched"
+  echo "STOP: V5 repair was not launched"
 fi
 
 echo "===== SEND BACK ====="
@@ -423,7 +436,7 @@ echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_REPAIR_RUN_ID|NEXT_REQUIRED_PNR_RUN_ID)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -20
 cat "$REPAIR_DIR/reports/operator_gate_route_geometry_repair.rpt" 2>/dev/null
-cat "$REPAIR_DIR/reports/manual_geometry_eco_v4.rpt" 2>/dev/null
+cat "$REPAIR_DIR/reports/manual_geometry_eco_v5.rpt" 2>/dev/null
 ```
 
 The repair passes the geometry stage only when the reports show all of the
@@ -432,6 +445,7 @@ following:
 ```text
 TOOL_RC=0
 MANUAL_ECO_STATUS=PASS
+VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL
 INITIAL_DRC=3
 INITIAL_SHORTS=1
 INITIAL_REGULAR_CONNECTIVITY_BAD=0

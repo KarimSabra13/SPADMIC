@@ -394,7 +394,7 @@ CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
 RPT
   exit 0
 fi
-grep -qx 'mptdc_ckpt_manual_three_marker_eco_v4' "$commands_file"
+grep -qx 'mptdc_ckpt_manual_three_marker_eco_v5' "$commands_file"
 test "$(wc -l < "$commands_file")" -eq 1
 ! grep -qE 'globalDetailRoute|detailRoute|ecoRoute|routeDesign|createRouteBlk' "$commands_file"
 
@@ -413,8 +413,9 @@ for report in "$initial_special" "$final_special"; do
     echo '    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).'
   } > "$report"
 done
-cat > "$run/reports/manual_geometry_eco_v4.rpt" <<'RPT'
-MANUAL_ECO_MODE=EXACT_VIA_ESCAPE_AND_MIN_AREA_PATCH
+cat > "$run/reports/manual_geometry_eco_v5.rpt" <<'RPT'
+MANUAL_ECO_MODE=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH
+VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL
 PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED
 PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
 MANUAL_ECO_STATUS=PASS
@@ -653,7 +654,8 @@ env "${COMMON_ENV[@]}" bash "$DRIVER" \
 grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/geometry_repair_clean.stdout"
 grep -qx 'INITIAL_DRC=3' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'MANUAL_ECO_STATUS=PASS' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
-grep -qx 'REPAIR_METHOD=MANUAL_VIA_ESCAPE_AND_MIN_AREA_PATCH_V4' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'REPAIR_METHOD=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH_V5' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -Fqx 'REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,179.48;u_core_n_67240:219.80,224.14->221.20,224.28' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -Fqx 'REPAIR_MIN_AREA_PATCH_POLICY=u_core_n_57563:MET1:364.84,328.44->365.40,328.44:width=0.28' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"

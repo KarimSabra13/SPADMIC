@@ -734,6 +734,76 @@ proc mptdc_ckpt_manual_vias_at {net point} {
     return $rows
 }
 
+proc mptdc_ckpt_manual_rects_from_value {value} {
+    while {[llength $value] == 1} {
+        set nested [lindex $value 0]
+        if {$nested eq $value} {
+            return {}
+        }
+        set value $nested
+    }
+
+    set value_count [llength $value]
+    set all_numeric [expr {$value_count >= 4 && ($value_count % 4) == 0}]
+    if {$all_numeric} {
+        foreach item $value {
+            if {![string is double -strict $item]} {
+                set all_numeric 0
+                break
+            }
+        }
+    }
+    if {$all_numeric} {
+        set rects {}
+        for {set idx 0} {$idx < $value_count} {incr idx 4} {
+            set rect [lrange $value $idx [expr {$idx + 3}]]
+            if {[mptdc_signoff_box_valid $rect]} {
+                lappend rects $rect
+            }
+        }
+        return $rects
+    }
+
+    set rects {}
+    foreach item $value {
+        foreach rect [mptdc_ckpt_manual_rects_from_value $item] {
+            lappend rects $rect
+        }
+    }
+    return $rects
+}
+
+proc mptdc_ckpt_manual_via_geometry {handle} {
+    set rects {}
+    set attribute_counts {}
+    foreach attribute {botRects cutRects topRects} {
+        if {[catch {set raw [dbGet ${handle}.${attribute}]} err]} {
+            error "failed to query $attribute for via $handle: $err"
+        }
+        set attribute_rects [mptdc_ckpt_manual_rects_from_value $raw]
+        dict set attribute_counts $attribute [llength $attribute_rects]
+        foreach rect $attribute_rects {
+            lappend rects $rect
+        }
+    }
+    if {[llength $rects] == 0} {
+        error "via $handle has no queryable botRects/cutRects/topRects geometry"
+    }
+
+    set first [lindex $rects 0]
+    lassign $first llx lly urx ury
+    foreach rect [lrange $rects 1 end] {
+        set llx [expr {min($llx, [lindex $rect 0])}]
+        set lly [expr {min($lly, [lindex $rect 1])}]
+        set urx [expr {max($urx, [lindex $rect 2])}]
+        set ury [expr {max($ury, [lindex $rect 3])}]
+    }
+    return [dict create \
+        box [list $llx $lly $urx $ury] \
+        rect_count [llength $rects] \
+        attribute_counts $attribute_counts]
+}
+
 proc mptdc_ckpt_manual_wire_rows {net} {
     set nh [mptdc_ckpt_manual_net_handle $net]
     set rows {}
@@ -792,12 +862,68 @@ proc mptdc_ckpt_manual_delete_via_stack {fh label net point expected_names} {
     if {[lsort $names] ne [lsort $expected_names]} {
         error "$label expected via names $expected_names at $point, found $names"
     }
-    lassign $point x y
-    set area [list \
-        [expr {$x - 0.01}] [expr {$y - 0.01}] \
-        [expr {$x + 0.01}] [expr {$y + 0.01}]]
-    mptdc_ckpt_manual_log_command $fh "${label}_DELETE" \
-        [list editDelete -net $net -area $area -type Regular -object_type Via]
+
+    foreach expected_name [lsort $expected_names] {
+        set current_rows [mptdc_ckpt_manual_vias_at $net $point]
+        set matching_rows {}
+        foreach row $current_rows {
+            if {[dict get $row name] eq $expected_name} {
+                lappend matching_rows $row
+            }
+        }
+        if {[llength $matching_rows] != 1} {
+            error "$label expected exactly one $expected_name at $point before deletion"
+        }
+
+        set row [lindex $matching_rows 0]
+        set handle [dict get $row handle]
+        set status [string tolower [lindex [dbGet ${handle}.status] 0]]
+        if {$status ne "routed"} {
+            error "$label expected routed status for $expected_name, found $status"
+        }
+        set geometry [mptdc_ckpt_manual_via_geometry $handle]
+        set box [dict get $geometry box]
+        lassign $point point_x point_y
+        set box_width [expr {[lindex $box 2] - [lindex $box 0]}]
+        set box_height [expr {[lindex $box 3] - [lindex $box 1]}]
+        if {$point_x < [lindex $box 0] || $point_x > [lindex $box 2] ||
+            $point_y < [lindex $box 1] || $point_y > [lindex $box 3] ||
+            $box_width > 2.0 || $box_height > 2.0} {
+            error "$label rejected unexpected geometry box $box for $expected_name at $point"
+        }
+        set margin 0.02
+        set area [list \
+            [expr {[lindex $box 0] - $margin}] \
+            [expr {[lindex $box 1] - $margin}] \
+            [expr {[lindex $box 2] + $margin}] \
+            [expr {[lindex $box 3] + $margin}]]
+        set token [string toupper [mptdc_ckpt_sanitize $expected_name]]
+        puts $fh "${label}_${token}_HANDLE=$handle"
+        puts $fh "${label}_${token}_STATUS=$status"
+        puts $fh "${label}_${token}_RECT_COUNT=[dict get $geometry rect_count]"
+        puts $fh "${label}_${token}_ATTRIBUTE_COUNTS=[dict get $geometry attribute_counts]"
+        puts $fh "${label}_${token}_GEOMETRY_BOX=$box"
+        puts $fh "${label}_${token}_GEOMETRY_WIDTH=$box_width"
+        puts $fh "${label}_${token}_GEOMETRY_HEIGHT=$box_height"
+        puts $fh "${label}_${token}_DELETE_AREA=$area"
+        set pre_count [llength $current_rows]
+        mptdc_ckpt_manual_log_command $fh "${label}_${token}_DELETE" \
+            [list editDelete -net $net -area $area -type Regular \
+                -object_type Via -via_cell $expected_name]
+        set remaining [mptdc_ckpt_manual_vias_at $net $point]
+        set remaining_name_count 0
+        foreach remaining_row $remaining {
+            if {[dict get $remaining_row name] eq $expected_name} {
+                incr remaining_name_count
+            }
+        }
+        puts $fh "${label}_${token}_POST_DELETE_VIA_COUNT=[llength $remaining]"
+        puts $fh "${label}_${token}_POST_DELETE_NAME_COUNT=$remaining_name_count"
+        if {$remaining_name_count != 0 || [llength $remaining] != ($pre_count - 1)} {
+            error "$label failed to delete exact via cell $expected_name at $point"
+        }
+    }
+
     set remaining [mptdc_ckpt_manual_vias_at $net $point]
     puts $fh "${label}_POST_DELETE_VIA_COUNT=[llength $remaining]"
     if {[llength $remaining] != 0} {
@@ -897,18 +1023,23 @@ proc mptdc_ckpt_manual_add_via_stack {fh label net point} {
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
+    error "manual geometry ECO V4 is retired after editDelete selected no vias; use mptdc_ckpt_manual_three_marker_eco_v5"
+}
+
+proc mptdc_ckpt_manual_three_marker_eco_v5 {} {
     set report_dir [mptdc_signoff_report_dir]
-    set report [file join $report_dir manual_geometry_eco_v4.rpt]
+    set report [file join $report_dir manual_geometry_eco_v5.rpt]
     set fh [open $report w]
-    puts $fh "# MPTDC Exact Three-Marker Manual Geometry ECO V4"
-    puts $fh "MANUAL_ECO_MODE=EXACT_VIA_ESCAPE_AND_MIN_AREA_PATCH"
+    puts $fh "# MPTDC Exact Three-Marker Manual Geometry ECO V5"
+    puts $fh "MANUAL_ECO_MODE=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH"
+    puts $fh "VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL"
     puts $fh "SOURCE_BASELINE=DRC_3_SHORTS_1_REGULAR_0_SPECIAL_NON_RO_0"
     puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     puts $fh "TARGET_NETS=u_core_n_66687,u_core_n_67240,u_core_n_57563"
 
     set body_status [catch {
-        set baseline [mptdc_ckpt_verify_snapshot manual_v4_pre]
+        set baseline [mptdc_ckpt_verify_snapshot manual_v5_pre]
         puts $fh "PRE_DRC=[dict get $baseline total_violations]"
         puts $fh "PRE_SHORTS=[dict get $baseline shorts]"
         puts $fh "PRE_REGULAR_CONNECTIVITY_BAD=[dict get $baseline regular_bad]"
@@ -917,7 +1048,7 @@ proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
             [dict get $baseline shorts] != 1 ||
             [dict get $baseline regular_bad] != 0 ||
             [dict get $baseline special_non_ro_failures] != 0} {
-            error "manual V4 source baseline mismatch"
+            error "manual V5 source baseline mismatch"
         }
 
         if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {220.64 179.48}] ||
@@ -969,7 +1100,7 @@ proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
             error "u_core_n_57563 MET1 landing patch did not materialize"
         }
 
-        set final [mptdc_ckpt_verify_snapshot manual_v4_post]
+        set final [mptdc_ckpt_verify_snapshot manual_v5_post]
         puts $fh "POST_DRC=[dict get $final total_violations]"
         puts $fh "POST_SHORTS=[dict get $final shorts]"
         puts $fh "POST_REGULAR_CONNECTIVITY_BAD=[dict get $final regular_bad]"
@@ -978,7 +1109,7 @@ proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
             [dict get $final shorts] != 0 ||
             [dict get $final regular_bad] != 0 ||
             [dict get $final special_non_ro_failures] != 0} {
-            error "manual V4 final physical gate failed"
+            error "manual V5 final physical gate failed"
         }
     } body_error body_opts]
 
@@ -993,7 +1124,7 @@ proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
     puts $fh "MANUAL_ECO_STATUS=PASS"
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
-    puts "MPTDC_CKPT_MANUAL_GEOMETRY_ECO_V4_REPORT=$report"
+    puts "MPTDC_CKPT_MANUAL_GEOMETRY_ECO_V5_REPORT=$report"
     return [dict create status PASS report $report]
 }
 

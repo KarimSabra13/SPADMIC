@@ -311,19 +311,20 @@ run_route_geometry_repair_stage() {
   local final_drc final_shorts final_regular final_special final_special_raw
   local final_special_non_ro final_unrouted final_route_gate final_status
   local final_special_report final_dangling_count final_checkpoint_exists final_def
-  local manual_eco_report="$RUN_DIR/reports/manual_geometry_eco_v4.rpt"
+  local manual_eco_report="$RUN_DIR/reports/manual_geometry_eco_v5.rpt"
   local manual_eco_status=UNKNOWN
   local tap_slow=0 tap_fast=0 tap_total=0 publish_rc=99 next_head
 
   mkdir -p "$RUN_DIR/reports" "$RUN_DIR/logs" "$RUN_DIR/manifests"
   cat > "$commands_file" <<'COMMANDS'
-mptdc_ckpt_manual_three_marker_eco_v4
+mptdc_ckpt_manual_three_marker_eco_v5
 COMMANDS
   {
     echo "# Exact bounded command payload supplied to Innovus"
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
-    echo "REPAIR_METHOD=MANUAL_VIA_ESCAPE_AND_MIN_AREA_PATCH_V4"
+    echo "REPAIR_METHOD=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH_V5"
+    echo "VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL"
     echo "REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,179.48;u_core_n_67240:219.80,224.14->221.20,224.28"
     echo "REPAIR_MIN_AREA_PATCH_POLICY=u_core_n_57563:MET1:364.84,328.44->365.40,328.44:width=0.28"
     echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
@@ -414,7 +415,8 @@ COMMANDS
     echo "REPAIR_RC=$repair_rc"
     echo "MANUAL_ECO_STATUS=$manual_eco_status"
     echo "MANUAL_ECO_REPORT=$manual_eco_report"
-    echo "REPAIR_METHOD=MANUAL_VIA_ESCAPE_AND_MIN_AREA_PATCH_V4"
+    echo "REPAIR_METHOD=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH_V5"
+    echo "VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL"
     echo "REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,179.48;u_core_n_67240:219.80,224.14->221.20,224.28"
     echo "REPAIR_MIN_AREA_PATCH_POLICY=u_core_n_57563:MET1:364.84,328.44->365.40,328.44:width=0.28"
     echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
@@ -821,7 +823,7 @@ if [[ -z "$RUN_ID" ]]; then
   elif [[ "$STAGE" == "route-geometry-probe" ]]; then
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_geometry_probe_$(date +%H%M%S)"
   elif [[ "$STAGE" == "route-geometry-repair" ]]; then
-    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_manual_geometry_repair_v4_$(date +%H%M%S)"
+    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_manual_geometry_repair_v5_$(date +%H%M%S)"
   else
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_mettpfix_physical_$(date +%H%M%S)"
   fi
