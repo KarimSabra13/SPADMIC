@@ -1,0 +1,19 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_three_marker_eco_v5
+REPORT_STATUS=FAILED
+ERROR=N66687_NEW_STACK expected one VIA1 and one VIA2 at 221.20 179.48, found VIA1_o
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N66687_NEW_STACK expected one VIA1 and one VIA2 at 221.20 179.48, found VIA1_o
+    while executing
+"error "$label expected one VIA1 and one VIA2 at $point, found $names""
+    (procedure "mptdc_ckpt_manual_add_via_stack" line 33)
+    invoked from within
+"mptdc_ckpt_manual_add_via_stack $fh N66687_NEW_STACK  u_core_n_66687 {221.20 179.48}"
+    (procedure "mptdc_ckpt_manual_three_marker_eco_v5" line 36)
+    invoked from within
+"mptdc_ckpt_manual_three_marker_eco_v5"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END

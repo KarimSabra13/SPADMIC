@@ -1,0 +1,27 @@
+VERIFY_CONNECTIVITY use new engine.
+
+******** Start: VERIFY CONNECTIVITY ********
+Start Time: Tue Aug 25 10:35:36 2026
+
+Design Name: mptdc_axis_core
+Database Units: 1000
+Design Boundary: (0.0000, 0.0000) (1168.7200, 882.5600)
+Error Limit = 1000; Warning Limit = 50
+Check specified nets
+**** 10:35:37 **** Processed 5000 nets.
+**** 10:35:37 **** Processed 10000 nets.
+Net u_core_n_66687: dangling Wire.
+**** 10:35:37 **** Processed 15000 nets.
+
+Begin Summary 
+    1 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+    1 total info(s) created.
+End Summary
+
+End Time: Tue Aug 25 10:35:37 2026
+Time Elapsed: 0:00:01.0
+
+******** End: VERIFY CONNECTIVITY ********
+  Verification Complete : 1 Viols.  0 Wrngs.
+  (CPU Time: 0:00:00.6  MEM: 0.000M)
+
