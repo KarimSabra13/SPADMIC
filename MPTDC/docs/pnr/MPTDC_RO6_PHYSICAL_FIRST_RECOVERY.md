@@ -264,7 +264,7 @@ special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact `HALO10_PNRLEF_15` PVS-candidate
 fingerprint.
 
-### 2. Current Command: Exact Two-Marker Repair
+### 2. Current Command: Staged Normalized Via-Side Repair V2
 
 The read-only probe completed as
 `20260825_mptdc_bufftap0_route_minarea_probe_143229`. It proved that the source
@@ -275,19 +275,35 @@ was a reporting false negative: Innovus writes the count in the summary report
 and the 15 exact coordinates in the sibling `_detailed.rpt`. The recovery gate
 now evaluates that real report pair.
 
-This is the only Innovus command to run now. It restores the same guarded-halo
-checkpoint in one fresh process and adds only these two MET1 landing stubs:
+The V1 repair completed as
+`20260825_mptdc_bufftap0_route_minarea_repair_v1_145836`. It was useful and
+must not be rerun: `u_core_n_57960` closed, while `u_core_n_57556` improved
+from `0.1064/0.202` to `0.1777/0.202`. The final tuple was one DRC, zero
+shorts, zero regular-connectivity failures, and zero non-RO special-connectivity
+failures. Innovus also canonicalized `VIA1_o` to the legal VIA1-class variant
+`VIA1_X_so`; exact post-edit via-name equality was therefore an invalid gate.
+
+This is the only Innovus command to run now. V2 restores the original
+guarded-halo checkpoint in one fresh process and first reproduces only these two
+MET1 landing stubs:
 
 ```text
 u_core_n_57960: (363.72,358.12) -> (364.56,358.12), width 0.28
 u_core_n_57556: (385.56,328.44) -> (384.72,328.44), width 0.28
 ```
 
-Both stubs extend inward from the existing `VIA1_o` landing and remain inside
-the connected standard-cell pin geometry. The command does not delete or add a
-via, edit PG, move an instance, or invoke broad rerouting. It then extracts RC,
-runs TC setup/hold and DRV/power checks, saves a new checkpoint, and publishes
-the evidence automatically.
+V2 must then prove the exact intermediate state: one geometry DRC, zero shorts,
+zero regular and non-RO special connectivity failures, and the sole geometry
+marker `u_core_n_57556` at `0.1777/0.202`. It discovers the actual normalized
+fixed MET1 stub endpoint from the Innovus database and adds one `0.56 um`,
+`0.28 um`-requested segment eastward from its via-side endpoint. This is the
+repository-validated method for a Wire Editor stub that saturates at
+`0.1777/0.202`.
+
+The command issues no explicit via add/delete, PG edit, placement edit, route
+blockage, or router optimization command. Innovus VIA1-class canonicalization
+is allowed and audited. It then extracts RC, runs TC setup/hold and DRV/power
+checks, saves a new checkpoint, and publishes the evidence automatically.
 
 ```bash
 set +e
@@ -342,7 +358,7 @@ grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|MINAREA_RE
   "$DRIVER_LOG" 2>/dev/null | tail -20
 
 echo "===== OPERATOR GATE ====="
-grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|INITIAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
+grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|MANUAL_(PRE|BASE|POST)_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES)|BASE_(MINAREA_MARKER|CANONICAL_VIA_SIDE)_STATUS|INITIAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
   "$REPAIR_DIR/reports/operator_gate_route_min_area_repair.rpt" 2>/dev/null
 ```
 
@@ -361,8 +377,13 @@ NEXT_REQUIRED_PNR_RUN_ID=<new repair run id>
 
 The operator gate must additionally show `COMMAND_1_STATUS=PASS`,
 `COMMAND_2_STATUS=PASS`, `MANUAL_ECO_STATUS=PASS`, initial `DRC=2` and
-`SHORTS=0`, final `DRC=0` and `SHORTS=0`, zero regular and non-RO special
-connectivity failures, unchanged `SPECIAL_DANGLING_COUNT=15`,
+`SHORTS=0`, `MANUAL_BASE_DRC=1`, `MANUAL_BASE_SHORTS=0`,
+`MANUAL_BASE_REGULAR_CONNECTIVITY_BAD=0`,
+`MANUAL_BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0`,
+`BASE_MINAREA_MARKER_STATUS=PASS`,
+`BASE_CANONICAL_VIA_SIDE_STATUS=PASS`, final `DRC=0` and `SHORTS=0`, zero
+regular and non-RO special connectivity failures, unchanged
+`SPECIAL_DANGLING_COUNT=15`,
 `SPECIAL_SIGNATURE_STATUS=PASS`, `TIMING_GATE_STATUS=PASS`, and
 `RO_TAP_OBSERVABILITY_PIN_COUNT=2`. `FINAL_SPECIAL_CONNECTIVITY_BAD=1` is
 expected only for those exact 15 guarded PG wire ends; this is a PVS candidate,

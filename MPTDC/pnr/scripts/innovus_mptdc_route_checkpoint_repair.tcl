@@ -729,6 +729,26 @@ proc mptdc_ckpt_manual_flat_point {value} {
     return [lrange $value 0 1]
 }
 
+proc mptdc_ckpt_manual_flat_values {value} {
+    if {[llength $value] == 0} {
+        return {}
+    }
+    if {[llength $value] == 1} {
+        set nested [lindex $value 0]
+        if {$nested eq $value} {
+            return [list $value]
+        }
+        return [mptdc_ckpt_manual_flat_values $nested]
+    }
+    set values {}
+    foreach item $value {
+        foreach nested [mptdc_ckpt_manual_flat_values $item] {
+            lappend values $nested
+        }
+    }
+    return $values
+}
+
 proc mptdc_ckpt_manual_close {lhs rhs {tolerance 0.001}} {
     if {![string is double -strict $lhs] || ![string is double -strict $rhs]} {
         return 0
@@ -1113,6 +1133,184 @@ proc mptdc_ckpt_manual_assert_snapshot_tuple {fh label snapshot expected_drc exp
     return $snapshot
 }
 
+proc mptdc_ckpt_manual_assert_minarea_01777_marker {fh label snapshot} {
+    if {![dict exists $snapshot marker_rpt]} {
+        error "$label snapshot has no marker report"
+    }
+    set marker_rpt [dict get $snapshot marker_rpt]
+    if {![file readable $marker_rpt]} {
+        error "$label marker report is not readable: $marker_rpt"
+    }
+
+    set geometry_count 0
+    set target_count 0
+    set target_box {}
+    set target_actual UNKNOWN
+    set target_required UNKNOWN
+    set input [open $marker_rpt r]
+    while {[gets $input line] >= 0} {
+        set fields [split $line \t]
+        if {[llength $fields] < 7 || [lindex $fields 4] ne "Geometry"} {
+            continue
+        }
+        incr geometry_count
+        set layer [lindex $fields 3]
+        set subtype [lindex $fields 5]
+        set message [join [lrange $fields 6 end] \t]
+        if {$layer ne "MET1" || $subtype ne "Minimal_Area" ||
+            ![regexp {Regular Wire of Net u_core_n_57556[[:space:]]+Actual:[[:space:]]*([0-9.]+)[[:space:]]+Required:[[:space:]]*([0-9.]+)} \
+                $message -> actual required]} {
+            continue
+        }
+        set box [mptdc_signoff_flat_box [lindex $fields 2]]
+        if {![mptdc_signoff_box_valid $box]} {
+            close $input
+            error "$label found u_core_n_57556 marker with invalid box: $box"
+        }
+        incr target_count
+        set target_box $box
+        set target_actual $actual
+        set target_required $required
+    }
+    close $input
+
+    set expected_box {385.06 328.29 385.75 328.52}
+    set box_matches [expr {[llength $target_box] == 4}]
+    if {$box_matches} {
+        foreach actual $target_box expected $expected_box {
+            if {![mptdc_ckpt_manual_close $actual $expected]} {
+                set box_matches 0
+                break
+            }
+        }
+    }
+    set marker_status [expr {
+        $geometry_count == 1 && $target_count == 1 && $box_matches &&
+        [mptdc_ckpt_manual_close $target_actual 0.17770000 0.00000001] &&
+        [mptdc_ckpt_manual_close $target_required 0.20200000 0.00000001]
+    }]
+    puts $fh "${label}_GEOMETRY_COUNT=$geometry_count"
+    puts $fh "${label}_REPORT=$marker_rpt"
+    puts $fh "${label}_TARGET_COUNT=$target_count"
+    puts $fh "${label}_NET=u_core_n_57556"
+    puts $fh "${label}_BOX=$target_box"
+    puts $fh "${label}_ACTUAL=$target_actual"
+    puts $fh "${label}_REQUIRED=$target_required"
+    puts $fh "${label}_STATUS=[expr {$marker_status ? "PASS" : "FAIL"}]"
+    if {!$marker_status} {
+        error "$label expected the sole geometry marker to be u_core_n_57556 MET1 minimum area 0.1777/0.202 at $expected_box"
+    }
+    return $target_box
+}
+
+proc mptdc_ckpt_manual_find_canonical_via_side_stub {
+        fh label net marker_box via_point source_direction_sign} {
+    if {$source_direction_sign ni {-1 1}} {
+        error "$label source direction must be -1 or 1"
+    }
+    lassign [mptdc_ckpt_manual_flat_point $via_point] via_x via_y
+    if {![string is double -strict $via_x] || ![string is double -strict $via_y]} {
+        error "$label requires a numeric via point"
+    }
+
+    set candidates {}
+    set wire_count 0
+    set local_wire_count 0
+    set attribute_fail_count 0
+    foreach row [mptdc_ckpt_manual_wire_rows $net] {
+        incr wire_count
+        set handle [dict get $row handle]
+        set box [dict get $row box]
+        set layer [dict get $row layer]
+        set width [dict get $row width]
+        set status UNKNOWN
+        set shape UNKNOWN
+        set length UNKNOWN
+        set attribute_failed 0
+        foreach attribute {status shape length} {
+            if {[catch {set value [lindex [dbGet ${handle}.${attribute}] 0]}]} {
+                set attribute_failed 1
+            } else {
+                set $attribute $value
+            }
+        }
+        if {$attribute_failed} {
+            incr attribute_fail_count
+        }
+        if {$layer ne "MET1" ||
+            ![mptdc_ckpt_probe_boxes_overlap $box $marker_box]} {
+            continue
+        }
+        incr local_wire_count
+        set row_label [format "%s_LOCAL_ROW_%02d" $label $local_wire_count]
+        puts $fh "${row_label}_HANDLE=$handle"
+        puts $fh "${row_label}_BOX=$box"
+        puts $fh "${row_label}_STATUS=$status"
+        puts $fh "${row_label}_SHAPE=$shape"
+        puts $fh "${row_label}_WIDTH=$width"
+        puts $fh "${row_label}_LENGTH=$length"
+        puts $fh "${row_label}_POINTS=[dict get $row pts]"
+        if {$attribute_failed || ![string equal -nocase $status fixed] ||
+            $shape ne "0x0" ||
+            ![mptdc_ckpt_manual_close $width 0.23] ||
+            ![mptdc_ckpt_manual_close $length 0.385]} {
+            continue
+        }
+
+        set points [mptdc_ckpt_manual_flat_values [dict get $row pts]]
+        if {[llength $points] < 4} {
+            continue
+        }
+        lassign [lrange $points 0 3] x1 y1 x2 y2
+        if {![mptdc_ckpt_manual_close $y1 $y2]} {
+            continue
+        }
+        set near1 [expr {
+            [mptdc_ckpt_manual_close $x1 $via_x] && abs($y1 - $via_y) <= 0.050
+        }]
+        set near2 [expr {
+            [mptdc_ckpt_manual_close $x2 $via_x] && abs($y2 - $via_y) <= 0.050
+        }]
+        if {$near1 == $near2} {
+            continue
+        }
+        if {$near1} {
+            set near [list $x1 $y1]
+            set far [list $x2 $y2]
+        } else {
+            set near [list $x2 $y2]
+            set far [list $x1 $y1]
+        }
+        set far_x [lindex $far 0]
+        if {($source_direction_sign < 0 && $far_x >= $via_x) ||
+            ($source_direction_sign > 0 && $far_x <= $via_x)} {
+            continue
+        }
+        lappend candidates [dict create \
+            handle $handle box $box width $width length $length \
+            points $points near $near far $far]
+    }
+
+    puts $fh "${label}_WIRE_COUNT=$wire_count"
+    puts $fh "${label}_LOCAL_WIRE_COUNT=$local_wire_count"
+    puts $fh "${label}_ATTRIBUTE_FAIL_COUNT=$attribute_fail_count"
+    puts $fh "${label}_CANDIDATE_COUNT=[llength $candidates]"
+    if {[llength $candidates] != 1} {
+        puts $fh "${label}_STATUS=FAIL"
+        error "$label expected exactly one normalized fixed MET1 stub, found [llength $candidates]"
+    }
+    set candidate [lindex $candidates 0]
+    puts $fh "${label}_HANDLE=[dict get $candidate handle]"
+    puts $fh "${label}_BOX=[dict get $candidate box]"
+    puts $fh "${label}_WIDTH=[dict get $candidate width]"
+    puts $fh "${label}_LENGTH=[dict get $candidate length]"
+    puts $fh "${label}_POINTS=[dict get $candidate points]"
+    puts $fh "${label}_NEAR=[dict get $candidate near]"
+    puts $fh "${label}_FAR=[dict get $candidate far]"
+    puts $fh "${label}_STATUS=PASS"
+    return $candidate
+}
+
 proc mptdc_ckpt_manual_add_single_via1 {fh label net point} {
     if {[llength [mptdc_ckpt_manual_vias_at $net $point]] != 0} {
         error "$label expected no existing vias at the new point $point"
@@ -1217,6 +1415,85 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v1 {} {
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
     puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V1_REPORT=$report"
+    return [dict create status PASS report $report]
+}
+
+proc mptdc_ckpt_manual_two_minarea_landing_patch_v2 {} {
+    set report_dir [mptdc_signoff_report_dir]
+    set report [file join $report_dir min_area_landing_patch_v2.rpt]
+    set fh [open $report w]
+    puts $fh "# MPTDC Staged Two-Landing and Normalized Via-Side Patch V2"
+    puts $fh "MANUAL_ECO_MODE=STAGED_BASE_STUBS_THEN_NORMALIZED_VIA_SIDE_EXTENSION"
+    puts $fh "SOURCE_BASELINE=DRC_2_SHORTS_0_REGULAR_0_SPECIAL_NON_RO_0"
+    puts $fh "BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1777_OF_0.202"
+    puts $fh "TARGET_NETS=u_core_n_57960,u_core_n_57556"
+    puts $fh "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
+    puts $fh "VIA_SIDE_POLICY=u_core_n_57556:ACTUAL_NORMALIZED_VIA_ENDPOINT->EAST_0.56;width=0.28"
+    puts $fh "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_ALLOWED"
+    puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
+    puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
+    puts $fh "ROUTE_OPTIMIZER_POLICY=NO_BROAD_OR_TARGETED_ROUTER_COMMANDS"
+
+    set body_status [catch {
+        set baseline [mptdc_ckpt_verify_snapshot minarea_v2_pre]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 2 0 0
+
+        mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_PRE \
+            u_core_n_57960 {363.72 358.12} {VIA1_o}
+        mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_PRE \
+            u_core_n_57556 {385.56 328.44} {VIA1_o}
+
+        mptdc_ckpt_manual_add_wire_path $fh N57960_BASE_MET1_LANDING_PATCH \
+            u_core_n_57960 MET1 0.28 \
+            {{363.72 358.12} {364.56 358.12}}
+        mptdc_ckpt_manual_add_wire_path $fh N57556_BASE_MET1_LANDING_PATCH \
+            u_core_n_57556 MET1 0.28 \
+            {{385.56 328.44} {384.72 328.44}}
+
+        mptdc_ckpt_manual_assert_single_via1 $fh N57960_LANDING_BASE \
+            u_core_n_57960 {363.72 358.12}
+        mptdc_ckpt_manual_assert_single_via1 $fh N57556_LANDING_BASE \
+            u_core_n_57556 {385.56 328.44}
+
+        set base [mptdc_ckpt_verify_snapshot minarea_v2_base]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh BASE $base 1 0 0
+        set marker_box [mptdc_ckpt_manual_assert_minarea_01777_marker \
+            $fh BASE_MINAREA_MARKER $base]
+        set canonical [mptdc_ckpt_manual_find_canonical_via_side_stub \
+            $fh BASE_CANONICAL_VIA_SIDE u_core_n_57556 $marker_box \
+            {385.56 328.44} -1]
+        set via_side_start [dict get $canonical near]
+        set via_side_end [list \
+            [expr {[lindex $via_side_start 0] + 0.56}] \
+            [lindex $via_side_start 1]]
+        puts $fh "VIA_SIDE_START=$via_side_start"
+        puts $fh "VIA_SIDE_END=$via_side_end"
+        puts $fh "VIA_SIDE_DIRECTION=AWAY_FROM_SOURCE_EAST"
+        mptdc_ckpt_manual_add_wire_path $fh N57556_VIA_SIDE_MET1_PATCH \
+            u_core_n_57556 MET1 0.28 \
+            [list $via_side_start $via_side_end]
+
+        mptdc_ckpt_manual_assert_single_via1 $fh N57960_LANDING_POST \
+            u_core_n_57960 {363.72 358.12}
+        mptdc_ckpt_manual_assert_single_via1 $fh N57556_LANDING_POST \
+            u_core_n_57556 {385.56 328.44}
+
+        set final [mptdc_ckpt_verify_snapshot minarea_v2_post]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
+    } body_error body_opts]
+
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+    if {$body_status} {
+        puts $fh "MANUAL_ECO_STATUS=FAIL"
+        puts $fh "MANUAL_ECO_ERROR=[mptdc_signoff_report_value $body_error]"
+        close $fh
+        return -options $body_opts $body_error
+    }
+    puts $fh "MANUAL_ECO_STATUS=PASS"
+    puts $fh "MANUAL_ECO_REPORT=$report"
+    close $fh
+    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V2_REPORT=$report"
     return [dict create status PASS report $report]
 }
 
