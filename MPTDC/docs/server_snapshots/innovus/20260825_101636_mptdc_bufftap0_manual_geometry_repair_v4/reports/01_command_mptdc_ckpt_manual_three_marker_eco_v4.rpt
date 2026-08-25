@@ -1,0 +1,19 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_three_marker_eco_v4
+REPORT_STATUS=FAILED
+ERROR=N66687_OLD_STACK failed to delete the exact via stack at 220.64 179.48
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N66687_OLD_STACK failed to delete the exact via stack at 220.64 179.48
+    while executing
+"error "$label failed to delete the exact via stack at $point""
+    (procedure "mptdc_ckpt_manual_delete_via_stack" line 17)
+    invoked from within
+"mptdc_ckpt_manual_delete_via_stack $fh N66687_OLD_STACK  u_core_n_66687 {220.64 179.48} {VIA1_o VIA2_o}"
+    (procedure "mptdc_ckpt_manual_three_marker_eco_v4" line 33)
+    invoked from within
+"mptdc_ckpt_manual_three_marker_eco_v4"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
