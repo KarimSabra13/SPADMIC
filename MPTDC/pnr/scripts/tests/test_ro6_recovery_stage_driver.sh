@@ -25,13 +25,21 @@ SOURCE_PNR_ROOT="$REPO/MPTDC/docs/server_snapshots/innovus/$SOURCE_PNR_ID"
 SOURCE_PNR_GATE="$SOURCE_PNR_ROOT/reports/operator_gate_physical_pnr.rpt"
 SOURCE_PNR_ROUTE="$SOURCE_PNR_ROOT/reports/route_status.rpt"
 SOURCE_PNR_MARKERS="$SOURCE_PNR_ROOT/reports/route_drc_markers.tsv"
+MINAREA_PNR_ID="pnr_two_minarea_source"
+MINAREA_PNR_ROOT="$REPO/MPTDC/docs/server_snapshots/innovus/$MINAREA_PNR_ID"
+MINAREA_PNR_GATE="$MINAREA_PNR_ROOT/reports/operator_gate_physical_pnr.rpt"
+MINAREA_PNR_ROUTE="$MINAREA_PNR_ROOT/reports/route_status.rpt"
+MINAREA_PNR_MARKERS="$MINAREA_PNR_ROOT/reports/route_drc_markers.tsv"
+MINAREA_PNR_SPECIAL="$MINAREA_PNR_ROOT/reports/route_connectivity_special_detailed.rpt"
 mkdir -p \
   "$(dirname "$PRE_GATE")" \
   "$(dirname "$PG_GATE")" \
   "$(dirname "$FAILED_PG_GATE")" \
   "$WORK/innovus/pg_failed/checkpoints/03_cts.enc.dat" \
   "$WORK/innovus/$SOURCE_PNR_ID/checkpoints/04_route_failed.enc.dat" \
-  "$SOURCE_PNR_ROOT/reports"
+  "$SOURCE_PNR_ROOT/reports" \
+  "$WORK/innovus/$MINAREA_PNR_ID/checkpoints/04_route_failed.enc.dat" \
+  "$MINAREA_PNR_ROOT/reports"
 cat > "$PRE_GATE" <<'EOF'
 STEP=PRE_PNR
 PACKAGE_RC=0
@@ -104,6 +112,59 @@ idx	marker_handle	box	layer	type	subType	message
 3	0x3	{219.94 223.775 219.96 224.505}	MET2	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_67240 & Special Wire of Net VDD
 4	0x4	{220.5 179.29 220.76 180.015}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_n_66687 & Special Wire of Net VSS
 5	0x5	{220.5 179.29 220.76 180.015}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_n_66687 & Special Wire of Net VSS
+EOF
+cat > "$MINAREA_PNR_GATE" <<'EOF'
+STEP=PHYSICAL_PNR
+PNR_RC=1
+ROUTE_STATUS=FAIL
+INNOVUS_VERIFY_DRC_STATUS=FAIL
+GEOMETRY_DRC_VIOLATIONS=2
+SHORTS=0
+REGULAR_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_BAD=1
+SPECIAL_NET_CONNECTIVITY_RAW_BAD=1
+SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
+RO_HALO_STATUS=PASS
+RO_HALO_OCCUPANCY_STATUS=PASS
+RO_HALO_TOTAL_INTRUSION_COUNT=0
+ro_slow_tap0_o_COUNT=1
+ro_fast_tap0_o_COUNT=1
+RO_TAP_OBSERVABILITY_PIN_COUNT=2
+DECISION=FAIL_STOP
+EOF
+cat > "$MINAREA_PNR_ROUTE" <<'EOF'
+ROUTE_STATUS=FAIL
+INNOVUS_VERIFY_DRC_STATUS=FAIL
+GEOMETRY_DRC_VIOLATIONS=2
+SHORTS=0
+REGULAR_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_BAD=1
+SPECIAL_NET_CONNECTIVITY_RAW_BAD=1
+SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
+ROUTE_GATE_FAILURE_CHECKPOINT_DAT_EXISTS=1
+EOF
+cat > "$MINAREA_PNR_MARKERS" <<'EOF'
+idx	marker_handle	box	layer	type	subType	message
+1	0x1	{363.53 357.98 363.91 358.26}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57960 Actual: 0.10640000 Required: 0.20200000
+2	0x2	{385.37 328.3 385.75 328.58}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57556 Actual: 0.10640000 Required: 0.20200000
+EOF
+cat > "$MINAREA_PNR_SPECIAL" <<'EOF'
+Net VDD: dangling Wire at (221.750, 681.160) (221.750, 681.160) on layer: MET3
+Net VDD: dangling Wire at (48.000, 681.160) (48.000, 681.160) on layer: MET3
+Net VDD: dangling Wire at (221.750, 201.160) (221.750, 201.160) on layer: MET3
+Net VDD: dangling Wire at (48.000, 201.160) (48.000, 201.160) on layer: MET3
+Net VDD: dangling Wire at (121.160, 233.620) (121.160, 233.620) on layer: METTP
+Net VDD: dangling Wire at (121.160, 648.320) (121.160, 648.320) on layer: METTP
+Net VSS: dangling Wire at (221.750, 685.160) (221.750, 685.160) on layer: MET3
+Net VSS: dangling Wire at (48.000, 685.160) (48.000, 685.160) on layer: MET3
+Net VSS: dangling Wire at (221.750, 205.160) (221.750, 205.160) on layer: MET3
+Net VSS: dangling Wire at (48.000, 205.160) (48.000, 205.160) on layer: MET3
+Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP
+Net VSS: dangling Wire at (125.160, 721.750) (125.160, 721.750) on layer: METTP
+Net VSS: dangling Wire at (125.160, 648.320) (125.160, 648.320) on layer: METTP
+Net VSS: dangling Wire at (125.160, 233.620) (125.160, 233.620) on layer: METTP
+Net VSS: dangling Wire at (125.160, 158.320) (125.160, 158.320) on layer: METTP
+    15 Problem(s) (IMPVFC-94): The net has dangling wire(s).
 EOF
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
@@ -286,21 +347,25 @@ Net VDD: dangling Wire at ($altered_x, 681.160) ($altered_x, 681.160) on layer: 
 Net VDD: dangling Wire at (48.000, 681.160) (48.000, 681.160) on layer: MET3
 Net VDD: dangling Wire at (221.750, 201.160) (221.750, 201.160) on layer: MET3
 Net VDD: dangling Wire at (48.000, 201.160) (48.000, 201.160) on layer: MET3
-Net VDD: dangling Wire at (201.160, 233.620) (201.160, 233.620) on layer: METTP
+Net VDD: dangling Wire at (121.160, 233.620) (121.160, 233.620) on layer: METTP
+Net VDD: dangling Wire at (121.160, 648.320) (121.160, 648.320) on layer: METTP
 Net VSS: dangling Wire at (221.750, 685.160) (221.750, 685.160) on layer: MET3
 Net VSS: dangling Wire at (48.000, 685.160) (48.000, 685.160) on layer: MET3
 Net VSS: dangling Wire at (221.750, 205.160) (221.750, 205.160) on layer: MET3
 Net VSS: dangling Wire at (48.000, 205.160) (48.000, 205.160) on layer: MET3
 Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP
 Net VSS: dangling Wire at (125.160, 721.750) (125.160, 721.750) on layer: METTP
+Net VSS: dangling Wire at (125.160, 648.320) (125.160, 648.320) on layer: METTP
+Net VSS: dangling Wire at (125.160, 233.620) (125.160, 233.620) on layer: METTP
 Net VSS: dangling Wire at (125.160, 158.320) (125.160, 158.320) on layer: METTP
-    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+    15 Problem(s) (IMPVFC-94): The net has dangling wire(s).
 RPT
   cat > "$run/reports/route_pg_pvs_candidate_status.rpt" <<'RPT'
 ROUTE_PG_PVS_CANDIDATE_ENABLED=1
-ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=12
-ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=12
-ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=12
+ROUTE_PG_PVS_CANDIDATE_PROFILE=HALO10_PNRLEF_15
+ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=15
+ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=15
+ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=15
 ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT=0
 ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT=0
 ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=1
@@ -426,6 +491,81 @@ while [[ $# -gt 0 ]]; do
 done
 test -d "$checkpoint"
 test -s "$commands_file"
+if grep -qx 'mptdc_ckpt_probe_target_geometry {u_core_n_57960 u_core_n_57556}' "$commands_file"; then
+  test "$(wc -l < "$commands_file")" -eq 1
+  run="$work/$run_id"
+  mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
+  initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
+  final_special="$run/reports/01_after_command_verify_connectivity_special.rpt"
+  for report in "$initial_special" "$final_special"; do
+    cat > "$report" <<'RPT'
+Net VDD: dangling Wire at (221.750, 681.160) (221.750, 681.160) on layer: MET3
+Net VDD: dangling Wire at (48.000, 681.160) (48.000, 681.160) on layer: MET3
+Net VDD: dangling Wire at (221.750, 201.160) (221.750, 201.160) on layer: MET3
+Net VDD: dangling Wire at (48.000, 201.160) (48.000, 201.160) on layer: MET3
+Net VDD: dangling Wire at (121.160, 233.620) (121.160, 233.620) on layer: METTP
+Net VDD: dangling Wire at (121.160, 648.320) (121.160, 648.320) on layer: METTP
+Net VSS: dangling Wire at (221.750, 685.160) (221.750, 685.160) on layer: MET3
+Net VSS: dangling Wire at (48.000, 685.160) (48.000, 685.160) on layer: MET3
+Net VSS: dangling Wire at (221.750, 205.160) (221.750, 205.160) on layer: MET3
+Net VSS: dangling Wire at (48.000, 205.160) (48.000, 205.160) on layer: MET3
+Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP
+Net VSS: dangling Wire at (125.160, 721.750) (125.160, 721.750) on layer: METTP
+Net VSS: dangling Wire at (125.160, 648.320) (125.160, 648.320) on layer: METTP
+Net VSS: dangling Wire at (125.160, 233.620) (125.160, 233.620) on layer: METTP
+Net VSS: dangling Wire at (125.160, 158.320) (125.160, 158.320) on layer: METTP
+    15 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+RPT
+  done
+  cat > "$run/reports/route_min_area_target_probe.rpt" <<'RPT'
+PROBE_MODE=READ_ONLY_NO_ROUTE_EDITS
+PROBE_PROFILE=HALO10_TWO_MET1_MIN_AREA
+TARGET_NET_COUNT=2
+TARGET_NET_WITH_INSTTERMS_COUNT=2
+TARGET_NET_WITH_PIN_GEOMETRY_COUNT=0
+TARGET_INSTTERM_COUNT=4
+TARGET_INSTTERM_PIN_GEOMETRY_COUNT=0
+TARGET_WIRE_COUNT=6
+TARGET_VIA_COUNT=2
+NEARBY_PG_SHAPE_COUNT=0
+HELP_CAPTURE_PASS_COUNT=8
+HELP_CAPTURE_STATUS=PASS
+SCHEMA_CAPTURE_PASS_COUNT=7
+SCHEMA_CAPTURE_STATUS=PASS
+PROBE_STATUS=PASS
+RPT
+  cat > "$run/def/repaired_route.def" <<'DEF'
+VERSION 5.8 ;
+PINS 2 ;
+- ro_slow_tap0_o + NET ro_slow_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 1000 0 ) N ;
+- ro_fast_tap0_o + NET ro_fast_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 2000 0 ) N ;
+END PINS
+END DESIGN
+DEF
+  cat > "$run/reports/checkpoint_repair_status.rpt" <<RPT
+INITIAL_DRC=2
+INITIAL_SHORTS=0
+INITIAL_REGULAR_CONNECTIVITY_BAD=0
+INITIAL_SPECIAL_CONNECTIVITY_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+INITIAL_SPECIAL_CONNECTIVITY_REPORT=$initial_special
+COMMAND_1_STATUS=PASS
+FINAL_DRC=2
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
+FINAL_DEF=$run/def/repaired_route.def
+FINAL_CHECKPOINT_DAT_EXISTS=1
+CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
+RPT
+  exit 0
+fi
 if grep -qx 'mptdc_ckpt_probe_target_geometry {u_core_n_66687 u_core_n_67240 u_core_n_57563}' "$commands_file"; then
   test "$(wc -l < "$commands_file")" -eq 1
   run="$work/$run_id"
@@ -790,6 +930,25 @@ set -e
 test "$DIRTY_RC" -ne 0
 grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_dirty/reports/operator_gate_physical_pnr.rpt"
 grep -q 'innovus route_dirty .* PHYSICAL_PNR' "$PUBLISH_CALLS"
+
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-minarea-probe --run-id minarea_probe \
+  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_probe.stdout"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/minarea_probe.stdout"
+grep -qx 'INITIAL_DRC=2' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'INITIAL_SHORTS=0' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'FINAL_DRC=2' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'FINAL_SHORTS=0' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'TARGET_NET_COUNT=2' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'TARGET_NET_WITH_INSTTERMS_COUNT=2' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'PROFILE_GEOMETRY_STATUS=PASS' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'SPECIAL_SIGNATURE_STATUS=PASS' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'PROBE_GATE_MODE=READ_ONLY_BASELINE_PRESERVED' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/minarea_probe/reports/operator_gate_route_min_area_probe.rpt"
+grep -q 'innovus minarea_probe .* ROUTE_MIN_AREA_PROBE' "$PUBLISH_CALLS"
+grep -qx 'NEXT_STAGE=REVIEW_ROUTE_MIN_AREA_PROBE' "$TMP_ROOT/minarea_probe.stdout"
+grep -qx 'NEXT_REQUIRED_PROBE_RUN_ID=minarea_probe' "$TMP_ROOT/minarea_probe.stdout"
 
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage route-geometry-probe --run-id geometry_probe \

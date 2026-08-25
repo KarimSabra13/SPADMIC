@@ -390,24 +390,50 @@ proc mptdc_ckpt_probe_boxes_overlap {lhs rhs} {
 }
 
 proc mptdc_ckpt_probe_target_geometry {nets} {
-    set expected_nets {u_core_n_66687 u_core_n_67240 u_core_n_57563}
-    if {$nets ne $expected_nets} {
-        error "mptdc_ckpt_probe_target_geometry requires the exact bounded target set: $expected_nets"
+    set legacy_nets {u_core_n_66687 u_core_n_67240 u_core_n_57563}
+    set min_area_nets {u_core_n_57960 u_core_n_57556}
+    set marker_boxes [dict create]
+    set marker_centers [dict create]
+    if {$nets eq $legacy_nets} {
+        set probe_profile LEGACY_THREE_MARKER
+        set probe_basename route_geometry
+        set windows [dict create \
+            u_core_n_66687 {214.0 173.0 226.0 185.0} \
+            u_core_n_67240 {214.0 218.0 226.0 230.0} \
+            u_core_n_57563 {359.0 323.0 371.0 334.0}]
+        set require_pin_geometry 1
+        set require_nearby_pg 1
+    } elseif {$nets eq $min_area_nets} {
+        set probe_profile HALO10_TWO_MET1_MIN_AREA
+        set probe_basename route_min_area
+        set windows [dict create \
+            u_core_n_57960 {358.0 352.0 369.0 364.0} \
+            u_core_n_57556 {380.0 322.0 391.0 335.0}]
+        set marker_boxes [dict create \
+            u_core_n_57960 {363.53 357.98 363.91 358.26} \
+            u_core_n_57556 {385.37 328.30 385.75 328.58}]
+        set marker_centers [dict create \
+            u_core_n_57960 {363.72 358.12} \
+            u_core_n_57556 {385.56 328.44}]
+        set require_pin_geometry 0
+        set require_nearby_pg 0
+    } else {
+        error "mptdc_ckpt_probe_target_geometry requires $legacy_nets or $min_area_nets"
     }
+    set expected_nets $nets
 
     set report_dir [mptdc_signoff_report_dir]
-    set probe_rpt [file join $report_dir route_geometry_target_probe.rpt]
-    set help_status_rpt [file join $report_dir route_geometry_command_help_status.rpt]
-    set schema_status_rpt [file join $report_dir route_geometry_db_schema_status.rpt]
+    set probe_rpt [file join $report_dir ${probe_basename}_target_probe.rpt]
+    set help_status_rpt [file join $report_dir ${probe_basename}_command_help_status.rpt]
+    set schema_status_rpt [file join $report_dir ${probe_basename}_db_schema_status.rpt]
     set fh [open $probe_rpt w]
     puts $fh "# MPTDC Read-Only Route Geometry Probe"
     puts $fh "PROBE_MODE=READ_ONLY_NO_ROUTE_EDITS"
+    puts $fh "PROBE_PROFILE=$probe_profile"
+    puts $fh "PROBE_REQUIRE_PIN_GEOMETRY=$require_pin_geometry"
+    puts $fh "PROBE_REQUIRE_NEARBY_PG=$require_nearby_pg"
     puts $fh "TARGET_NETS=[join $nets ,]"
 
-    set windows [dict create \
-        u_core_n_66687 {214.0 173.0 226.0 185.0} \
-        u_core_n_67240 {214.0 218.0 226.0 230.0} \
-        u_core_n_57563 {359.0 323.0 371.0 334.0}]
     set target_net_count 0
     set target_with_instterms_count 0
     set target_with_pin_geometry_count 0
@@ -421,6 +447,12 @@ proc mptdc_ckpt_probe_target_geometry {nets} {
         puts $fh ""
         puts $fh "TARGET_${token}_BEGIN"
         puts $fh "TARGET_${token}_WINDOW=[dict get $windows $net]"
+        if {[dict exists $marker_boxes $net]} {
+            puts $fh "TARGET_${token}_MARKER_LAYER=MET1"
+            puts $fh "TARGET_${token}_MARKER_SUBTYPE=Minimal_Area"
+            puts $fh "TARGET_${token}_MARKER_BOX=[dict get $marker_boxes $net]"
+            puts $fh "TARGET_${token}_MARKER_CENTER=[dict get $marker_centers $net]"
+        }
         set handles {}
         puts $fh "TARGET_${token}_LOOKUP_COMMAND=dbGet -e top.nets.name $net -p"
         if {[catch {set raw [dbGet -e top.nets.name $net -p]} err]} {
@@ -651,11 +683,18 @@ proc mptdc_ckpt_probe_target_geometry {nets} {
     puts $schema_fh "SCHEMA_CAPTURE_STATUS=[expr {$schema_pass_count > 0 ? "PASS" : "FAIL"}]"
     close $schema_fh
 
+    set pin_geometry_ok [expr {
+        $require_pin_geometry ?
+            ($target_with_pin_geometry_count == [llength $expected_nets]) :
+            ($target_instterm_count > 0)
+    }]
+    set nearby_pg_ok [expr {!$require_nearby_pg || $nearby_pg_shape_count > 0}]
     set probe_status [expr {
         $target_net_count == [llength $expected_nets] &&
         $target_with_instterms_count == [llength $expected_nets] &&
-        $target_with_pin_geometry_count == [llength $expected_nets] &&
-        $nearby_pg_shape_count > 0 &&
+        $pin_geometry_ok &&
+        $target_wire_count > 0 &&
+        $nearby_pg_ok &&
         $help_pass_count > 0 &&
         $schema_pass_count > 0
     }]

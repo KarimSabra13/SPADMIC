@@ -7284,7 +7284,34 @@ proc mptdc_signoff_read_route_gate_reports {drc_rpt regular_rpt special_rpt repo
     return [list $drc_data $regular_bad $special_bad $unrouted]
 }
 
+proc mptdc_signoff_pg_wire_end_profile {} {
+    set profile [mptdc_signoff_env MPTDC_PG_WIRE_END_PROFILE LEGACY_12]
+    if {$profile ni {LEGACY_12 HALO10_PNRLEF_15}} {
+        error "unsupported MPTDC_PG_WIRE_END_PROFILE: $profile"
+    }
+    return $profile
+}
+
 proc mptdc_signoff_expected_pg_wire_end_fingerprint {} {
+    set profile [mptdc_signoff_pg_wire_end_profile]
+    if {$profile eq "HALO10_PNRLEF_15"} {
+        return [lsort [list \
+            VDD|MET3|221.750|681.160 \
+            VDD|MET3|48.000|681.160 \
+            VDD|MET3|221.750|201.160 \
+            VDD|MET3|48.000|201.160 \
+            VDD|METTP|121.160|233.620 \
+            VDD|METTP|121.160|648.320 \
+            VSS|MET3|221.750|685.160 \
+            VSS|MET3|48.000|685.160 \
+            VSS|MET3|221.750|205.160 \
+            VSS|MET3|48.000|205.160 \
+            VSS|METTP|205.160|158.320 \
+            VSS|METTP|125.160|721.750 \
+            VSS|METTP|125.160|648.320 \
+            VSS|METTP|125.160|233.620 \
+            VSS|METTP|125.160|158.320]]
+    }
     return [lsort [list \
         VDD|MET3|221.750|681.160 \
         VDD|MET3|48.000|681.160 \
@@ -7305,7 +7332,9 @@ proc mptdc_signoff_route_pg_pvs_candidate {special_detail_rpt drc_data regular_b
         set path [file join [mptdc_signoff_report_dir] route_pg_pvs_candidate_status.rpt]
     }
     set enabled [mptdc_signoff_env_truthy MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE 0]
+    set profile [mptdc_signoff_pg_wire_end_profile]
     set expected [mptdc_signoff_expected_pg_wire_end_fingerprint]
+    set expected_count [llength $expected]
     set actual [list]
     set parse_failures [list]
     set other_net_lines [list]
@@ -7354,7 +7383,7 @@ proc mptdc_signoff_route_pg_pvs_candidate {special_detail_rpt drc_data regular_b
     if {[lindex $special_bad 2] != 1} { lappend failures special_raw_bad_not_one }
     if {[lindex $special_bad 5] != 0} { lappend failures special_non_ro_failures_nonzero }
     if {!$exact_match} { lappend failures endpoint_fingerprint_mismatch }
-    if {$summary_count ne "12"} { lappend failures "impvfc_94_summary_count=$summary_count" }
+    if {$summary_count ne "$expected_count"} { lappend failures "impvfc_94_summary_count=$summary_count" }
     if {[llength $other_net_lines] > 0} { lappend failures other_vdd_vss_connectivity_lines }
     if {[llength $other_problem_lines] > 0} { lappend failures other_impvfc_problem_classes }
     if {$effective_unrouted eq "UNKNOWN" && [llength $failures] == 0} {
@@ -7368,6 +7397,7 @@ proc mptdc_signoff_route_pg_pvs_candidate {special_detail_rpt drc_data regular_b
     puts $fh "# MPTDC Exact PG Wire-End PVS Candidate"
     puts $fh "ROUTE_PG_PVS_CANDIDATE_ENABLED=[expr {$enabled ? 1 : 0}]"
     puts $fh "ROUTE_PG_PVS_CANDIDATE_MODE=EXACT_IMPVFC_94_WIRE_ENDS"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_PROFILE=$profile"
     puts $fh "ROUTE_PG_PVS_CANDIDATE_SPECIAL_DETAIL_REPORT=$special_detail_rpt"
     puts $fh "ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=[llength $expected]"
     puts $fh "ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=[llength $actual]"
@@ -7653,7 +7683,7 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     }
     puts $fh "REGULAR_NET_OPENS=[expr {$regular_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     if {$special_flag && $pg_candidate_status eq "PASS"} {
-        puts $fh "SPECIAL_NET_OPENS=EXACT_12_IMPVFC_94_WIRE_ENDS_PVS_REQUIRED"
+        puts $fh "SPECIAL_NET_OPENS=EXACT_[dict get $pg_candidate expected_count]_IMPVFC_94_WIRE_ENDS_PVS_REQUIRED"
     } else {
         puts $fh "SPECIAL_NET_OPENS=[expr {$special_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     }

@@ -59,13 +59,16 @@ expected_pg_wire_end_fingerprint() {
     'VDD|MET3|48.000|681.160' \
     'VDD|MET3|221.750|201.160' \
     'VDD|MET3|48.000|201.160' \
-    'VDD|METTP|201.160|233.620' \
+    'VDD|METTP|121.160|233.620' \
+    'VDD|METTP|121.160|648.320' \
     'VSS|MET3|221.750|685.160' \
     'VSS|MET3|48.000|685.160' \
     'VSS|MET3|221.750|205.160' \
     'VSS|MET3|48.000|205.160' \
     'VSS|METTP|205.160|158.320' \
     'VSS|METTP|125.160|721.750' \
+    'VSS|METTP|125.160|648.320' \
+    'VSS|METTP|125.160|233.620' \
     'VSS|METTP|125.160|158.320' | sort
 }
 
@@ -99,9 +102,10 @@ tracked_candidate_fingerprint_passes() {
     [[ -s "$path" ]] || return 1
   done
   [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_STATUS)" == PASS ]] || return 1
-  [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT)" == 12 ]] || return 1
-  [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT)" == 12 ]] || return 1
-  [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT)" == 12 ]] || return 1
+  [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_PROFILE)" == HALO10_PNRLEF_15 ]] || return 1
+  [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT)" == 15 ]] || return 1
+  [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT)" == 15 ]] || return 1
+  [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT)" == 15 ]] || return 1
   [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH)" == 1 ]] || return 1
   [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT)" == 0 ]] || return 1
   [[ "$(report_value "$status" ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT)" == 0 ]] || return 1
@@ -110,7 +114,7 @@ tracked_candidate_fingerprint_passes() {
   other_count="$(grep -E '^Net (VDD|VSS):' "$detail" 2>/dev/null | grep -Evc ': dangling Wire at ' || true)"
   other_problem_count="$(grep -E 'Problem\(s\).*\(IMPVFC-' "$detail" 2>/dev/null \
     | grep -Evc '\(IMPVFC-94\):[[:space:]]+The net has dangling wire\(s\)' || true)"
-  [[ "$summary_count" == 12 && "$detail_count" == 12 && "$other_count" == 0 && \
+  [[ "$summary_count" == 15 && "$detail_count" == 15 && "$other_count" == 0 && \
      "$other_problem_count" == 0 ]] || return 1
   [[ "$(actual_pg_wire_end_fingerprint "$detail")" == "$(expected_pg_wire_end_fingerprint)" ]]
 }

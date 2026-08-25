@@ -34,6 +34,7 @@ LOCAL_PHASE_PREPLACE_VALUE="${MPTDC_SIMPLEPG_LOCAL_PHASE_PREPLACE:-0}"
 POSTROUTE_OPT_VALUE="${MPTDC_SIMPLEPG_POSTROUTE_OPT:-1}"
 RO_HALOS_VALUE=0
 ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE=0
+PG_WIRE_END_PROFILE_VALUE="${MPTDC_PG_WIRE_END_PROFILE:-LEGACY_12}"
 
 usage() {
   cat <<'USAGE'
@@ -59,9 +60,10 @@ Options:
   --ro-halos             Create audited 10 um hard placement halos around both
                          fixed RO macros. Valid only for full_closure.
   --allow-exact-pg-pvs-candidate
-                         Permit only the exact audited 12 IMPVFC-94 VDD/VSS
-                         wire-end fingerprint to continue as a PVS candidate.
-                         This does not declare Innovus special connectivity clean.
+                         Permit only the exact audited 15 IMPVFC-94 VDD/VSS
+                         guarded-halo wire-end fingerprint to continue as a
+                         PVS candidate. This does not declare Innovus special
+                         connectivity clean.
   --physical-first       Disable post-route timing optimization for this run.
                          Extraction and TC timing reports are still generated.
   --no-final-filler      Disable final filler in full_closure.
@@ -313,6 +315,13 @@ if is_truthy "$ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE" && [[ "$STAGE" != "full_closu
   echo "ERROR: --allow-exact-pg-pvs-candidate is valid only with --stage full_closure" >&2
   exit 2
 fi
+if is_truthy "$ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE" && ! is_truthy "$RO_HALOS_VALUE"; then
+  echo "ERROR: --allow-exact-pg-pvs-candidate requires --ro-halos" >&2
+  exit 2
+fi
+if is_truthy "$ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE"; then
+  PG_WIRE_END_PROFILE_VALUE=HALO10_PNRLEF_15
+fi
 
 cd "$REPO_ROOT"
 
@@ -430,6 +439,7 @@ export MPTDC_PNR_CREATE_RO_HALOS="$RO_HALOS_VALUE"
 export MPTDC_RO_HALO_PLACER_GUARD_X_UM=11.20
 export MPTDC_RO_HALO_PLACER_GUARD_Y_UM=4.48
 export MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE="$ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE"
+export MPTDC_PG_WIRE_END_PROFILE="$PG_WIRE_END_PROFILE_VALUE"
 export MPTDC_PNR_CREATE_RO_ROUTE_BLOCKAGES=0
 export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE=none
 export MPTDC_PNR_PD_TILE_APPLY_HIER_BOX=0
@@ -558,6 +568,7 @@ echo "MPTDC_RO_PHASE_MIN_CLEARANCE_UM=$MPTDC_RO_PHASE_MIN_CLEARANCE_UM"
 echo "MPTDC_RO_HALO_PLACER_GUARD_X_UM=$MPTDC_RO_HALO_PLACER_GUARD_X_UM"
 echo "MPTDC_RO_HALO_PLACER_GUARD_Y_UM=$MPTDC_RO_HALO_PLACER_GUARD_Y_UM"
 echo "MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE=$MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE"
+echo "MPTDC_PG_WIRE_END_PROFILE=$MPTDC_PG_WIRE_END_PROFILE"
 echo "MPTDC_SIMPLEPG_LOCAL_PHASE_PREPLACE=$LOCAL_PHASE_PREPLACE_VALUE"
 echo "MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=$MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE"
 echo "MPTDC_PNR_PHASE_BUF_FIX=${MPTDC_PNR_PHASE_BUF_FIX:-0}"

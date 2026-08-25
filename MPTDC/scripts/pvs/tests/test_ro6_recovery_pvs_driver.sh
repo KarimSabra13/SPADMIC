@@ -230,9 +230,10 @@ ROUTE_PG_PVS_CANDIDATE_STATUS=PASS
 ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=1
 EOF
 cat > "$(dirname "$PHYSICAL_GATE")/route_pg_pvs_candidate_status.rpt" <<'EOF'
-ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=12
-ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=12
-ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=12
+ROUTE_PG_PVS_CANDIDATE_PROFILE=HALO10_PNRLEF_15
+ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=15
+ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=15
+ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=15
 ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=1
 ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT=0
 ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT=0
@@ -243,15 +244,18 @@ Net VDD: dangling Wire at (221.750, 681.160) (221.750, 681.160) on layer: MET3
 Net VDD: dangling Wire at (48.000, 681.160) (48.000, 681.160) on layer: MET3
 Net VDD: dangling Wire at (221.750, 201.160) (221.750, 201.160) on layer: MET3
 Net VDD: dangling Wire at (48.000, 201.160) (48.000, 201.160) on layer: MET3
-Net VDD: dangling Wire at (201.160, 233.620) (201.160, 233.620) on layer: METTP
+Net VDD: dangling Wire at (121.160, 233.620) (121.160, 233.620) on layer: METTP
+Net VDD: dangling Wire at (121.160, 648.320) (121.160, 648.320) on layer: METTP
 Net VSS: dangling Wire at (221.750, 685.160) (221.750, 685.160) on layer: MET3
 Net VSS: dangling Wire at (48.000, 685.160) (48.000, 685.160) on layer: MET3
 Net VSS: dangling Wire at (221.750, 205.160) (221.750, 205.160) on layer: MET3
 Net VSS: dangling Wire at (48.000, 205.160) (48.000, 205.160) on layer: MET3
 Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP
 Net VSS: dangling Wire at (125.160, 721.750) (125.160, 721.750) on layer: METTP
+Net VSS: dangling Wire at (125.160, 648.320) (125.160, 648.320) on layer: METTP
+Net VSS: dangling Wire at (125.160, 233.620) (125.160, 233.620) on layer: METTP
 Net VSS: dangling Wire at (125.160, 158.320) (125.160, 158.320) on layer: METTP
-    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+    15 Problem(s) (IMPVFC-94): The net has dangling wire(s).
 EOF
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m candidate-fixtures

@@ -7,6 +7,7 @@ file mkdir [file join $test_root reports]
 set ::env(MPTDC_DIGITAL_SIGNOFF_LIBRARY_ONLY) 1
 set ::env(MPTDC_SIGNOFF_RESULT_DIR) $test_root
 set ::env(MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE) 1
+set ::env(MPTDC_PG_WIRE_END_PROFILE) LEGACY_12
 source $signoff_tcl
 
 proc require_dict_value {data key expected} {
@@ -18,7 +19,8 @@ proc require_dict_value {data key expected} {
 proc write_candidate_report {path {alter_first 0}} {
     set fh [open $path w]
     set index 0
-    foreach fingerprint [mptdc_signoff_expected_pg_wire_end_fingerprint] {
+    set fingerprints [mptdc_signoff_expected_pg_wire_end_fingerprint]
+    foreach fingerprint $fingerprints {
         lassign [split $fingerprint |] net layer x y
         if {$alter_first && $index == 0} {
             set x [format %.3f [expr {$x + 0.001}]]
@@ -26,8 +28,9 @@ proc write_candidate_report {path {alter_first 0}} {
         puts $fh "Net $net: dangling Wire at ($x, $y) ($x, $y) on layer: $layer"
         incr index
     }
-    puts $fh "    12 Problem(s) (IMPVFC-94): The net has dangling wire(s)."
-    puts $fh "    12 total info(s) created."
+    set count [llength $fingerprints]
+    puts $fh "    $count Problem(s) (IMPVFC-94): The net has dangling wire(s)."
+    puts $fh "    $count total info(s) created."
     close $fh
 }
 
@@ -43,6 +46,22 @@ require_dict_value $exact status PASS
 require_dict_value $exact effective_unrouted 0
 require_dict_value $exact fallback_applied 1
 require_dict_value $exact actual_count 12
+
+set ::env(MPTDC_PG_WIRE_END_PROFILE) HALO10_PNRLEF_15
+set halo_report [file join $test_root reports halo_special.rpt]
+set halo_status [file join $test_root reports halo_status.rpt]
+write_candidate_report $halo_report
+set halo [mptdc_signoff_route_pg_pvs_candidate \
+    $halo_report $drc_data $regular_bad $special_bad UNKNOWN $halo_status]
+require_dict_value $halo status PASS
+require_dict_value $halo effective_unrouted 0
+require_dict_value $halo actual_count 15
+set fh [open $halo_status r]
+set halo_status_text [read $fh]
+close $fh
+if {[string first "ROUTE_PG_PVS_CANDIDATE_PROFILE=HALO10_PNRLEF_15" $halo_status_text] < 0} {
+    error "guarded-halo candidate report did not record its profile"
+}
 
 set altered_report [file join $test_root reports altered_special.rpt]
 write_candidate_report $altered_report 1
