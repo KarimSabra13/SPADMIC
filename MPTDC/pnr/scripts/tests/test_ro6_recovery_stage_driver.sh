@@ -212,8 +212,17 @@ POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX=$dangling_only_max
 POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT=0
 POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=0
 RPT
-cat > "$run/reports/ro_halo_status.rpt" <<'RPT'
+halo_guard_x="${FAKE_HALO_GUARD_X:-11.2}"
+halo_guard_y="${FAKE_HALO_GUARD_Y:-4.48}"
+halo_clearance_x="${FAKE_HALO_PLACEMENT_CLEARANCE_X:-21.2}"
+halo_clearance_y="${FAKE_HALO_PLACEMENT_CLEARANCE_Y:-14.48}"
+cat > "$run/reports/ro_halo_status.rpt" <<RPT
 RO_PHASE_MIN_CLEARANCE_UM=10.0
+RO_HALO_AUDIT_CLEARANCE_UM=10.0
+RO_HALO_PLACER_GUARD_X_UM=$halo_guard_x
+RO_HALO_PLACER_GUARD_Y_UM=$halo_guard_y
+RO_HALO_PLACEMENT_CLEARANCE_X_UM=$halo_clearance_x
+RO_HALO_PLACEMENT_CLEARANCE_Y_UM=$halo_clearance_y
 RO_HALO_ENABLED=1
 SLOW_HALO_STATUS=PASS
 FAST_HALO_STATUS=PASS
@@ -660,6 +669,8 @@ grep -qx 'PRE_ROUTE_DANGLING_COUNT=35' "$WORK/innovus/route_pnr_lef_35/reports/o
 grep -qx 'PRE_ROUTE_DANGLING_MAX=35' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'RO_HALO_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'RO_HALO_OCCUPANCY_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'RO_HALO_PLACER_GUARD_X_UM=11.2' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'RO_HALO_PLACER_GUARD_Y_UM=4.48' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'SETUP_STATUS_TC=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'TC_HOLD_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'DRV_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
@@ -705,6 +716,20 @@ set -e
 test "$HALO_INTRUSION_RC" -ne 0
 grep -qx 'RO_HALO_TOTAL_INTRUSION_COUNT=1' "$WORK/innovus/route_halo_intrusion/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_halo_intrusion/reports/operator_gate_physical_pnr.rpt"
+
+set +e
+env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 \
+  FAKE_HALO_GUARD_X=0.0 FAKE_HALO_PLACEMENT_CLEARANCE_X=10.0 \
+  bash "$DRIVER" \
+  --stage physical-pnr --run-id route_unguarded_halo --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 --ro-halos \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_unguarded_halo.stdout"
+UNGUARDED_HALO_RC=$?
+set -e
+test "$UNGUARDED_HALO_RC" -ne 0
+grep -qx 'RO_HALO_PLACER_GUARD_X_UM=0.0' "$WORK/innovus/route_unguarded_halo/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_unguarded_halo/reports/operator_gate_physical_pnr.rpt"
 
 set +e
 env "${COMMON_ENV[@]}" bash "$DRIVER" \

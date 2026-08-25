@@ -24,6 +24,8 @@ require_line 'export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY="$SIGNAL_TOP_ROUT
 require_line 'export MPTDC_BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair'
 require_line 'export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0'
 require_line 'export MPTDC_PNR_CREATE_RO_HALOS="$RO_HALOS_VALUE"'
+require_line 'export MPTDC_RO_HALO_PLACER_GUARD_X_UM=11.20'
+require_line 'export MPTDC_RO_HALO_PLACER_GUARD_Y_UM=4.48'
 require_line 'export MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE="$ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE"'
 
 grep -Fqx '    mesh_lr_vdd_vss|ring_aligned_vdd_vss_pair) ;;' "$SIGNOFF_WRAPPER" || {

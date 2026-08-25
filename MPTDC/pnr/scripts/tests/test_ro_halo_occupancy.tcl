@@ -8,6 +8,8 @@ set ::env(MPTDC_DIGITAL_SIGNOFF_LIBRARY_ONLY) 1
 set ::env(MPTDC_SIGNOFF_RESULT_DIR) $test_root
 set ::env(MPTDC_PNR_CREATE_RO_HALOS) 1
 set ::env(MPTDC_RO_PHASE_MIN_CLEARANCE_UM) 10.0
+set ::env(MPTDC_RO_HALO_PLACER_GUARD_X_UM) 11.2
+set ::env(MPTDC_RO_HALO_PLACER_GUARD_Y_UM) 4.48
 source $signoff_tcl
 
 rename mptdc_signoff_ro_instances_by_family mptdc_signoff_ro_instances_by_family_original
@@ -41,11 +43,32 @@ proc require_report_value {path key expected} {
     }
 }
 
+proc createPlaceBlockage {args} {
+    lappend ::mock_place_blockages $args
+}
+
 set ::mock_boxes [dict create \
     ro_slow {10.0 10.0 20.0 20.0} \
     ro_fast {50.0 50.0 60.0 60.0} \
     cell_slow_outside {30.0 12.0 31.0 13.0} \
     cell_fast_outside {70.0 52.0 71.0 53.0}]
+set ::mock_place_blockages [list]
+set create_report [file join $test_root reports ro_halo_create.rpt]
+mptdc_signoff_create_ro_halos $create_report
+require_report_value $create_report RO_HALO_AUDIT_CLEARANCE_UM 10.0
+require_report_value $create_report RO_HALO_PLACER_GUARD_X_UM 11.2
+require_report_value $create_report RO_HALO_PLACER_GUARD_Y_UM 4.48
+require_report_value $create_report RO_HALO_PLACEMENT_CLEARANCE_X_UM 21.2
+require_report_value $create_report RO_HALO_PLACEMENT_CLEARANCE_Y_UM 14.48
+require_report_value $create_report SLOW_RO_HALO_BBOX {0.0 0.0 30.0 30.0}
+require_report_value $create_report SLOW_RO_PLACEMENT_BLOCKAGE_BBOX {-11.200000 -4.480000 41.200000 34.480000}
+require_report_value $create_report FAST_RO_PLACEMENT_BLOCKAGE_BBOX {28.800000 35.520000 81.200000 74.480000}
+require_report_value $create_report RO_HALO_COUNT 2
+require_report_value $create_report RO_HALO_STATUS PASS
+if {[llength $::mock_place_blockages] != 2} {
+    error "expected two guarded placement blockages, got [llength $::mock_place_blockages]"
+}
+
 set pass_report [file join $test_root reports ro_halo_occupancy_pass.rpt]
 mptdc_signoff_audit_ro_halo_occupancy 1 $pass_report
 require_report_value $pass_report RO_HALO_OCCUPANCY_STATUS PASS
@@ -60,6 +83,9 @@ if {![catch {mptdc_signoff_audit_ro_halo_occupancy 1 $fail_report}]} {
 }
 require_report_value $fail_report RO_HALO_OCCUPANCY_STATUS FAIL
 require_report_value $fail_report RO_HALO_TOTAL_INTRUSION_COUNT 1
+require_report_value $fail_report SLOW_RO_HALO_INTRUSION_0_INSTANCE cell_inside_slow
+require_report_value $fail_report SLOW_RO_HALO_INTRUSION_0_BBOX {25.0 12.0 26.0 13.0}
+require_report_value $fail_report SLOW_RO_HALO_INTRUSION_0_RO_CLEARANCE_UM 5.0
 
 file delete -force $test_root
 puts "MPTDC_RO_HALO_OCCUPANCY_TEST=PASS"

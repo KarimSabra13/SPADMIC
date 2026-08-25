@@ -690,6 +690,24 @@ proc mptdc_signoff_expand_box {box halo} {
         [expr {[lindex $box 3] + $halo}]]
 }
 
+proc mptdc_signoff_expand_box_xy {box halo_x halo_y} {
+    if {![mptdc_signoff_box_valid $box]} { return [list] }
+    return [list \
+        [expr {[lindex $box 0] - $halo_x}] \
+        [expr {[lindex $box 1] - $halo_y}] \
+        [expr {[lindex $box 2] + $halo_x}] \
+        [expr {[lindex $box 3] + $halo_y}]]
+}
+
+proc mptdc_signoff_format_box {box} {
+    if {![mptdc_signoff_box_valid $box]} { return [list] }
+    set out [list]
+    foreach value [lrange $box 0 3] {
+        lappend out [format %.6f $value]
+    }
+    return $out
+}
+
 proc mptdc_signoff_cell_ptr {inst} {
     set ptrs [list]
     catch {set ptrs [dbGet top.insts.name $inst -p]}
@@ -1233,7 +1251,11 @@ proc mptdc_signoff_ro_instances_by_family {} {
 }
 
 proc mptdc_signoff_create_ro_halos {{path ""}} {
-    set halo [mptdc_signoff_env MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    set halo [mptdc_signoff_env_double MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    set guard_x [mptdc_signoff_env_double MPTDC_RO_HALO_PLACER_GUARD_X_UM 0.0]
+    set guard_y [mptdc_signoff_env_double MPTDC_RO_HALO_PLACER_GUARD_Y_UM 0.0]
+    set placement_halo_x [expr {$halo + max(0.0, $guard_x)}]
+    set placement_halo_y [expr {$halo + max(0.0, $guard_y)}]
     if {$path eq ""} {
         set path [file join [mptdc_signoff_report_dir] ro_halo_status.rpt]
     }
@@ -1241,6 +1263,12 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
     set fh [open $path w]
     puts $fh "# MPTDC RO Macro Halo Status"
     puts $fh "RO_PHASE_MIN_CLEARANCE_UM=$halo"
+    puts $fh "RO_HALO_AUDIT_CLEARANCE_UM=$halo"
+    puts $fh "RO_HALO_PLACER_GUARD_X_UM=$guard_x"
+    puts $fh "RO_HALO_PLACER_GUARD_Y_UM=$guard_y"
+    puts $fh "RO_HALO_PLACEMENT_CLEARANCE_X_UM=$placement_halo_x"
+    puts $fh "RO_HALO_PLACEMENT_CLEARANCE_Y_UM=$placement_halo_y"
+    puts $fh "RO_HALO_BLOCKAGE_POLICY=AUDIT_HALO_PLUS_FULL_STDCELL_GUARD"
     puts $fh "RO_HALO_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_CREATE_RO_HALOS 1] ? 1 : 0}]"
     if {![mptdc_signoff_env_truthy MPTDC_PNR_CREATE_RO_HALOS 1]} {
         puts $fh "RO_HALO_STATUS=SKIPPED"
@@ -1249,24 +1277,30 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
         return $path
     }
     set failures [list]
+    if {$guard_x < 0.0 || $guard_y < 0.0} {
+        lappend failures "negative_placer_guard:x=$guard_x:y=$guard_y"
+    }
     set halo_count 0
     foreach family {slow fast} {
         set inst [dict get $ro_map $family]
         set box [mptdc_signoff_cell_box $inst]
         set halo_box [mptdc_signoff_expand_box $box $halo]
+        set placement_box [mptdc_signoff_format_box \
+            [mptdc_signoff_expand_box_xy $box $placement_halo_x $placement_halo_y]]
         puts $fh "[string toupper $family]_RO_INSTANCE=$inst"
         puts $fh "[string toupper $family]_RO_BBOX=$box"
         puts $fh "[string toupper $family]_RO_HALO_BBOX=$halo_box"
-        if {![mptdc_signoff_box_valid $halo_box]} {
+        puts $fh "[string toupper $family]_RO_PLACEMENT_BLOCKAGE_BBOX=$placement_box"
+        if {![mptdc_signoff_box_valid $halo_box] || ![mptdc_signoff_box_valid $placement_box]} {
             lappend failures "${family}:invalid_ro_bbox"
             continue
         }
         set name "MPTDC_${family}_RO_HALO"
         set ok 0
         foreach cmd [list \
-            [list createPlaceBlockage -box $halo_box -type hard -name $name] \
-            [list createPlaceBlockage -box $halo_box -type hard] \
-            [list createPlaceBlockage -box $halo_box]] {
+            [list createPlaceBlockage -box $placement_box -type hard -name $name] \
+            [list createPlaceBlockage -box $placement_box -type hard] \
+            [list createPlaceBlockage -box $placement_box]] {
             puts $fh "[string toupper $family]_HALO_COMMAND=$cmd"
             if {![catch {{*}$cmd} err]} {
                 puts $fh "[string toupper $family]_HALO_STATUS=PASS"
@@ -1331,6 +1365,7 @@ proc mptdc_signoff_audit_ro_halo_occupancy {{fatal 1} {path ""}} {
         set ro_box [mptdc_signoff_cell_box $ro_inst]
         set halo_box [mptdc_signoff_expand_box $ro_box $halo]
         set intrusions [list]
+        set intrusion_details [dict create]
         puts $fh "${label}_RO_INSTANCE=$ro_inst"
         puts $fh "${label}_RO_BBOX=$ro_box"
         puts $fh "${label}_RO_HALO_BBOX=$halo_box"
@@ -1346,12 +1381,24 @@ proc mptdc_signoff_audit_ro_halo_occupancy {{fatal 1} {path ""}} {
             set overlap [mptdc_signoff_box_overlap_area $halo_box [dict get $inst_boxes $name]]
             if {$overlap ne "" && $overlap > 0.0} {
                 lappend intrusions $name
+                set inst_box [dict get $inst_boxes $name]
+                dict set intrusion_details $name [list \
+                    $inst_box $overlap [mptdc_signoff_box_clearance $ro_box $inst_box]]
             }
         }
         set intrusion_count [llength $intrusions]
         incr total_intrusions $intrusion_count
         puts $fh "${label}_RO_HALO_INTRUSION_COUNT=$intrusion_count"
         puts $fh "${label}_RO_HALO_INTRUSIONS=[join [lsort $intrusions] ,]"
+        set intrusion_index 0
+        foreach name [lsort $intrusions] {
+            set detail [dict get $intrusion_details $name]
+            puts $fh "${label}_RO_HALO_INTRUSION_${intrusion_index}_INSTANCE=$name"
+            puts $fh "${label}_RO_HALO_INTRUSION_${intrusion_index}_BBOX=[lindex $detail 0]"
+            puts $fh "${label}_RO_HALO_INTRUSION_${intrusion_index}_OVERLAP_AREA_UM2=[lindex $detail 1]"
+            puts $fh "${label}_RO_HALO_INTRUSION_${intrusion_index}_RO_CLEARANCE_UM=[lindex $detail 2]"
+            incr intrusion_index
+        }
         if {$intrusion_count > 0} {
             lappend failures "${family}:non_ro_instances_inside_halo=$intrusion_count"
         }

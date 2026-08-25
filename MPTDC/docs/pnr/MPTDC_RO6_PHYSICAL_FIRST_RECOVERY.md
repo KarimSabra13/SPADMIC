@@ -100,10 +100,23 @@ this form: Innovus emitted `IMPSPR-340` because the command requires both
 `-net` and `-status`. These are symptoms of the original placement topology,
 not three independent post-route edits worth continuing.
 
+The first fresh-halo run,
+`20260825_mptdc_bufftap0_halo10_physical_123744`, stopped during placement
+before CTS or routing. Both 10 um blockage commands passed and `checkPlace`
+reported a legal placement, but the full-bbox audit found 8 ordinary cells in
+the slow halo and 12 in the fast halo. This is consistent with a cell origin
+being legal immediately outside a hard blockage while the cell body crosses
+its edge. The phase buffers were not the failure: their minimum measured RO
+clearance was 17.42 um.
+
 The active recovery is therefore one fresh PnR from the accepted buffered-tap
-handoff with two audited 10 um hard placement halos around the fixed RO macros.
-The halos keep ordinary cells and their pin-access vias away from the RO PG
-trunks before placement and routing. No V4-V7 repaired checkpoint is reused.
+handoff with a 10 um audited exclusion around each fixed RO macro. The actual
+hard placer blockage adds 11.2 um in X, covering the widest standard-cell
+buffer used here, and 4.48 um in Y, covering one complete JIHD row. Thus the
+placement blockage clearances are 21.2 um in X and 14.48 um in Y while the
+acceptance audit remains exactly 10 um. The closest fixed phase buffer remains
+2.94 um outside the guarded blockage. No failed placement or V4-V7 repair
+checkpoint is reused.
 The final Innovus gate remains strict for geometry, shorts, regular
 connectivity, timing, DRV, LEF identity, layers, and the two south MET3 tap
 pins. Only the exact known 12 `IMPVFC-94` VDD/VSS wire endpoints may continue
@@ -119,10 +132,12 @@ PVS DRC are both zero and LVS explicitly matches.
    `20260824_mptdc_bufftap0_simplepg_pgproof_135116`; do not repeat the sweep.
 3. Require the exact audited PnR LEF path, SHA-256, 13 MET2 windows, 13 MET3
    windows, and the complete `S[0:7],rstb` access set.
-4. Start a fresh full PnR with both RO macros fixed and one 10 um hard placement
-   halo around each macro. Do not restore a V4-V7 repaired checkpoint.
-5. Require two created halos, zero post-place halo intrusions, valid instance
-   boxes, phase-buffer clearance at least 10 um, and exactly two RO macros.
+4. Start a fresh full PnR with both RO macros fixed, a 10 um audit halo, and the
+   mandatory 11.2 um X / 4.48 um Y placer guard around each macro. Do not
+   restore a failed placement or V4-V7 repaired checkpoint.
+5. Require two created guarded blockages, 21.2 um X / 14.48 um Y placement
+   clearance, zero post-place 10 um audit-halo intrusions, valid instance boxes,
+   phase-buffer clearance at least 10 um, and exactly two RO macros.
 6. Require zero Innovus geometry DRC, zero shorts, zero regular-net failures,
    zero non-RO special failures, zero unrouted nets, TC setup PASS, TC hold PASS,
    DRV PASS, and successful power-report capture.
@@ -232,12 +247,13 @@ still requires zero geometry DRC, shorts, regular-connectivity debt, non-RO
 special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact 12-endpoint PVS-candidate fingerprint.
 
-### 2. Current Command: Fresh 10 um Halo Physical PnR
+### 2. Current Command: Fresh Guarded-Halo Physical PnR
 
 This is the only Innovus command to run now. It uses the exact accepted PG
 proof, buffered Genus handoff, and audited PnR LEF. It starts a fresh flow,
-creates and audits both RO halos, completes extraction and TC timing, publishes
-the bounded evidence automatically, and never restores a V4-V7 repair output.
+creates the guarded placer blockages, audits the unchanged 10 um exclusion,
+completes extraction and TC timing, publishes the bounded evidence
+automatically, and never restores a failed placement or V4-V7 repair output.
 
 ```bash
 set +e
@@ -670,6 +686,11 @@ SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=PASS
 SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED
 RO_HALO_STATUS=PASS
 RO_HALO_COUNT=2
+RO_HALO_CLEARANCE_UM>=10.0
+RO_HALO_PLACER_GUARD_X_UM>=11.2
+RO_HALO_PLACER_GUARD_Y_UM>=4.48
+RO_HALO_PLACEMENT_CLEARANCE_X_UM>=21.2
+RO_HALO_PLACEMENT_CLEARANCE_Y_UM>=14.48
 RO_HALO_OCCUPANCY_STATUS=PASS
 RO_HALO_TOTAL_INTRUSION_COUNT=0
 RO_HALO_INVALID_INSTANCE_BBOX_COUNT=0
