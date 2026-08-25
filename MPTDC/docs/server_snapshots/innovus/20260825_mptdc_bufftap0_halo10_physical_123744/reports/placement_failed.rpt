@@ -1,0 +1,16 @@
+STAGE=placement
+STATUS=FAIL
+ERROR=MPTDC_RO_HALO_OCCUPANCY_GATE_FAILED: failures=slow:non_ro_instances_inside_halo=8 fast:non_ro_instances_inside_halo=12 report=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_123744/reports/ro_halo_occupancy.rpt
+
+MPTDC_RO_HALO_OCCUPANCY_GATE_FAILED: failures=slow:non_ro_instances_inside_halo=8 fast:non_ro_instances_inside_halo=12 report=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_123744/reports/ro_halo_occupancy.rpt
+    while executing
+"error "MPTDC_RO_HALO_OCCUPANCY_GATE_FAILED: failures=$failures report=$path""
+    (procedure "mptdc_signoff_audit_ro_halo_occupancy" line 86)
+    invoked from within
+"mptdc_signoff_audit_ro_halo_occupancy $ro_halo_fatal"
+    (procedure "mptdc_signoff_place_design" line 26)
+    invoked from within
+"mptdc_signoff_place_design"
+    ("uplevel" body line 2)
+    invoked from within
+"uplevel 1 $body"

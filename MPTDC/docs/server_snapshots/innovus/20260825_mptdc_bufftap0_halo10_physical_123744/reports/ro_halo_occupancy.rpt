@@ -1,0 +1,21 @@
+# MPTDC Post-Place RO Halo Occupancy Audit
+RO_HALO_OCCUPANCY_AUDIT_FATAL=1
+RO_HALO_ENABLED=1
+RO_HALO_CLEARANCE_UM=10.0
+SLOW_RO_INSTANCE=u_core_u_osc_slow_u_ro_tune4
+SLOW_RO_BBOX=50.4 650.72 219.35 721.22
+SLOW_RO_HALO_BBOX=40.4 640.72 229.35 731.22
+SLOW_RO_HALO_INTRUSION_COUNT=8
+SLOW_RO_HALO_INTRUSIONS=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/g26,u_core_gen_pd_row[6].gen_pd_col[4].u_pd/g437__7482,u_core_gen_pd_row[6].gen_pd_col[4].u_pd/g442__2883,u_core_gen_pd_row[6].gen_pd_col[4].u_pd/hit_latched_reg,u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2],u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5],u_core_gen_pd_row[6].gen_pd_col[4].u_pd/q2_reg,u_core_gen_pd_row[7].gen_pd_col[4].u_pd/FE_OFC695_u_core_fast_tag_col_4__0
+FAST_RO_INSTANCE=u_core_u_osc_fast_u_ro_tune4
+FAST_RO_BBOX=50.4 160.72 219.35 231.22
+FAST_RO_HALO_BBOX=40.4 150.72 229.35 241.22
+FAST_RO_HALO_INTRUSION_COUNT=12
+FAST_RO_HALO_INTRUSIONS=u_core_g79443,u_core_g79622,u_core_g80139,u_core_gen_pd_row[5].gen_pd_col[7].u_pd/FE_OFC771_u_core_pd_hit_level_47,u_core_gen_pd_row[5].gen_pd_col[7].u_pd/g436__8246,u_core_gen_pd_row[6].gen_pd_col[7].u_pd/g436__1666,u_core_gen_pd_row[6].gen_pd_col[7].u_pd/g441__5107,u_core_gen_pd_row[6].gen_pd_col[7].u_pd/g442__6260,u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3],u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][385],u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][388],u_core_u_hit_capture_bridge_snapshot_q_reg[nfast_hit_packed][389]
+RO_TUNE6_COUNT=2
+RO_HALO_AUDITED_INSTANCE_COUNT=14169
+RO_HALO_INVALID_INSTANCE_BBOX_COUNT=0
+RO_HALO_INVALID_INSTANCE_BBOX_NAMES=
+RO_HALO_TOTAL_INTRUSION_COUNT=20
+RO_HALO_OCCUPANCY_STATUS=FAIL
+RO_HALO_OCCUPANCY_FAILURES=slow:non_ro_instances_inside_halo=8 fast:non_ro_instances_inside_halo=12
