@@ -1,0 +1,19 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_three_marker_eco_v6
+REPORT_STATUS=FAILED
+ERROR=N66687_OLD_MET2_LANDING expected at least 1 bounded wire before deletion
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N66687_OLD_MET2_LANDING expected at least 1 bounded wire before deletion
+    while executing
+"error "$label expected at least $min_before bounded wire before deletion""
+    (procedure "mptdc_ckpt_manual_delete_regular_wire_area" line 8)
+    invoked from within
+"mptdc_ckpt_manual_delete_regular_wire_area $fh N66687_OLD_MET2_LANDING  u_core_n_66687 MET2 {220.45 179.25 220.85 180.05} 1"
+    (procedure "mptdc_ckpt_manual_three_marker_eco_v6" line 44)
+    invoked from within
+"mptdc_ckpt_manual_three_marker_eco_v6"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END

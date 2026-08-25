@@ -1,0 +1,6 @@
+ROUTE_DEF=/sim/ksabra/SPADMIC_work/innovus/20260825_110029_mptdc_bufftap0_manual_geometry_repair_v6/def/repaired_route.def
+ro_slow_tap0_o_COUNT=1
+ro_fast_tap0_o_COUNT=1
+RO_TAP_OBSERVABILITY_PIN_COUNT=2
+- ro_slow_tap0_o + NET ro_slow_tap0_o + DIRECTION OUTPUT + USE SIGNAL   + LAYER MET3 ( -200 0 ) ( 200 800 )   + FIXED ( 1400 0 ) N ;
+- ro_fast_tap0_o + NET ro_fast_tap0_o + DIRECTION OUTPUT + USE SIGNAL   + LAYER MET3 ( -200 0 ) ( 200 800 )   + FIXED ( 584360 0 ) N ;
