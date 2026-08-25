@@ -1,0 +1,18 @@
+# Installed Innovus DB schema capture
+SCHEMA_net_STATUS=PASS
+SCHEMA_net_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/schema_net.rpt
+SCHEMA_wire_STATUS=PASS
+SCHEMA_wire_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/schema_wire.rpt
+SCHEMA_viaInst_STATUS=PASS
+SCHEMA_viaInst_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/schema_viaInst.rpt
+SCHEMA_instTerm_STATUS=PASS
+SCHEMA_instTerm_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/schema_instTerm.rpt
+SCHEMA_pin_STATUS=PASS
+SCHEMA_pin_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/schema_pin.rpt
+SCHEMA_pinShape_STATUS=PASS
+SCHEMA_pinShape_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/schema_pinShape.rpt
+SCHEMA_sWire_STATUS=PASS
+SCHEMA_sWire_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/schema_sWire.rpt
+SCHEMA_CAPTURE_PASS_COUNT=7
+SCHEMA_CAPTURE_FAIL_COUNT=0
+SCHEMA_CAPTURE_STATUS=PASS

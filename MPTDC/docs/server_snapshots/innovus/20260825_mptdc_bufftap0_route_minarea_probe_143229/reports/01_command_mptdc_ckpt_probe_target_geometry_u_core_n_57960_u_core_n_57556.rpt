@@ -1,0 +1,4 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_probe_target_geometry {u_core_n_57960 u_core_n_57556}
+HELPER_RESULT=status PASS report /sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_route_minarea_probe_143229/reports/route_min_area_target_probe.rpt
+REPORT_STATUS=PASS

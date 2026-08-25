@@ -1,0 +1,43 @@
+============================================================
+instTerm: Instance terminal (used in flattened connectivity)
+------------------------------------------------------------
+cellTerm: obj(term), Pointer to equivalent cell terminal
+defName: string, Fully qualified def name of the instance terminal from db
+dontInvertPhase(settable): bool,  
+dontTouch(settable): enum(deleteOk false invertOk none true), The preservation status of a pin during optimization. A preserved pin means the logical function of the pin must be preserved to maintain a simulation or test-point pin in the netlist.  However, the name does not need to be preserved..
+edge: int, If this term is for a partition, or inst that is a black-box, and the term is assigned, the edge value indicates along which edge of the boundary polygon the term is assigned. The edge number starts from the lowest Y, then left-most X vertex, staring with 0, and then counting clock-wise. See the setPinConstraint command document for a figure showing the edge numbering. If the term is not assigned, or not for a partition or black-box inst, the value of -1 is returned.
+effectiveStackVia: string, Reads the effective stack via name for this instterm, which is what the router would use if the design were routed now.
+effectiveStackViaRule: obj(stackViaRule), The stackViaRule that is expected to be used by the router for connecting to this instTerm. This value is derived from the other instTerm and term attributes related to stack via.
+hNet: obj(hNet), Pointer to the hierarchical net (hNet) connected to the instance term
+hdlName(settable): string, This is the original RTL name for this instterm. It is used to map RTL simulation results with RTL names to the current netlist for switching activity analysis. It is only maintained properly on the output pins of sequential cells. Optimization will copy this name during any multi-bit merge or splitting transforms to the equivalent instterm, but not on output pins of combinational cells. The is_phase_inverted attribute will be flipped if the phase is inverted.
+initialName(settable): string, This will be used for verification of initial input netlist (post-synthesis) to any other netlist generated during Innovus flow.
+inst: obj(inst), Pointer to Instance containing the instTerm
+isHdlPhaseInverted(settable): bool, This indicates if the original RTL phase has been inverted. It is combined with the .hdlName attribute to map RTL simulation results to the current netlist for switching activity analysis.
+isInitialPhaseInverted(settable): bool, This indicates if the initial RTL phase has been inverted.
+isInput: bool, Indicates that the terminal is an input
+isOutput: bool, Indicates that the terminal is an output
+isPhaseInverted(settable): bool, Identifies the instTerm for which phase is inverted.
+isSGNC: bool, Indicates tie connection was made by Single Inst GNC rule
+isSequentialDuplicate(settable): string, Identifies the instTerm which is cloned or duplicated and source of duplication.
+isSequentialMerged(settable): string, Keep track of instTerms after  merge or split  during optimization.
+isSequentialRetimed(settable): bool, Whether this instterm is retimed.
+isSpecial(settable): bool,  Indicates that the instTerm belongs in the DEF SPECIALNETS section (0 = NETS section, 1 = SPECIALNETS section)
+isTieHi: bool, Indicates that the terminal is a tieHi
+isTieLo: bool, Indicates that the terminal is a tieLo
+layer: obj(layer), Pointer to layer of the instance terminal (yellow square in display)
+name: string, Fully qualified instance terminal name including instance path
+net: obj(net), Pointer to net connected to the instTerm
+objType: enum(antennaData antennaModel bndry bump bumpGrid bumpTerm bus busGuide busSinkGroup cellDensity densityShape fPlan foreign gCellGridDef group guiLine guiPoly guiRect guiText hInst hInstTerm hNet hTerm head inst instTerm io layer layerRule layerShape libCell marker net netGroup pBlkg pWire pd pgInstTerm pin pinGroup pinGuide pinShape pkgComponent pkgObject prop ptn ptnCell ptnPinBlkg rBlkg resistor resizeBlkg routeType row rule sViaInst sWire sdp shape shapeVia site stackViaRule term text topCell trackDef vCell vWire via viaInst viaRuleGenerate whatIfVia whatIfWire wire), Object type: Instance terminal
+pd: obj(pd), Pointer to the parent power domain of the instance terminal (equivalent to Design Browser effPD)
+props: objList(prop), List of pointers to propertie.
+pt: pt, Location of instance terminal (yellow square in display)
+pt_x: coord, X of location of instance terminal (yellow square in display)
+pt_y: coord, Y of location of instance terminal (yellow square in display)
+stackViaRequired(settable): bool, Sets whether a stack via is required for this instTerm.
+stackViaRule(settable): obj(stackViaRule), This value serves as a instTerm-specific override to use this stackViaRule when connecting to this instTerm. If set, it must match one of the elements from the stackViaRuleList attribute of the corresponding term. The interpretation of this value depends on this instTerm's stackViaRuleRequired attribute. 
+ stackViaRule == {} && stackViaRuleRequired == false: stackViaRule does not affect the choice. 
+ stackViaRule == stackrule1 && stackViaRuleRequired == false: Router will prefer stackrule1, but it may select another (or possibly none) if necessary to avoid design rule violations. 
+ stackViaRule == {} && stackViaRuleRequired == true: The required stackViaRule is empty, so the router will not use any stackViaRule for connecting to this instTerm (even ignoring stackViaRuleRequired on the term if necessary). 
+ stackViaRule == stackrule1 && stackViaRuleRequired == true: Router will use stackrule1, even if it leads to design rule violations.
+stackViaRuleRequired(settable): bool, Specifies whether the router must use this instTerm's stackViaRule value. If false, the stackViaRule value will be preferred by the router, if true the stackViaRule value is required by the router. See the stackViaRule attribute for more details.
+unusedBitInMultibit(settable): bool, Returns a value of true if the pin is unused in the multibit cell.

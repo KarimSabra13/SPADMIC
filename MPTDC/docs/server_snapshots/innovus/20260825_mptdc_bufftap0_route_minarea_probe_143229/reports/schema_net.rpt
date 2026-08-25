@@ -1,0 +1,75 @@
+==================================================================================
+net: Canonical (flat) net (equivalent to connectivity in DEF NETS and SPECIALNETS)
+----------------------------------------------------------------------------------
+allTerms: objList(instTerm term), List of pointers to connections (terms and instTerms)
+area: area, Area of the net as defined by the LEF MACRO SIZE or OVERLAP information
+avoidDetour(settable): bool, Avoids detours of roughly more than a few gcell grids on the specified nets (affects global routing only).
+botMaskLayerNum(settable): int, Specify the bottom layer number that the mask constraint should be applied.
+botOneSideSpacingLayerNum(settable): int, Specify the bottom layer number of one side spacing, The spacing constraint could be applied to one side only instead of the typical both sides.  This is an attempt to balance the timing benefit vs routability impact.
+bottomPreferredLayer(settable): obj(layer), Pointer to the preferred lowest routing layer. This attribute is a soft limit; that is, NanoRoute might use a layer below the specified layer if necessary to complete routing.
+bottomPreferredShieldLayer(settable): obj(layer), The bottom preferred layer on which to add shield on for the net.
+box: rect, Bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_area: area, Area of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_ll: pt, Lower left (ll) of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_llx: coord, Lower left X (llx) of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_lly: coord, Lower left Y (lly) of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_size: pt, Size of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_sizex: coord, Size X of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_sizey: coord, Size Y of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_ur: pt, Upper right (ur) of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_urx: coord, Upper Right X (urx) of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+box_ury: coord, Upper Right Y (ury) of bounding box of the net's wiring if routed, otherwise bounding box of the terms/instTerms on the net.
+bus: obj(bus), Pointer to bus object, Null (0x0) for scalar net
+defName: string, Fully qualified def name of the net from db
+dontTouch(settable): enum(deleteOk false true), This attribute defines the preservation status of an net during optimization. Setting this attribute will preserve all connections on this net. When set, this overrides any setting on hnets of this net.
+hNets: objList(hNet), List of pointers to hNets which make up this net.
+instTerms: objList(instTerm), List of pointers to instTerm connections
+isAnalog(settable): bool, Indicates that net is an analog net
+isCTSClock(settable): bool, Indicates that net is a cts clock net (equivalent to 'USE CLOCK' property in DEF)
+isClock: bool, Indicates that net is a clock according to timing constraints and tracing
+isEarlyGlobalRouted(settable): bool, Indicate that the net is from early global route
+isEdit(settable): bool, Indicate that the wire/via on the net has been modified. This attribute only works when "setEditMode -create_is_edit_flag 1". Please look up for more details on "setEditMode -create_is_edit_flag" man page.
+isExternal: bool, Indicates that net is connected to a terminal
+isFixedBump: bool, Indicates that the net is connected to a bump
+isGnd: bool, Indicates that net is ground
+isIlmNet: bool, Specify if a top level net is connecting to ILM (Interface Logic Model) modules and some or all terms (either drive or sink) of the net are inside ILM module.
+isMixedSignal: bool, Indicates that the net has one or more Mixed Signal constraints when the value is true 
+isPatternTrunk: bool, Indicates that the net is routed with a trunk pattern
+isPhysOnly: bool, Indicates that the net is physical only
+isPwr: bool, Indicates that net is power
+isPwrOrGnd: bool, Indicates that net is power or ground
+isScanNet: bool, Indicates that net is a scan net
+mask(settable): int, Indicates mask number for multiple mask layer usage. Refer to layer .numMask attributes for valid range, 0 indicates unconstrained. Layers that do not support the specified value will be treated as unconstrained. (Legal range: 0-3).
+maxVoltage: float, Max voltage for the net, determined by the max net voltage of all active hold views. Net voltage is determined using the following procedure: voltage from net's driver instTerm, associated power from CPF related_power_pins command or Liberty related_pg_pin attribute or LEF SUPPLYSENSITIVITY statement; power domain operating voltage; or default system voltage.
+minVoltage: float, Min voltage for the net, determined by the min net voltage of all active setup views.Net voltage is determined using the following procedure: voltage from net's driver instTerm, associated power from CPF related_power_pins command or Liberty related_pg_pin attribute or LEF SUPPLYSENSITIVITY statement; power domain operating voltage; or default system voltage.
+name: string, Canonical (flat) name of the net
+numInputTerms: int, Number of input (load) connections on the net (terms with .isOutput 1 + instTerms with .isInput 1)
+numOutputTerms: int, Number of output (driver) connected to the net (terms with .isInput 1 + instTerms with .isOutput 1)
+numTerms: int, Number of connections to the net (number of terms + number of instTerms)
+objType: enum(antennaData antennaModel bndry bump bumpGrid bumpTerm bus busGuide busSinkGroup cellDensity densityShape fPlan foreign gCellGridDef group guiLine guiPoly guiRect guiText hInst hInstTerm hNet hTerm head inst instTerm io layer layerRule layerShape libCell marker net netGroup pBlkg pWire pd pgInstTerm pin pinGroup pinGuide pinShape pkgComponent pkgObject prop ptn ptnCell ptnPinBlkg rBlkg resistor resizeBlkg routeType row rule sViaInst sWire sdp shape shapeVia site stackViaRule term text topCell trackDef vCell vWire via viaInst viaRuleGenerate whatIfVia whatIfWire wire), Object type: Canonical (flat) Net
+pWires: objList(pWire), List of pointers to wire patch objects (small rectangles that are connected to the symbolic wiring graph)
+preferredExtraSpace(settable): int, Gives additional pitch spacing to the specified net. Use this attribute to give critical nets extra space to reduce coupling. Legal range: 0-3
+props: objList(prop), List of pointers to properties
+rule: obj(rule), Pointer to non-default rule corresponding to the net, nets with the default routing rule will return NULL (0x0).
+sVias: objList(sViaInst), List of pointers to sViasInsts (DEF SPECIALNETS equivalent)
+sWires: objList(sWire), List of pointers to sWires (DEF SPECIALNETS equivalent)
+shieldNets: objList(net), Specifies the nets that are to be used in the creation of shielding wires (DEF NETS + SHIELDNET equivalent).
+shieldTapInstanceInsertionEffort(settable): enum(high none standard), Different route type for clock shielding, including high frequency(high) and low frequency(standard) that main difference is what ground tie cell instance/via used to achieve shield segments electrical connection.
+None: default
+Standard: use existing standard cell vss m0 pins as much as possible, create a new instance of a ground tie cell under the shield route if cannot find an existing vss m0 pin within a user controlled search distance of a required connection, the new cell vss pins can have a "max fanout" of 2 shield nets.
+ High: must create ground tie cell instances, and user can specify the physical distance of these new ground tie cells along the clock segments. new instance m0 vss pin to the clock shield segments will be a via stack of single vias on ever layer to the shield nets. It is acceptable for the router to create a n-1 metal shape to connect adjacent vss shield segments together and then route this single vss shape down to m0 ground tie pin.   Shield segments may be electrically connected between adjacent route layers through vias. If this is done, there shall be no Manhattan distance between ground tie cells that is larger than the user provided value. Newly inserted ground tie cells cannot be shared between clocks.
+siPostRouteRepair(settable): bool, Specifies that Signal Integrity issues should be repaired at the end of the routing phase.
+skipAntennaRepair(settable): bool, Specifies that antenna violations should not be corrected by the routing as the violation will be corrected in a different level of the design hierarchy.
+skipRouting(settable): bool, Specifies that Nanoroute should not route or re-route the net.
+terms: objList(term), List of pointers to top level term connections
+topMaskLayerNum(settable): int, Specify the top layer number that the mask constraint should be applied.
+topOneSideSpacingLayerNum(settable): int, Specify the top layer number of one side spacing, The spacing constraint could be applied to one side only instead of the typical both sides.  This is an attempt to balance the timing benefit vs routability impact.
+topPreferredLayer(settable): obj(layer), Pointer to the preferred highest routing layer. This attribute is a soft limit; that is, NanoRoute might use a layer above the specified layer if necessary to complete routing.
+topPreferredShieldLayer(settable): obj(layer), The top preferred layer on which to add shield on for the net.
+userBottomPreferredRoutingLayer(settable): obj(layer), The initial lowest layer set by setAttribute or dbSet. Opt will use it as a reference to set bottomPreferredLayer to any value equal or greater than initialBottomPreferredLayer and smaller than topPreferredLayer for better performance.
+vWires: objList(vWire), List of pointers to virtual wire objects (connections that are not real shapes used in the symbolic wiring graph)
+vias: objList(viaInst), List of pointers to viaInsts (DEF NETS equivalent)
+weight(settable): int, Specifies a relative weight for routing nets. In each switch box, the NanoRoute router routes nets with the highest weight first, then the next highest weight, and so on. Specify a value higher than 2 to ensure a net is routed before other nets.
+whatIfVias: objList(whatIfVia), List of 'what if' vias.
+whatIfWires: objList(whatIfWire), List of 'what if' wires.
+wires: objList(wire), List of pointers to wires (DEF NETS equivalent)
