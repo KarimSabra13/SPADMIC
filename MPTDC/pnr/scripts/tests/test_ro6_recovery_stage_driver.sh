@@ -110,9 +110,10 @@ git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
 printf 'MACRO RO_tune6\nEND RO_tune6\n' > "$PNR_LEF"
+PNR_LEF_SHA256="$(sha256sum "$PNR_LEF" | awk '{print $1}')"
 cat > "$PNR_LEF_SUMMARY" <<EOF
 OUTPUT_LEF=$PNR_LEF
-OUTPUT_LEF_SHA256=$(sha256sum "$PNR_LEF" | awk '{print $1}')
+OUTPUT_LEF_SHA256=$PNR_LEF_SHA256
 REQUIRED_ACCESS_PIN_SET_STATUS=PASS
 UNEXPECTED_ACCESS_PIN_COUNT=0
 MET2_ACCESS_WINDOW_COUNT=13
@@ -140,6 +141,8 @@ strict_special_clean=0
 dangling_only_max=""
 temporary_signal_top_blockage=0
 pnr_lef=""
+ro_halos=0
+allow_candidate=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id) run_id="$2"; shift 2 ;;
@@ -149,6 +152,8 @@ while [[ $# -gt 0 ]]; do
     --dangling-only-max) dangling_only_max="$2"; shift 2 ;;
     --temporary-signal-top-route-blockage) temporary_signal_top_blockage=1; shift ;;
     --pnr-lef) pnr_lef="$2"; shift 2 ;;
+    --ro-halos) ro_halos=1; shift ;;
+    --allow-exact-pg-pvs-candidate) allow_candidate=1; shift ;;
     *) shift ;;
   esac
 done
@@ -156,6 +161,7 @@ test "$strict_special_clean" = 0
 test "$dangling_only_max" = "${EXPECTED_DANGLING_ONLY_MAX:-34}"
 if [[ "$stage" == full_closure ]]; then
   test "$temporary_signal_top_blockage" = 1
+  test "$ro_halos" = 1
 fi
 run="$work/$run_id"
 mkdir -p "$run/reports" "$run/def" "$run/checkpoints/04_route.enc.dat"
@@ -206,6 +212,32 @@ POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX=$dangling_only_max
 POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT=0
 POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=0
 RPT
+cat > "$run/reports/ro_halo_status.rpt" <<'RPT'
+RO_PHASE_MIN_CLEARANCE_UM=10.0
+RO_HALO_ENABLED=1
+SLOW_HALO_STATUS=PASS
+FAST_HALO_STATUS=PASS
+RO_HALO_COUNT=2
+RO_HALO_STATUS=PASS
+RPT
+halo_intrusions="${FAKE_HALO_INTRUSIONS:-0}"
+halo_occupancy_status=PASS
+if [[ "$halo_intrusions" != 0 ]]; then halo_occupancy_status=FAIL; fi
+cat > "$run/reports/ro_halo_occupancy.rpt" <<RPT
+RO_HALO_ENABLED=1
+RO_HALO_CLEARANCE_UM=10.0
+RO_TUNE6_COUNT=2
+RO_HALO_INVALID_INSTANCE_BBOX_COUNT=0
+RO_HALO_TOTAL_INTRUSION_COUNT=$halo_intrusions
+RO_HALO_OCCUPANCY_STATUS=$halo_occupancy_status
+RPT
+cat > "$run/reports/ro_phase_overlap_audit.rpt" <<'RPT'
+RO_PHASE_MIN_CLEARANCE_REQUIRED_UM=10.0
+SLOW_RO_PHASE_PLACEMENT_STATUS=PASS
+FAST_RO_PHASE_PLACEMENT_STATUS=PASS
+RO_PHASE_MIN_CLEARANCE_UM=17.42
+RO_PHASE_PLACEMENT_STATUS=PASS
+RPT
 shorts=0
 tool_rc=0
 if [[ "${FAKE_DIRTY_ROUTE:-0}" == 1 ]]; then shorts=1; tool_rc=1; fi
@@ -216,17 +248,66 @@ fi
 cat > "$run/reports/ro_import_source_gate.rpt" <<RPT
 O1_RO_LEF_PATH=$actual_pnr_lef
 RPT
+route_status=PASS
+special_bad=0
+special_raw_bad=0
+if [[ "$shorts" != 0 ]]; then route_status=FAIL; fi
+if [[ "${FAKE_ROUTE_CANDIDATE:-0}" == 1 && "$shorts" == 0 ]]; then
+  test "$allow_candidate" = 1
+  route_status=PVS_CANDIDATE
+  special_bad=1
+  special_raw_bad=1
+fi
 cat > "$run/reports/route_status.rpt" <<RPT
-ROUTE_STATUS=$([[ "$shorts" == 0 ]] && echo PASS || echo FAIL)
+ROUTE_STATUS=$route_status
 INNOVUS_VERIFY_DRC_STATUS=$([[ "$shorts" == 0 ]] && echo PASS || echo FAIL)
 GEOMETRY_DRC_VIOLATIONS=$shorts
 SHORTS=$shorts
 REGULAR_NET_CONNECTIVITY_BAD=0
-SPECIAL_NET_CONNECTIVITY_BAD=0
-SPECIAL_NET_CONNECTIVITY_RAW_BAD=0
+SPECIAL_NET_CONNECTIVITY_BAD=$special_bad
+SPECIAL_NET_CONNECTIVITY_RAW_BAD=$special_raw_bad
 SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
 UNROUTED_NETS=0
 RPT
+if [[ "${FAKE_ROUTE_CANDIDATE:-0}" == 1 ]]; then
+  altered_x=221.750
+  if [[ "${FAKE_ALTER_CANDIDATE_ENDPOINT:-0}" == 1 ]]; then altered_x=221.751; fi
+  cat > "$run/reports/route_connectivity_special_detailed.rpt" <<RPT
+Net VDD: dangling Wire at ($altered_x, 681.160) ($altered_x, 681.160) on layer: MET3
+Net VDD: dangling Wire at (48.000, 681.160) (48.000, 681.160) on layer: MET3
+Net VDD: dangling Wire at (221.750, 201.160) (221.750, 201.160) on layer: MET3
+Net VDD: dangling Wire at (48.000, 201.160) (48.000, 201.160) on layer: MET3
+Net VDD: dangling Wire at (201.160, 233.620) (201.160, 233.620) on layer: METTP
+Net VSS: dangling Wire at (221.750, 685.160) (221.750, 685.160) on layer: MET3
+Net VSS: dangling Wire at (48.000, 685.160) (48.000, 685.160) on layer: MET3
+Net VSS: dangling Wire at (221.750, 205.160) (221.750, 205.160) on layer: MET3
+Net VSS: dangling Wire at (48.000, 205.160) (48.000, 205.160) on layer: MET3
+Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP
+Net VSS: dangling Wire at (125.160, 721.750) (125.160, 721.750) on layer: METTP
+Net VSS: dangling Wire at (125.160, 158.320) (125.160, 158.320) on layer: METTP
+    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+RPT
+  cat > "$run/reports/route_pg_pvs_candidate_status.rpt" <<'RPT'
+ROUTE_PG_PVS_CANDIDATE_ENABLED=1
+ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=12
+ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=12
+ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=12
+ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT=0
+ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT=0
+ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=1
+ROUTE_PG_PVS_CANDIDATE_STATUS=PASS
+RPT
+else
+  cat > "$run/reports/route_pg_pvs_candidate_status.rpt" <<'RPT'
+ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=12
+ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=0
+ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=0
+ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT=0
+ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT=0
+ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=0
+ROUTE_PG_PVS_CANDIDATE_STATUS=FAIL
+RPT
+fi
 cat > "$run/reports/route_layer_intent.rpt" <<'RPT'
 signal_top_layer=MET3
 router_command_top_layer=METTP
@@ -239,6 +320,13 @@ SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=PASS
 SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED
 RPT
 printf 'REPORT_STATUS=OK\n' > "$run/reports/io_pin_placement_summary.md"
+cat > "$run/reports/extracted_timing_status.rpt" <<'RPT'
+SETUP_STATUS_TC=PASS
+TC_HOLD_STATUS=PASS
+RPT
+printf 'DRV_STATUS=PASS\n' > "$run/reports/drv_status.rpt"
+printf 'POWER_REPORT_CAPTURE_STATUS=PASS\n' > "$run/reports/power_status.rpt"
+printf 'EXTRACTION_STATUS=PASS\n' > "$run/reports/digital_pnr_signoff_status.rpt"
 cat > "$run/reports/io_pin_placement.csv" <<'CSV'
 pin,direction,side,layer,status
 "ro_slow_tap0_o",out,SOUTH,MET3,REQUESTED
@@ -488,6 +576,10 @@ COMMON_ENV=(
   MPTDC_CADENCE_ENV="$FAKE_CADENCE_ENV"
   MPTDC_WORK_ROOT="$WORK"
   MPTDC_INNOVUS_WORK="$WORK/innovus"
+  MPTDC_RECOVERY_EXPECTED_HALO_GENUS_RUN_ID=genus_fixture
+  MPTDC_RECOVERY_EXPECTED_HALO_PG_RUN_ID=pg_prior
+  MPTDC_RECOVERY_EXPECTED_HALO_PNR_LEF="$PNR_LEF"
+  MPTDC_RECOVERY_EXPECTED_HALO_PNR_LEF_SHA256="$PNR_LEF_SHA256"
 )
 
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
@@ -556,39 +648,79 @@ grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/sweep_no_pass/reports/operator_gate
 grep -q 'innovus sweep_no_pass .* PG_SROUTE_SWEEP' "$PUBLISH_CALLS"
 grep -qx 'NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE' "$TMP_ROOT/sweep_no_pass.stdout"
 
-env "${COMMON_ENV[@]}" bash "$DRIVER" \
-  --stage physical-pnr --run-id route_fixture --pg-run-id pg_prior \
-  --pnr-lef "$PNR_LEF" \
-  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
-  > "$TMP_ROOT/route.stdout"
-grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'signal_top_layer=MET3' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'router_command_top_layer=METTP' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'PNR_LEF_PATH_MATCH_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'PNR_LEF_EVIDENCE_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'PNR_LEF_SUMMARY_BINDING_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'PNR_LEF_GATE_STATUS=PASS' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'PRE_ROUTE_DANGLING_MODE=BASELINE_34' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'PRE_ROUTE_DANGLING_MAX=34' "$WORK/innovus/route_fixture/reports/operator_gate_physical_pnr.rpt"
-grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$WORK/innovus/route_fixture/reports/tap_pin_def_excerpt.rpt"
-test -s "$WORK/innovus/route_fixture/outputs/RO_tune6_pnr_lef_used.txt"
-test -s "$WORK/innovus/route_fixture/outputs/RO_tune6_pnr_lef_summary.txt"
-
 env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 bash "$DRIVER" \
   --stage physical-pnr --run-id route_pnr_lef_35 --pg-run-id pg_prior \
-  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 --ro-halos \
   --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/route_pnr_lef_35.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PHYSICAL_GATE_MODE=STRICT_CLEAN' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'PRE_ROUTE_DANGLING_MODE=PNR_LEF_ONE_MARKER_CONTINUATION' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'PRE_ROUTE_DANGLING_COUNT=35' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
 grep -qx 'PRE_ROUTE_DANGLING_MAX=35' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'RO_HALO_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'RO_HALO_OCCUPANCY_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'SETUP_STATUS_TC=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'TC_HOLD_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'DRV_STATUS=PASS' "$WORK/innovus/route_pnr_lef_35/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$WORK/innovus/route_pnr_lef_35/reports/tap_pin_def_excerpt.rpt"
+grep -qx 'NEXT_STAGE=PVS' "$TMP_ROOT/route_pnr_lef_35.stdout"
+test -s "$WORK/innovus/route_pnr_lef_35/outputs/RO_tune6_pnr_lef_used.txt"
+test -s "$WORK/innovus/route_pnr_lef_35/outputs/RO_tune6_pnr_lef_summary.txt"
+
+env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 FAKE_ROUTE_CANDIDATE=1 \
+  bash "$DRIVER" \
+  --stage physical-pnr --run-id route_exact_candidate --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 --ro-halos \
+  --allow-exact-pg-pvs-candidate \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_exact_candidate.stdout"
+grep -qx 'ROUTE_STATUS=PVS_CANDIDATE' "$WORK/innovus/route_exact_candidate/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'PHYSICAL_GATE_MODE=PVS_CANDIDATE_EXACT_PG_WIRE_ENDS' "$WORK/innovus/route_exact_candidate/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'DECISION=PVS_CANDIDATE_CONTINUE' "$WORK/innovus/route_exact_candidate/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'NEXT_STAGE=PVS' "$TMP_ROOT/route_exact_candidate.stdout"
+
+set +e
+env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 FAKE_ROUTE_CANDIDATE=1 \
+  FAKE_ALTER_CANDIDATE_ENDPOINT=1 bash "$DRIVER" \
+  --stage physical-pnr --run-id route_altered_candidate --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 --ro-halos \
+  --allow-exact-pg-pvs-candidate \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_altered_candidate.stdout"
+ALTERED_CANDIDATE_RC=$?
+set -e
+test "$ALTERED_CANDIDATE_RC" -ne 0
+grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_altered_candidate/reports/operator_gate_physical_pnr.rpt"
+
+set +e
+env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 FAKE_HALO_INTRUSIONS=1 \
+  bash "$DRIVER" \
+  --stage physical-pnr --run-id route_halo_intrusion --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 --ro-halos \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_halo_intrusion.stdout"
+HALO_INTRUSION_RC=$?
+set -e
+test "$HALO_INTRUSION_RC" -ne 0
+grep -qx 'RO_HALO_TOTAL_INTRUSION_COUNT=1' "$WORK/innovus/route_halo_intrusion/reports/operator_gate_physical_pnr.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_halo_intrusion/reports/operator_gate_physical_pnr.rpt"
+
+set +e
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage physical-pnr --run-id route_without_halos --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 \
+  --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
+  > "$TMP_ROOT/route_without_halos.stdout"
+ROUTE_WITHOUT_HALOS_RC=$?
+set -e
+test "$ROUTE_WITHOUT_HALOS_RC" -eq 4
+grep -qx 'STOP: physical-pnr requires --ro-halos' "$TMP_ROOT/route_without_halos.stdout"
 
 set +e
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage physical-pnr --run-id route_35_without_pnr_lef --pg-run-id pg_prior \
-  --pre-route-dangling-max 35 \
+  --pre-route-dangling-max 35 --ro-halos \
   --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/route_35_without_pnr_lef.stdout"
 ROUTE_35_WITHOUT_LEF_RC=$?
@@ -600,7 +732,7 @@ grep -qx 'RECOVERY_PREFLIGHT=FAIL' "$TMP_ROOT/route_35_without_pnr_lef.stdout"
 set +e
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage physical-pnr --run-id route_invalid_bound --pg-run-id pg_prior \
-  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 36 \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 36 --ro-halos \
   --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/route_invalid_bound.stdout"
 ROUTE_INVALID_BOUND_RC=$?
@@ -610,9 +742,9 @@ grep -qx 'STOP: --pre-route-dangling-max must be 34 or 35' "$TMP_ROOT/route_inva
 grep -qx 'RECOVERY_PREFLIGHT=FAIL' "$TMP_ROOT/route_invalid_bound.stdout"
 
 set +e
-env "${COMMON_ENV[@]}" FAKE_PNR_LEF_MISMATCH=1 bash "$DRIVER" \
+env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 FAKE_PNR_LEF_MISMATCH=1 bash "$DRIVER" \
   --stage physical-pnr --run-id route_lef_mismatch --pg-run-id pg_prior \
-  --pnr-lef "$PNR_LEF" \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 --ro-halos \
   --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/route_lef_mismatch.stdout"
 LEF_MISMATCH_RC=$?
@@ -623,8 +755,9 @@ grep -qx 'PNR_LEF_GATE_STATUS=FAIL' "$WORK/innovus/route_lef_mismatch/reports/op
 grep -qx 'DECISION=FAIL_STOP' "$WORK/innovus/route_lef_mismatch/reports/operator_gate_physical_pnr.rpt"
 
 set +e
-env "${COMMON_ENV[@]}" FAKE_DIRTY_ROUTE=1 bash "$DRIVER" \
+env "${COMMON_ENV[@]}" EXPECTED_DANGLING_ONLY_MAX=35 FAKE_DIRTY_ROUTE=1 bash "$DRIVER" \
   --stage physical-pnr --run-id route_dirty --pg-run-id pg_prior \
+  --pnr-lef "$PNR_LEF" --pre-route-dangling-max 35 --ro-halos \
   --expected-head "$HEAD_SHA" --genus-run-id genus_fixture --handoff-dir "$HANDOFF" \
   > "$TMP_ROOT/route_dirty.stdout"
 DIRTY_RC=$?

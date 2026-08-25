@@ -12,6 +12,9 @@ PUBLISHER="${MPTDC_RECOVERY_PUBLISHER:-$REPO_ROOT/MPTDC/ci/publish_mptdc_server_
 INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-/sim/ksabra/SPADMIC_work/innovus}"
 WORK_ROOT="${MPTDC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 DEFAULT_GENUS_RUN="MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623"
+DEFAULT_ACCEPTED_PG_RUN="20260824_mptdc_bufftap0_simplepg_pgproof_135116"
+DEFAULT_HALO_PNR_LEF="/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_tempblk_met3_20260824_151753.lef"
+DEFAULT_HALO_PNR_LEF_SHA256="6788f856561a3e8c002dc7f2536ac338b16fc76b56aaae9d2062f4dccfec8469"
 
 STAGE=""
 RUN_ID=""
@@ -28,6 +31,12 @@ PNR_LEF_SUMMARY_BINDING_STATUS=NOT_REQUESTED
 PRE_ROUTE_DANGLING_MAX=34
 PRE_ROUTE_DANGLING_MAX_EXPLICIT=0
 PRE_ROUTE_DANGLING_MODE=BASELINE_34
+RO_HALOS=0
+ALLOW_EXACT_PG_PVS_CANDIDATE=0
+EXPECTED_HALO_GENUS_RUN_ID="${MPTDC_RECOVERY_EXPECTED_HALO_GENUS_RUN_ID:-$DEFAULT_GENUS_RUN}"
+EXPECTED_HALO_PG_RUN_ID="${MPTDC_RECOVERY_EXPECTED_HALO_PG_RUN_ID:-$DEFAULT_ACCEPTED_PG_RUN}"
+EXPECTED_HALO_PNR_LEF="${MPTDC_RECOVERY_EXPECTED_HALO_PNR_LEF:-$DEFAULT_HALO_PNR_LEF}"
+EXPECTED_HALO_PNR_LEF_SHA256="${MPTDC_RECOVERY_EXPECTED_HALO_PNR_LEF_SHA256:-$DEFAULT_HALO_PNR_LEF_SHA256}"
 
 usage() {
   cat <<'USAGE'
@@ -54,7 +63,14 @@ Options:
   --pre-route-dangling-max <34|35>
                          Physical-pnr pre-route continuation bound. Value 35 is
                          allowed only with the audited 13+13 marker-derived PnR
-                         LEF; the final route gate still requires raw zero debt.
+                         LEF.
+  --ro-halos             Require audited 10 um hard placement halos around both
+                         fixed RO macros. Required for physical-pnr.
+  --allow-exact-pg-pvs-candidate
+                         If geometry, timing, regular connectivity, halo, and
+                         pin gates pass, allow only the exact audited 12
+                         IMPVFC-94 VDD/VSS wire ends to proceed to PVS. This is
+                         not an Innovus special-connectivity-clean result.
   -h, --help             Show this help.
 
 The stage runs in the foreground, writes an operator_gate report, and publishes
@@ -619,6 +635,59 @@ report_value() {
   fi
 }
 
+numeric_ge() {
+  local actual="$1"
+  local minimum="$2"
+  awk -v actual="$actual" -v minimum="$minimum" \
+    'BEGIN {exit !(actual ~ /^[-+]?[0-9]+([.][0-9]+)?$/ && actual + 0 >= minimum + 0)}'
+}
+
+expected_pg_wire_end_fingerprint() {
+  printf '%s\n' \
+    'VDD|MET3|221.750|681.160' \
+    'VDD|MET3|48.000|681.160' \
+    'VDD|MET3|221.750|201.160' \
+    'VDD|MET3|48.000|201.160' \
+    'VDD|METTP|201.160|233.620' \
+    'VSS|MET3|221.750|685.160' \
+    'VSS|MET3|48.000|685.160' \
+    'VSS|MET3|221.750|205.160' \
+    'VSS|MET3|48.000|205.160' \
+    'VSS|METTP|205.160|158.320' \
+    'VSS|METTP|125.160|721.750' \
+    'VSS|METTP|125.160|158.320' | sort
+}
+
+actual_pg_wire_end_fingerprint() {
+  local report="$1"
+  awk '
+    /^Net (VDD|VSS): dangling Wire at / {
+      net=$2; sub(/:$/, "", net)
+      x1=$6; y1=$7; x2=$8; y2=$9
+      gsub(/[(),]/, "", x1); gsub(/[(),]/, "", y1)
+      gsub(/[(),]/, "", x2); gsub(/[(),]/, "", y2)
+      if ((x1 + 0) != (x2 + 0) || (y1 + 0) != (y2 + 0)) {
+        print "INVALID_NON_POINT_WIRE_END"
+      } else {
+        printf "%s|%s|%.3f|%.3f\n", net, $12, x1, y1
+      }
+    }
+  ' "$report" 2>/dev/null | sort
+}
+
+exact_pg_wire_end_report_passes() {
+  local report="$1"
+  local expected actual other_problem_count
+  special_dangling_only_report_passes "$report" || return 1
+  [[ "$(special_dangling_count "$report")" == 12 ]] || return 1
+  other_problem_count="$(grep -E 'Problem\(s\).*\(IMPVFC-' "$report" 2>/dev/null \
+    | grep -Evc '\(IMPVFC-94\):[[:space:]]+The net has dangling wire\(s\)' || true)"
+  [[ "$other_problem_count" == 0 ]] || return 1
+  expected="$(expected_pg_wire_end_fingerprint)"
+  actual="$(actual_pg_wire_end_fingerprint "$report")"
+  [[ "$actual" == "$expected" ]]
+}
+
 file_sha256() {
   local path="$1"
   if [[ -r "$path" ]]; then
@@ -815,6 +884,8 @@ while [[ $# -gt 0 ]]; do
       PRE_ROUTE_DANGLING_MAX_EXPLICIT=1
       shift 2
       ;;
+    --ro-halos) RO_HALOS=1; shift ;;
+    --allow-exact-pg-pvs-candidate) ALLOW_EXACT_PG_PVS_CANDIDATE=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -839,7 +910,7 @@ if [[ -z "$RUN_ID" ]]; then
   elif [[ "$STAGE" == "route-geometry-repair" ]]; then
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_manual_geometry_repair_v7_$(date +%H%M%S)"
   else
-    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_mettpfix_physical_$(date +%H%M%S)"
+    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_halo10_physical_$(date +%H%M%S)"
   fi
 fi
 RUN_DIR="$INNOVUS_WORK/$RUN_ID"
@@ -868,6 +939,9 @@ if [[ -n "$PNR_LEF" && -r "$PNR_LEF" ]]; then
     PNR_LEF_SUMMARY_BINDING_STATUS=FAIL
   fi
 fi
+if [[ -r "$EXPECTED_HALO_PNR_LEF" ]]; then
+  EXPECTED_HALO_PNR_LEF="$(readlink -f "$EXPECTED_HALO_PNR_LEF" 2>/dev/null || printf '%s' "$EXPECTED_HALO_PNR_LEF")"
+fi
 
 cd "$REPO_ROOT" || exit 3
 ACTUAL_HEAD="$(git rev-parse HEAD 2>/dev/null)"
@@ -887,6 +961,12 @@ echo "PNR_LEF=${PNR_LEF:-NOT_REQUESTED}"
 echo "PNR_LEF_SUMMARY=${PNR_LEF_SUMMARY:-NOT_REQUESTED}"
 echo "PNR_LEF_SUMMARY_BINDING_STATUS=$PNR_LEF_SUMMARY_BINDING_STATUS"
 echo "PRE_ROUTE_DANGLING_MAX=$PRE_ROUTE_DANGLING_MAX"
+echo "RO_HALOS=$RO_HALOS"
+echo "ALLOW_EXACT_PG_PVS_CANDIDATE=$ALLOW_EXACT_PG_PVS_CANDIDATE"
+echo "EXPECTED_HALO_GENUS_RUN_ID=$EXPECTED_HALO_GENUS_RUN_ID"
+echo "EXPECTED_HALO_PG_RUN_ID=$EXPECTED_HALO_PG_RUN_ID"
+echo "EXPECTED_HALO_PNR_LEF=$EXPECTED_HALO_PNR_LEF"
+echo "EXPECTED_HALO_PNR_LEF_SHA256=$EXPECTED_HALO_PNR_LEF_SHA256"
 echo "BRANCH=$BRANCH"
 echo "ACTUAL_HEAD=$ACTUAL_HEAD"
 echo "ORIGIN_HEAD=${ORIGIN_HEAD:-MISSING}"
@@ -953,6 +1033,36 @@ elif [[ "$STAGE" == "physical-pnr" ]]; then
       PREFLIGHT=FAIL
     fi
   fi
+  if [[ "$RO_HALOS" != 1 ]]; then
+    echo "STOP: physical-pnr requires --ro-halos"
+    PREFLIGHT=FAIL
+  fi
+  if [[ "$GENUS_RUN_ID" != "$EXPECTED_HALO_GENUS_RUN_ID" ]]; then
+    echo "STOP: halo recovery requires buffered Genus run $EXPECTED_HALO_GENUS_RUN_ID"
+    PREFLIGHT=FAIL
+  fi
+  EXPECTED_HALO_HANDOFF="$WORK_ROOT/handoff/genus_typical_pnrcompat/$EXPECTED_HALO_GENUS_RUN_ID"
+  if [[ -d "$HANDOFF_DIR" ]]; then
+    HANDOFF_DIR_REAL="$(readlink -f "$HANDOFF_DIR" 2>/dev/null || printf '%s' "$HANDOFF_DIR")"
+  else
+    HANDOFF_DIR_REAL="$HANDOFF_DIR"
+  fi
+  if [[ -d "$EXPECTED_HALO_HANDOFF" ]]; then
+    EXPECTED_HALO_HANDOFF="$(readlink -f "$EXPECTED_HALO_HANDOFF" 2>/dev/null || printf '%s' "$EXPECTED_HALO_HANDOFF")"
+  fi
+  if [[ "$HANDOFF_DIR_REAL" != "$EXPECTED_HALO_HANDOFF" ]]; then
+    echo "STOP: halo recovery requires exact PnR-compatible handoff: $EXPECTED_HALO_HANDOFF"
+    PREFLIGHT=FAIL
+  fi
+  if [[ "$PG_RUN_ID" != "$EXPECTED_HALO_PG_RUN_ID" ]]; then
+    echo "STOP: halo recovery requires accepted PG proof $EXPECTED_HALO_PG_RUN_ID"
+    PREFLIGHT=FAIL
+  fi
+  if [[ -z "$PNR_LEF" || "$PNR_LEF" != "$EXPECTED_HALO_PNR_LEF" || \
+        "$(file_sha256 "$PNR_LEF")" != "$EXPECTED_HALO_PNR_LEF_SHA256" ]]; then
+    echo "STOP: halo recovery requires the exact audited marker-access PnR LEF path and hash"
+    PREFLIGHT=FAIL
+  fi
 else
   [[ -n "$SOURCE_PNR_RUN_ID" ]] || { echo "STOP: --source-pnr-run-id is required for $STAGE"; PREFLIGHT=FAIL; }
   [[ "$SOURCE_PNR_RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "STOP: unsafe source PnR run id"; PREFLIGHT=FAIL; }
@@ -1000,6 +1110,22 @@ if [[ "$PRE_ROUTE_DANGLING_MAX" != 34 && "$PRE_ROUTE_DANGLING_MAX" != 35 ]]; the
 fi
 if [[ "$PRE_ROUTE_DANGLING_MAX_EXPLICIT" -eq 1 && "$STAGE" != "physical-pnr" ]]; then
   echo "STOP: --pre-route-dangling-max is only valid for physical-pnr"
+  PREFLIGHT=FAIL
+fi
+if [[ "$RO_HALOS" -eq 1 && "$STAGE" != "physical-pnr" ]]; then
+  echo "STOP: --ro-halos is only valid for physical-pnr"
+  PREFLIGHT=FAIL
+fi
+if [[ "$ALLOW_EXACT_PG_PVS_CANDIDATE" -eq 1 && "$STAGE" != "physical-pnr" ]]; then
+  echo "STOP: --allow-exact-pg-pvs-candidate is only valid for physical-pnr"
+  PREFLIGHT=FAIL
+fi
+if [[ "$ALLOW_EXACT_PG_PVS_CANDIDATE" -eq 1 && "$RO_HALOS" != 1 ]]; then
+  echo "STOP: exact PG PVS candidate mode requires --ro-halos"
+  PREFLIGHT=FAIL
+fi
+if [[ "$STAGE" == "physical-pnr" && "$PRE_ROUTE_DANGLING_MAX" != 35 ]]; then
+  echo "STOP: halo physical-pnr requires --pre-route-dangling-max 35"
   PREFLIGHT=FAIL
 fi
 if [[ "$PRE_ROUTE_DANGLING_MAX" == 35 ]]; then
@@ -1063,6 +1189,12 @@ if [[ "$STAGE" == "pg-proof" ]]; then
 else
   LAUNCH_ARGS+=(--stage full_closure --physical-first --post-filler-sroute \
     --temporary-signal-top-route-blockage)
+  if [[ "$RO_HALOS" -eq 1 ]]; then
+    LAUNCH_ARGS+=(--ro-halos)
+  fi
+  if [[ "$ALLOW_EXACT_PG_PVS_CANDIDATE" -eq 1 ]]; then
+    LAUNCH_ARGS+=(--allow-exact-pg-pvs-candidate)
+  fi
 fi
 
 set +e
@@ -1157,6 +1289,15 @@ else
   SIGNAL_TOP_BLOCKAGE_REPORT="$RUN_DIR/reports/signal_top_route_blockage_status.rpt"
   PRE_ROUTE_REPORT="$RUN_DIR/reports/postplace_pre_route_sroute_status.rpt"
   RO_IMPORT_REPORT="$RUN_DIR/reports/ro_import_source_gate.rpt"
+  RO_HALO_REPORT="$RUN_DIR/reports/ro_halo_status.rpt"
+  RO_HALO_OCCUPANCY_REPORT="$RUN_DIR/reports/ro_halo_occupancy.rpt"
+  RO_PHASE_REPORT="$RUN_DIR/reports/ro_phase_overlap_audit.rpt"
+  PG_CANDIDATE_REPORT="$RUN_DIR/reports/route_pg_pvs_candidate_status.rpt"
+  PG_CANDIDATE_DETAIL_REPORT="$RUN_DIR/reports/route_connectivity_special_detailed.rpt"
+  EXTRACTED_TIMING_REPORT="$RUN_DIR/reports/extracted_timing_status.rpt"
+  DRV_REPORT="$RUN_DIR/reports/drv_status.rpt"
+  POWER_REPORT="$RUN_DIR/reports/power_status.rpt"
+  DIGITAL_STATUS_REPORT="$RUN_DIR/reports/digital_pnr_signoff_status.rpt"
   IO_PIN_SUMMARY="$RUN_DIR/reports/io_pin_placement_summary.md"
   IO_PIN_CSV="$RUN_DIR/reports/io_pin_placement.csv"
   ROUTE_STATUS="$(report_value "$ROUTE_REPORT" ROUTE_STATUS)"
@@ -1181,6 +1322,30 @@ else
   PRE_ROUTE_DANGLING_ACTUAL_MAX="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX)"
   PRE_ROUTE_DANGLING_FATAL="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT)"
   PRE_ROUTE_CROSS_SHORT_COUNT="$(report_value "$PRE_ROUTE_REPORT" POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT)"
+  RO_HALO_ENABLED="$(report_value "$RO_HALO_REPORT" RO_HALO_ENABLED)"
+  RO_HALO_STATUS="$(report_value "$RO_HALO_REPORT" RO_HALO_STATUS)"
+  RO_HALO_COUNT="$(report_value "$RO_HALO_REPORT" RO_HALO_COUNT)"
+  RO_HALO_CLEARANCE="$(report_value "$RO_HALO_REPORT" RO_PHASE_MIN_CLEARANCE_UM)"
+  SLOW_HALO_STATUS="$(report_value "$RO_HALO_REPORT" SLOW_HALO_STATUS)"
+  FAST_HALO_STATUS="$(report_value "$RO_HALO_REPORT" FAST_HALO_STATUS)"
+  RO_HALO_OCCUPANCY_STATUS="$(report_value "$RO_HALO_OCCUPANCY_REPORT" RO_HALO_OCCUPANCY_STATUS)"
+  RO_HALO_TOTAL_INTRUSIONS="$(report_value "$RO_HALO_OCCUPANCY_REPORT" RO_HALO_TOTAL_INTRUSION_COUNT)"
+  RO_HALO_INVALID_BBOXES="$(report_value "$RO_HALO_OCCUPANCY_REPORT" RO_HALO_INVALID_INSTANCE_BBOX_COUNT)"
+  RO_HALO_AUDITED_RO_COUNT="$(report_value "$RO_HALO_OCCUPANCY_REPORT" RO_TUNE6_COUNT)"
+  RO_PHASE_STATUS="$(report_value "$RO_PHASE_REPORT" RO_PHASE_PLACEMENT_STATUS)"
+  RO_PHASE_MIN_CLEARANCE="$(report_value "$RO_PHASE_REPORT" RO_PHASE_MIN_CLEARANCE_UM)"
+  PG_CANDIDATE_STATUS="$(report_value "$PG_CANDIDATE_REPORT" ROUTE_PG_PVS_CANDIDATE_STATUS)"
+  PG_CANDIDATE_EXPECTED_COUNT="$(report_value "$PG_CANDIDATE_REPORT" ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT)"
+  PG_CANDIDATE_ACTUAL_COUNT="$(report_value "$PG_CANDIDATE_REPORT" ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT)"
+  PG_CANDIDATE_SUMMARY_COUNT="$(report_value "$PG_CANDIDATE_REPORT" ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT)"
+  PG_CANDIDATE_EXACT_MATCH="$(report_value "$PG_CANDIDATE_REPORT" ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH)"
+  PG_CANDIDATE_OTHER_NET_LINES="$(report_value "$PG_CANDIDATE_REPORT" ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT)"
+  PG_CANDIDATE_OTHER_PROBLEM_LINES="$(report_value "$PG_CANDIDATE_REPORT" ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT)"
+  SETUP_STATUS_TC="$(report_value "$EXTRACTED_TIMING_REPORT" SETUP_STATUS_TC)"
+  TC_HOLD_STATUS="$(report_value "$EXTRACTED_TIMING_REPORT" TC_HOLD_STATUS)"
+  DRV_STATUS="$(report_value "$DRV_REPORT" DRV_STATUS)"
+  POWER_REPORT_CAPTURE_STATUS="$(report_value "$POWER_REPORT" POWER_REPORT_CAPTURE_STATUS)"
+  EXTRACTION_STATUS="$(report_value "$DIGITAL_STATUS_REPORT" EXTRACTION_STATUS)"
   ACTUAL_PNR_LEF="$(report_value "$RO_IMPORT_REPORT" O1_RO_LEF_PATH)"
   PNR_LEF_PATH_MATCH_STATUS=NOT_REQUESTED
   PNR_LEF_ACTUAL_SHA256=NOT_REQUESTED
@@ -1218,20 +1383,44 @@ else
     TAP_FAST_COUNT="$(tap_def_count "$ROUTE_DEF" ro_fast_tap0_o)"
     TAP_TOTAL_COUNT="$(tap_def_total "$ROUTE_DEF")"
   fi
-  if [[ "$TOOL_RC" -eq 0 && "$ROUTE_STATUS" == PASS && "$DRC_STATUS" == PASS && \
+  PHYSICAL_GATE_MODE=FAIL
+  COMMON_PHYSICAL_GATE=0
+  if [[ "$TOOL_RC" -eq 0 && "$DRC_STATUS" == PASS && \
         "$GEOMETRY_DRC" == 0 && "$SHORTS" == 0 && "$REGULAR_BAD" == 0 && \
-        "$SPECIAL_BAD" == 0 && "$SPECIAL_RAW_BAD" == 0 && "$SPECIAL_NON_RO_BAD" == 0 && \
-        "$UNROUTED" == 0 && "$SIGNAL_TOP" == MET3 && "$ROUTER_TOP" == METTP && \
+        "$SPECIAL_NON_RO_BAD" == 0 && "$UNROUTED" == 0 && \
+        "$SIGNAL_TOP" == MET3 && "$ROUTER_TOP" == METTP && \
         "$ROUTE_COMMAND_STATUS" == PASS && "$SIGNAL_TOP_BLOCKAGE_TEMPORARY" == 1 && \
         "$SIGNAL_TOP_BLOCKAGE_CREATE" == PASS && "$SIGNAL_TOP_BLOCKAGE_REMOVE" == PASS && \
         "$SIGNAL_TOP_BLOCKAGE_STATUS" == REMOVED && "$PRE_ROUTE_SROUTE_STATUS" == PASS && \
         "$PRE_ROUTE_DANGLING_ACTUAL_MAX" == "$PRE_ROUTE_DANGLING_MAX" && \
         "$PRE_ROUTE_DANGLING_FATAL" == 0 && "$PRE_ROUTE_CROSS_SHORT_COUNT" == 0 && \
-        "$PNR_LEF_GATE_STATUS" == PASS && \
-        "$IO_PIN_STATUS" == OK && \
+        "$PNR_LEF_GATE_STATUS" == PASS && "$IO_PIN_STATUS" == OK && \
         "$TAP_SLOW_PLAN" == 1 && "$TAP_FAST_PLAN" == 1 && "$TAP_SLOW_COUNT" == 1 && \
-        "$TAP_FAST_COUNT" == 1 && "$TAP_TOTAL_COUNT" == 2 ]]; then
+        "$TAP_FAST_COUNT" == 1 && "$TAP_TOTAL_COUNT" == 2 && \
+        "$RO_HALO_ENABLED" == 1 && "$RO_HALO_STATUS" == PASS && "$RO_HALO_COUNT" == 2 && \
+        "$SLOW_HALO_STATUS" == PASS && "$FAST_HALO_STATUS" == PASS && \
+        "$RO_HALO_OCCUPANCY_STATUS" == PASS && "$RO_HALO_TOTAL_INTRUSIONS" == 0 && \
+        "$RO_HALO_INVALID_BBOXES" == 0 && "$RO_HALO_AUDITED_RO_COUNT" == 2 && \
+        "$RO_PHASE_STATUS" == PASS && "$EXTRACTION_STATUS" == PASS && \
+        "$SETUP_STATUS_TC" == PASS && "$TC_HOLD_STATUS" == PASS && \
+        "$DRV_STATUS" == PASS && "$POWER_REPORT_CAPTURE_STATUS" == PASS ]] && \
+        numeric_ge "$RO_HALO_CLEARANCE" 10.0 && \
+        numeric_ge "$RO_PHASE_MIN_CLEARANCE" 10.0; then
+    COMMON_PHYSICAL_GATE=1
+  fi
+  if [[ "$COMMON_PHYSICAL_GATE" == 1 && "$ROUTE_STATUS" == PASS && \
+        "$SPECIAL_BAD" == 0 && "$SPECIAL_RAW_BAD" == 0 ]]; then
+    PHYSICAL_GATE_MODE=STRICT_CLEAN
     DECISION=PASS_CONTINUE
+  elif [[ "$COMMON_PHYSICAL_GATE" == 1 && "$ALLOW_EXACT_PG_PVS_CANDIDATE" == 1 && \
+          "$ROUTE_STATUS" == PVS_CANDIDATE && "$SPECIAL_BAD" == 1 && \
+          "$SPECIAL_RAW_BAD" == 1 && "$PG_CANDIDATE_STATUS" == PASS && \
+          "$PG_CANDIDATE_EXPECTED_COUNT" == 12 && "$PG_CANDIDATE_ACTUAL_COUNT" == 12 && \
+          "$PG_CANDIDATE_SUMMARY_COUNT" == 12 && "$PG_CANDIDATE_EXACT_MATCH" == 1 && \
+          "$PG_CANDIDATE_OTHER_NET_LINES" == 0 && "$PG_CANDIDATE_OTHER_PROBLEM_LINES" == 0 ]] && \
+          exact_pg_wire_end_report_passes "$PG_CANDIDATE_DETAIL_REPORT"; then
+    PHYSICAL_GATE_MODE=PVS_CANDIDATE_EXACT_PG_WIRE_ENDS
+    DECISION=PVS_CANDIDATE_CONTINUE
   fi
   if [[ -d "$RUN_DIR" ]]; then
     mkdir -p "$RUN_DIR/reports"
@@ -1275,13 +1464,42 @@ else
       echo "PNR_LEF_EVIDENCE_STATUS=$PNR_LEF_EVIDENCE_STATUS"
       echo "PNR_LEF_REQUESTED_SHA256=$PNR_LEF_REQUESTED_SHA256"
       echo "PNR_LEF_ACTUAL_SHA256=$PNR_LEF_ACTUAL_SHA256"
+      echo "PNR_LEF_EXPECTED_SHA256=$EXPECTED_HALO_PNR_LEF_SHA256"
       echo "PNR_LEF_GATE_STATUS=$PNR_LEF_GATE_STATUS"
+      echo "RO_HALOS_REQUESTED=$RO_HALOS"
+      echo "RO_HALO_ENABLED=$RO_HALO_ENABLED"
+      echo "RO_HALO_STATUS=$RO_HALO_STATUS"
+      echo "RO_HALO_COUNT=$RO_HALO_COUNT"
+      echo "RO_HALO_CLEARANCE_UM=$RO_HALO_CLEARANCE"
+      echo "SLOW_HALO_STATUS=$SLOW_HALO_STATUS"
+      echo "FAST_HALO_STATUS=$FAST_HALO_STATUS"
+      echo "RO_HALO_OCCUPANCY_STATUS=$RO_HALO_OCCUPANCY_STATUS"
+      echo "RO_HALO_TOTAL_INTRUSION_COUNT=$RO_HALO_TOTAL_INTRUSIONS"
+      echo "RO_HALO_INVALID_INSTANCE_BBOX_COUNT=$RO_HALO_INVALID_BBOXES"
+      echo "RO_HALO_AUDITED_RO_COUNT=$RO_HALO_AUDITED_RO_COUNT"
+      echo "RO_PHASE_PLACEMENT_STATUS=$RO_PHASE_STATUS"
+      echo "RO_PHASE_MIN_CLEARANCE_UM=$RO_PHASE_MIN_CLEARANCE"
+      echo "ALLOW_EXACT_PG_PVS_CANDIDATE=$ALLOW_EXACT_PG_PVS_CANDIDATE"
+      echo "ROUTE_PG_PVS_CANDIDATE_STATUS=$PG_CANDIDATE_STATUS"
+      echo "ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=$PG_CANDIDATE_EXPECTED_COUNT"
+      echo "ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=$PG_CANDIDATE_ACTUAL_COUNT"
+      echo "ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=$PG_CANDIDATE_SUMMARY_COUNT"
+      echo "ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=$PG_CANDIDATE_EXACT_MATCH"
+      echo "ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT=$PG_CANDIDATE_OTHER_NET_LINES"
+      echo "ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT=$PG_CANDIDATE_OTHER_PROBLEM_LINES"
+      echo "EXTRACTION_STATUS=$EXTRACTION_STATUS"
+      echo "SETUP_STATUS_TC=$SETUP_STATUS_TC"
+      echo "TC_HOLD_STATUS=$TC_HOLD_STATUS"
+      echo "DRV_STATUS=$DRV_STATUS"
+      echo "POWER_REPORT_CAPTURE_STATUS=$POWER_REPORT_CAPTURE_STATUS"
       echo "IO_PIN_PLACEMENT_STATUS=$IO_PIN_STATUS"
       echo "ro_slow_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_SLOW_PLAN"
       echo "ro_fast_tap0_o_SOUTH_MET3_PLAN_COUNT=$TAP_FAST_PLAN"
       echo "ro_slow_tap0_o_COUNT=$TAP_SLOW_COUNT"
       echo "ro_fast_tap0_o_COUNT=$TAP_FAST_COUNT"
       echo "RO_TAP_OBSERVABILITY_PIN_COUNT=$TAP_TOTAL_COUNT"
+      echo "COMMON_PHYSICAL_GATE=$COMMON_PHYSICAL_GATE"
+      echo "PHYSICAL_GATE_MODE=$PHYSICAL_GATE_MODE"
       echo "DECISION=$DECISION"
     } | tee "$RUN_DIR/reports/operator_gate_physical_pnr.rpt"
   fi
@@ -1303,17 +1521,24 @@ echo "TOOL_RC=$TOOL_RC"
 echo "DECISION=$DECISION"
 echo "PUBLISH_RC=$PUBLISH_RC"
 echo "NEXT_EXPECTED_HEAD=$NEXT_HEAD"
+if [[ "$STAGE" == "physical-pnr" ]]; then
+  echo "PHYSICAL_GATE_MODE=$PHYSICAL_GATE_MODE"
+  echo "ROUTE_PG_PVS_CANDIDATE_STATUS=$PG_CANDIDATE_STATUS"
+fi
 if [[ "$STAGE" == "pg-proof" && "$DECISION" == PASS_CONTINUE && "$PUBLISH_RC" -eq 0 ]]; then
   echo "NEXT_STAGE=PHYSICAL_PNR"
   echo "NEXT_REQUIRED_PG_RUN_ID=$RUN_ID"
-elif [[ "$STAGE" == "physical-pnr" && "$DECISION" == PASS_CONTINUE && "$PUBLISH_RC" -eq 0 ]]; then
+elif [[ "$STAGE" == "physical-pnr" && \
+        ( "$DECISION" == PASS_CONTINUE || "$DECISION" == PVS_CANDIDATE_CONTINUE ) && \
+        "$PUBLISH_RC" -eq 0 ]]; then
   echo "NEXT_STAGE=PVS"
   echo "NEXT_REQUIRED_PNR_RUN_ID=$RUN_ID"
 else
   echo "NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE"
 fi
 
-if [[ "$DECISION" == PASS_CONTINUE && "$PUBLISH_RC" -eq 0 ]]; then
+if [[ ( "$DECISION" == PASS_CONTINUE || "$DECISION" == PVS_CANDIDATE_CONTINUE ) && \
+      "$PUBLISH_RC" -eq 0 ]]; then
   exit 0
 fi
 exit 1

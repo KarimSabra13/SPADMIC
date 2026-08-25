@@ -1249,6 +1249,7 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
         return $path
     }
     set failures [list]
+    set halo_count 0
     foreach family {slow fast} {
         set inst [dict get $ro_map $family]
         set box [mptdc_signoff_cell_box $inst]
@@ -1270,6 +1271,7 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
             if {![catch {{*}$cmd} err]} {
                 puts $fh "[string toupper $family]_HALO_STATUS=PASS"
                 set ok 1
+                incr halo_count
                 break
             }
             puts $fh "[string toupper $family]_HALO_ATTEMPT_ERROR=$err"
@@ -1278,6 +1280,7 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
             lappend failures "${family}:halo_create_failed"
         }
     }
+    puts $fh "RO_HALO_COUNT=$halo_count"
     puts $fh "RO_HALO_STATUS=[expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]"
     if {[llength $failures] > 0} {
         puts $fh "RO_HALO_FAILURES=$failures"
@@ -1285,6 +1288,96 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
     close $fh
     if {[llength $failures] > 0} {
         error "MPTDC_RO_HALO_GATE_FAILED: $failures report=$path"
+    }
+    return $path
+}
+
+proc mptdc_signoff_audit_ro_halo_occupancy {{fatal 1} {path ""}} {
+    if {$path eq ""} {
+        set path [file join [mptdc_signoff_report_dir] ro_halo_occupancy.rpt]
+    }
+    set enabled [mptdc_signoff_env_truthy MPTDC_PNR_CREATE_RO_HALOS 0]
+    set halo [mptdc_signoff_env_double MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    set fh [open $path w]
+    puts $fh "# MPTDC Post-Place RO Halo Occupancy Audit"
+    puts $fh "RO_HALO_OCCUPANCY_AUDIT_FATAL=$fatal"
+    puts $fh "RO_HALO_ENABLED=[expr {$enabled ? 1 : 0}]"
+    puts $fh "RO_HALO_CLEARANCE_UM=$halo"
+    if {!$enabled} {
+        puts $fh "RO_HALO_OCCUPANCY_STATUS=SKIPPED"
+        puts $fh "RO_HALO_OCCUPANCY_REASON=halos_disabled"
+        close $fh
+        return $path
+    }
+
+    set ro_map [mptdc_signoff_ro_instances_by_family]
+    set inst_names [mptdc_signoff_collect_inst_names_from_db [list *]]
+    set inst_boxes [dict create]
+    set invalid_names [list]
+    foreach name $inst_names {
+        set box [mptdc_signoff_cell_box $name]
+        if {![mptdc_signoff_box_valid $box]} {
+            lappend invalid_names $name
+            continue
+        }
+        dict set inst_boxes $name $box
+    }
+
+    set total_intrusions 0
+    set failures [list]
+    foreach family {slow fast} {
+        set label [string toupper $family]
+        set ro_inst [dict get $ro_map $family]
+        set ro_box [mptdc_signoff_cell_box $ro_inst]
+        set halo_box [mptdc_signoff_expand_box $ro_box $halo]
+        set intrusions [list]
+        puts $fh "${label}_RO_INSTANCE=$ro_inst"
+        puts $fh "${label}_RO_BBOX=$ro_box"
+        puts $fh "${label}_RO_HALO_BBOX=$halo_box"
+        if {![mptdc_signoff_box_valid $halo_box]} {
+            lappend failures "${family}:invalid_halo_box"
+            puts $fh "${label}_RO_HALO_INTRUSION_COUNT=UNKNOWN"
+            continue
+        }
+        foreach name [dict keys $inst_boxes] {
+            if {[mptdc_signoff_norm_inst_name $name] eq [mptdc_signoff_norm_inst_name $ro_inst]} {
+                continue
+            }
+            set overlap [mptdc_signoff_box_overlap_area $halo_box [dict get $inst_boxes $name]]
+            if {$overlap ne "" && $overlap > 0.0} {
+                lappend intrusions $name
+            }
+        }
+        set intrusion_count [llength $intrusions]
+        incr total_intrusions $intrusion_count
+        puts $fh "${label}_RO_HALO_INTRUSION_COUNT=$intrusion_count"
+        puts $fh "${label}_RO_HALO_INTRUSIONS=[join [lsort $intrusions] ,]"
+        if {$intrusion_count > 0} {
+            lappend failures "${family}:non_ro_instances_inside_halo=$intrusion_count"
+        }
+    }
+
+    set ro_count [llength [dict get $ro_map all]]
+    puts $fh "RO_TUNE6_COUNT=$ro_count"
+    puts $fh "RO_HALO_AUDITED_INSTANCE_COUNT=[dict size $inst_boxes]"
+    puts $fh "RO_HALO_INVALID_INSTANCE_BBOX_COUNT=[llength $invalid_names]"
+    puts $fh "RO_HALO_INVALID_INSTANCE_BBOX_NAMES=[join [lsort $invalid_names] ,]"
+    puts $fh "RO_HALO_TOTAL_INTRUSION_COUNT=$total_intrusions"
+    if {$ro_count != 2} {
+        lappend failures "ro_tune6_count_not_two=$ro_count"
+    }
+    if {[llength $inst_names] == 0} {
+        lappend failures no_instances_discovered
+    }
+    if {[llength $invalid_names] > 0} {
+        lappend failures "invalid_instance_bboxes=[llength $invalid_names]"
+    }
+    set status [expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]
+    puts $fh "RO_HALO_OCCUPANCY_STATUS=$status"
+    puts $fh "RO_HALO_OCCUPANCY_FAILURES=$failures"
+    close $fh
+    if {$status ne "PASS" && $fatal} {
+        error "MPTDC_RO_HALO_OCCUPANCY_GATE_FAILED: failures=$failures report=$path"
     }
     return $path
 }
@@ -7144,6 +7237,110 @@ proc mptdc_signoff_read_route_gate_reports {drc_rpt regular_rpt special_rpt repo
     return [list $drc_data $regular_bad $special_bad $unrouted]
 }
 
+proc mptdc_signoff_expected_pg_wire_end_fingerprint {} {
+    return [lsort [list \
+        VDD|MET3|221.750|681.160 \
+        VDD|MET3|48.000|681.160 \
+        VDD|MET3|221.750|201.160 \
+        VDD|MET3|48.000|201.160 \
+        VDD|METTP|201.160|233.620 \
+        VSS|MET3|221.750|685.160 \
+        VSS|MET3|48.000|685.160 \
+        VSS|MET3|221.750|205.160 \
+        VSS|MET3|48.000|205.160 \
+        VSS|METTP|205.160|158.320 \
+        VSS|METTP|125.160|721.750 \
+        VSS|METTP|125.160|158.320]]
+}
+
+proc mptdc_signoff_route_pg_pvs_candidate {special_detail_rpt drc_data regular_bad special_bad unrouted {path ""}} {
+    if {$path eq ""} {
+        set path [file join [mptdc_signoff_report_dir] route_pg_pvs_candidate_status.rpt]
+    }
+    set enabled [mptdc_signoff_env_truthy MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE 0]
+    set expected [mptdc_signoff_expected_pg_wire_end_fingerprint]
+    set actual [list]
+    set parse_failures [list]
+    set other_net_lines [list]
+    set other_problem_lines [list]
+    set summary_count ""
+    if {[file exists $special_detail_rpt]} {
+        set in [open $special_detail_rpt r]
+        while {[gets $in line] >= 0} {
+            if {[regexp {^Net (VDD|VSS): dangling Wire at \(([-+0-9.eE]+),[[:space:]]*([-+0-9.eE]+)\) \(([-+0-9.eE]+),[[:space:]]*([-+0-9.eE]+)\) on layer:[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*$} \
+                    $line -> net x1 y1 x2 y2 layer]} {
+                if {![string is double -strict $x1] || ![string is double -strict $y1] ||
+                    ![string is double -strict $x2] || ![string is double -strict $y2]} {
+                    lappend parse_failures "invalid_coordinate:$line"
+                    continue
+                }
+                if {[format %.3f $x1] ne [format %.3f $x2] ||
+                    [format %.3f $y1] ne [format %.3f $y2]} {
+                    lappend parse_failures "non_point_wire_end:$line"
+                    continue
+                }
+                lappend actual [format "%s|%s|%.3f|%.3f" $net $layer $x1 $y1]
+                continue
+            }
+            if {[regexp {^Net (VDD|VSS):} $line]} {
+                lappend other_net_lines $line
+            }
+            if {[regexp {^[[:space:]]*([0-9]+)[[:space:]]+Problem\(s\)[[:space:]]+\(IMPVFC-94\):[[:space:]]+The net has dangling wire\(s\)\.?[[:space:]]*$} $line -> count]} {
+                set summary_count $count
+            } elseif {[regexp {Problem\(s\).*\(IMPVFC-} $line]} {
+                lappend other_problem_lines $line
+            }
+        }
+        close $in
+    } else {
+        lappend parse_failures missing_special_detail_report
+    }
+    set actual [lsort $actual]
+    set exact_match [expr {$actual eq $expected}]
+    set effective_unrouted $unrouted
+    set fallback_applied 0
+    set failures $parse_failures
+    if {!$enabled} { lappend failures candidate_not_enabled }
+    if {[dict get $drc_data status] ne "PASS"} { lappend failures drc_not_clean }
+    if {[lindex $regular_bad 0]} { lappend failures regular_connectivity_bad }
+    if {![lindex $special_bad 0]} { lappend failures special_connectivity_not_candidate_shape }
+    if {[lindex $special_bad 2] != 1} { lappend failures special_raw_bad_not_one }
+    if {[lindex $special_bad 5] != 0} { lappend failures special_non_ro_failures_nonzero }
+    if {!$exact_match} { lappend failures endpoint_fingerprint_mismatch }
+    if {$summary_count ne "12"} { lappend failures "impvfc_94_summary_count=$summary_count" }
+    if {[llength $other_net_lines] > 0} { lappend failures other_vdd_vss_connectivity_lines }
+    if {[llength $other_problem_lines] > 0} { lappend failures other_impvfc_problem_classes }
+    if {$effective_unrouted eq "UNKNOWN" && [llength $failures] == 0} {
+        set effective_unrouted 0
+        set fallback_applied 1
+    } elseif {$effective_unrouted ne "0"} {
+        lappend failures "unrouted_nets=$effective_unrouted"
+    }
+    set status [expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]
+    set fh [open $path w]
+    puts $fh "# MPTDC Exact PG Wire-End PVS Candidate"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_ENABLED=[expr {$enabled ? 1 : 0}]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_MODE=EXACT_IMPVFC_94_WIRE_ENDS"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_SPECIAL_DETAIL_REPORT=$special_detail_rpt"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=[llength $expected]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=[llength $actual]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=$summary_count"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT=[llength $other_net_lines]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT=[llength $other_problem_lines]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=[expr {$exact_match ? 1 : 0}]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_UNROUTED_FALLBACK_APPLIED=$fallback_applied"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_EFFECTIVE_UNROUTED_NETS=$effective_unrouted"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_EXPECTED_FINGERPRINT=[join $expected ,]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_ACTUAL_FINGERPRINT=[join $actual ,]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_FAILURES=$failures"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_STATUS=$status"
+    close $fh
+    return [dict create status $status report $path effective_unrouted $effective_unrouted \
+        fallback_applied $fallback_applied expected_count [llength $expected] \
+        actual_count [llength $actual] exact_match $exact_match summary_count $summary_count \
+        other_net_count [llength $other_net_lines] other_problem_count [llength $other_problem_lines]]
+}
+
 proc mptdc_signoff_route_gate_is_pass {drc_data regular_bad special_bad unrouted} {
     return [expr {[dict get $drc_data status] eq "PASS" &&
         ![lindex $regular_bad 0] &&
@@ -7325,15 +7522,23 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
     return $route_gate
 }
 
-proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad unrouted antenna_status} {
+proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad unrouted antenna_status {pg_candidate ""}} {
     set total [dict get $drc_data total_violations]
     set shorts [dict get $drc_data shorts]
     set regular_flag [lindex $regular_bad 0]
     set special_flag [lindex $special_bad 0]
     set status FAIL
     set review_allowed [mptdc_signoff_route_gate_review_allowed $drc_data $regular_bad $special_bad $unrouted]
+    set pg_candidate_status NOT_REQUESTED
+    set pg_candidate_report ""
+    if {$pg_candidate ne ""} {
+        set pg_candidate_status [dict get $pg_candidate status]
+        set pg_candidate_report [dict get $pg_candidate report]
+    }
     if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
         set status PASS
+    } elseif {$pg_candidate_status eq "PASS"} {
+        set status PVS_CANDIDATE
     } elseif {$review_allowed} {
         set status PROVISIONAL
     }
@@ -7381,6 +7586,17 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "SPECIAL_NET_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
     puts $fh "SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
     puts $fh "SPECIAL_NET_CONNECTIVITY_FILTER_REPORT=[lindex $special_bad 6]"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_STATUS=$pg_candidate_status"
+    puts $fh "ROUTE_PG_PVS_CANDIDATE_REPORT=$pg_candidate_report"
+    if {$pg_candidate ne ""} {
+        puts $fh "ROUTE_PG_PVS_CANDIDATE_EXPECTED_COUNT=[dict get $pg_candidate expected_count]"
+        puts $fh "ROUTE_PG_PVS_CANDIDATE_ACTUAL_COUNT=[dict get $pg_candidate actual_count]"
+        puts $fh "ROUTE_PG_PVS_CANDIDATE_EXACT_MATCH=[expr {[dict get $pg_candidate exact_match] ? 1 : 0}]"
+        puts $fh "ROUTE_PG_PVS_CANDIDATE_SUMMARY_COUNT=[dict get $pg_candidate summary_count]"
+        puts $fh "ROUTE_PG_PVS_CANDIDATE_OTHER_NET_LINE_COUNT=[dict get $pg_candidate other_net_count]"
+        puts $fh "ROUTE_PG_PVS_CANDIDATE_OTHER_PROBLEM_LINE_COUNT=[dict get $pg_candidate other_problem_count]"
+        puts $fh "ROUTE_PG_PVS_CANDIDATE_UNROUTED_FALLBACK_APPLIED=[dict get $pg_candidate fallback_applied]"
+    }
     puts $fh "RO_PG_MANUAL_EXCEPTION=[expr {[mptdc_signoff_ro_pg_manual_exception_enabled] ? 1 : 0}]"
     puts $fh "RO_PG_MANUAL_EXCEPTION_STATUS=[mptdc_signoff_ro_pg_manual_exception_status $special_bad]"
     puts $fh "RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4]"
@@ -7389,7 +7605,11 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
         puts $fh "LVS_STATUS=DEFERRED_UNTIL_MANUAL_RO_PG_PATCH"
     }
     puts $fh "REGULAR_NET_OPENS=[expr {$regular_flag ? "NONZERO_OR_UNPARSED" : 0}]"
-    puts $fh "SPECIAL_NET_OPENS=[expr {$special_flag ? "NONZERO_OR_UNPARSED" : 0}]"
+    if {$special_flag && $pg_candidate_status eq "PASS"} {
+        puts $fh "SPECIAL_NET_OPENS=EXACT_12_IMPVFC_94_WIRE_ENDS_PVS_REQUIRED"
+    } else {
+        puts $fh "SPECIAL_NET_OPENS=[expr {$special_flag ? "NONZERO_OR_UNPARSED" : 0}]"
+    }
     puts $fh "UNROUTED_NETS=$unrouted"
     if {[dict exists $drc_data unrouted_source]} {
         puts $fh "UNROUTED_NETS_SOURCE=[dict get $drc_data unrouted_source]"
@@ -7407,6 +7627,10 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "ROUTE_DRC_CLASS_COUNTS=[dict get $drc_data drc_class_counts]"
     if {$review_allowed} {
         puts $fh "ROUTE_DRC_REVIEW_CLASS=ALLOWED_NONSHORT_MAR_WITH_CLEAN_CONNECTIVITY"
+    }
+    if {$status eq "PVS_CANDIDATE"} {
+        puts $fh "ROUTE_GATE_MODE=PVS_CANDIDATE_EXACT_PG_WIRE_ENDS"
+        puts $fh "ROUTE_GATE_NOTE=not_innovus_special_connectivity_clean_requires_real_ro_pvs_drc_and_lvs"
     }
     if {[dict exists $drc_data route_drc_source]} {
         puts $fh "ROUTE_DRC_SOURCE=[dict get $drc_data route_drc_source]"
@@ -8246,6 +8470,8 @@ proc mptdc_signoff_place_design {} {
         [mptdc_signoff_phase_buffer_instances fast iso] \
         [mptdc_signoff_phase_buffer_instances fast drv] \
         post_place $ro_phase_post_fatal
+    set ro_halo_fatal [mptdc_signoff_env_truthy MPTDC_RO_HALO_POSTPLACE_AUDIT_FATAL 1]
+    mptdc_signoff_audit_ro_halo_occupancy $ro_halo_fatal
     catch {defOut [file join [mptdc_signoff_def_dir] 02_place.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 02_place.enc]}
     mptdc_signoff_audit_pd_matrix_physical
@@ -9278,8 +9504,18 @@ proc mptdc_signoff_route_design {} {
     set route_gate [mptdc_signoff_route_gate_recovery \
         $drc_rpt $regular_rpt $special_rpt $report_route_rpt $route_gate]
     lassign $route_gate drc_data regular_bad special_bad unrouted
+    set special_detail_rpt "[file rootname $special_rpt]_detailed.rpt"
+    set pg_candidate [mptdc_signoff_route_pg_pvs_candidate \
+        $special_detail_rpt $drc_data $regular_bad $special_bad $unrouted]
+    if {[dict get $pg_candidate status] eq "PASS"} {
+        set unrouted [dict get $pg_candidate effective_unrouted]
+        if {[dict get $pg_candidate fallback_applied]} {
+            dict set drc_data unrouted_source exact_pg_wire_end_candidate_fallback
+        }
+    }
     mptdc_signoff_write_pg_postroute_connectivity_status $special_rpt $regular_rpt
-    mptdc_signoff_write_route_gate_status $rpt $drc_data $regular_bad $special_bad $unrouted $antenna_status
+    mptdc_signoff_write_route_gate_status \
+        $rpt $drc_data $regular_bad $special_bad $unrouted $antenna_status $pg_candidate
     catch {defOut [file join [mptdc_signoff_def_dir] 04_route.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 04_route.enc]}
 }

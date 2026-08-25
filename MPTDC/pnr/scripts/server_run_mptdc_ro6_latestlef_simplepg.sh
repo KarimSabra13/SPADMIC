@@ -32,6 +32,8 @@ SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY_VALUE="${MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_TEM
 KEEP_ROUTER_TOP_AT_FLOOR_VALUE="${MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES:-0}"
 LOCAL_PHASE_PREPLACE_VALUE="${MPTDC_SIMPLEPG_LOCAL_PHASE_PREPLACE:-0}"
 POSTROUTE_OPT_VALUE="${MPTDC_SIMPLEPG_POSTROUTE_OPT:-1}"
+RO_HALOS_VALUE=0
+ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE=0
 
 usage() {
   cat <<'USAGE'
@@ -54,6 +56,12 @@ Options:
   --local-phase-preplace Keep the RO macros fixed and pre-place/fix the phase
                          isolation/driver buffers beside the macros. Use with
                          --no-free-all for the buffered-tap closure topology.
+  --ro-halos             Create audited 10 um hard placement halos around both
+                         fixed RO macros. Valid only for full_closure.
+  --allow-exact-pg-pvs-candidate
+                         Permit only the exact audited 12 IMPVFC-94 VDD/VSS
+                         wire-end fingerprint to continue as a PVS candidate.
+                         This does not declare Innovus special connectivity clean.
   --physical-first       Disable post-route timing optimization for this run.
                          Extraction and TC timing reports are still generated.
   --no-final-filler      Disable final filler in full_closure.
@@ -219,6 +227,16 @@ while [[ $# -gt 0 ]]; do
       FREE_ALL_INTERNAL_VALUE=0
       shift
       ;;
+    --ro-halos)
+      RO_HALOS_VALUE=1
+      FIX_RO_VALUE=1
+      FREE_ALL_INTERNAL_VALUE=0
+      shift
+      ;;
+    --allow-exact-pg-pvs-candidate)
+      ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE=1
+      shift
+      ;;
     --physical-first|--no-postroute-opt)
       POSTROUTE_OPT_VALUE=0
       shift
@@ -286,6 +304,15 @@ case "$STAGE" in
     exit 2
     ;;
 esac
+
+if is_truthy "$RO_HALOS_VALUE" && [[ "$STAGE" != "full_closure" ]]; then
+  echo "ERROR: --ro-halos is valid only with --stage full_closure" >&2
+  exit 2
+fi
+if is_truthy "$ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE" && [[ "$STAGE" != "full_closure" ]]; then
+  echo "ERROR: --allow-exact-pg-pvs-candidate is valid only with --stage full_closure" >&2
+  exit 2
+fi
 
 cd "$REPO_ROOT"
 
@@ -399,7 +426,8 @@ export MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT="$FREE_ALL_INTERNAL_VALUE"
 export MPTDC_PNR_FREE_INTERNAL_PLACEMENT="$FREE_ALL_INTERNAL_VALUE"
 export MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT=0
 export MPTDC_PNR_FIX_RO_MACROS="$FIX_RO_VALUE"
-export MPTDC_PNR_CREATE_RO_HALOS=0
+export MPTDC_PNR_CREATE_RO_HALOS="$RO_HALOS_VALUE"
+export MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE="$ALLOW_EXACT_PG_PVS_CANDIDATE_VALUE"
 export MPTDC_PNR_CREATE_RO_ROUTE_BLOCKAGES=0
 export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE=none
 export MPTDC_PNR_PD_TILE_APPLY_HIER_BOX=0
@@ -523,6 +551,9 @@ echo "MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=$MPTDC_POSTPLACE_PRE_ROUTE_DAN
 echo "MPTDC_PNR_CORE_UTIL=$MPTDC_PNR_CORE_UTIL"
 echo "MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"
 echo "MPTDC_PNR_FIX_RO_MACROS=$MPTDC_PNR_FIX_RO_MACROS"
+echo "MPTDC_PNR_CREATE_RO_HALOS=$MPTDC_PNR_CREATE_RO_HALOS"
+echo "MPTDC_RO_PHASE_MIN_CLEARANCE_UM=$MPTDC_RO_PHASE_MIN_CLEARANCE_UM"
+echo "MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE=$MPTDC_ALLOW_EXACT_PG_WIRE_END_PVS_CANDIDATE"
 echo "MPTDC_SIMPLEPG_LOCAL_PHASE_PREPLACE=$LOCAL_PHASE_PREPLACE_VALUE"
 echo "MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=$MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE"
 echo "MPTDC_PNR_PHASE_BUF_FIX=${MPTDC_PNR_PHASE_BUF_FIX:-0}"

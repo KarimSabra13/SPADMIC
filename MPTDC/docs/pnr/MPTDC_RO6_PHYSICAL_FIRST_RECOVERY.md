@@ -92,50 +92,58 @@ The reported final 5 DRCs and 3 shorts include the still-active two-layer
 blockage and are not five canonical route defects. Do not restore the v3 output
 checkpoint and do not rerun or enlarge any of its keepouts.
 
-The published read-only probe
-`20260824_171645_mptdc_bufftap0_route_geometry_probe` preserved that original
-checkpoint tuple exactly and exposed the two conflicting signal via stacks,
-the minimum-area landing, and the nearby VDD/VSS shapes. Its pin-geometry query
-used the wrong DB path (`instTerm.term` instead of `instTerm.cellTerm`), which is
-now corrected, but the wire/via/PG evidence required for repair is complete.
-The active next step is the exact manual V4 geometry ECO from the original
-failed-route checkpoint. It moves only those two via stacks and adds only the
-three local wire extensions; no PG geometry or placement is modified.
+The published V4 through V7 checkpoint repairs are now retired. They proved
+that deleting either conflicting signal via stack immediately opens its regular
+net, while local reroute reconstructs the same PG collision. V7 also proved
+that `editDelete -regular_wire_with_drc` is not a usable bounded selector in
+this form: Innovus emitted `IMPSPR-340` because the command requires both
+`-net` and `-status`. These are symptoms of the original placement topology,
+not three independent post-route edits worth continuing.
+
+The active recovery is therefore one fresh PnR from the accepted buffered-tap
+handoff with two audited 10 um hard placement halos around the fixed RO macros.
+The halos keep ordinary cells and their pin-access vias away from the RO PG
+trunks before placement and routing. No V4-V7 repaired checkpoint is reused.
+The final Innovus gate remains strict for geometry, shorts, regular
+connectivity, timing, DRV, LEF identity, layers, and the two south MET3 tap
+pins. Only the exact known 12 `IMPVFC-94` VDD/VSS wire endpoints may continue
+under the distinct label `PVS_CANDIDATE_EXACT_PG_WIRE_ENDS`; that label is not
+special-connectivity closure and becomes acceptable only if base and density
+PVS DRC are both zero and LVS explicitly matches.
 
 ## Acceptance Order
 
-1. Reuse the latest buffered-tap Genus handoff; do not resynthesize.
-2. Run a fresh PG proof with the ring-aligned two-pin topology. Continue on
-   either raw-clean special connectivity or no more than 34 classified
-   `IMPVFC-94` dangling mesh tails, only when fatal connectivity findings and
-   VDD/VSS cross-net shorts are both zero.
-3. Generate one fresh PnR-only RO LEF from the failed run's pre-sroute MET3
-   marker snapshot. Require all nine signal pin classes, both MET2 and MET3
-   access windows, no unexpected pin windows, and at least one OBS trim.
-4. Run a fresh physical-first PnR with that exact LEF. The completed replay
-   reduced the route debt to the exact three-marker class recorded above.
-5. The completed read-only three-net geometry probe preserved exactly 3 DRC,
-   1 short, regular connectivity 0, special raw bad 1 with 12 classified tails,
-   and exactly two tap pins.
-6. Apply the exact V4 manual geometry ECO from the original checkpoint. Require
-   final DRC 0, shorts 0, regular connectivity 0, non-RO special failures 0,
-   and exactly two tap pins before considering any PG-tail repair.
-7. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
-   temporary METTP blockage was created and removed, and both tap pins exist.
-8. Require raw special connectivity zero. A geometry-clean result with only
-   the same or fewer classified `IMPVFC-94` tails is an intermediate checkpoint,
-   not route closure and not permission to launch PVS.
-9. Restore only a fully clean route checkpoint and merge the real RO
-   OA GDS.
+1. Reuse buffered Genus run
+   `MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623`; do not resynthesize.
+2. Reuse accepted PG proof
+   `20260824_mptdc_bufftap0_simplepg_pgproof_135116`; do not repeat the sweep.
+3. Require the exact audited PnR LEF path, SHA-256, 13 MET2 windows, 13 MET3
+   windows, and the complete `S[0:7],rstb` access set.
+4. Start a fresh full PnR with both RO macros fixed and one 10 um hard placement
+   halo around each macro. Do not restore a V4-V7 repaired checkpoint.
+5. Require two created halos, zero post-place halo intrusions, valid instance
+   boxes, phase-buffer clearance at least 10 um, and exactly two RO macros.
+6. Require zero Innovus geometry DRC, zero shorts, zero regular-net failures,
+   zero non-RO special failures, zero unrouted nets, TC setup PASS, TC hold PASS,
+   DRV PASS, and successful power-report capture.
+7. Require ordinary signal top MET3, router command top METTP, the temporary
+   METTP blockage created and removed, and exactly the two south MET3 tap0 pins.
+8. Prefer raw-clean special connectivity. Otherwise allow only the exact 12
+   audited `IMPVFC-94` VDD/VSS point endpoints, with no coordinate, count, net,
+   or problem-class difference, as `PVS_CANDIDATE_EXACT_PG_WIRE_ENDS`.
+9. Merge the explicitly supplied real-OA `RO_tune6` GDS under strict hashed
+   attribution.
 10. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
-   MATCH on the same hashed inputs.
-11. Keep TC setup/hold/DRV separate. Full MMMC, characterized RO timing, PEX,
-   IR/EM, and final tapeout remain outside this physical-first gate.
+    MATCH on the same prepared inputs.
+11. The resulting label is `MPTDC_TC_PVS_CLOSED_NOT_MMMC_SIGNOFF`. Full MMMC,
+    characterized RO timing, PEX, IR/EM, and final tapeout remain outside scope.
 
 ## Step Decisions and Evidence
 
-Every executable step writes an `operator_gate_*.rpt` with either
-`DECISION=PASS_CONTINUE` or `DECISION=FAIL_STOP`. Missing fields are failures.
+Every executable step writes an `operator_gate_*.rpt` with
+`DECISION=PASS_CONTINUE`, the narrowly scoped physical
+`DECISION=PVS_CANDIDATE_CONTINUE`, or `DECISION=FAIL_STOP`. Missing fields are
+failures.
 Publish the snapshot even when a step fails; the failed reports and diagnostic
 log tails are what make remote analysis possible.
 
@@ -144,9 +152,9 @@ log tails are what make remote analysis possible.
 | Pre-PnR | package RC 0, pre-PnR RC 0, `PRE_PNR_GATE=PASS` | `genus` |
 | PG proof | wrapper RC 0, sroute PASS, PG cross-net shorts 0, non-RO failures 0, and either raw clean or bounded classified `IMPVFC-94` only | `innovus` |
 | PnR LEF preparation | preparation PASS, `S[0:7]` plus `rstb` present, MET2/MET3 windows nonzero, unexpected-pin count 0, OBS trims nonzero | bundled into physical `innovus` snapshot |
-| Physical PnR | pre-route status PASS with the audited PnR-LEF-only bound 35, requested/imported PnR LEF path and hash match, signal top MET3, router top METTP, temporary blockage removed, route/DRC PASS, every final DRC/connectivity/unrouted count 0, exactly two tap0 pins planned south on MET3 | `innovus` |
+| Physical PnR | exact handoff/PG proof/LEF, two audited 10 um RO halos with zero intrusions, TC setup/hold and DRV PASS, signal top MET3, router top METTP, temporary blockage removed, zero geometry/short/regular/non-RO/unrouted debt, exactly two south MET3 tap0 pins, and either raw special clean or the exact 12-endpoint PVS-candidate fingerprint | `innovus` |
 | Route geometry probe | exact published 3-DRC/1-short source signature, fresh single restore, no route-edit command, identical initial/final physical tuple, all three target nets and endpoint terms found, nearby PG shapes captured, command help/schema evidence present, exactly two tap0 pins | `innovus` |
-| Route geometry repair | exact published 3-DRC/1-short source signature, fresh single restore, final DRC 0, shorts 0, regular connectivity 0, saved checkpoint present, exactly two tap0 pins | `innovus` |
+| Route geometry repair | retired diagnostic path; V4-V7 outputs are never downstream sources | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
 | Base DRC | gate PASS, variant BASE, both report totals 0 | `pvs` |
@@ -199,54 +207,115 @@ Continue only when `SYNC_RC=0` and there is no line between the two tracked
 status markers. The drivers also enforce `SPADMIC_test` and require local HEAD
 to match `origin/SPADMIC_test` when no explicit hash is supplied.
 
-### 1. PG Proof
+### 1. Accepted PG Proof (Do Not Rerun)
 
-```bash
-set +e
-
-bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
-  --stage pg-proof \
-  --genus-run-id MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623 \
-  --handoff-dir /sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623
-
-PG_DRIVER_RC=$?
-echo "PG_DRIVER_RC=$PG_DRIVER_RC"
-echo "HEAD=$(git rev-parse HEAD 2>/dev/null)"
-```
-
-Pass requires all of these markers:
+The required PG input is already published and accepted:
 
 ```text
-CADENCE_ENV_STATUS=PASS
-PG_DRIVER_RC=0
+PG_RUN_ID=20260824_mptdc_bufftap0_simplepg_pgproof_135116
 DECISION=PASS_CONTINUE
-PUBLISH_RC=0
-POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_STATUS=PASS
 POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT=0
 BLOCK_PG_PIN_STYLE=ring_aligned_vdd_vss_pair
 BLOCK_PG_PIN_REQUESTED_COUNT=2
-PG_GATE_MODE=RAW_CLEAN or BOUNDED_DANGLING_CONTINUATION
-NEXT_STAGE=PHYSICAL_PNR
-NEXT_REQUIRED_PG_RUN_ID=<new PG run id>
 ```
 
-Save the printed `NEXT_REQUIRED_PG_RUN_ID`; it is the only value needed by the
-next command. On any failure, stop. If `PUBLISH_RC=0`, send the run id and
-printed HEAD so the pushed failure evidence can be reviewed remotely.
-
-`RECOVERY_PREFLIGHT=PASS` alone does not mean Innovus launched. The driver must
-next print `CADENCE_ENV_STATUS=PASS`. A missing status means the checkout still
-has the older startup bug; `CADENCE_ENV_STATUS=FAIL` means the Cadence site
-setup itself failed. In either case, stop before retrying.
+The physical driver requires this exact tracked run id. No PG command is needed
+unless its preflight later reports that the published snapshot or server
+checkpoint is missing.
 
 ### Completed PG SRoute Sweep
 
 The isolated sweep is complete and has no winner. Its published decision is
 `STRICT_PASS_COUNT=0`; rerunning it would repeat the same topology. The bounded
 pre-route continuation in step 1 is not final connectivity acceptance. Step 2
-still requires raw special connectivity, all DRC, and all shorts to be zero.
+still requires zero geometry DRC, shorts, regular-connectivity debt, non-RO
+special-connectivity debt, and unrouted nets. Raw special connectivity must
+either be clean or match the exact 12-endpoint PVS-candidate fingerprint.
 
-### 2. Prepare the PnR LEF and Run Physical PnR
+### 2. Current Command: Fresh 10 um Halo Physical PnR
+
+This is the only Innovus command to run now. It uses the exact accepted PG
+proof, buffered Genus handoff, and audited PnR LEF. It starts a fresh flow,
+creates and audits both RO halos, completes extraction and TC timing, publishes
+the bounded evidence automatically, and never restores a V4-V7 repair output.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+TAG=$(date +%Y%m%d_%H%M%S)
+DRIVER_LOG=/tmp/${TAG}_mptdc_halo10_physical.driver.log
+SYNC_RC=99
+PNR_DRIVER_RC=99
+REPO_READY=0
+
+if [ -d "$REPO/.git" ]; then
+  cd "$REPO"
+  git checkout SPADMIC_test
+  git pull --ff-only origin SPADMIC_test
+  SYNC_RC=$?
+  HEAD_NOW="$(git rev-parse HEAD 2>/dev/null)"
+  ORIGIN_HEAD="$(git rev-parse refs/remotes/origin/SPADMIC_test 2>/dev/null)"
+  TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+  if [ "$SYNC_RC" -eq 0 ] && [ -n "$HEAD_NOW" ] && \
+     [ "$HEAD_NOW" = "$ORIGIN_HEAD" ] && [ -z "$TRACKED_STATUS" ]; then
+    REPO_READY=1
+  else
+    echo "STOP: sync, HEAD, or tracked-tree gate failed"
+    [ -n "$TRACKED_STATUS" ] && printf '%s\n' "$TRACKED_STATUS"
+  fi
+else
+  echo "STOP: repository missing: $REPO"
+fi
+
+if [ "$REPO_READY" -eq 1 ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
+    --stage physical-pnr \
+    --pg-run-id 20260824_mptdc_bufftap0_simplepg_pgproof_135116 \
+    --genus-run-id MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623 \
+    --handoff-dir /sim/ksabra/SPADMIC_work/handoff/genus_typical_pnrcompat/MPTDC_TC_BufferedROTap0Pins_Genus_20260709_155623 \
+    --pnr-lef /sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_tempblk_met3_20260824_151753.lef \
+    --pre-route-dangling-max 35 \
+    --ro-halos \
+    --allow-exact-pg-pvs-candidate \
+    2>&1 | tee "$DRIVER_LOG"
+  PNR_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: fresh halo PnR was not launched"
+fi
+
+echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "PNR_DRIVER_RC=$PNR_DRIVER_RC"
+grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|PHYSICAL_GATE_MODE|ROUTE_PG_PVS_CANDIDATE_STATUS|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PNR_RUN_ID)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -20
+```
+
+Continue to PVS only for one of these two published outcomes:
+
+```text
+DECISION=PASS_CONTINUE
+PHYSICAL_GATE_MODE=STRICT_CLEAN
+PUBLISH_RC=0
+NEXT_STAGE=PVS
+```
+
+or:
+
+```text
+DECISION=PVS_CANDIDATE_CONTINUE
+PHYSICAL_GATE_MODE=PVS_CANDIDATE_EXACT_PG_WIRE_ENDS
+ROUTE_PG_PVS_CANDIDATE_STATUS=PASS
+PUBLISH_RC=0
+NEXT_STAGE=PVS
+```
+
+The second outcome is only permission to test the real merged GDS in PVS. It
+is not an Innovus special-connectivity-clean result. Any other decision stops.
+When `PUBLISH_RC=0`, send only the eight final lines printed under `SEND BACK`;
+the detailed reports are already on `origin/SPADMIC_test`.
+
+### Archived Physical and Repair History (Do Not Run)
 
 The preparation and first replay are complete. They reused the accepted PG proof
 `20260824_mptdc_bufftap0_simplepg_pgproof_135116` and the exact pre-sroute MET3
@@ -327,7 +396,8 @@ cat "$PNR_DIR/reports/operator_gate_physical_pnr.rpt" 2>/dev/null
 
 The completed result is intentionally `DECISION=FAIL_STOP`: DRC is 3, shorts are
 1, regular connectivity is 0, and special connectivity contains 12 dangling
-tails. Its failed-route checkpoint is the source for the active command below.
+tails. Its failed-route checkpoint was the source for the retired V4-V7
+diagnostics below; it is not the source for the current fresh-halo run.
 
 #### 2B. Completed Read-Only Route Geometry Probe
 
@@ -361,7 +431,7 @@ PG geometry already identifies all three edits:
 No PG shape, cell placement, broad router command, route blockage, waiver, or
 prior v1/v2/v3 repaired checkpoint is part of this repair.
 
-#### 2C. Current Next Command: Staged Bounded DRC-Wire Repair V7
+#### 2C. Retired Staged Bounded DRC-Wire Repair V7
 
 V4 completed as a verified no-op. Innovus accepted the point-sized
 `editDelete` command, but retained both vias because the `-area` box did not
@@ -399,7 +469,8 @@ remote VIA2 and bounded MET3 branch. The one-track-lower MET1 escape avoids the
 DFRQJIHDX1 blockage exposed by V5. The third edit remains the bounded MET1
 minimum-area patch on `u_core_n_57563`.
 
-Run this block once in the foreground. It always restores the original
+Do not run this block. It is retained only to reproduce the V7 evidence trail.
+It restores the original
 `20260824_154115_mptdc_bufftap0_pnrlef35_physical` failed-route checkpoint in a
 fresh Innovus process. The driver verifies the tracked five-row marker signature
 before launch, applies only the three edits listed above, reruns DRC and both
@@ -470,68 +541,12 @@ grep -E '^(MANUAL_ECO_MODE|VIA_DELETE_MODE|OLD_MET2_LANDING_DELETE_MODE|OBSOLETE
   "$REPAIR_DIR/reports/manual_geometry_eco_v7.rpt" 2>/dev/null
 ```
 
-The repair passes the geometry stage only when the reports show all of the
-following:
-
-```text
-TOOL_RC=0
-MANUAL_ECO_STATUS=PASS
-VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL
-OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_WITH_DRC
-OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY
-VIA_INSERT_MODE=SINGLE_VIA1_ONLY
-STAGED_TUPLE_GATES=ENABLED
-N66687_OLD_STACK_POST_DELETE_VIA_COUNT=0
-N67240_OLD_STACK_POST_DELETE_VIA_COUNT=0
-N66687_STACK_DELETED_DRC=3
-N66687_STACK_DELETED_SHORTS=1
-N66687_STACK_DELETED_REGULAR_CONNECTIVITY_BAD=1
-N66687_DRC_WIRE_DELETED_DRC=2
-N66687_DRC_WIRE_DELETED_SHORTS=0
-N66687_DRC_WIRE_DELETED_REGULAR_CONNECTIVITY_BAD=1
-N66687_RECONNECTED_DRC=2
-N66687_RECONNECTED_SHORTS=0
-N66687_RECONNECTED_REGULAR_CONNECTIVITY_BAD=0
-N67240_STACK_DELETED_DRC=2
-N67240_STACK_DELETED_SHORTS=0
-N67240_STACK_DELETED_REGULAR_CONNECTIVITY_BAD=1
-N67240_DRC_WIRE_DELETED_DRC=1
-N67240_DRC_WIRE_DELETED_SHORTS=0
-N67240_DRC_WIRE_DELETED_REGULAR_CONNECTIVITY_BAD=1
-N67240_RECONNECTED_DRC=1
-N67240_RECONNECTED_SHORTS=0
-N67240_RECONNECTED_REGULAR_CONNECTIVITY_BAD=0
-N66687_NEW_VIA1_VIA1_COUNT=1
-N66687_NEW_VIA1_VIA2_COUNT=0
-N67240_NEW_VIA1_VIA1_COUNT=1
-N67240_NEW_VIA1_VIA2_COUNT=0
-N66687_REMOTE_VIA2_POST_DELETE_VIA_COUNT=0
-N67240_REMOTE_VIA2_POST_DELETE_VIA_COUNT=0
-N66687_REMOTE_VIA2_POST_VIA_NAMES=
-N67240_REMOTE_VIA2_POST_VIA_NAMES=
-N66687_OBSOLETE_MET3_POST_DELETE_WIRE_COUNT=0
-N67240_OBSOLETE_MET3_POST_DELETE_WIRE_COUNT=0
-INITIAL_DRC=3
-INITIAL_SHORTS=1
-INITIAL_REGULAR_CONNECTIVITY_BAD=0
-INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
-FINAL_DRC=0
-FINAL_SHORTS=0
-FINAL_REGULAR_CONNECTIVITY_BAD=0
-FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
-FINAL_CHECKPOINT_DAT_EXISTS=1
-RO_TAP_OBSERVABILITY_PIN_COUNT=2
-DECISION=PASS_CONTINUE
-PUBLISH_RC=0
-```
-
-`NEXT_STAGE=PVS` means the full route gate is clean.
-`NEXT_STAGE=PG_DANGLING_REPAIR_REVIEW` means geometry and regular connectivity
-are clean but the unchanged bounded RO-only PG tails still need a separate
-decision. In both cases, stop and send only the `SEND BACK` block so the pushed
-snapshot can be reviewed before any PVS or GDS command. On `FAIL_STOP`, do not
-retry from the generated checkpoint; the automatically published failure
-snapshot is the next input to analysis.
+The published V7 result is `DECISION=FAIL_STOP`. After the first via-stack
+deletion, regular connectivity became bad, as expected. The next command was
+rejected with `IMPSPR-340`: `-regular_wire_with_drc` requires both `-net` and
+`-status`. No valid reconstructed route was produced. This confirms the
+checkpoint-edit path is retired; do not reinterpret `TOOL_RC=0` from the outer
+wrapper as repair success and do not use its generated checkpoint downstream.
 
 #### 2D. Completed PnR-LEF Generation Reference
 
@@ -628,12 +643,12 @@ all nine required pin classes, zero unexpected pins, and 15 touched OBS
 rectangles. The server-side status gate is authoritative because it hashes the
 actual canonical source and generated output.
 
-Physical PnR passes only with:
+The current fresh-halo physical driver continues only with the common gates
+below:
 
 ```text
 CADENCE_ENV_STATUS=PASS
 PNR_DRIVER_RC=0
-DECISION=PASS_CONTINUE
 PUBLISH_RC=0
 PNR_LEF_SUMMARY_BINDING_STATUS=PASS
 PNR_LEF_PATH_MATCH_STATUS=PASS
@@ -653,16 +668,35 @@ SIGNAL_TOP_ROUTE_BLOCKAGE_TEMPORARY=1
 SIGNAL_TOP_ROUTE_BLOCKAGE_CREATE_STATUS=PASS
 SIGNAL_TOP_ROUTE_BLOCKAGE_REMOVE_STATUS=PASS
 SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=REMOVED
+RO_HALO_STATUS=PASS
+RO_HALO_COUNT=2
+RO_HALO_OCCUPANCY_STATUS=PASS
+RO_HALO_TOTAL_INTRUSION_COUNT=0
+RO_HALO_INVALID_INSTANCE_BBOX_COUNT=0
+RO_PHASE_PLACEMENT_STATUS=PASS
+RO_PHASE_MIN_CLEARANCE_UM>=10.0
+INNOVUS_VERIFY_DRC_STATUS=PASS
+GEOMETRY_DRC_VIOLATIONS=0
+SHORTS=0
+REGULAR_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
+UNROUTED_NETS=0
+EXTRACTION_STATUS=PASS
+SETUP_STATUS_TC=PASS
+TC_HOLD_STATUS=PASS
+DRV_STATUS=PASS
+POWER_REPORT_CAPTURE_STATUS=PASS
+RO_TAP_OBSERVABILITY_PIN_COUNT=2
 NEXT_STAGE=PVS
 NEXT_REQUIRED_PNR_RUN_ID=<new physical PnR run id>
 ```
 
-The driver independently requires zero Innovus DRC and shorts, zero regular
-and special connectivity debt, zero unrouted nets, and exactly the two
-south-edge MET3 buffered tap pins. It copies the exact generated LEF and its
-summary into the bounded evidence snapshot before publishing. On failure,
-send only `PNR_RUN`, `FINAL_HEAD`, and the final driver lines; the reports are
-already on GitHub when `PUBLISH_RC=0`. Do not run PVS after a failed decision.
+In addition, either `PHYSICAL_GATE_MODE=STRICT_CLEAN` with
+`DECISION=PASS_CONTINUE`, or
+`PHYSICAL_GATE_MODE=PVS_CANDIDATE_EXACT_PG_WIRE_ENDS` with
+`DECISION=PVS_CANDIDATE_CONTINUE` and exact 12-endpoint fingerprint PASS is
+required. The driver copies the exact generated LEF and summary into the
+bounded evidence snapshot. Do not run PVS after any other decision.
 
 ### 3. PVS Preparation, DRC, and LVS
 
@@ -693,6 +727,11 @@ PVS_TEMPLATE_AUDIT=PASS
 PVS_DRC_BASE=PASS
 PVS_DRC_DENSITY=PASS
 PVS_LVS=MATCH
+MPTDC_TC_PVS_CLOSED=YES
+FINAL_DECISION=MPTDC_TC_PVS_CLOSED_NOT_MMMC_SIGNOFF
+NOT_MMMC_SIGNOFF=YES
+FINAL_SIGNOFF=NO
+READY_FOR_TAPEOUT=NO
 DECISION=PASS_CONTINUE
 PUBLISH_RC=0
 ```
@@ -702,7 +741,7 @@ PUBLISH_RC=0
 Do not paste full Innovus or PVS logs into chat. Send only:
 
 ```text
-STEP=<PG_PROOF, PHYSICAL_PNR, ROUTE_GEOMETRY_REPAIR, or PVS>
+STEP=<PHYSICAL_PNR or PVS>
 RUN_ID=<NEXT_REQUIRED_*_RUN_ID or PVS_RUN_ID>
 DRIVER_RC=<printed driver RC>
 DECISION=<printed decision>
@@ -710,10 +749,8 @@ PUBLISH_RC=<printed publish RC, when present>
 HEAD=<printed repository HEAD>
 ```
 
-For `PG_PROOF`, also send `PG_GATE_MODE` and
-`POSTPLACE_PRE_ROUTE_PG_CROSS_NET_SHORT_COUNT`. No full Innovus log needs to be
-pasted when `PUBLISH_RC=0`. For `ROUTE_GEOMETRY_REPAIR`, also send
-`GEOMETRY_REPAIR_GATE_MODE` and `FINAL_SPECIAL_DANGLING_COUNT`.
+For `PHYSICAL_PNR`, also send `PHYSICAL_GATE_MODE`. No full Innovus or PVS log
+needs to be pasted when `PUBLISH_RC=0`.
 
 When publication succeeds, the pushed snapshot contains all authoritative
 small reports and manifests plus filtered diagnostic log tails. The local GDS,
@@ -1424,8 +1461,9 @@ text evidence is on `origin/SPADMIC_test` and can be pulled for detailed review.
 The snapshot contains the operator gate, status reports, manifests, small PVS
 controls, and diagnostic log tails.
 
-- Continue only when both `DECISION=PASS_CONTINUE` and the matching
-  `*_PUBLISH_RC=0` are printed.
+- Continue only when the current short driver prints either
+  `DECISION=PASS_CONTINUE` or `DECISION=PVS_CANDIDATE_CONTINUE`, together with
+  `PUBLISH_RC=0` and the explicit next stage.
 - On `DECISION=FAIL_STOP`, let the failed snapshot push complete, send the five
   lines above, and do not launch the next command.
 - On a nonzero publish RC, stop and paste the final `EVIDENCE_*` lines because
