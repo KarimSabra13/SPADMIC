@@ -267,19 +267,49 @@ proc uiSetTool {tool} {
 proc editDelete {args} {
     lappend ::mptdc_test_manual_command_calls [linsert $args 0 editDelete]
     set object_idx [lsearch -exact $args -object_type]
-    if {$object_idx < 0 || [lindex $args [expr {$object_idx + 1}]] ne "Via"} {
-        error "manual fixture supports exact via deletion only"
+    if {$object_idx < 0} {
+        error "manual fixture requires an object_type filter"
     }
+    set object_type [lindex $args [expr {$object_idx + 1}]]
     set net_idx [lsearch -exact $args -net]
     set area_idx [lsearch -exact $args -area]
-    set via_cell_idx [lsearch -exact $args -via_cell]
-    if {$net_idx < 0 || $area_idx < 0 || $via_cell_idx < 0} {
-        error "manual fixture requires net, area, and exact via_cell filters"
+    if {$net_idx < 0 || $area_idx < 0} {
+        error "manual fixture requires net and area filters"
     }
     set net [lindex $args [expr {$net_idx + 1}]]
     set area [lindex $args [expr {$area_idx + 1}]]
-    set via_cell [lindex $args [expr {$via_cell_idx + 1}]]
     lassign $area llx lly urx ury
+
+    if {$object_type eq "Wire"} {
+        set layer_idx [lsearch -exact $args -layer]
+        if {$layer_idx < 0} {
+            error "manual fixture requires a layer for wire deletion"
+        }
+        set layer [lindex $args [expr {$layer_idx + 1}]]
+        set retained {}
+        foreach row $::mptdc_test_manual_wires {
+            set box [dict get $row box]
+            set delete_row [expr {
+                [dict get $row net] eq $net && [dict get $row layer] eq $layer &&
+                [lindex $box 0] >= $llx && [lindex $box 1] >= $lly &&
+                [lindex $box 2] <= $urx && [lindex $box 3] <= $ury
+            }]
+            if {!$delete_row} {
+                lappend retained $row
+            }
+        }
+        set ::mptdc_test_manual_wires $retained
+        return {}
+    }
+
+    if {$object_type ne "Via"} {
+        error "manual fixture does not support object_type $object_type"
+    }
+    set via_cell_idx [lsearch -exact $args -via_cell]
+    if {$via_cell_idx < 0} {
+        error "manual fixture requires an exact via_cell filter"
+    }
+    set via_cell [lindex $args [expr {$via_cell_idx + 1}]]
     set retained {}
     foreach row $::mptdc_test_manual_vias {
         set delete_row [expr {
@@ -463,6 +493,10 @@ set ::mptdc_test_manual_vias [list \
         bot_rects {{{220.50 179.29 220.76 179.67}}} \
         cut_rects {{{220.58 179.40 220.70 179.56}}} \
         top_rects {{{220.48 179.25 220.80 179.71}}}] \
+    [dict create net u_core_n_66687 name VIA2_o point {224.84 179.48} status routed \
+        bot_rects {{{224.70 179.29 224.98 179.67}}} \
+        cut_rects {{{224.76 179.40 224.92 179.56}}} \
+        top_rects {{{224.68 179.25 225.00 179.71}}}] \
     [dict create net u_core_n_67240 name VIA1_Y_so point {219.80 224.14} status routed \
         bot_rects {{{219.66 223.775 219.94 224.505}}} \
         cut_rects {{{219.72 224.05 219.88 224.23}}} \
@@ -471,6 +505,10 @@ set ::mptdc_test_manual_vias [list \
         bot_rects {{{219.64 223.75 219.96 224.53}}} \
         cut_rects {{{219.72 224.04 219.88 224.24}}} \
         top_rects {{{219.62 223.73 219.98 224.55}}}] \
+    [dict create net u_core_n_67240 name VIA2_o point {229.32 225.40} status routed \
+        bot_rects {{{229.18 225.21 229.46 225.59}}} \
+        cut_rects {{{229.24 225.32 229.40 225.48}}} \
+        top_rects {{{229.16 225.17 229.48 225.63}}}] \
     [dict create net u_core_n_57563 name VIA1_X_so point {364.84 328.44} status routed \
         bot_rects {{{364.72 328.32 364.96 328.56}}} \
         cut_rects {{{364.76 328.36 364.92 328.52}}} \
@@ -482,9 +520,30 @@ set ::mptdc_test_manual_wires [list \
     [dict create net u_core_n_66687 layer MET3 \
         box {220.45 179.34 225.03 179.62} width 0.28 \
         points {{220.64 179.48} {224.84 179.48}}] \
+    [dict create net u_core_n_66687 layer MET2 \
+        box {220.50 179.29 220.76 180.015} width 0.28 \
+        points {{220.64 179.48} {220.64 179.875}}] \
+    [dict create net u_core_n_66687 layer MET2 \
+        box {224.70 179.29 224.98 190.82} width 0.28 \
+        points {{224.84 179.48} {224.84 190.68}}] \
+    [dict create net u_core_n_67240 layer MET3 \
+        box {219.66 223.95 219.94 224.42} width 0.28 \
+        points {{219.80 224.14} {219.80 224.28}}] \
     [dict create net u_core_n_67240 layer MET3 \
         box {219.66 224.14 221.06 224.42} width 0.28 \
-        points {{219.80 224.28} {220.92 224.28}}]]
+        points {{219.80 224.28} {220.92 224.28}}] \
+    [dict create net u_core_n_67240 layer MET3 \
+        box {220.78 224.14 221.06 225.54} width 0.28 \
+        points {{220.92 224.28} {220.92 225.40}}] \
+    [dict create net u_core_n_67240 layer MET3 \
+        box {220.78 225.26 229.51 225.54} width 0.28 \
+        points {{220.92 225.40} {229.32 225.40}}] \
+    [dict create net u_core_n_67240 layer MET2 \
+        box {219.66 223.775 219.94 224.505} width 0.28 \
+        points {{219.80 224.14} {219.80 224.365}}] \
+    [dict create net u_core_n_67240 layer MET2 \
+        box {229.18 225.21 229.46 237.35} width 0.28 \
+        points {{229.32 225.40} {229.32 237.16}}]]
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_manual_verify_count 0
 proc mptdc_ckpt_verify_snapshot {tag} {
@@ -502,7 +561,11 @@ if {![catch {mptdc_ckpt_manual_three_marker_eco_v4} err] ||
     ![string match "*retired*" $err]} {
     error "manual V4 retirement guard did not fail as expected: $err"
 }
-set manual [mptdc_ckpt_manual_three_marker_eco_v5]
+if {![catch {mptdc_ckpt_manual_three_marker_eco_v5} err] ||
+    ![string match "*retired*" $err]} {
+    error "manual V5 retirement guard did not fail as expected: $err"
+}
+set manual [mptdc_ckpt_manual_three_marker_eco_v6]
 if {[dict get $manual status] ne "PASS" || ![file exists [dict get $manual report]]} {
     error "manual three-marker ECO helper did not pass: $manual"
 }
@@ -511,15 +574,40 @@ if {[llength [mptdc_ckpt_manual_vias_at u_core_n_66687 {220.64 179.48}]] != 0 ||
     error "manual ECO retained an old offending via stack"
 }
 foreach spec {
-    {u_core_n_66687 {221.20 179.48}}
-    {u_core_n_67240 {221.20 224.28}}
+    {u_core_n_66687 {221.20 178.92}}
+    {u_core_n_67240 {221.20 223.58}}
 } {
     lassign $spec net point
     set rows [mptdc_ckpt_manual_vias_at $net $point]
     lassign [mptdc_ckpt_manual_via_name_classes $rows] via1_count via2_count
-    if {[llength $rows] != 2 || $via1_count != 1 || $via2_count != 1} {
-        error "manual ECO did not create the expected stack for $net at $point: $rows"
+    if {[llength $rows] != 1 || $via1_count != 1 || $via2_count != 0} {
+        error "manual ECO did not create exactly one VIA1 for $net at $point: $rows"
     }
+}
+foreach spec {
+    {u_core_n_66687 {224.84 179.48}}
+    {u_core_n_67240 {229.32 225.40}}
+} {
+    lassign $spec net point
+    if {[mptdc_ckpt_manual_via_names_at $net $point] ne {}} {
+        error "manual ECO retained obsolete remote VIA2_o for $net at $point"
+    }
+}
+if {[mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {220.64 179.48}] ||
+    [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {219.80 224.14}]} {
+    error "manual ECO retained an offending old MET2 landing"
+}
+if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {221.20 178.92}] ||
+    ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {224.84 179.48}] ||
+    ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {221.20 223.58}] ||
+    ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {229.32 225.40}]} {
+    error "manual ECO did not create both remote-MET2 bridges"
+}
+if {[mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {220.64 179.48}] ||
+    [mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {224.84 179.48}] ||
+    [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {219.80 224.14}] ||
+    [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {229.32 225.40}]} {
+    error "manual ECO retained an obsolete MET3 branch"
 }
 if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57563 MET1 {365.12 328.44}]} {
     error "manual ECO did not create the MET1 minimum-area landing patch"
@@ -528,8 +616,13 @@ set fh [open [dict get $manual report] r]
 set manual_text [read $fh]
 close $fh
 foreach expected {
-    {MANUAL_ECO_MODE=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH}
+    {MANUAL_ECO_MODE=REMOTE_MET2_TRUNK_SPLICE_AND_MIN_AREA_PATCH}
     {VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL}
+    {OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY}
+    {OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY}
+    {VIA_INSERT_MODE=SINGLE_VIA1_ONLY}
+    {REMOTE_VIA2_DELETE=u_core_n_66687:VIA2_o@224.84,179.48;u_core_n_67240:VIA2_o@229.32,225.40}
+    {REMOTE_MET2_TRUNK_SPLICE=u_core_n_66687:224.84,179.48;u_core_n_67240:229.32,225.40}
     {PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED}
     {PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED}
     {POST_DRC=0}
@@ -541,19 +634,42 @@ foreach expected {
     }
 }
 set delete_call_count 0
+set via_delete_call_count 0
+set wire_delete_call_count 0
+set via_add_call_count 0
 foreach call $::mptdc_test_manual_command_calls {
     if {[lindex $call 0] eq "editDelete"} {
         incr delete_call_count
-        if {[lsearch -exact $call -via_cell] < 0} {
-            error "manual ECO via deletion omitted exact via_cell filter: $call"
+        set object_idx [lsearch -exact $call -object_type]
+        set object_type [lindex $call [expr {$object_idx + 1}]]
+        if {$object_type eq "Via"} {
+            incr via_delete_call_count
+            if {[lsearch -exact $call -via_cell] < 0} {
+                error "manual ECO via deletion omitted exact via_cell filter: $call"
+            }
+        } elseif {$object_type eq "Wire"} {
+            incr wire_delete_call_count
+            if {[lsearch -exact $call -layer] < 0 ||
+                [lsearch -exact $call -via_cell] >= 0} {
+                error "manual ECO wire deletion was not layer-bounded: $call"
+            }
+        } else {
+            error "manual ECO used unexpected delete object type: $call"
         }
+    }
+    if {[lindex $call 0] eq "editAddVia"} {
+        incr via_add_call_count
     }
     if {[lindex $call 0] in {routeDesign globalDetailRoute detailRoute ecoRoute createRouteBlk editPowerVia}} {
         error "manual ECO invoked a prohibited broad or PG command: $call"
     }
 }
-if {$delete_call_count != 4} {
-    error "manual ECO expected four geometry-bounded via deletions, found $delete_call_count"
+if {$delete_call_count != 10 || $via_delete_call_count != 6 ||
+    $wire_delete_call_count != 4} {
+    error "manual ECO expected six via and four wire deletions, found $via_delete_call_count/$wire_delete_call_count"
+}
+if {$via_add_call_count != 2} {
+    error "manual ECO expected exactly two single-VIA1 insertions, found $via_add_call_count"
 }
 set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir

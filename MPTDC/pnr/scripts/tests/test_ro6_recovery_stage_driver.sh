@@ -394,7 +394,7 @@ CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
 RPT
   exit 0
 fi
-grep -qx 'mptdc_ckpt_manual_three_marker_eco_v5' "$commands_file"
+grep -qx 'mptdc_ckpt_manual_three_marker_eco_v6' "$commands_file"
 test "$(wc -l < "$commands_file")" -eq 1
 ! grep -qE 'globalDetailRoute|detailRoute|ecoRoute|routeDesign|createRouteBlk' "$commands_file"
 
@@ -413,9 +413,14 @@ for report in "$initial_special" "$final_special"; do
     echo '    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).'
   } > "$report"
 done
-cat > "$run/reports/manual_geometry_eco_v5.rpt" <<'RPT'
-MANUAL_ECO_MODE=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH
+cat > "$run/reports/manual_geometry_eco_v6.rpt" <<'RPT'
+MANUAL_ECO_MODE=REMOTE_MET2_TRUNK_SPLICE_AND_MIN_AREA_PATCH
 VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL
+OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY
+OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY
+VIA_INSERT_MODE=SINGLE_VIA1_ONLY
+REMOTE_VIA2_DELETE=u_core_n_66687:VIA2_o@224.84,179.48;u_core_n_67240:VIA2_o@229.32,225.40
+REMOTE_MET2_TRUNK_SPLICE=u_core_n_66687:224.84,179.48;u_core_n_67240:229.32,225.40
 PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED
 PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
 MANUAL_ECO_STATUS=PASS
@@ -654,9 +659,15 @@ env "${COMMON_ENV[@]}" bash "$DRIVER" \
 grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/geometry_repair_clean.stdout"
 grep -qx 'INITIAL_DRC=3' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'MANUAL_ECO_STATUS=PASS' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
-grep -qx 'REPAIR_METHOD=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH_V5' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'REPAIR_METHOD=REMOTE_MET2_TRUNK_SPLICE_AND_MIN_AREA_PATCH_V6' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
-grep -Fqx 'REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,179.48;u_core_n_67240:219.80,224.14->221.20,224.28' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'VIA_INSERT_MODE=SINGLE_VIA1_ONLY' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -Fqx 'REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,178.92;u_core_n_67240:219.80,224.14->221.20,223.58' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -Fqx 'REPAIR_MET2_REMOTE_BRIDGE_POLICY=u_core_n_66687:221.20,178.92->224.84,179.48;u_core_n_67240:221.20,223.58->229.32,225.40' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -Fqx 'REMOTE_VIA2_DELETE=u_core_n_66687:VIA2_o@224.84,179.48;u_core_n_67240:VIA2_o@229.32,225.40' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -Fqx 'REMOTE_MET2_TRUNK_SPLICE=u_core_n_66687:224.84,179.48;u_core_n_67240:229.32,225.40' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -Fqx 'REPAIR_MIN_AREA_PATCH_POLICY=u_core_n_57563:MET1:364.84,328.44->365.40,328.44:width=0.28' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"

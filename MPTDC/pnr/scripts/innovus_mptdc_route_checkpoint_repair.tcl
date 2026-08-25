@@ -977,37 +977,93 @@ proc mptdc_ckpt_manual_via_name_classes {rows} {
     return [list $via1 $via2]
 }
 
-proc mptdc_ckpt_manual_add_via_stack {fh label net point} {
+proc mptdc_ckpt_manual_via_names_at {net point} {
+    set names {}
+    foreach row [mptdc_ckpt_manual_vias_at $net $point] {
+        lappend names [dict get $row name]
+    }
+    return [lsort $names]
+}
+
+proc mptdc_ckpt_manual_assert_via_names {fh label net point expected_names} {
+    set names [mptdc_ckpt_manual_via_names_at $net $point]
+    puts $fh "${label}_VIA_NAMES=[join $names ,]"
+    if {$names ne [lsort $expected_names]} {
+        error "$label expected via names $expected_names at $point, found $names"
+    }
+    return $names
+}
+
+proc mptdc_ckpt_manual_assert_single_via1 {fh label net point} {
+    set rows [mptdc_ckpt_manual_vias_at $net $point]
+    lassign [mptdc_ckpt_manual_via_name_classes $rows] via1_count via2_count
+    set names {}
+    foreach row $rows {
+        lappend names [dict get $row name]
+    }
+    puts $fh "${label}_VIA_NAMES=[join [lsort $names] ,]"
+    puts $fh "${label}_VIA1_COUNT=$via1_count"
+    puts $fh "${label}_VIA2_COUNT=$via2_count"
+    if {[llength $rows] != 1 || $via1_count != 1 || $via2_count != 0} {
+        error "$label expected exactly one VIA1 at $point, found $names"
+    }
+    return $rows
+}
+
+proc mptdc_ckpt_manual_wire_rows_in_area {net layer area} {
+    if {![mptdc_signoff_box_valid $area]} {
+        error "wire-area query requires a valid bounded area"
+    }
+    lassign $area llx lly urx ury
+    set matches {}
+    foreach row [mptdc_ckpt_manual_wire_rows $net] {
+        set box [dict get $row box]
+        if {[dict get $row layer] eq $layer &&
+            [mptdc_signoff_box_valid $box] &&
+            [lindex $box 0] >= $llx && [lindex $box 1] >= $lly &&
+            [lindex $box 2] <= $urx && [lindex $box 3] <= $ury} {
+            lappend matches $row
+        }
+    }
+    return $matches
+}
+
+proc mptdc_ckpt_manual_delete_regular_wire_area {fh label net layer area min_before} {
+    if {![mptdc_signoff_box_valid $area]} {
+        error "$label requires a valid bounded deletion area"
+    }
+    set before [mptdc_ckpt_manual_wire_rows_in_area $net $layer $area]
+    puts $fh "${label}_PRE_DELETE_WIRE_COUNT=[llength $before]"
+    if {[llength $before] < $min_before} {
+        error "$label expected at least $min_before bounded wire before deletion"
+    }
+    mptdc_ckpt_manual_log_command $fh "${label}_DELETE" \
+        [list editDelete -net $net -layer $layer -area $area \
+            -type Regular -object_type Wire]
+    set after [mptdc_ckpt_manual_wire_rows_in_area $net $layer $area]
+    puts $fh "${label}_POST_DELETE_WIRE_COUNT=[llength $after]"
+    if {[llength $after] != 0} {
+        error "$label failed to delete all bounded $layer wire objects"
+    }
+}
+
+proc mptdc_ckpt_manual_add_single_via1 {fh label net point} {
     if {[llength [mptdc_ckpt_manual_vias_at $net $point]] != 0} {
         error "$label expected no existing vias at the new point $point"
     }
-    foreach spec {
-        {MET1 MET2 MET1 MET2}
-        {MET2 MET3 MET3 MET2}
-    } {
-        lassign $spec lower upper horizontal vertical
-        set setup [list setEditMode \
-            -nets $net \
-            -shape None \
-            -force_regular 1 \
-            -layer_horizontal $horizontal \
-            -layer_vertical $vertical \
-            -snap_to_track_regular 0 \
-            -width_horizontal 0.28 \
-            -width_vertical 0.28]
-        mptdc_ckpt_manual_log_command $fh "${label}_${lower}_${upper}_SET_EDIT_MODE" $setup
-        mptdc_ckpt_manual_log_command $fh "${label}_${lower}_${upper}_SET_TOOL" {uiSetTool addWire}
-        mptdc_ckpt_manual_log_command $fh "${label}_${lower}_${upper}_ADD_VIA" \
-            [list editAddVia {*}$point]
-        set rows [mptdc_ckpt_manual_vias_at $net $point]
-        lassign [mptdc_ckpt_manual_via_name_classes $rows] via1_count via2_count
-        puts $fh "${label}_${lower}_${upper}_VIA_COUNT=[llength $rows]"
-        puts $fh "${label}_${lower}_${upper}_VIA1_COUNT=$via1_count"
-        puts $fh "${label}_${lower}_${upper}_VIA2_COUNT=$via2_count"
-        if {$via1_count == 1 && $via2_count == 1 && [llength $rows] == 2} {
-            break
-        }
-    }
+    set setup [list setEditMode \
+        -nets $net \
+        -shape None \
+        -force_regular 1 \
+        -layer_horizontal MET1 \
+        -layer_vertical MET2 \
+        -snap_to_track_regular 0 \
+        -width_horizontal 0.28 \
+        -width_vertical 0.28]
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_EDIT_MODE" $setup
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_TOOL" {uiSetTool addWire}
+    mptdc_ckpt_manual_log_command $fh "${label}_ADD_VIA" \
+        [list editAddVia {*}$point]
     catch {uiSetTool select}
     catch {setEditMode -reset}
     set rows [mptdc_ckpt_manual_vias_at $net $point]
@@ -1016,30 +1072,42 @@ proc mptdc_ckpt_manual_add_via_stack {fh label net point} {
     foreach row $rows {
         lappend names [dict get $row name]
     }
+    puts $fh "${label}_VIA_COUNT=[llength $rows]"
+    puts $fh "${label}_VIA1_COUNT=$via1_count"
+    puts $fh "${label}_VIA2_COUNT=$via2_count"
     puts $fh "${label}_FINAL_VIA_NAMES=[join [lsort $names] ,]"
-    if {[llength $rows] != 2 || $via1_count != 1 || $via2_count != 1} {
-        error "$label expected one VIA1 and one VIA2 at $point, found $names"
+    if {[llength $rows] != 1 || $via1_count != 1 || $via2_count != 0} {
+        error "$label expected exactly one VIA1 at $point, found $names"
     }
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
-    error "manual geometry ECO V4 is retired after editDelete selected no vias; use mptdc_ckpt_manual_three_marker_eco_v5"
+    error "manual geometry ECO V4 is retired after editDelete selected no vias; use mptdc_ckpt_manual_three_marker_eco_v6"
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v5 {} {
+    error "manual geometry ECO V5 is retired after coincident VIA2 insertion was a no-op; use mptdc_ckpt_manual_three_marker_eco_v6"
+}
+
+proc mptdc_ckpt_manual_three_marker_eco_v6 {} {
     set report_dir [mptdc_signoff_report_dir]
-    set report [file join $report_dir manual_geometry_eco_v5.rpt]
+    set report [file join $report_dir manual_geometry_eco_v6.rpt]
     set fh [open $report w]
-    puts $fh "# MPTDC Exact Three-Marker Manual Geometry ECO V5"
-    puts $fh "MANUAL_ECO_MODE=GEOMETRY_BOUNDED_VIA_ESCAPE_AND_MIN_AREA_PATCH"
+    puts $fh "# MPTDC Exact Three-Marker Manual Geometry ECO V6"
+    puts $fh "MANUAL_ECO_MODE=REMOTE_MET2_TRUNK_SPLICE_AND_MIN_AREA_PATCH"
     puts $fh "VIA_DELETE_MODE=FULL_GEOMETRY_BOX_AND_EXACT_VIA_CELL"
+    puts $fh "OLD_MET2_LANDING_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY"
+    puts $fh "OBSOLETE_MET3_DELETE_MODE=BOUNDED_REGULAR_WIRE_ONLY"
+    puts $fh "VIA_INSERT_MODE=SINGLE_VIA1_ONLY"
+    puts $fh "REMOTE_VIA2_DELETE=u_core_n_66687:VIA2_o@224.84,179.48;u_core_n_67240:VIA2_o@229.32,225.40"
+    puts $fh "REMOTE_MET2_TRUNK_SPLICE=u_core_n_66687:224.84,179.48;u_core_n_67240:229.32,225.40"
     puts $fh "SOURCE_BASELINE=DRC_3_SHORTS_1_REGULAR_0_SPECIAL_NON_RO_0"
     puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     puts $fh "TARGET_NETS=u_core_n_66687,u_core_n_67240,u_core_n_57563"
 
     set body_status [catch {
-        set baseline [mptdc_ckpt_verify_snapshot manual_v5_pre]
+        set baseline [mptdc_ckpt_verify_snapshot manual_v6_pre]
         puts $fh "PRE_DRC=[dict get $baseline total_violations]"
         puts $fh "PRE_SHORTS=[dict get $baseline shorts]"
         puts $fh "PRE_REGULAR_CONNECTIVITY_BAD=[dict get $baseline regular_bad]"
@@ -1048,33 +1116,56 @@ proc mptdc_ckpt_manual_three_marker_eco_v5 {} {
             [dict get $baseline shorts] != 1 ||
             [dict get $baseline regular_bad] != 0 ||
             [dict get $baseline special_non_ro_failures] != 0} {
-            error "manual V5 source baseline mismatch"
+            error "manual V6 source baseline mismatch"
         }
 
         if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {220.64 179.48}] ||
-            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {221.20 179.48}]} {
-            error "u_core_n_66687 source/target wire anchors do not match the probe"
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {224.84 179.48}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {224.84 179.48}]} {
+            error "u_core_n_66687 source/remote wire anchors do not match the probe"
         }
-        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {220.92 224.28}]} {
-            error "u_core_n_67240 MET3 anchor does not match the probe"
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {229.32 225.40}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {229.32 225.40}]} {
+            error "u_core_n_67240 remote wire anchor does not match the probe"
         }
+        mptdc_ckpt_manual_assert_via_names $fh N66687_REMOTE_VIA2 \
+            u_core_n_66687 {224.84 179.48} {VIA2_o}
+        mptdc_ckpt_manual_assert_via_names $fh N67240_REMOTE_VIA2 \
+            u_core_n_67240 {229.32 225.40} {VIA2_o}
 
         mptdc_ckpt_manual_delete_via_stack $fh N66687_OLD_STACK \
             u_core_n_66687 {220.64 179.48} {VIA1_o VIA2_o}
+        mptdc_ckpt_manual_delete_regular_wire_area $fh N66687_OLD_MET2_LANDING \
+            u_core_n_66687 MET2 {220.45 179.25 220.85 180.05} 1
+        mptdc_ckpt_manual_delete_via_stack $fh N66687_REMOTE_VIA2 \
+            u_core_n_66687 {224.84 179.48} {VIA2_o}
+        mptdc_ckpt_manual_delete_regular_wire_area $fh N66687_OBSOLETE_MET3 \
+            u_core_n_66687 MET3 {220.43 179.32 225.05 179.64} 1
         mptdc_ckpt_manual_add_wire_path $fh N66687_MET1_ESCAPE \
-            u_core_n_66687 MET1 0.23 {{220.64 179.48} {221.20 179.48}}
-        mptdc_ckpt_manual_add_via_stack $fh N66687_NEW_STACK \
-            u_core_n_66687 {221.20 179.48}
+            u_core_n_66687 MET1 0.23 \
+            {{220.64 179.48} {220.64 178.92} {221.20 178.92}}
+        mptdc_ckpt_manual_add_single_via1 $fh N66687_NEW_VIA1 \
+            u_core_n_66687 {221.20 178.92}
+        mptdc_ckpt_manual_add_wire_path $fh N66687_MET2_REMOTE_BRIDGE \
+            u_core_n_66687 MET2 0.28 \
+            {{221.20 178.92} {224.84 178.92} {224.84 179.48}}
 
         mptdc_ckpt_manual_delete_via_stack $fh N67240_OLD_STACK \
             u_core_n_67240 {219.80 224.14} {VIA1_Y_so VIA2_so}
+        mptdc_ckpt_manual_delete_regular_wire_area $fh N67240_OLD_MET2_LANDING \
+            u_core_n_67240 MET2 {219.62 223.73 219.98 224.55} 1
+        mptdc_ckpt_manual_delete_via_stack $fh N67240_REMOTE_VIA2 \
+            u_core_n_67240 {229.32 225.40} {VIA2_o}
+        mptdc_ckpt_manual_delete_regular_wire_area $fh N67240_OBSOLETE_MET3 \
+            u_core_n_67240 MET3 {219.64 223.93 229.53 225.56} 1
         mptdc_ckpt_manual_add_wire_path $fh N67240_MET1_ESCAPE \
             u_core_n_67240 MET1 0.23 \
-            {{219.80 224.14} {221.20 224.14} {221.20 224.28}}
-        mptdc_ckpt_manual_add_wire_path $fh N67240_MET3_BRIDGE \
-            u_core_n_67240 MET3 0.28 {{220.92 224.28} {221.20 224.28}}
-        mptdc_ckpt_manual_add_via_stack $fh N67240_NEW_STACK \
-            u_core_n_67240 {221.20 224.28}
+            {{219.80 224.14} {219.80 223.58} {221.20 223.58}}
+        mptdc_ckpt_manual_add_single_via1 $fh N67240_NEW_VIA1 \
+            u_core_n_67240 {221.20 223.58}
+        mptdc_ckpt_manual_add_wire_path $fh N67240_MET2_REMOTE_BRIDGE \
+            u_core_n_67240 MET2 0.28 \
+            {{221.20 223.58} {229.32 223.58} {229.32 225.40}}
 
         set min_area_vias [mptdc_ckpt_manual_vias_at u_core_n_57563 {364.84 328.44}]
         set min_area_names {}
@@ -1088,19 +1179,36 @@ proc mptdc_ckpt_manual_three_marker_eco_v5 {} {
         mptdc_ckpt_manual_add_wire_path $fh N57563_MET1_LANDING_PATCH \
             u_core_n_57563 MET1 0.28 {{364.84 328.44} {365.40 328.44}}
 
-        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {221.20 179.48}] ||
-            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {221.20 179.48}]} {
-            error "u_core_n_66687 manual via escape did not materialize"
+        mptdc_ckpt_manual_assert_single_via1 $fh N66687_NEW_VIA1_POST \
+            u_core_n_66687 {221.20 178.92}
+        mptdc_ckpt_manual_assert_single_via1 $fh N67240_NEW_VIA1_POST \
+            u_core_n_67240 {221.20 223.58}
+        mptdc_ckpt_manual_assert_via_names $fh N66687_REMOTE_VIA2_POST \
+            u_core_n_66687 {224.84 179.48} {}
+        mptdc_ckpt_manual_assert_via_names $fh N67240_REMOTE_VIA2_POST \
+            u_core_n_67240 {229.32 225.40} {}
+
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {221.20 178.92}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {221.20 178.92}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET2 {224.84 179.48}]} {
+            error "u_core_n_66687 remote-MET2 bridge did not materialize"
         }
-        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET1 {221.20 224.28}] ||
-            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {221.20 224.28}]} {
-            error "u_core_n_67240 manual via escape did not materialize"
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET1 {221.20 223.58}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {221.20 223.58}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET2 {229.32 225.40}]} {
+            error "u_core_n_67240 remote-MET2 bridge did not materialize"
+        }
+        if {[mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {220.64 179.48}] ||
+            [mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {224.84 179.48}] ||
+            [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {219.80 224.14}] ||
+            [mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {229.32 225.40}]} {
+            error "obsolete MET3 branch remained after remote-MET2 splice"
         }
         if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57563 MET1 {365.12 328.44}]} {
             error "u_core_n_57563 MET1 landing patch did not materialize"
         }
 
-        set final [mptdc_ckpt_verify_snapshot manual_v5_post]
+        set final [mptdc_ckpt_verify_snapshot manual_v6_post]
         puts $fh "POST_DRC=[dict get $final total_violations]"
         puts $fh "POST_SHORTS=[dict get $final shorts]"
         puts $fh "POST_REGULAR_CONNECTIVITY_BAD=[dict get $final regular_bad]"
@@ -1109,7 +1217,7 @@ proc mptdc_ckpt_manual_three_marker_eco_v5 {} {
             [dict get $final shorts] != 0 ||
             [dict get $final regular_bad] != 0 ||
             [dict get $final special_non_ro_failures] != 0} {
-            error "manual V5 final physical gate failed"
+            error "manual V6 final physical gate failed"
         }
     } body_error body_opts]
 
@@ -1124,7 +1232,7 @@ proc mptdc_ckpt_manual_three_marker_eco_v5 {} {
     puts $fh "MANUAL_ECO_STATUS=PASS"
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
-    puts "MPTDC_CKPT_MANUAL_GEOMETRY_ECO_V5_REPORT=$report"
+    puts "MPTDC_CKPT_MANUAL_GEOMETRY_ECO_V6_REPORT=$report"
     return [dict create status PASS report $report]
 }
 
