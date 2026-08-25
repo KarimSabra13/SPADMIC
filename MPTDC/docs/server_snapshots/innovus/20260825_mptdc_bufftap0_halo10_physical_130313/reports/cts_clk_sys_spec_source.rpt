@@ -1,0 +1,11 @@
+# MPTDC selected clk_sys CTS spec source audit
+SELECTED_SPEC_PATH=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/work/clk_sys_cts.spec
+FORBIDDEN_REGEX=(clk_osc|RO_tune6|u_ro_tune4|mptdc_phase_buffer_bank|phase_buf|gen_phase_buf|u_core_u_phase_buf)
+PRE_SOURCE_CCOPT_CLOCK_TREES=UNAVAILABLE
+SOURCE_SELECTED_SPEC_COMMAND=source /sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/work/clk_sys_cts.spec
+SOURCE_SELECTED_SPEC_STATUS=PASS
+POST_SOURCE_CCOPT_CLOCK_TREES=1
+POST_SOURCE_CCOPT_CLOCK_TREE_NAMES=clk_sys
+POST_SOURCE_CLK_SYS_ONLY_TREE_SET=1
+CLK_SYS_ROOT_PRE_CCOPT_SELECTED_SPEC_AUDIT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/cts_clk_sys_root_pre_ccopt_selected_spec.rpt
+CTS_SPEC_SOURCE_STATUS=PASS

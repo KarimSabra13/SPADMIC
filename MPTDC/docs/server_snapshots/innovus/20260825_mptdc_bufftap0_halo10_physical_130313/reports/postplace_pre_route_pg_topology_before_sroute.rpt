@@ -1,0 +1,312 @@
+# MPTDC PG Topology Dump
+DUMP_LABEL=POSTPLACE_PRE_ROUTE_BEFORE_SROUTE
+SCHEMA_marker_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_before_sroute_marker_schema.rpt
+SCHEMA_marker_STATUS=PASS
+SCHEMA_sWire_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_before_sroute_sWire_schema.rpt
+SCHEMA_sWire_STATUS=PASS
+SCHEMA_term_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_before_sroute_term_schema.rpt
+SCHEMA_term_STATUS=PASS
+SCHEMA_pin_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_before_sroute_pin_schema.rpt
+SCHEMA_pin_STATUS=PASS
+SCHEMA_pinShape_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_before_sroute_pinShape_schema.rpt
+SCHEMA_pinShape_STATUS=PASS
+
+TOP_NAME_COMMAND=dbGet top.name
+TOP_NAME_BEGIN
+TOP_NAME_STATUS=PASS
+TOP_NAME_VALUE=mptdc_axis_core
+TOP_NAME_END
+
+CORE_BOX_COMMAND=dbGet top.fPlan.coreBox
+CORE_BOX_BEGIN
+CORE_BOX_STATUS=PASS
+CORE_BOX_VALUE={20.16 20.16 1148.56 862.4}
+CORE_BOX_END
+
+PG_TERM_NAMES_COMMAND=dbGet top.pgTerms.name
+PG_TERM_NAMES_BEGIN
+PG_TERM_NAMES_STATUS=PASS
+PG_TERM_NAMES_VALUE=VDD VSS
+PG_TERM_NAMES_END
+
+PG_TERM_NETS_COMMAND=dbGet top.pgTerms.net.name
+PG_TERM_NETS_BEGIN
+PG_TERM_NETS_STATUS=PASS
+PG_TERM_NETS_VALUE=VDD VSS
+PG_TERM_NETS_END
+
+PG_TERM_LAYERS_COMMAND=dbGet top.pgTerms.pins.allShapes.layer.name
+PG_TERM_LAYERS_BEGIN
+PG_TERM_LAYERS_STATUS=PASS
+PG_TERM_LAYERS_VALUE=METTP METTP
+PG_TERM_LAYERS_END
+
+VDD_PGTERM_NAMES_COMMAND=dbGet [dbGet top.pgTerms.net.name VDD -p2].name
+VDD_PGTERM_NAMES_BEGIN
+VDD_PGTERM_NAMES_STATUS=PASS
+VDD_PGTERM_NAMES_VALUE=VDD
+VDD_PGTERM_NAMES_END
+
+VSS_PGTERM_NAMES_COMMAND=dbGet [dbGet top.pgTerms.net.name VSS -p2].name
+VSS_PGTERM_NAMES_BEGIN
+VSS_PGTERM_NAMES_STATUS=PASS
+VSS_PGTERM_NAMES_VALUE=VSS
+VSS_PGTERM_NAMES_END
+
+VDD_SWIRE_COUNT_COMMAND=llength [dbGet [dbGet top.nets.name VDD -p].sWires]
+VDD_SWIRE_COUNT_BEGIN
+VDD_SWIRE_COUNT_STATUS=PASS
+VDD_SWIRE_COUNT_VALUE=35
+VDD_SWIRE_COUNT_END
+
+VSS_SWIRE_COUNT_COMMAND=llength [dbGet [dbGet top.nets.name VSS -p].sWires]
+VSS_SWIRE_COUNT_BEGIN
+VSS_SWIRE_COUNT_STATUS=PASS
+VSS_SWIRE_COUNT_VALUE=35
+VSS_SWIRE_COUNT_END
+
+SWIRE_NON_FOLLOWPIN_TABLE_BEGIN
+net	idx	shape	layer	status	width	geomType	box	pts
+VDD	1	ring	METTP	routed	2.0	pathSeg	{16.16 16.16 18.16 866.4}	{{17.16 16.16} {17.16 866.4}}
+VDD	2	ring	METTP	routed	2.0	pathSeg	{1150.56 16.16 1152.56 866.4}	{{1151.56 16.16} {1151.56 866.4}}
+VDD	3	ring	MET3	routed	2.0	pathSeg	{16.16 16.16 1152.56 18.16}	{{16.16 17.16} {1152.56 17.16}}
+VDD	4	ring	MET3	routed	2.0	pathSeg	{16.16 864.4 1152.56 866.4}	{{16.16 865.4} {1152.56 865.4}}
+VDD	5	stripe	METTP	routed	2.0	pathSeg	{40.16 16.16 42.16 866.4}	{{41.16 16.16} {41.16 866.4}}
+VDD	6	stripe	METTP	routed	2.0	pathSeg	{120.16 16.16 122.16 158.32}	{{121.16 16.16} {121.16 158.32}}
+VDD	7	stripe	METTP	routed	2.0	pathSeg	{120.16 233.62 122.16 648.32}	{{121.16 233.62} {121.16 648.32}}
+VDD	8	stripe	METTP	routed	2.0	pathSeg	{120.16 721.75 122.16 866.4}	{{121.16 721.75} {121.16 866.4}}
+VDD	9	stripe	METTP	routed	2.0	pathSeg	{200.16 16.16 202.16 158.32}	{{201.16 16.16} {201.16 158.32}}
+VDD	10	stripe	METTP	routed	2.0	pathSeg	{200.16 233.62 202.16 648.32}	{{201.16 233.62} {201.16 648.32}}
+VDD	11	stripe	METTP	routed	2.0	pathSeg	{200.16 723.62 202.16 866.4}	{{201.16 723.62} {201.16 866.4}}
+VDD	12	stripe	METTP	routed	2.0	pathSeg	{280.16 16.16 282.16 866.4}	{{281.16 16.16} {281.16 866.4}}
+VDD	13	stripe	METTP	routed	2.0	pathSeg	{360.16 16.16 362.16 866.4}	{{361.16 16.16} {361.16 866.4}}
+VDD	14	stripe	METTP	routed	2.0	pathSeg	{440.16 16.16 442.16 866.4}	{{441.16 16.16} {441.16 866.4}}
+VDD	15	stripe	METTP	routed	2.0	pathSeg	{520.16 16.16 522.16 866.4}	{{521.16 16.16} {521.16 866.4}}
+VDD	16	stripe	METTP	routed	2.0	pathSeg	{600.16 16.16 602.16 866.4}	{{601.16 16.16} {601.16 866.4}}
+VDD	17	stripe	METTP	routed	2.0	pathSeg	{680.16 16.16 682.16 866.4}	{{681.16 16.16} {681.16 866.4}}
+VDD	18	stripe	METTP	routed	2.0	pathSeg	{760.16 16.16 762.16 866.4}	{{761.16 16.16} {761.16 866.4}}
+VDD	19	stripe	METTP	routed	2.0	pathSeg	{840.16 16.16 842.16 866.4}	{{841.16 16.16} {841.16 866.4}}
+VDD	20	stripe	METTP	routed	2.0	pathSeg	{920.16 16.16 922.16 866.4}	{{921.16 16.16} {921.16 866.4}}
+VDD	21	stripe	METTP	routed	2.0	pathSeg	{1000.16 16.16 1002.16 866.4}	{{1001.16 16.16} {1001.16 866.4}}
+VDD	22	stripe	METTP	routed	2.0	pathSeg	{1080.16 16.16 1082.16 866.4}	{{1081.16 16.16} {1081.16 866.4}}
+VDD	23	stripe	MET3	routed	2.0	pathSeg	{16.16 40.16 1152.56 42.16}	{{16.16 41.16} {1152.56 41.16}}
+VDD	24	stripe	MET3	routed	2.0	pathSeg	{16.16 120.16 1152.56 122.16}	{{16.16 121.16} {1152.56 121.16}}
+VDD	25	stripe	MET3	routed	2.0	pathSeg	{16.16 200.16 48.0 202.16}	{{16.16 201.16} {48.0 201.16}}
+VDD	26	stripe	MET3	routed	2.0	pathSeg	{221.75 200.16 1152.56 202.16}	{{221.75 201.16} {1152.56 201.16}}
+VDD	27	stripe	MET3	routed	2.0	pathSeg	{16.16 280.16 1152.56 282.16}	{{16.16 281.16} {1152.56 281.16}}
+VDD	28	stripe	MET3	routed	2.0	pathSeg	{16.16 360.16 1152.56 362.16}	{{16.16 361.16} {1152.56 361.16}}
+VDD	29	stripe	MET3	routed	2.0	pathSeg	{16.16 440.16 1152.56 442.16}	{{16.16 441.16} {1152.56 441.16}}
+VDD	30	stripe	MET3	routed	2.0	pathSeg	{16.16 520.16 1152.56 522.16}	{{16.16 521.16} {1152.56 521.16}}
+VDD	31	stripe	MET3	routed	2.0	pathSeg	{16.16 600.16 1152.56 602.16}	{{16.16 601.16} {1152.56 601.16}}
+VDD	32	stripe	MET3	routed	2.0	pathSeg	{16.16 680.16 48.0 682.16}	{{16.16 681.16} {48.0 681.16}}
+VDD	33	stripe	MET3	routed	2.0	pathSeg	{221.75 680.16 1152.56 682.16}	{{221.75 681.16} {1152.56 681.16}}
+VDD	34	stripe	MET3	routed	2.0	pathSeg	{16.16 760.16 1152.56 762.16}	{{16.16 761.16} {1152.56 761.16}}
+VDD	35	stripe	MET3	routed	2.0	pathSeg	{16.16 840.16 1152.56 842.16}	{{16.16 841.16} {1152.56 841.16}}
+VDD	FOLLOWPIN_ROWS_SKIPPED	0
+VSS	1	ring	METTP	routed	2.0	pathSeg	{13.16 13.16 15.16 869.4}	{{14.16 13.16} {14.16 869.4}}
+VSS	2	ring	METTP	routed	2.0	pathSeg	{1153.56 13.16 1155.56 869.4}	{{1154.56 13.16} {1154.56 869.4}}
+VSS	3	ring	MET3	routed	2.0	pathSeg	{13.16 13.16 1155.56 15.16}	{{13.16 14.16} {1155.56 14.16}}
+VSS	4	ring	MET3	routed	2.0	pathSeg	{13.16 867.4 1155.56 869.4}	{{13.16 868.4} {1155.56 868.4}}
+VSS	5	stripe	METTP	routed	2.0	pathSeg	{44.16 13.16 46.16 869.4}	{{45.16 13.16} {45.16 869.4}}
+VSS	6	stripe	METTP	routed	2.0	pathSeg	{124.16 13.16 126.16 158.32}	{{125.16 13.16} {125.16 158.32}}
+VSS	7	stripe	METTP	routed	2.0	pathSeg	{124.16 233.62 126.16 648.32}	{{125.16 233.62} {125.16 648.32}}
+VSS	8	stripe	METTP	routed	2.0	pathSeg	{124.16 721.75 126.16 869.4}	{{125.16 721.75} {125.16 869.4}}
+VSS	9	stripe	METTP	routed	2.0	pathSeg	{204.16 13.16 206.16 158.32}	{{205.16 13.16} {205.16 158.32}}
+VSS	10	stripe	METTP	routed	2.0	pathSeg	{204.16 233.62 206.16 648.32}	{{205.16 233.62} {205.16 648.32}}
+VSS	11	stripe	METTP	routed	2.0	pathSeg	{204.16 723.62 206.16 869.4}	{{205.16 723.62} {205.16 869.4}}
+VSS	12	stripe	METTP	routed	2.0	pathSeg	{284.16 13.16 286.16 869.4}	{{285.16 13.16} {285.16 869.4}}
+VSS	13	stripe	METTP	routed	2.0	pathSeg	{364.16 13.16 366.16 869.4}	{{365.16 13.16} {365.16 869.4}}
+VSS	14	stripe	METTP	routed	2.0	pathSeg	{444.16 13.16 446.16 869.4}	{{445.16 13.16} {445.16 869.4}}
+VSS	15	stripe	METTP	routed	2.0	pathSeg	{524.16 13.16 526.16 869.4}	{{525.16 13.16} {525.16 869.4}}
+VSS	16	stripe	METTP	routed	2.0	pathSeg	{604.16 13.16 606.16 869.4}	{{605.16 13.16} {605.16 869.4}}
+VSS	17	stripe	METTP	routed	2.0	pathSeg	{684.16 13.16 686.16 869.4}	{{685.16 13.16} {685.16 869.4}}
+VSS	18	stripe	METTP	routed	2.0	pathSeg	{764.16 13.16 766.16 869.4}	{{765.16 13.16} {765.16 869.4}}
+VSS	19	stripe	METTP	routed	2.0	pathSeg	{844.16 13.16 846.16 869.4}	{{845.16 13.16} {845.16 869.4}}
+VSS	20	stripe	METTP	routed	2.0	pathSeg	{924.16 13.16 926.16 869.4}	{{925.16 13.16} {925.16 869.4}}
+VSS	21	stripe	METTP	routed	2.0	pathSeg	{1004.16 13.16 1006.16 869.4}	{{1005.16 13.16} {1005.16 869.4}}
+VSS	22	stripe	METTP	routed	2.0	pathSeg	{1084.16 13.16 1086.16 869.4}	{{1085.16 13.16} {1085.16 869.4}}
+VSS	23	stripe	MET3	routed	2.0	pathSeg	{13.16 44.16 1155.56 46.16}	{{13.16 45.16} {1155.56 45.16}}
+VSS	24	stripe	MET3	routed	2.0	pathSeg	{13.16 124.16 1155.56 126.16}	{{13.16 125.16} {1155.56 125.16}}
+VSS	25	stripe	MET3	routed	2.0	pathSeg	{13.16 204.16 48.0 206.16}	{{13.16 205.16} {48.0 205.16}}
+VSS	26	stripe	MET3	routed	2.0	pathSeg	{221.75 204.16 1155.56 206.16}	{{221.75 205.16} {1155.56 205.16}}
+VSS	27	stripe	MET3	routed	2.0	pathSeg	{13.16 284.16 1155.56 286.16}	{{13.16 285.16} {1155.56 285.16}}
+VSS	28	stripe	MET3	routed	2.0	pathSeg	{13.16 364.16 1155.56 366.16}	{{13.16 365.16} {1155.56 365.16}}
+VSS	29	stripe	MET3	routed	2.0	pathSeg	{13.16 444.16 1155.56 446.16}	{{13.16 445.16} {1155.56 445.16}}
+VSS	30	stripe	MET3	routed	2.0	pathSeg	{13.16 524.16 1155.56 526.16}	{{13.16 525.16} {1155.56 525.16}}
+VSS	31	stripe	MET3	routed	2.0	pathSeg	{13.16 604.16 1155.56 606.16}	{{13.16 605.16} {1155.56 605.16}}
+VSS	32	stripe	MET3	routed	2.0	pathSeg	{13.16 684.16 48.0 686.16}	{{13.16 685.16} {48.0 685.16}}
+VSS	33	stripe	MET3	routed	2.0	pathSeg	{221.75 684.16 1155.56 686.16}	{{221.75 685.16} {1155.56 685.16}}
+VSS	34	stripe	MET3	routed	2.0	pathSeg	{13.16 764.16 1155.56 766.16}	{{13.16 765.16} {1155.56 765.16}}
+VSS	35	stripe	MET3	routed	2.0	pathSeg	{13.16 844.16 1155.56 846.16}	{{13.16 845.16} {1155.56 845.16}}
+VSS	FOLLOWPIN_ROWS_SKIPPED	0
+SWIRE_NON_FOLLOWPIN_TABLE_END
+
+VERIFY_SPECIAL_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_before_sroute_verify_special.rpt
+VERIFY_SPECIAL_CONSOLE=/sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_before_sroute_verify_special.console.rpt
+VERIFY_SPECIAL_STATUS=PASS
+
+MARKER_TABLE_BEGIN
+idx	handle	box	layer	type	subType	message
+1	0x7fb55a8e3f40	{1091.32 789.69 1092.22 790.32}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[2][30]/vddi; Direction: INOUT; Use: POWER;
+2	0x7fb55a8e3fa0	{1080.12 816.57 1081.02 817.2}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[3][34]/vddi; Direction: INOUT; Use: POWER;
+3	0x7fb55a8aa020	{1043.72 834.49 1044.62 835.12}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[4][34]/vddi; Direction: INOUT; Use: POWER;
+4	0x7fb55a8aa8f0	{1103.64 789.69 1104.54 790.32}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[24][30]/vddi; Direction: INOUT; Use: POWER;
+5	0x7fb55a8aa920	{1109.14 789.69 1110.04 790.32}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[24][34]/vddi; Direction: INOUT; Use: POWER;
+6	0x7fb55a8aa980	{1090.2 773.2 1091.1 773.83}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[25][7]/vddi; Direction: INOUT; Use: POWER;
+7	0x7fb55a8aaaa0	{1121.46 771.77 1122.36 772.4}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[26][34]/vddi; Direction: INOUT; Use: POWER;
+8	0x7fb55a8aab30	{1129.86 762.81 1130.76 763.44}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[27][34]/vddi; Direction: INOUT; Use: POWER;
+9	0x7fb55a8aab90	{1115.86 755.28 1116.76 755.91}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[30][34]/vddi; Direction: INOUT; Use: POWER;
+10	0x7fb55a8a30a0	{1039.83 827.82 1040.14 828.12}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73855/vddi; Direction: INOUT; Use: POWER;
+11	0x7fb55a8a3100	{1077.22 789.16 1077.53 789.46}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73888/vddi; Direction: INOUT; Use: POWER;
+12	0x7fb55a8a3130	{1066.15 774.06 1066.46 774.36}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73891/vddi; Direction: INOUT; Use: POWER;
+13	0x7fb55a8a33d0	{1031.43 807.08 1031.74 807.38}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74600/vddi; Direction: INOUT; Use: POWER;
+14	0x7fb55a8a3700	{1032.98 756.14 1033.29 756.44}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74759/vddi; Direction: INOUT; Use: POWER;
+15	0x7fb55a8a3f10	{1112.5 774.06 1112.81 774.36}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75359/vddi; Direction: INOUT; Use: POWER;
+16	0x7fb55a8c2290	{1060.98 756.14 1061.29 756.44}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75566/vddi; Direction: INOUT; Use: POWER;
+17	0x7fb55a8c25c0	{1080.71 747.18 1081.02 747.48}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75830/vddi; Direction: INOUT; Use: POWER;
+18	0x7fb55a8c2cb0	{1127.06 756.14 1127.37 756.44}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76105/vddi; Direction: INOUT; Use: POWER;
+19	0x7fb55a8cbd30	{1145.2 826.16 1147.44 826.96}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g80500/vddi; Direction: INOUT; Use: POWER;
+20	0x7fb55a8a3850	{1004.42 851.88 1004.73 852.18}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74864/vddi; Direction: INOUT; Use: POWER;
+21	0x7fb55a8aa3b0	{987.72 853.84 988.62 854.47}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[11][34]/vddi; Direction: INOUT; Use: POWER;
+22	0x7fb55a8aa200	{1000.04 825.53 1000.94 826.16}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][7]/vddi; Direction: INOUT; Use: POWER;
+23	0x7fb55a8e2b60	{984.48 862.0 987.28 862.8}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44415/vddi; Direction: INOUT; Use: POWER;
+24	0x7fb55a8e2b90	{980.18 861.42 980.47 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44420/vddi; Direction: INOUT; Use: POWER;
+25	0x7fb55a8aa470	{1011.8 825.53 1012.7 826.16}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[12][7]/vddi; Direction: INOUT; Use: POWER;
+26	0x7fb55a8aa4a0	{1003.86 861.37 1004.76 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[12][34]/vddi; Direction: INOUT; Use: POWER;
+27	0x7fb55a8aa560	{1020.66 825.53 1021.56 826.16}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[15][7]/vddi; Direction: INOUT; Use: POWER;
+28	0x7fb55a8abac0	{950.24 861.165 950.58 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_packet_tx_hit_idx_q_reg[0]/vddi; Direction: INOUT; Use: POWER;
+29	0x7fb55a8abaf0	{966.86 861.165 967.2 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_packet_tx_hit_idx_q_reg[1]/vddi; Direction: INOUT; Use: POWER;
+30	0x7fb55a8abb20	{963.68 861.165 964.02 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_packet_tx_hit_idx_q_reg[2]/vddi; Direction: INOUT; Use: POWER;
+31	0x7fb55a8a27a0	{972.3 843.45 972.58 844.08}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g71540/vddi; Direction: INOUT; Use: POWER;
+32	0x7fb55a8a2830	{958.72 835.12 963.2 835.92}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g71599/vddi; Direction: INOUT; Use: POWER;
+33	0x7fb55a8a31f0	{962.08 853.04 964.88 853.84}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73931/vddi; Direction: INOUT; Use: POWER;
+34	0x7fb55a8ca440	{976.55 825.0 976.86 825.3}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g79060/vddi; Direction: INOUT; Use: POWER;
+35	0x7fb55a8c2a70	{888.5 854.7 888.81 855.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76027/vddi; Direction: INOUT; Use: POWER;
+36	0x7fb55a8abb50	{909.74 861.165 910.08 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_packet_tx_state_q_reg[0]/vddi; Direction: INOUT; Use: POWER;
+37	0x7fb55a8aa350	{882.34 861.37 883.24 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[11][6]/vddi; Direction: INOUT; Use: POWER;
+38	0x7fb55a8aa1d0	{877.96 861.37 878.86 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][6]/vddi; Direction: INOUT; Use: POWER;
+39	0x7fb55a8e3010	{911.77 843.5 912.07 844.08}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44650/vddi; Direction: INOUT; Use: POWER;
+40	0x7fb55a8e3040	{940.8 844.08 943.6 844.88}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44655/vddi; Direction: INOUT; Use: POWER;
+41	0x7fb55a8e3070	{934.64 835.12 937.44 835.92}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44657/vddi; Direction: INOUT; Use: POWER;
+42	0x7fb55a8e3580	{925.12 844.08 927.92 844.88}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44911/vddi; Direction: INOUT; Use: POWER;
+43	0x7fb55a8e35b0	{929.04 844.08 931.28 844.88}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44925/vddi; Direction: INOUT; Use: POWER;
+44	0x7fb55a8aa440	{896.34 861.37 897.24 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[12][6]/vddi; Direction: INOUT; Use: POWER;
+45	0x7fb55a8aa530	{912.12 852.41 913.02 853.04}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[13][6]/vddi; Direction: INOUT; Use: POWER;
+46	0x7fb55a8a26b0	{921.76 844.08 924.56 844.88}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g71496/vddi; Direction: INOUT; Use: POWER;
+47	0x7fb55a8a2740	{919.14 843.5 919.43 844.08}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g71529/vddi; Direction: INOUT; Use: POWER;
+48	0x7fb55a8a2d40	{900.82 825.0 901.13 825.3}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73605/vddi; Direction: INOUT; Use: POWER;
+49	0x7fb55a8a3010	{895.78 836.78 896.09 837.08}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73838/vddi; Direction: INOUT; Use: POWER;
+50	0x7fb55a8a3190	{929.04 853.04 932.96 853.84}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73910/vddi; Direction: INOUT; Use: POWER;
+51	0x7fb55a8c2dd0	{945.75 854.7 946.06 855.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76815/vddi; Direction: INOUT; Use: POWER;
+52	0x7fb55a8cbe20	{924.18 861.36 925.79 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_packet_tx_state_q_reg[1]/vddi; Direction: INOUT; Use: POWER;
+53	0x7fb55a8aba90	{963.5 798.445 963.84 799.28}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_packet_tx_hit_count_q_reg[0]/vddi; Direction: INOUT; Use: POWER;
+54	0x7fb55a8aa890	{917.62 798.65 918.52 799.28}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[22][34]/vddi; Direction: INOUT; Use: POWER;
+55	0x7fb55a8a3730	{885.7 791.98 886.01 792.28}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74788/vddi; Direction: INOUT; Use: POWER;
+56	0x7fb55a8a3820	{999.51 774.06 999.82 774.36}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74857/vddi; Direction: INOUT; Use: POWER;
+57	0x7fb55a8c2770	{895.22 791.98 895.53 792.28}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75908/vddi; Direction: INOUT; Use: POWER;
+58	0x7fb55a8ca410	{958.63 756.14 958.94 756.44}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g79056/vddi; Direction: INOUT; Use: POWER;
+59	0x7fb55a8aa380	{852.2 861.37 853.1 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[11][8]/vddi; Direction: INOUT; Use: POWER;
+60	0x7fb55a8aa320	{831.94 861.37 832.84 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[11][4]/vddi; Direction: INOUT; Use: POWER;
+61	0x7fb55a8aa2f0	{808.42 861.37 809.32 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[11][2]/vddi; Direction: INOUT; Use: POWER;
+62	0x7fb55a8aa2c0	{748.5 861.37 749.4 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][43]/vddi; Direction: INOUT; Use: POWER;
+63	0x7fb55a8aa290	{784.9 861.37 785.8 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][42]/vddi; Direction: INOUT; Use: POWER;
+64	0x7fb55a8aa260	{768.2 861.37 769.1 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][41]/vddi; Direction: INOUT; Use: POWER;
+65	0x7fb55a8aa230	{864.52 861.37 865.42 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][8]/vddi; Direction: INOUT; Use: POWER;
+66	0x7fb55a8aa1a0	{828.12 861.37 829.02 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][4]/vddi; Direction: INOUT; Use: POWER;
+67	0x7fb55a8aa170	{804.6 861.37 805.5 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[10][2]/vddi; Direction: INOUT; Use: POWER;
+68	0x7fb55a8e2aa0	{731.36 808.24 735.84 809.04}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44390/vddi; Direction: INOUT; Use: POWER;
+69	0x7fb55a8e2ad0	{738.64 808.24 743.12 809.04}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44392/vddi; Direction: INOUT; Use: POWER;
+70	0x7fb55a8aa3e0	{772.02 861.37 772.92 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[11][42]/vddi; Direction: INOUT; Use: POWER;
+71	0x7fb55a8aa7d0	{784.9 771.77 785.8 772.4}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[20][4]/vddi; Direction: INOUT; Use: POWER;
+72	0x7fb55a8abb80	{750.7 798.445 751.04 799.28}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_packet_tx_stop_slow_phase_disc_q_reg[1]/vddi; Direction: INOUT; Use: POWER;
+73	0x7fb55a8a2d70	{821.3 851.88 821.61 852.18}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73608/vddi; Direction: INOUT; Use: POWER;
+74	0x7fb55a8a33a0	{826.47 780.2 826.78 780.5}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74584/vddi; Direction: INOUT; Use: POWER;
+75	0x7fb55a8a37f0	{786.02 854.7 786.33 855.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74837/vddi; Direction: INOUT; Use: POWER;
+76	0x7fb55a8a3cd0	{863.86 756.14 864.17 756.44}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75216/vddi; Direction: INOUT; Use: POWER;
+77	0x7fb55a8c2a40	{838.1 854.7 838.41 855.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76025/vddi; Direction: INOUT; Use: POWER;
+78	0x7fb55a8c2b00	{745.27 860.84 745.58 861.14}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76046/vddi; Direction: INOUT; Use: POWER;
+79	0x7fb55a8a3940	{662.82 800.94 663.13 801.24}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74936/vddi; Direction: INOUT; Use: POWER;
+80	0x7fb55a8aa110	{676.92 755.28 677.82 755.91}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[6][41]/vddi; Direction: INOUT; Use: POWER;
+81	0x7fb55a8aa0b0	{683.64 825.53 684.54 826.16}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[5][43]/vddi; Direction: INOUT; Use: POWER;
+82	0x7fb55a8aa080	{689.24 780.73 690.14 781.36}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[5][41]/vddi; Direction: INOUT; Use: POWER;
+83	0x7fb55a8e2b30	{690.01 843.5 690.34 844.08}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g44413/vddi; Direction: INOUT; Use: POWER;
+84	0x7fb55a8e3f10	{706.5 807.61 707.4 808.24}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[1][44]/vddi; Direction: INOUT; Use: POWER;
+85	0x7fb55a8aa410	{728.9 861.37 729.8 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[11][44]/vddi; Direction: INOUT; Use: POWER;
+86	0x7fb55a8aa500	{714.44 861.37 715.34 862.0}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[12][41]/vddi; Direction: INOUT; Use: POWER;
+87	0x7fb55a8aa6e0	{655.64 816.57 656.54 817.2}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[18][44]/vddi; Direction: INOUT; Use: POWER;
+88	0x7fb55a8aa740	{665.72 755.28 666.62 755.91}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[19][43]/vddi; Direction: INOUT; Use: POWER;
+89	0x7fb55a8aa770	{662.26 816.57 663.16 817.2}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[19][44]/vddi; Direction: INOUT; Use: POWER;
+90	0x7fb55a8a2cb0	{718.95 845.74 719.26 846.04}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73588/vddi; Direction: INOUT; Use: POWER;
+91	0x7fb55a8a2ce0	{719.51 851.88 719.82 852.18}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73591/vddi; Direction: INOUT; Use: POWER;
+92	0x7fb55a8a2fe0	{708.87 827.82 709.18 828.12}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73819/vddi; Direction: INOUT; Use: POWER;
+93	0x7fb55a8c2320	{674.71 800.94 675.02 801.24}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75579/vddi; Direction: INOUT; Use: POWER;
+94	0x7fb55a8c2620	{720.07 747.18 720.38 747.48}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75848/vddi; Direction: INOUT; Use: POWER;
+95	0x7fb55a8c2d10	{727.91 809.9 728.22 810.2}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76758/vddi; Direction: INOUT; Use: POWER;
+96	0x7fb55a8c2d40	{722.31 809.9 722.62 810.2}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76767/vddi; Direction: INOUT; Use: POWER;
+97	0x7fb55a8c2650	{1115.43 639.66 1115.74 639.96}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75854/vddi; Direction: INOUT; Use: POWER;
+98	0x7fb55a8c25f0	{1118.66 702.38 1118.97 702.68}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75833/vddi; Direction: INOUT; Use: POWER;
+99	0x7fb55a8c22c0	{1033.54 603.82 1033.85 604.12}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75569/vddi; Direction: INOUT; Use: POWER;
+100	0x7fb55a8a3ee0	{1088.55 654.76 1088.86 655.06}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75349/vddi; Direction: INOUT; Use: POWER;
+101	0x7fb55a8a3d00	{1075.54 621.74 1075.85 622.04}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75226/vddi; Direction: INOUT; Use: POWER;
+102	0x7fb55a8a3c10	{1041.94 612.78 1042.25 613.08}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75115/vddi; Direction: INOUT; Use: POWER;
+103	0x7fb55a8a3280	{1091.78 654.76 1092.09 655.06}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74524/vddi; Direction: INOUT; Use: POWER;
+104	0x7fb55a8a3160	{1042.63 681.64 1042.94 681.94}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73905/vddi; Direction: INOUT; Use: POWER;
+105	0x7fb55a8e3ee0	{1033.64 673.21 1034.54 673.84}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[1][32]/vddi; Direction: INOUT; Use: POWER;
+106	0x7fb55a8e3f70	{1060.42 610.49 1061.32 611.12}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[3][31]/vddi; Direction: INOUT; Use: POWER;
+107	0x7fb55a8aa9b0	{1082.92 655.29 1083.82 655.92}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[25][10]/vddi; Direction: INOUT; Use: POWER;
+108	0x7fb55a8aaa10	{1141.72 664.25 1142.62 664.88}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[26][10]/vddi; Direction: INOUT; Use: POWER;
+109	0x7fb55a8aaa40	{1141.16 710.48 1142.06 711.11}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[26][11]/vddi; Direction: INOUT; Use: POWER;
+110	0x7fb55a8aaa70	{1143.96 728.4 1144.86 729.03}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[26][13]/vddi; Direction: INOUT; Use: POWER;
+111	0x7fb55a8aaad0	{1141.72 701.52 1142.62 702.15}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[27][11]/vddi; Direction: INOUT; Use: POWER;
+112	0x7fb55a8aab00	{1141.16 719.44 1142.06 720.07}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[27][13]/vddi; Direction: INOUT; Use: POWER;
+113	0x7fb55a8aab60	{1135.56 638.8 1136.46 639.43}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[27][50]/vddi; Direction: INOUT; Use: POWER;
+114	0x7fb55a8aabf0	{1127.72 620.88 1128.62 621.51}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[31][32]/vddi; Direction: INOUT; Use: POWER;
+115	0x7fb55a8c2c20	{1114.18 594.86 1114.49 595.16}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76092/vddi; Direction: INOUT; Use: POWER;
+116	0x7fb55a8c2c50	{1128.18 702.38 1128.49 702.68}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76097/vddi; Direction: INOUT; Use: POWER;
+117	0x7fb55a8c2ce0	{1122.58 639.66 1122.89 639.96}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76118/vddi; Direction: INOUT; Use: POWER;
+118	0x7fb55a8c26e0	{1007.22 684.46 1007.53 684.76}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75875/vddi; Direction: INOUT; Use: POWER;
+119	0x7fb55a8c26b0	{987.62 612.78 987.93 613.08}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75872/vddi; Direction: INOUT; Use: POWER;
+120	0x7fb55a8c2680	{964.66 594.86 964.97 595.16}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75870/vddi; Direction: INOUT; Use: POWER;
+121	0x7fb55a8c2560	{949.54 609.96 949.85 610.26}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75805/vddi; Direction: INOUT; Use: POWER;
+122	0x7fb55a8a3df0	{972.07 666.54 972.38 666.84}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75279/vddi; Direction: INOUT; Use: POWER;
+123	0x7fb55a8a38b0	{927.14 684.46 927.45 684.76}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74895/vddi; Direction: INOUT; Use: POWER;
+124	0x7fb55a8a3880	{881.78 702.38 882.09 702.68}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74874/vddi; Direction: INOUT; Use: POWER;
+125	0x7fb55a8a37c0	{980.9 639.66 981.21 639.96}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74828/vddi; Direction: INOUT; Use: POWER;
+126	0x7fb55a8aa590	{898.68 611.92 899.58 612.55}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[16][29]/vddi; Direction: INOUT; Use: POWER;
+127	0x7fb55a8aa050	{1006.76 602.96 1007.66 603.59}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[5][0]/vddi; Direction: INOUT; Use: POWER;
+128	0x7fb55a8a2d10	{1007.22 675.5 1007.53 675.8}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73596/vddi; Direction: INOUT; Use: POWER;
+129	0x7fb55a8a3040	{982.58 609.96 982.89 610.26}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g73843/vddi; Direction: INOUT; Use: POWER;
+130	0x7fb55a8c2710	{1011.14 702.38 1011.45 702.68}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75888/vddi; Direction: INOUT; Use: POWER;
+131	0x7fb55a8c2aa0	{940.71 618.92 941.02 619.22}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76035/vddi; Direction: INOUT; Use: POWER;
+132	0x7fb55a8c2b60	{938.34 672.68 938.65 672.98}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76059/vddi; Direction: INOUT; Use: POWER;
+133	0x7fb55a8c2b90	{879.11 618.92 879.42 619.22}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76068/vddi; Direction: INOUT; Use: POWER;
+134	0x7fb55a8c2050	{1094.71 565.16 1095.02 565.46}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75457/vddi; Direction: INOUT; Use: POWER;
+135	0x7fb55a8c2020	{1123.7 532.14 1124.01 532.44}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75448/vddi; Direction: INOUT; Use: POWER;
+136	0x7fb55a8a3be0	{1034.1 457.64 1034.41 457.94}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75092/vddi; Direction: INOUT; Use: POWER;
+137	0x7fb55a8a3bb0	{1035.91 514.22 1036.22 514.52}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75086/vddi; Direction: INOUT; Use: POWER;
+138	0x7fb55a8a3b20	{1125.38 496.3 1125.69 496.6}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75060/vddi; Direction: INOUT; Use: POWER;
+139	0x7fb55a8a36a0	{1060.42 514.22 1060.73 514.52}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74718/vddi; Direction: INOUT; Use: POWER;
+140	0x7fb55a8a3640	{1102.42 547.24 1102.73 547.54}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74692/vddi; Direction: INOUT; Use: POWER;
+141	0x7fb55a8a3610	{1087.99 478.38 1088.3 478.68}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74690/vddi; Direction: INOUT; Use: POWER;
+142	0x7fb55a8a32b0	{1027.38 583.08 1027.69 583.38}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74531/vddi; Direction: INOUT; Use: POWER;
+143	0x7fb55a8aac20	{1103.64 529.85 1104.54 530.48}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[33][33]/vddi; Direction: INOUT; Use: POWER;
+144	0x7fb55a8aac50	{1140.04 494.01 1140.94 494.64}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[34][13]/vddi; Direction: INOUT; Use: POWER;
+145	0x7fb55a8aacb0	{1141.16 486.48 1142.06 487.11}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[35][11]/vddi; Direction: INOUT; Use: POWER;
+146	0x7fb55a8aad10	{1137.8 531.28 1138.7 531.91}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[38][10]/vddi; Direction: INOUT; Use: POWER;
+147	0x7fb55a8aad40	{1133.88 547.77 1134.78 548.4}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[38][12]/vddi; Direction: INOUT; Use: POWER;
+148	0x7fb55a8aad70	{1143.4 467.13 1144.3 467.76}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[38][50]/vddi; Direction: INOUT; Use: POWER;
+149	0x7fb55a8aada0	{1132.1 459.6 1133.0 460.23}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[38][51]/vddi; Direction: INOUT; Use: POWER;
+150	0x7fb55a8aadd0	{1139.48 511.93 1140.38 512.56}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[39][13]/vddi; Direction: INOUT; Use: POWER;
+151	0x7fb55a8aae00	{1119.78 459.6 1120.68 460.23}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_fifo_mem_reg[39][50]/vddi; Direction: INOUT; Use: POWER;
+152	0x7fb55a8c24a0	{1125.94 487.34 1126.25 487.64}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75695/vddi; Direction: INOUT; Use: POWER;
+153	0x7fb55a8c27d0	{1079.46 478.38 1079.77 478.68}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75930/vddi; Direction: INOUT; Use: POWER;
+154	0x7fb55a8c2a10	{1119.35 487.34 1119.66 487.64}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75998/vddi; Direction: INOUT; Use: POWER;
+155	0x7fb55a8c2c80	{1052.15 583.08 1052.46 583.38}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g76103/vddi; Direction: INOUT; Use: POWER;
+156	0x7fb55a8a3eb0	{1006.79 583.08 1007.1 583.38}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75341/vddi; Direction: INOUT; Use: POWER;
+157	0x7fb55a8a3af0	{930.5 565.16 930.81 565.46}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g75051/vddi; Direction: INOUT; Use: POWER;
+158	0x7fb55a8a39a0	{928.82 583.08 929.13 583.38}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74958/vddi; Direction: INOUT; Use: POWER;
+159	0x7fb55a8a3760	{923.91 585.9 924.22 586.2}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74794/vddi; Direction: INOUT; Use: POWER;
+160	0x7fb55a8a35e0	{945.62 523.18 945.93 523.48}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_g74688/vddi; Direction: INOUT; Use: POWER;
+TRUNCATED	max_marker_rows=160
+MARKER_COUNT=161
+MARKER_TABLE_END

@@ -1,0 +1,26 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7fb55d98f8e0	{240.8 683.2 240.8 683.2}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+2	0x7fb55d98f8b0	{240.8 692.16 240.8 692.16}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7fb55d98f880	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7fb55d98f6d0	{240.8 678.72 240.8 678.72}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+5	0x7fb55d98f6a0	{240.8 687.68 240.8 687.68}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+6	0x7fb55d98f670	{240.8 696.64 240.8 696.64}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+7	0x7fb55d98f640	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+8	0x7fb55d98f850	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+9	0x7fb55d98f790	{121.16 648.32 121.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+10	0x7fb55d98f610	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+11	0x7fb55d98f550	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7fb55d98f4f0	{125.16 648.32 125.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+13	0x7fb59b75a200	{240.8 190.4 240.8 190.4}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+14	0x7fb55d98f910	{240.8 199.36 240.8 199.36}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+15	0x7fb55d98f820	{221.75 201.16 221.75 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+16	0x7fb55d98f760	{240.8 185.92 240.8 185.92}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+17	0x7fb55d98f730	{240.8 194.88 240.8 194.88}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+18	0x7fb55d98f700	{240.8 203.84 240.8 203.84}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+19	0x7fb55d98f5e0	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+20	0x7fb55d98f580	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+21	0x7fb55d98f7f0	{48.0 201.16 48.0 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+22	0x7fb55d98f7c0	{121.16 233.62 121.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+23	0x7fb55d98f5b0	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+24	0x7fb55d98f520	{125.16 233.62 125.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+25	0x7fb55d98f4c0	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
