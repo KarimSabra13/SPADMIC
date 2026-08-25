@@ -1,0 +1,19 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_two_minarea_landing_patch_v1
+REPORT_STATUS=FAILED
+ERROR=N57960_LANDING_POST expected via names VIA1_o at 363.72 358.12, found VIA1_X_so
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N57960_LANDING_POST expected via names VIA1_o at 363.72 358.12, found VIA1_X_so
+    while executing
+"error "$label expected via names $expected_names at $point, found $names""
+    (procedure "mptdc_ckpt_manual_assert_via_names" line 5)
+    invoked from within
+"mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_POST  u_core_n_57960 {363.72 358.12} {VIA1_o}"
+    (procedure "mptdc_ckpt_manual_two_minarea_landing_patch_v1" line 40)
+    invoked from within
+"mptdc_ckpt_manual_two_minarea_landing_patch_v1"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
