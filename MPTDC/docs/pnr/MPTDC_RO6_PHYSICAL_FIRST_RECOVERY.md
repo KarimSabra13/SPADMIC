@@ -264,15 +264,30 @@ special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact `HALO10_PNRLEF_15` PVS-candidate
 fingerprint.
 
-### 2. Current Command: Read-Only Two-Marker Probe
+### 2. Current Command: Exact Two-Marker Repair
 
-This is the only Innovus command to run now. It restores the exact guarded-halo
-failed-route checkpoint in a fresh process and queries only
-`u_core_n_57960` and `u_core_n_57556`. Preflight requires the tracked source to
-have exactly two MET1 minimum-area markers, zero shorts, zero regular
-connectivity failures, the exact 15 guarded PG endpoints, passing RO halos, and
-exactly two tap0 pins. The command makes no route, PG, placement, or timing
-edit. It publishes the bounded evidence automatically.
+The read-only probe completed as
+`20260825_mptdc_bufftap0_route_minarea_probe_143229`. It proved that the source
+checkpoint has exactly two MET1 minimum-area markers, zero shorts, zero regular
+connectivity failures, the exact 15 guarded PG endpoints, intact pin/via
+geometry, and exactly two tap0 pins. Its published `SPECIAL_SIGNATURE_STATUS`
+was a reporting false negative: Innovus writes the count in the summary report
+and the 15 exact coordinates in the sibling `_detailed.rpt`. The recovery gate
+now evaluates that real report pair.
+
+This is the only Innovus command to run now. It restores the same guarded-halo
+checkpoint in one fresh process and adds only these two MET1 landing stubs:
+
+```text
+u_core_n_57960: (363.72,358.12) -> (364.56,358.12), width 0.28
+u_core_n_57556: (385.56,328.44) -> (384.72,328.44), width 0.28
+```
+
+Both stubs extend inward from the existing `VIA1_o` landing and remain inside
+the connected standard-cell pin geometry. The command does not delete or add a
+via, edit PG, move an instance, or invoke broad rerouting. It then extracts RC,
+runs TC setup/hold and DRV/power checks, saves a new checkpoint, and publishes
+the evidence automatically.
 
 ```bash
 set +e
@@ -280,9 +295,9 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 TAG=$(date +%Y%m%d_%H%M%S)
 SOURCE_PNR_RUN=20260825_mptdc_bufftap0_halo10_physical_130313
-DRIVER_LOG=/tmp/${TAG}_mptdc_route_minarea_probe.driver.log
+DRIVER_LOG=/tmp/${TAG}_mptdc_route_minarea_repair.driver.log
 SYNC_RC=99
-PROBE_DRIVER_RC=99
+REPAIR_DRIVER_RC=99
 REPO_READY=0
 
 if [ -d "$REPO/.git" ]; then
@@ -309,41 +324,52 @@ fi
 
 if [ "$REPO_READY" -eq 1 ]; then
   bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
-    --stage route-minarea-probe \
+    --stage route-minarea-repair \
     --source-pnr-run-id "$SOURCE_PNR_RUN" \
     2>&1 | tee "$DRIVER_LOG"
-  PROBE_DRIVER_RC=${PIPESTATUS[0]}
+  REPAIR_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: read-only minimum-area probe was not launched"
+  echo "STOP: exact minimum-area repair was not launched"
 fi
+
+REPAIR_RUN="$(sed -n 's/^RECOVERY_RUN_ID=//p' "$DRIVER_LOG" 2>/dev/null | tail -1)"
+REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
 
 echo "===== SEND BACK ====="
 echo "SYNC_RC=$SYNC_RC"
-echo "PROBE_DRIVER_RC=$PROBE_DRIVER_RC"
-grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PROBE_RUN_ID)=' \
+echo "REPAIR_DRIVER_RC=$REPAIR_DRIVER_RC"
+grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|MINAREA_REPAIR_GATE_MODE|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PNR_RUN_ID)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -20
+
+echo "===== OPERATOR GATE ====="
+grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|INITIAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
+  "$REPAIR_DIR/reports/operator_gate_route_min_area_repair.rpt" 2>/dev/null
 ```
 
 Stop and send back the final lines unless every required line is present:
 
 ```text
-PROBE_DRIVER_RC=0
-RECOVERY_STAGE=ROUTE_MIN_AREA_PROBE
+REPAIR_DRIVER_RC=0
+RECOVERY_STAGE=ROUTE_MIN_AREA_REPAIR
 TOOL_RC=0
-DECISION=PASS_CONTINUE
+DECISION=PVS_CANDIDATE_CONTINUE
 PUBLISH_RC=0
-NEXT_STAGE=REVIEW_ROUTE_MIN_AREA_PROBE
-NEXT_REQUIRED_PROBE_RUN_ID=<new probe run id>
+MINAREA_REPAIR_GATE_MODE=PVS_CANDIDATE_EXACT_PG_WIRE_ENDS
+NEXT_STAGE=PVS
+NEXT_REQUIRED_PNR_RUN_ID=<new repair run id>
 ```
 
-The operator report must also contain `INITIAL_DRC=2`, `INITIAL_SHORTS=0`,
-`FINAL_DRC=2`, `FINAL_SHORTS=0`, `PROFILE_GEOMETRY_STATUS=PASS`,
-`SPECIAL_SIGNATURE_STATUS=PASS`, and
-`PROBE_GATE_MODE=READ_ONLY_BASELINE_PRESERVED`. Any other result stops. Do not
-run another physical PnR, a manual ECO, export, or PVS yet. When
-`PUBLISH_RC=0`, send only the final lines under `SEND BACK`; the detailed net,
-wire, via, pin, help, and schema reports are already on
-`origin/SPADMIC_test`.
+The operator gate must additionally show `COMMAND_1_STATUS=PASS`,
+`COMMAND_2_STATUS=PASS`, `MANUAL_ECO_STATUS=PASS`, initial `DRC=2` and
+`SHORTS=0`, final `DRC=0` and `SHORTS=0`, zero regular and non-RO special
+connectivity failures, unchanged `SPECIAL_DANGLING_COUNT=15`,
+`SPECIAL_SIGNATURE_STATUS=PASS`, `TIMING_GATE_STATUS=PASS`, and
+`RO_TAP_OBSERVABILITY_PIN_COUNT=2`. `FINAL_SPECIAL_CONNECTIVITY_BAD=1` is
+expected only for those exact 15 guarded PG wire ends; this is a PVS candidate,
+not an Innovus special-connectivity-clean result. Any other result stops. Do
+not run PVS until this step has been reviewed. When `PUBLISH_RC=0`, the detailed
+reports are already on `origin/SPADMIC_test`; send only the two displayed
+sections.
 
 ### Archived Physical and Repair History (Do Not Run)
 

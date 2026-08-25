@@ -1147,6 +1147,79 @@ proc mptdc_ckpt_manual_add_single_via1 {fh label net point} {
     }
 }
 
+proc mptdc_ckpt_manual_two_minarea_landing_patch_v1 {} {
+    set report_dir [mptdc_signoff_report_dir]
+    set report [file join $report_dir min_area_landing_patch_v1.rpt]
+    set fh [open $report w]
+    puts $fh "# MPTDC Exact Two-Via-Landing Minimum-Area Patch V1"
+    puts $fh "MANUAL_ECO_MODE=EXACT_TWO_VIA_LANDING_MIN_AREA_STUBS"
+    puts $fh "SOURCE_BASELINE=DRC_2_SHORTS_0_REGULAR_0_SPECIAL_NON_RO_0"
+    puts $fh "TARGET_NETS=u_core_n_57960,u_core_n_57556"
+    puts $fh "TARGET_VIA_POLICY=u_core_n_57960:VIA1_o@363.72,358.12;u_core_n_57556:VIA1_o@385.56,328.44"
+    puts $fh "REPAIR_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
+    puts $fh "PIN_CONTAINMENT_EVIDENCE=u_core_g71301/A:NO2JIHDX4:MY;FE_RC_5_0/Q:NO6I5JIHDX2:R180"
+    puts $fh "VIA_EDIT_POLICY=NO_VIAS_MODIFIED"
+    puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
+    puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
+
+    set body_status [catch {
+        set baseline [mptdc_ckpt_verify_snapshot minarea_v1_pre]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 2 0 0
+
+        mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_PRE \
+            u_core_n_57960 {363.72 358.12} {VIA1_o}
+        mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_PRE \
+            u_core_n_57556 {385.56 328.44} {VIA1_o}
+
+        if {[mptdc_ckpt_manual_wire_covers_point \
+                u_core_n_57960 MET1 {364.14 358.12}]} {
+            error "u_core_n_57960 target stub midpoint is already covered"
+        }
+        if {[mptdc_ckpt_manual_wire_covers_point \
+                u_core_n_57556 MET1 {385.14 328.44}]} {
+            error "u_core_n_57556 target stub midpoint is already covered"
+        }
+
+        mptdc_ckpt_manual_add_wire_path $fh N57960_MET1_LANDING_PATCH \
+            u_core_n_57960 MET1 0.28 \
+            {{363.72 358.12} {364.56 358.12}}
+        mptdc_ckpt_manual_add_wire_path $fh N57556_MET1_LANDING_PATCH \
+            u_core_n_57556 MET1 0.28 \
+            {{385.56 328.44} {384.72 328.44}}
+
+        if {![mptdc_ckpt_manual_wire_covers_point \
+                u_core_n_57960 MET1 {364.14 358.12}]} {
+            error "u_core_n_57960 MET1 landing patch did not materialize"
+        }
+        if {![mptdc_ckpt_manual_wire_covers_point \
+                u_core_n_57556 MET1 {385.14 328.44}]} {
+            error "u_core_n_57556 MET1 landing patch did not materialize"
+        }
+
+        mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_POST \
+            u_core_n_57960 {363.72 358.12} {VIA1_o}
+        mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_POST \
+            u_core_n_57556 {385.56 328.44} {VIA1_o}
+
+        set final [mptdc_ckpt_verify_snapshot minarea_v1_post]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
+    } body_error body_opts]
+
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+    if {$body_status} {
+        puts $fh "MANUAL_ECO_STATUS=FAIL"
+        puts $fh "MANUAL_ECO_ERROR=[mptdc_signoff_report_value $body_error]"
+        close $fh
+        return -options $body_opts $body_error
+    }
+    puts $fh "MANUAL_ECO_STATUS=PASS"
+    puts $fh "MANUAL_ECO_REPORT=$report"
+    close $fh
+    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V1_REPORT=$report"
+    return [dict create status PASS report $report]
+}
+
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
     error "manual geometry ECO V4 is retired after editDelete selected no vias; use mptdc_ckpt_manual_three_marker_eco_v7"
 }

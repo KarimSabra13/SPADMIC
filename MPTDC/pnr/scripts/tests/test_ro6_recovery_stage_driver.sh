@@ -491,14 +491,16 @@ while [[ $# -gt 0 ]]; do
 done
 test -d "$checkpoint"
 test -s "$commands_file"
-if grep -qx 'mptdc_ckpt_probe_target_geometry {u_core_n_57960 u_core_n_57556}' "$commands_file"; then
-  test "$(wc -l < "$commands_file")" -eq 1
-  run="$work/$run_id"
-  mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
-  initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
-  final_special="$run/reports/01_after_command_verify_connectivity_special.rpt"
-  for report in "$initial_special" "$final_special"; do
-    cat > "$report" <<'RPT'
+
+write_exact_pg_report_pair() {
+  local summary="$1"
+  local detailed="${summary%.rpt}_detailed.rpt"
+  cat > "$summary" <<'RPT'
+Net VDD: dangling Wire.
+Net VSS: dangling Wire.
+    15 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+RPT
+  cat > "$detailed" <<'RPT'
 Net VDD: dangling Wire at (221.750, 681.160) (221.750, 681.160) on layer: MET3
 Net VDD: dangling Wire at (48.000, 681.160) (48.000, 681.160) on layer: MET3
 Net VDD: dangling Wire at (221.750, 201.160) (221.750, 201.160) on layer: MET3
@@ -516,7 +518,16 @@ Net VSS: dangling Wire at (125.160, 233.620) (125.160, 233.620) on layer: METTP
 Net VSS: dangling Wire at (125.160, 158.320) (125.160, 158.320) on layer: METTP
     15 Problem(s) (IMPVFC-94): The net has dangling wire(s).
 RPT
-  done
+}
+
+if grep -qx 'mptdc_ckpt_probe_target_geometry {u_core_n_57960 u_core_n_57556}' "$commands_file"; then
+  test "$(wc -l < "$commands_file")" -eq 1
+  run="$work/$run_id"
+  mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
+  initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
+  final_special="$run/reports/01_after_command_verify_connectivity_special.rpt"
+  write_exact_pg_report_pair "$initial_special"
+  write_exact_pg_report_pair "$final_special"
   cat > "$run/reports/route_min_area_target_probe.rpt" <<'RPT'
 PROBE_MODE=READ_ONLY_NO_ROUTE_EDITS
 PROBE_PROFILE=HALO10_TWO_MET1_MIN_AREA
@@ -563,6 +574,83 @@ FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
 FINAL_DEF=$run/def/repaired_route.def
 FINAL_CHECKPOINT_DAT_EXISTS=1
 CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
+RPT
+  exit 0
+fi
+if grep -qx 'mptdc_ckpt_manual_two_minarea_landing_patch_v1' "$commands_file"; then
+  grep -qx 'mptdc_signoff_extract_and_sta' "$commands_file"
+  test "$(wc -l < "$commands_file")" -eq 2
+  ! grep -qE 'globalDetailRoute|detailRoute|ecoRoute|routeDesign|createRouteBlk|editAddVia|editDelete' "$commands_file"
+
+  run="$work/$run_id"
+  mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
+  initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
+  final_special="$run/reports/02_after_command_verify_connectivity_special.rpt"
+  write_exact_pg_report_pair "$initial_special"
+  write_exact_pg_report_pair "$final_special"
+
+  manual_status=PASS
+  command_1_status=PASS
+  final_drc=0
+  final_status=PASS_GEOMETRY_REVIEW_CONNECTIVITY
+  if [[ "${FAKE_MINAREA_REPAIR_DIRTY:-0}" == 1 ]]; then
+    manual_status=FAIL
+    command_1_status=FAIL
+    final_drc=1
+    final_status=REVIEW_REQUIRED
+  fi
+  cat > "$run/reports/min_area_landing_patch_v1.rpt" <<RPT
+MANUAL_ECO_MODE=EXACT_TWO_VIA_LANDING_MIN_AREA_STUBS
+PRE_DRC=2
+PRE_SHORTS=0
+POST_DRC=$final_drc
+POST_SHORTS=0
+VIA_EDIT_POLICY=NO_VIAS_MODIFIED
+PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED
+PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
+MANUAL_ECO_STATUS=$manual_status
+RPT
+
+  setup_status=PASS
+  if [[ "${FAKE_MINAREA_TIMING_FAIL:-0}" == 1 ]]; then setup_status=FAIL; fi
+  cat > "$run/reports/extracted_timing_status.rpt" <<RPT
+SETUP_STATUS_TC=$setup_status
+TC_HOLD_STATUS=PASS
+RPT
+  printf 'DRV_STATUS=PASS\n' > "$run/reports/drv_status.rpt"
+  printf 'POWER_REPORT_CAPTURE_STATUS=PASS\n' > "$run/reports/power_status.rpt"
+  cat > "$run/def/repaired_route.def" <<'DEF'
+VERSION 5.8 ;
+PINS 2 ;
+- ro_slow_tap0_o + NET ro_slow_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 1000 0 ) N ;
+- ro_fast_tap0_o + NET ro_fast_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 2000 0 ) N ;
+END PINS
+END DESIGN
+DEF
+  cat > "$run/reports/checkpoint_repair_status.rpt" <<RPT
+INITIAL_DRC=2
+INITIAL_SHORTS=0
+INITIAL_REGULAR_CONNECTIVITY_BAD=0
+INITIAL_SPECIAL_CONNECTIVITY_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+INITIAL_SPECIAL_CONNECTIVITY_REPORT=$initial_special
+COMMAND_1_STATUS=$command_1_status
+COMMAND_2_STATUS=PASS
+FINAL_DRC=$final_drc
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_UNROUTED_NETS=UNKNOWN
+FINAL_ROUTE_GATE_PASS=0
+FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
+FINAL_DEF=$run/def/repaired_route.def
+FINAL_CHECKPOINT_DAT_EXISTS=1
+CHECKPOINT_REPAIR_STATUS=$final_status
 RPT
   exit 0
 fi
@@ -949,6 +1037,54 @@ grep -qx 'DECISION=PASS_CONTINUE' "$WORK/innovus/minarea_probe/reports/operator_
 grep -q 'innovus minarea_probe .* ROUTE_MIN_AREA_PROBE' "$PUBLISH_CALLS"
 grep -qx 'NEXT_STAGE=REVIEW_ROUTE_MIN_AREA_PROBE' "$TMP_ROOT/minarea_probe.stdout"
 grep -qx 'NEXT_REQUIRED_PROBE_RUN_ID=minarea_probe' "$TMP_ROOT/minarea_probe.stdout"
+
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-minarea-repair --run-id minarea_repair_clean \
+  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_repair_clean.stdout"
+MINAREA_REPAIR_REPORT="$WORK/innovus/minarea_repair_clean/reports/operator_gate_route_min_area_repair.rpt"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/minarea_repair_clean.stdout"
+grep -qx 'REPAIR_METHOD=EXACT_TWO_VIA_LANDING_MIN_AREA_STUBS_V1' "$MINAREA_REPAIR_REPORT"
+grep -Fqx 'REPAIR_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28' "$MINAREA_REPAIR_REPORT"
+grep -qx 'VIA_EDIT_POLICY=NO_VIAS_MODIFIED' "$MINAREA_REPAIR_REPORT"
+grep -qx 'PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED' "$MINAREA_REPAIR_REPORT"
+grep -qx 'PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED' "$MINAREA_REPAIR_REPORT"
+grep -qx 'COMMAND_1_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'COMMAND_2_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'MANUAL_ECO_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'INITIAL_DRC=2' "$MINAREA_REPAIR_REPORT"
+grep -qx 'INITIAL_SHORTS=0' "$MINAREA_REPAIR_REPORT"
+grep -qx 'FINAL_DRC=0' "$MINAREA_REPAIR_REPORT"
+grep -qx 'FINAL_SHORTS=0' "$MINAREA_REPAIR_REPORT"
+grep -qx 'FINAL_REGULAR_CONNECTIVITY_BAD=0' "$MINAREA_REPAIR_REPORT"
+grep -qx 'FINAL_SPECIAL_DANGLING_COUNT=15' "$MINAREA_REPAIR_REPORT"
+grep -qx 'SPECIAL_SIGNATURE_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'SETUP_STATUS_TC=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'TC_HOLD_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'DRV_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'POWER_REPORT_CAPTURE_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'TIMING_GATE_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$MINAREA_REPAIR_REPORT"
+grep -qx 'MINAREA_REPAIR_GATE_MODE=PVS_CANDIDATE_EXACT_PG_WIRE_ENDS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'DECISION=PVS_CANDIDATE_CONTINUE' "$MINAREA_REPAIR_REPORT"
+grep -q 'innovus minarea_repair_clean .* ROUTE_MIN_AREA_REPAIR' "$PUBLISH_CALLS"
+grep -qx 'NEXT_STAGE=PVS' "$TMP_ROOT/minarea_repair_clean.stdout"
+grep -qx 'NEXT_REQUIRED_PNR_RUN_ID=minarea_repair_clean' "$TMP_ROOT/minarea_repair_clean.stdout"
+
+set +e
+env "${COMMON_ENV[@]}" FAKE_MINAREA_TIMING_FAIL=1 bash "$DRIVER" \
+  --stage route-minarea-repair --run-id minarea_repair_timing_fail \
+  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_repair_timing_fail.stdout"
+MINAREA_TIMING_FAIL_RC=$?
+set -e
+test "$MINAREA_TIMING_FAIL_RC" -ne 0
+MINAREA_TIMING_FAIL_REPORT="$WORK/innovus/minarea_repair_timing_fail/reports/operator_gate_route_min_area_repair.rpt"
+grep -qx 'FINAL_DRC=0' "$MINAREA_TIMING_FAIL_REPORT"
+grep -qx 'SETUP_STATUS_TC=FAIL' "$MINAREA_TIMING_FAIL_REPORT"
+grep -qx 'TIMING_GATE_STATUS=FAIL' "$MINAREA_TIMING_FAIL_REPORT"
+grep -qx 'DECISION=FAIL_STOP' "$MINAREA_TIMING_FAIL_REPORT"
+grep -qx 'NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE' "$TMP_ROOT/minarea_repair_timing_fail.stdout"
 
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage route-geometry-probe --run-id geometry_probe \

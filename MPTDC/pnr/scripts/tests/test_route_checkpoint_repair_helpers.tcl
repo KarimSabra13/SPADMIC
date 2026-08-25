@@ -491,7 +491,7 @@ if {![regexp {CELLTERM_PIN_RECTS_COMMAND=dbGet .*\.cellTerm\.pins\.layerShapeSha
     error "geometry probe did not use the captured instTerm/via schema paths"
 }
 if {![catch {mptdc_ckpt_probe_target_geometry {u_core_n_57563}} err] ||
-    ![string match "*exact bounded target set*" $err]} {
+    ![string match "*requires u_core_n_66687*or*u_core_n_57960*" $err]} {
     error "geometry probe target-set guard did not fail as expected: $err"
 }
 set ::mptdc_test_probe_mode 0
@@ -734,6 +734,75 @@ if {$drc_wire_delete_calls ne $expected_drc_wire_delete_calls} {
 }
 if {$via_add_call_count != 2} {
     error "manual ECO expected exactly two single-VIA1 insertions, found $via_add_call_count"
+}
+
+set ::mptdc_test_manual_vias [list \
+    [dict create net u_core_n_57960 name VIA1_o point {363.72 358.12} status routed \
+        bot_rects {{{363.53 357.98 363.91 358.26}}} \
+        cut_rects {{{363.59 357.99 363.85 358.25}}} \
+        top_rects {{{363.58 357.93 363.86 358.31}}}] \
+    [dict create net u_core_n_57556 name VIA1_o point {385.56 328.44} status routed \
+        bot_rects {{{385.37 328.30 385.75 328.58}}} \
+        cut_rects {{{385.43 328.31 385.69 328.57}}} \
+        top_rects {{{385.42 328.25 385.70 328.63}}}]]
+set ::mptdc_test_manual_wires {}
+set ::mptdc_test_manual_command_calls {}
+set ::mptdc_test_manual_verify_count 0
+set ::mptdc_test_manual_snapshot_tuples [dict create \
+    minarea_v1_pre {2 0 0} \
+    minarea_v1_post {0 0 0}]
+
+set minarea [mptdc_ckpt_manual_two_minarea_landing_patch_v1]
+if {[dict get $minarea status] ne "PASS" || ![file exists [dict get $minarea report]]} {
+    error "two-landing minimum-area helper did not pass: $minarea"
+}
+if {$::mptdc_test_manual_verify_count != 2} {
+    error "minimum-area helper expected two verification tuples, found $::mptdc_test_manual_verify_count"
+}
+if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57960 MET1 {364.14 358.12}] ||
+    ![mptdc_ckpt_manual_wire_covers_point u_core_n_57556 MET1 {385.14 328.44}]} {
+    error "minimum-area helper did not create both inward MET1 landing stubs"
+}
+if {[mptdc_ckpt_manual_via_names_at u_core_n_57960 {363.72 358.12}] ne {VIA1_o} ||
+    [mptdc_ckpt_manual_via_names_at u_core_n_57556 {385.56 328.44}] ne {VIA1_o}} {
+    error "minimum-area helper modified a target VIA1_o landing"
+}
+
+set fh [open [dict get $minarea report] r]
+set minarea_text [read $fh]
+close $fh
+foreach expected {
+    {MANUAL_ECO_MODE=EXACT_TWO_VIA_LANDING_MIN_AREA_STUBS}
+    {TARGET_VIA_POLICY=u_core_n_57960:VIA1_o@363.72,358.12;u_core_n_57556:VIA1_o@385.56,328.44}
+    {REPAIR_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28}
+    {VIA_EDIT_POLICY=NO_VIAS_MODIFIED}
+    {PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED}
+    {PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED}
+    {PRE_DRC=2}
+    {PRE_SHORTS=0}
+    {POST_DRC=0}
+    {POST_SHORTS=0}
+    {MANUAL_ECO_STATUS=PASS}
+} {
+    if {[string first $expected $minarea_text] < 0} {
+        error "minimum-area helper report is missing $expected"
+    }
+}
+set route_start_count 0
+set route_commit_count 0
+foreach call $::mptdc_test_manual_command_calls {
+    if {[lindex $call 0] eq "editAddRoute"} {
+        incr route_start_count
+    }
+    if {[lindex $call 0] eq "editCommitRoute"} {
+        incr route_commit_count
+    }
+    if {[lindex $call 0] in {editDelete editAddVia routeDesign globalDetailRoute detailRoute ecoRoute createRouteBlk editPowerVia}} {
+        error "minimum-area helper invoked a prohibited command: $call"
+    }
+}
+if {$route_start_count != 2 || $route_commit_count != 2} {
+    error "minimum-area helper expected two bounded wire starts/commits, found $route_start_count/$route_commit_count"
 }
 set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir
