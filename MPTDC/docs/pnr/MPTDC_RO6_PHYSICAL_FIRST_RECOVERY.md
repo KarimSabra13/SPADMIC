@@ -92,15 +92,15 @@ The reported final 5 DRCs and 3 shorts include the still-active two-layer
 blockage and are not five canonical route defects. Do not restore the v3 output
 checkpoint and do not rerun or enlarge any of its keepouts.
 
-The helper now verifies one created blockage object per requested layer and can
-delete all same-name layer objects, but that correction is diagnostic tooling,
-not permission to retry v3. The active next step is one read-only probe of the
-original `20260824_154115_mptdc_bufftap0_pnrlef35_physical` failed-route
-checkpoint. It records exact endpoint instances and pins, pin shapes, regular
-wire/via objects, nearby VDD/VSS special-wire shapes, and the installed Innovus
-command help and DB schemas. It makes no route edit. The published probe will
-be used to write one explicit manual geometry ECO instead of another router
-trial.
+The published read-only probe
+`20260824_171645_mptdc_bufftap0_route_geometry_probe` preserved that original
+checkpoint tuple exactly and exposed the two conflicting signal via stacks,
+the minimum-area landing, and the nearby VDD/VSS shapes. Its pin-geometry query
+used the wrong DB path (`instTerm.term` instead of `instTerm.cellTerm`), which is
+now corrected, but the wire/via/PG evidence required for repair is complete.
+The active next step is the exact manual V4 geometry ECO from the original
+failed-route checkpoint. It moves only those two via stacks and adds only the
+three local wire extensions; no PG geometry or placement is modified.
 
 ## Acceptance Order
 
@@ -114,14 +114,12 @@ trial.
    access windows, no unexpected pin windows, and at least one OBS trim.
 4. Run a fresh physical-first PnR with that exact LEF. The completed replay
    reduced the route debt to the exact three-marker class recorded above.
-5. Restore its failed-route checkpoint once in a fresh process and run the
-   read-only three-net geometry probe. Require the initial and final tuples to
-   remain exactly 3 DRC, 1 short, regular connectivity 0, special raw bad 1
-   with 12 classified tails, and exactly two tap pins. This is evidence only.
-6. Review the published pin/wire/via/PG geometry and installed command syntax,
-   then apply one explicit manual geometry ECO from the original checkpoint.
-   Require final DRC 0, shorts 0, regular connectivity 0, and exactly two tap
-   pins before considering any PG-tail repair.
+5. The completed read-only three-net geometry probe preserved exactly 3 DRC,
+   1 short, regular connectivity 0, special raw bad 1 with 12 classified tails,
+   and exactly two tap pins.
+6. Apply the exact V4 manual geometry ECO from the original checkpoint. Require
+   final DRC 0, shorts 0, regular connectivity 0, non-RO special failures 0,
+   and exactly two tap pins before considering any PG-tail repair.
 7. Confirm ordinary signal top is MET3, NanoRoute command top is METTP, the
    temporary METTP blockage was created and removed, and both tap pins exist.
 8. Require raw special connectivity zero. A geometry-clean result with only
@@ -331,20 +329,40 @@ The completed result is intentionally `DECISION=FAIL_STOP`: DRC is 3, shorts are
 1, regular connectivity is 0, and special connectivity contains 12 dangling
 tails. Its failed-route checkpoint is the source for the active command below.
 
-#### 2B. Current Next Command: Read-Only Route Geometry Probe
+#### 2B. Completed Read-Only Route Geometry Probe
 
-Run this block once. It refuses any source other than the tracked exact
-three-marker signature and restores the original failed-route checkpoint once
-in a fresh Innovus process. The only supplied command is the read-only
-`mptdc_ckpt_probe_target_geometry` helper. It records endpoint cells and pins,
-pin shapes, regular wire/via objects, nearby VDD/VSS special-wire shapes, and
-the installed command help and DB schemas. It does not delete or create routing,
-change preferred layers, create blockages, move cells, waive DRC, or launch PVS.
+Do not rerun the old probe. Its published run is
+`20260824_171645_mptdc_bufftap0_route_geometry_probe` at commit
+`708ac835cbb0682c6e7cc0e78b27b61c6afbc118`. The Innovus process returned zero
+and preserved the source tuple exactly: DRC 3, shorts 1, regular connectivity
+0, RO-only special connectivity 12, and exactly two tap observability pins.
 
-The driver verifies that the full initial/final physical tuple is unchanged,
-writes `operator_gate_route_geometry_probe.rpt`, publishes the bounded evidence
-automatically, and returns to the SSH prompt. `DECISION=PASS_CONTINUE` means the
-probe evidence is complete enough for review; it does not mean route closure.
+The operator probe gate failed because the original query followed
+`instTerm.term`; the captured Innovus schema identifies the library terminal as
+`instTerm.cellTerm`. The probe helper now uses that schema. This diagnostic
+query error did not alter the checkpoint and does not require another probe
+before the bounded repair because the published wire, via, marker, and nearby
+PG geometry already identifies all three edits:
+
+- `u_core_n_66687`: the VIA1/VIA2 stack at `(220.64,179.48)` intersects the VSS
+  MET2 trunk. Move only that stack to `(221.20,179.48)` and extend MET1 to it.
+- `u_core_n_67240`: the VIA1/VIA2 stack at `(219.80,224.14)` has only 0.02 um
+  clearance from the VDD MET2 trunk, where 0.28 um is required. Move only that
+  stack to `(221.20,224.28)` and add the local MET1/MET3 connection.
+- `u_core_n_57563`: extend the MET1 landing from `(364.84,328.44)` to
+  `(365.40,328.44)` at width 0.28 um to satisfy minimum area.
+
+No PG shape, cell placement, broad router command, route blockage, waiver, or
+prior v1/v2/v3 repaired checkpoint is part of this repair.
+
+#### 2C. Current Next Command: Exact Manual Geometry Repair V4
+
+Run this block once in the foreground. It always restores the original
+`20260824_154115_mptdc_bufftap0_pnrlef35_physical` failed-route checkpoint in a
+fresh Innovus process. The driver verifies the tracked five-row marker signature
+before launch, applies only the three edits listed above, reruns DRC and both
+connectivity checks, saves a new checkpoint, and publishes all bounded evidence
+to `origin/SPADMIC_test` even when the gate fails.
 
 ```bash
 set +e
@@ -352,84 +370,91 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260824_154115_mptdc_bufftap0_pnrlef35_physical
 TAG=$(date +%Y%m%d_%H%M%S)
-PROBE_RUN=${TAG}_mptdc_bufftap0_route_geometry_probe
-PROBE_DIR=/sim/ksabra/SPADMIC_work/innovus/$PROBE_RUN
-DRIVER_LOG=/tmp/${PROBE_RUN}.driver.log
+REPAIR_RUN=${TAG}_mptdc_bufftap0_manual_geometry_repair_v4
+REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
+DRIVER_LOG=/tmp/${REPAIR_RUN}.driver.log
 
 SYNC_RC=99
-PROBE_DRIVER_RC=99
+REPAIR_DRIVER_RC=99
 REPO_READY=0
+HEAD_NOW=UNKNOWN
+ORIGIN_HEAD=UNKNOWN
+TRACKED_STATUS=UNKNOWN
 
 if [ -d "$REPO/.git" ]; then
   cd "$REPO"
   git checkout SPADMIC_test
   git pull --ff-only origin SPADMIC_test
   SYNC_RC=$?
-  [ "$SYNC_RC" -eq 0 ] && REPO_READY=1
+  HEAD_NOW="$(git rev-parse HEAD 2>/dev/null)"
+  ORIGIN_HEAD="$(git rev-parse refs/remotes/origin/SPADMIC_test 2>/dev/null)"
+  TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+  if [ "$SYNC_RC" -eq 0 ] && [ -n "$HEAD_NOW" ] && \
+     [ "$HEAD_NOW" = "$ORIGIN_HEAD" ] && [ -z "$TRACKED_STATUS" ]; then
+    REPO_READY=1
+  else
+    echo "STOP: sync, HEAD, or tracked-tree gate failed"
+    [ -n "$TRACKED_STATUS" ] && printf '%s\n' "$TRACKED_STATUS"
+  fi
 else
   echo "STOP: repository missing: $REPO"
 fi
 
-EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
-TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+EXPECTED_HEAD="$HEAD_NOW"
 
-if [ "$REPO_READY" -eq 1 ] && [ -z "$TRACKED_STATUS" ]; then
+if [ "$REPO_READY" -eq 1 ]; then
   bash MPTDC/pnr/scripts/server_run_mptdc_ro6_recovery_stage.sh \
-    --stage route-geometry-probe \
-    --run-id "$PROBE_RUN" \
+    --stage route-geometry-repair \
+    --run-id "$REPAIR_RUN" \
     --source-pnr-run-id "$SOURCE_PNR_RUN" \
     --expected-head "$EXPECTED_HEAD" \
     2>&1 | tee "$DRIVER_LOG"
-  PROBE_DRIVER_RC=${PIPESTATUS[0]}
+  REPAIR_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: sync or tracked-tree gate failed"
-  [ -n "$TRACKED_STATUS" ] && printf '%s\n' "$TRACKED_STATUS"
+  echo "STOP: V4 repair was not launched"
 fi
 
 echo "===== SEND BACK ====="
 echo "SYNC_RC=$SYNC_RC"
 echo "SOURCE_PNR_RUN=$SOURCE_PNR_RUN"
-echo "PROBE_RUN=$PROBE_RUN"
-echo "PROBE_DRIVER_RC=$PROBE_DRIVER_RC"
+echo "REPAIR_RUN=$REPAIR_RUN"
+echo "REPAIR_DRIVER_RC=$REPAIR_DRIVER_RC"
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
-grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PROBE_RUN_ID)=' \
+grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_REPAIR_RUN_ID|NEXT_REQUIRED_PNR_RUN_ID)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -20
-cat "$PROBE_DIR/reports/operator_gate_route_geometry_probe.rpt" 2>/dev/null
+cat "$REPAIR_DIR/reports/operator_gate_route_geometry_repair.rpt" 2>/dev/null
+cat "$REPAIR_DIR/reports/manual_geometry_eco_v4.rpt" 2>/dev/null
 ```
 
-The probe step passes only when fresh Innovus evidence reports:
+The repair passes the geometry stage only when the reports show all of the
+following:
 
 ```text
+TOOL_RC=0
+MANUAL_ECO_STATUS=PASS
 INITIAL_DRC=3
 INITIAL_SHORTS=1
 INITIAL_REGULAR_CONNECTIVITY_BAD=0
-INITIAL_SPECIAL_DANGLING_COUNT=12
-FINAL_DRC=3
-FINAL_SHORTS=1
+INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_DRC=0
+FINAL_SHORTS=0
 FINAL_REGULAR_CONNECTIVITY_BAD=0
-FINAL_SPECIAL_DANGLING_COUNT=12
-PROBE_STATUS=PASS
-TARGET_NET_COUNT=3
-TARGET_NET_WITH_INSTTERMS_COUNT=3
-TARGET_NET_WITH_PIN_GEOMETRY_COUNT=3
-NEARBY_PG_SHAPE_COUNT=<positive integer>
-HELP_CAPTURE_STATUS=PASS
-SCHEMA_CAPTURE_STATUS=PASS
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 FINAL_CHECKPOINT_DAT_EXISTS=1
 RO_TAP_OBSERVABILITY_PIN_COUNT=2
-PROBE_GATE_MODE=READ_ONLY_BASELINE_PRESERVED
 DECISION=PASS_CONTINUE
 PUBLISH_RC=0
-NEXT_STAGE=REVIEW_ROUTE_GEOMETRY_PROBE
 ```
 
-After publication, stop and send only the `SEND BACK` block. The pushed snapshot
-contains the detailed reports, so no large log paste is needed. The next command
-will be written only after those exact objects and installed Innovus command
-forms are reviewed. Do not use any v1/v2/v3 repaired checkpoint, and do not
-continue to PVS or GDS from this probe.
+`NEXT_STAGE=PVS` means the full route gate is clean.
+`NEXT_STAGE=PG_DANGLING_REPAIR_REVIEW` means geometry and regular connectivity
+are clean but the unchanged bounded RO-only PG tails still need a separate
+decision. In both cases, stop and send only the `SEND BACK` block so the pushed
+snapshot can be reviewed before any PVS or GDS command. On `FAIL_STOP`, do not
+retry from the generated checkpoint; the automatically published failure
+snapshot is the next input to analysis.
 
-#### 2C. Completed PnR-LEF Generation Reference
+#### 2D. Completed PnR-LEF Generation Reference
 
 Do not rerun this block while the exact generated LEF and summary above remain
 readable. It is retained only to reproduce the file if server scratch storage

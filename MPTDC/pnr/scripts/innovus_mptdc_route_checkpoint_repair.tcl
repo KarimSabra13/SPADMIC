@@ -467,26 +467,24 @@ proc mptdc_ckpt_probe_target_geometry {nets} {
             mptdc_ckpt_probe_handle $fh "TARGET_${token}_INSTTERM_${term_idx}" $term {
                 {NAME name}
                 {NET_NAME net.name}
+                {PT pt}
+                {LAYER layer.name}
                 {INST_NAME inst.name}
                 {INST_CELL inst.cell.name}
                 {INST_ORIENT inst.orient}
                 {INST_PT inst.pt}
                 {INST_BOX inst.box}
-                {TERM_NAME term.name}
+                {CELLTERM_NAME cellTerm.name}
+                {EFFECTIVE_STACK_VIA effectiveStackVia}
+                {STACK_VIA_REQUIRED stackViaRequired}
+                {STACK_VIA_RULE_REQUIRED stackViaRuleRequired}
+                {STACK_VIA_RULE stackViaRule.name}
             }
             set term_has_pin_geometry 0
             foreach spec {
-                {PIN_LAYERS pins.allShapes.layer.name 0}
-                {PIN_SHAPE_BOXES pins.allShapes.shapes.box 1}
-                {PIN_BOXES pins.allShapes.box 1}
-                {PIN_SHAPE_RECTS pins.allShapes.shapes.rect 1}
-                {PIN_RECTS pins.allShapes.rect 1}
-                {SINGLE_PIN_LAYERS pin.allShapes.layer.name 0}
-                {SINGLE_PIN_BOXES pin.allShapes.shapes.box 1}
-                {DIRECT_SHAPE_LAYERS allShapes.layer.name 0}
-                {DIRECT_SHAPE_BOXES allShapes.shapes.box 1}
-                {LIBTERM_PIN_LAYERS term.pins.allShapes.layer.name 0}
-                {LIBTERM_PIN_BOXES term.pins.allShapes.shapes.box 1}
+                {CELLTERM_PIN_LAYERS cellTerm.pins.allShapes.layer.name 0}
+                {CELLTERM_PIN_RECTS cellTerm.pins.layerShapeShapes.shapes.rect 1}
+                {CELLTERM_PIN_POLYGONS cellTerm.pins.layerShapeShapes.shapes.polyPts 1}
             } {
                 lassign $spec key attribute is_geometry
                 set result [mptdc_ckpt_probe_dbget $fh \
@@ -532,11 +530,11 @@ proc mptdc_ckpt_probe_target_geometry {nets} {
                     {NET_NAME net.name}
                     {VIA_NAME via.name}
                     {PT pt}
-                    {BOX box}
+                    {BOTTOM_RECTS botRects}
+                    {CUT_RECTS cutRects}
+                    {TOP_RECTS topRects}
                     {STATUS status}
-                    {BOTTOM_LAYER bottomLayer.name}
-                    {TOP_LAYER topLayer.name}
-                    {ORIENT orient}
+                    {RULE rule.name}
                 }
             }
             set route_idx 0
@@ -611,8 +609,8 @@ proc mptdc_ckpt_probe_target_geometry {nets} {
     set help_fail_count 0
     foreach command_name {
         dbCreateWire dbCreateVia editAddRoute editCommitRoute editAddVia
-        setViaEdit editDelete setAttribute create_route_rule
-        set_route_attributes routeDesign dbQuery
+        setViaEdit setEdit setEditMode uiSetTool editDelete setAttribute
+        create_route_rule set_route_attributes routeDesign dbQuery
     } {
         set safe [mptdc_ckpt_sanitize $command_name]
         set path [file join $report_dir "help_${safe}.rpt"]
@@ -676,6 +674,327 @@ proc mptdc_ckpt_probe_target_geometry {nets} {
     }
     puts "MPTDC_CKPT_ROUTE_GEOMETRY_PROBE_REPORT=$probe_rpt"
     return [dict create status PASS report $probe_rpt]
+}
+
+proc mptdc_ckpt_manual_flat_point {value} {
+    while {[llength $value] == 1} {
+        set nested [lindex $value 0]
+        if {$nested eq $value} {
+            return {}
+        }
+        set value $nested
+    }
+    if {[llength $value] < 2} {
+        return {}
+    }
+    return [lrange $value 0 1]
+}
+
+proc mptdc_ckpt_manual_close {lhs rhs {tolerance 0.001}} {
+    if {![string is double -strict $lhs] || ![string is double -strict $rhs]} {
+        return 0
+    }
+    return [expr {abs(double($lhs) - double($rhs)) <= $tolerance}]
+}
+
+proc mptdc_ckpt_manual_point_equal {lhs rhs {tolerance 0.001}} {
+    set lhs [mptdc_ckpt_manual_flat_point $lhs]
+    set rhs [mptdc_ckpt_manual_flat_point $rhs]
+    if {[llength $lhs] != 2 || [llength $rhs] != 2} {
+        return 0
+    }
+    return [expr {
+        [mptdc_ckpt_manual_close [lindex $lhs 0] [lindex $rhs 0] $tolerance] &&
+        [mptdc_ckpt_manual_close [lindex $lhs 1] [lindex $rhs 1] $tolerance]
+    }]
+}
+
+proc mptdc_ckpt_manual_net_handle {net} {
+    set handles {}
+    if {[catch {set handles [mptdc_ckpt_probe_valid_handles [dbGet -e top.nets.name $net -p]]} err]} {
+        error "failed to query net $net: $err"
+    }
+    if {[llength $handles] != 1} {
+        error "expected one net handle for $net, found [llength $handles]"
+    }
+    return [lindex $handles 0]
+}
+
+proc mptdc_ckpt_manual_vias_at {net point} {
+    set nh [mptdc_ckpt_manual_net_handle $net]
+    set rows {}
+    foreach handle [mptdc_ckpt_probe_valid_handles [dbGet ${nh}.vias]] {
+        set actual_point [mptdc_ckpt_manual_flat_point [dbGet ${handle}.pt]]
+        if {![mptdc_ckpt_manual_point_equal $actual_point $point]} {
+            continue
+        }
+        set via_name [lindex [dbGet ${handle}.via.name] 0]
+        lappend rows [dict create handle $handle name $via_name point $actual_point]
+    }
+    return $rows
+}
+
+proc mptdc_ckpt_manual_wire_rows {net} {
+    set nh [mptdc_ckpt_manual_net_handle $net]
+    set rows {}
+    foreach handle [mptdc_ckpt_probe_valid_handles [dbGet ${nh}.wires]] {
+        set layer [lindex [dbGet ${handle}.layer.name] 0]
+        set box [mptdc_signoff_flat_box [dbGet ${handle}.box]]
+        set width [lindex [dbGet ${handle}.width] 0]
+        set pts [dbGet ${handle}.pts]
+        lappend rows [dict create handle $handle layer $layer box $box width $width pts $pts]
+    }
+    return $rows
+}
+
+proc mptdc_ckpt_manual_wire_covers_point {net layer point} {
+    set point [mptdc_ckpt_manual_flat_point $point]
+    if {[llength $point] != 2} {
+        return 0
+    }
+    lassign $point x y
+    foreach row [mptdc_ckpt_manual_wire_rows $net] {
+        if {[dict get $row layer] ne $layer} {
+            continue
+        }
+        set box [dict get $row box]
+        if {[mptdc_signoff_box_valid $box] &&
+            $x >= [lindex $box 0] && $x <= [lindex $box 2] &&
+            $y >= [lindex $box 1] && $y <= [lindex $box 3]} {
+            return 1
+        }
+    }
+    return 0
+}
+
+proc mptdc_ckpt_manual_log_command {fh label command} {
+    puts $fh "${label}_COMMAND=$command"
+    flush $fh
+    if {[catch {set result [uplevel #0 $command]} err opts]} {
+        puts $fh "${label}_STATUS=FAIL"
+        puts $fh "${label}_ERROR=[mptdc_signoff_report_value $err]"
+        flush $fh
+        return -options $opts $err
+    }
+    puts $fh "${label}_STATUS=PASS"
+    puts $fh "${label}_RESULT=[mptdc_signoff_report_value $result]"
+    flush $fh
+    return $result
+}
+
+proc mptdc_ckpt_manual_delete_via_stack {fh label net point expected_names} {
+    set rows [mptdc_ckpt_manual_vias_at $net $point]
+    set names {}
+    foreach row $rows {
+        lappend names [dict get $row name]
+    }
+    puts $fh "${label}_PRE_VIA_NAMES=[join [lsort $names] ,]"
+    if {[lsort $names] ne [lsort $expected_names]} {
+        error "$label expected via names $expected_names at $point, found $names"
+    }
+    lassign $point x y
+    set area [list \
+        [expr {$x - 0.01}] [expr {$y - 0.01}] \
+        [expr {$x + 0.01}] [expr {$y + 0.01}]]
+    mptdc_ckpt_manual_log_command $fh "${label}_DELETE" \
+        [list editDelete -net $net -area $area -type Regular -object_type Via]
+    set remaining [mptdc_ckpt_manual_vias_at $net $point]
+    puts $fh "${label}_POST_DELETE_VIA_COUNT=[llength $remaining]"
+    if {[llength $remaining] != 0} {
+        error "$label failed to delete the exact via stack at $point"
+    }
+}
+
+proc mptdc_ckpt_manual_add_wire_path {fh label net layer width points} {
+    if {[llength $points] < 2} {
+        error "$label requires at least two route points"
+    }
+    set setup [list setEditMode \
+        -nets $net \
+        -shape None \
+        -force_regular 1 \
+        -layer_horizontal $layer \
+        -layer_vertical $layer \
+        -snap_to_track_regular 0 \
+        -width_horizontal $width \
+        -width_vertical $width]
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_EDIT_MODE" $setup
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_TOOL" {uiSetTool addWire}
+    set start [lindex $points 0]
+    mptdc_ckpt_manual_log_command $fh "${label}_START" \
+        [list editAddRoute {*}$start]
+    set point_idx 0
+    foreach point [lrange $points 1 end-1] {
+        incr point_idx
+        mptdc_ckpt_manual_log_command $fh "${label}_CORNER_${point_idx}" \
+            [list editAddRoute {*}$point]
+    }
+    set finish [lindex $points end]
+    mptdc_ckpt_manual_log_command $fh "${label}_COMMIT" \
+        [list editCommitRoute {*}$finish]
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+}
+
+proc mptdc_ckpt_manual_via_name_classes {rows} {
+    set via1 0
+    set via2 0
+    foreach row $rows {
+        set name [dict get $row name]
+        if {[string match "VIA1*" $name]} {
+            incr via1
+        }
+        if {[string match "VIA2*" $name]} {
+            incr via2
+        }
+    }
+    return [list $via1 $via2]
+}
+
+proc mptdc_ckpt_manual_add_via_stack {fh label net point} {
+    if {[llength [mptdc_ckpt_manual_vias_at $net $point]] != 0} {
+        error "$label expected no existing vias at the new point $point"
+    }
+    foreach spec {
+        {MET1 MET2 MET1 MET2}
+        {MET2 MET3 MET3 MET2}
+    } {
+        lassign $spec lower upper horizontal vertical
+        set setup [list setEditMode \
+            -nets $net \
+            -shape None \
+            -force_regular 1 \
+            -layer_horizontal $horizontal \
+            -layer_vertical $vertical \
+            -snap_to_track_regular 0 \
+            -width_horizontal 0.28 \
+            -width_vertical 0.28]
+        mptdc_ckpt_manual_log_command $fh "${label}_${lower}_${upper}_SET_EDIT_MODE" $setup
+        mptdc_ckpt_manual_log_command $fh "${label}_${lower}_${upper}_SET_TOOL" {uiSetTool addWire}
+        mptdc_ckpt_manual_log_command $fh "${label}_${lower}_${upper}_ADD_VIA" \
+            [list editAddVia {*}$point]
+        set rows [mptdc_ckpt_manual_vias_at $net $point]
+        lassign [mptdc_ckpt_manual_via_name_classes $rows] via1_count via2_count
+        puts $fh "${label}_${lower}_${upper}_VIA_COUNT=[llength $rows]"
+        puts $fh "${label}_${lower}_${upper}_VIA1_COUNT=$via1_count"
+        puts $fh "${label}_${lower}_${upper}_VIA2_COUNT=$via2_count"
+        if {$via1_count == 1 && $via2_count == 1 && [llength $rows] == 2} {
+            break
+        }
+    }
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+    set rows [mptdc_ckpt_manual_vias_at $net $point]
+    lassign [mptdc_ckpt_manual_via_name_classes $rows] via1_count via2_count
+    set names {}
+    foreach row $rows {
+        lappend names [dict get $row name]
+    }
+    puts $fh "${label}_FINAL_VIA_NAMES=[join [lsort $names] ,]"
+    if {[llength $rows] != 2 || $via1_count != 1 || $via2_count != 1} {
+        error "$label expected one VIA1 and one VIA2 at $point, found $names"
+    }
+}
+
+proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
+    set report_dir [mptdc_signoff_report_dir]
+    set report [file join $report_dir manual_geometry_eco_v4.rpt]
+    set fh [open $report w]
+    puts $fh "# MPTDC Exact Three-Marker Manual Geometry ECO V4"
+    puts $fh "MANUAL_ECO_MODE=EXACT_VIA_ESCAPE_AND_MIN_AREA_PATCH"
+    puts $fh "SOURCE_BASELINE=DRC_3_SHORTS_1_REGULAR_0_SPECIAL_NON_RO_0"
+    puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
+    puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
+    puts $fh "TARGET_NETS=u_core_n_66687,u_core_n_67240,u_core_n_57563"
+
+    set body_status [catch {
+        set baseline [mptdc_ckpt_verify_snapshot manual_v4_pre]
+        puts $fh "PRE_DRC=[dict get $baseline total_violations]"
+        puts $fh "PRE_SHORTS=[dict get $baseline shorts]"
+        puts $fh "PRE_REGULAR_CONNECTIVITY_BAD=[dict get $baseline regular_bad]"
+        puts $fh "PRE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[dict get $baseline special_non_ro_failures]"
+        if {[dict get $baseline total_violations] != 3 ||
+            [dict get $baseline shorts] != 1 ||
+            [dict get $baseline regular_bad] != 0 ||
+            [dict get $baseline special_non_ro_failures] != 0} {
+            error "manual V4 source baseline mismatch"
+        }
+
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {220.64 179.48}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {221.20 179.48}]} {
+            error "u_core_n_66687 source/target wire anchors do not match the probe"
+        }
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {220.92 224.28}]} {
+            error "u_core_n_67240 MET3 anchor does not match the probe"
+        }
+
+        mptdc_ckpt_manual_delete_via_stack $fh N66687_OLD_STACK \
+            u_core_n_66687 {220.64 179.48} {VIA1_o VIA2_o}
+        mptdc_ckpt_manual_add_wire_path $fh N66687_MET1_ESCAPE \
+            u_core_n_66687 MET1 0.23 {{220.64 179.48} {221.20 179.48}}
+        mptdc_ckpt_manual_add_via_stack $fh N66687_NEW_STACK \
+            u_core_n_66687 {221.20 179.48}
+
+        mptdc_ckpt_manual_delete_via_stack $fh N67240_OLD_STACK \
+            u_core_n_67240 {219.80 224.14} {VIA1_Y_so VIA2_so}
+        mptdc_ckpt_manual_add_wire_path $fh N67240_MET1_ESCAPE \
+            u_core_n_67240 MET1 0.23 \
+            {{219.80 224.14} {221.20 224.14} {221.20 224.28}}
+        mptdc_ckpt_manual_add_wire_path $fh N67240_MET3_BRIDGE \
+            u_core_n_67240 MET3 0.28 {{220.92 224.28} {221.20 224.28}}
+        mptdc_ckpt_manual_add_via_stack $fh N67240_NEW_STACK \
+            u_core_n_67240 {221.20 224.28}
+
+        set min_area_vias [mptdc_ckpt_manual_vias_at u_core_n_57563 {364.84 328.44}]
+        set min_area_names {}
+        foreach row $min_area_vias {
+            lappend min_area_names [dict get $row name]
+        }
+        puts $fh "N57563_LANDING_VIA_NAMES=[join [lsort $min_area_names] ,]"
+        if {[lsort $min_area_names] ne {VIA1_X_so}} {
+            error "u_core_n_57563 landing via does not match the probe: $min_area_names"
+        }
+        mptdc_ckpt_manual_add_wire_path $fh N57563_MET1_LANDING_PATCH \
+            u_core_n_57563 MET1 0.28 {{364.84 328.44} {365.40 328.44}}
+
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET1 {221.20 179.48}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_66687 MET3 {221.20 179.48}]} {
+            error "u_core_n_66687 manual via escape did not materialize"
+        }
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET1 {221.20 224.28}] ||
+            ![mptdc_ckpt_manual_wire_covers_point u_core_n_67240 MET3 {221.20 224.28}]} {
+            error "u_core_n_67240 manual via escape did not materialize"
+        }
+        if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57563 MET1 {365.12 328.44}]} {
+            error "u_core_n_57563 MET1 landing patch did not materialize"
+        }
+
+        set final [mptdc_ckpt_verify_snapshot manual_v4_post]
+        puts $fh "POST_DRC=[dict get $final total_violations]"
+        puts $fh "POST_SHORTS=[dict get $final shorts]"
+        puts $fh "POST_REGULAR_CONNECTIVITY_BAD=[dict get $final regular_bad]"
+        puts $fh "POST_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[dict get $final special_non_ro_failures]"
+        if {[dict get $final total_violations] != 0 ||
+            [dict get $final shorts] != 0 ||
+            [dict get $final regular_bad] != 0 ||
+            [dict get $final special_non_ro_failures] != 0} {
+            error "manual V4 final physical gate failed"
+        }
+    } body_error body_opts]
+
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+    if {$body_status} {
+        puts $fh "MANUAL_ECO_STATUS=FAIL"
+        puts $fh "MANUAL_ECO_ERROR=[mptdc_signoff_report_value $body_error]"
+        close $fh
+        return -options $body_opts $body_error
+    }
+    puts $fh "MANUAL_ECO_STATUS=PASS"
+    puts $fh "MANUAL_ECO_REPORT=$report"
+    close $fh
+    puts "MPTDC_CKPT_MANUAL_GEOMETRY_ECO_V4_REPORT=$report"
+    return [dict create status PASS report $report]
 }
 
 proc mptdc_ckpt_route_selected_nets_with_commands {nets route_commands route_label} {

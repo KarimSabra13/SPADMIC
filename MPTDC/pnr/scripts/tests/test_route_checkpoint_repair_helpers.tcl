@@ -9,6 +9,15 @@ set ::mptdc_test_route_blockages {}
 set ::mptdc_test_create_route_blockage_calls {}
 set ::mptdc_test_delete_route_blockage_calls {}
 set ::mptdc_test_probe_mode 0
+set ::mptdc_test_manual_mode 0
+set ::mptdc_test_manual_vias {}
+set ::mptdc_test_manual_wires {}
+set ::mptdc_test_manual_edit_net ""
+set ::mptdc_test_manual_edit_horizontal ""
+set ::mptdc_test_manual_edit_vertical ""
+set ::mptdc_test_manual_edit_width 0.28
+set ::mptdc_test_manual_route_points {}
+set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_report_dir [file join [file dirname [file normalize [info script]]] .probe_fixture_reports]
 
 proc mptdc_signoff_report_dir {} {
@@ -80,6 +89,54 @@ proc setAttribute {args} {
 }
 
 proc dbGet {args} {
+    if {$::mptdc_test_manual_mode} {
+        if {[llength $args] == 4 && [lindex $args 0] eq "-e" &&
+            [lindex $args 1] eq "top.nets.name" && [lindex $args 3] eq "-p"} {
+            return [list "net:[lindex $args 2]"]
+        }
+        set expression [lindex $args 0]
+        if {[regexp {^net:(.+)\.vias$} $expression -> net]} {
+            set handles {}
+            set idx 0
+            foreach row $::mptdc_test_manual_vias {
+                if {[dict get $row net] eq $net} {
+                    lappend handles "mvia:$idx"
+                }
+                incr idx
+            }
+            return $handles
+        }
+        if {[regexp {^net:(.+)\.wires$} $expression -> net]} {
+            set handles {}
+            set idx 0
+            foreach row $::mptdc_test_manual_wires {
+                if {[dict get $row net] eq $net} {
+                    lappend handles "mwire:$idx"
+                }
+                incr idx
+            }
+            return $handles
+        }
+        if {[regexp {^mvia:([0-9]+)\.(.+)$} $expression -> idx attribute]} {
+            set row [lindex $::mptdc_test_manual_vias $idx]
+            switch -- $attribute {
+                pt { return [dict get $row point] }
+                via.name { return [dict get $row name] }
+                default { return 0x0 }
+            }
+        }
+        if {[regexp {^mwire:([0-9]+)\.(.+)$} $expression -> idx attribute]} {
+            set row [lindex $::mptdc_test_manual_wires $idx]
+            switch -- $attribute {
+                layer.name { return [dict get $row layer] }
+                box { return [dict get $row box] }
+                width { return [dict get $row width] }
+                pts { return [dict get $row points] }
+                default { return 0x0 }
+            }
+        }
+        return 0x0
+    }
     if {$::mptdc_test_probe_mode} {
         if {[llength $args] == 4 && [lindex $args 0] eq "-e" &&
             [lindex $args 1] eq "top.nets.name" && [lindex $args 3] eq "-p"} {
@@ -176,7 +233,104 @@ proc deleteRouteBlk {args} {
     lappend ::mptdc_test_delete_route_blockage_calls $args
 }
 
+proc setEditMode {args} {
+    lappend ::mptdc_test_manual_command_calls [linsert $args 0 setEditMode]
+    if {[lsearch -exact $args -reset] >= 0} {
+        set ::mptdc_test_manual_edit_net ""
+        set ::mptdc_test_manual_edit_horizontal ""
+        set ::mptdc_test_manual_edit_vertical ""
+        set ::mptdc_test_manual_route_points {}
+        return
+    }
+    foreach spec {
+        {-nets mptdc_test_manual_edit_net}
+        {-layer_horizontal mptdc_test_manual_edit_horizontal}
+        {-layer_vertical mptdc_test_manual_edit_vertical}
+        {-width_horizontal mptdc_test_manual_edit_width}
+    } {
+        lassign $spec option variable
+        set idx [lsearch -exact $args $option]
+        if {$idx >= 0} {
+            set ::$variable [lindex $args [expr {$idx + 1}]]
+        }
+    }
+}
+
+proc uiSetTool {tool} {
+    lappend ::mptdc_test_manual_command_calls [list uiSetTool $tool]
+}
+
+proc editDelete {args} {
+    lappend ::mptdc_test_manual_command_calls [linsert $args 0 editDelete]
+    set object_idx [lsearch -exact $args -object_type]
+    if {$object_idx < 0 || [lindex $args [expr {$object_idx + 1}]] ne "Via"} {
+        error "manual fixture supports exact via deletion only"
+    }
+    set net_idx [lsearch -exact $args -net]
+    set area_idx [lsearch -exact $args -area]
+    set net [lindex $args [expr {$net_idx + 1}]]
+    set area [lindex $args [expr {$area_idx + 1}]]
+    lassign $area llx lly urx ury
+    set retained {}
+    foreach row $::mptdc_test_manual_vias {
+        lassign [dict get $row point] x y
+        if {[dict get $row net] eq $net &&
+            $x >= $llx && $x <= $urx && $y >= $lly && $y <= $ury} {
+            continue
+        }
+        lappend retained $row
+    }
+    set ::mptdc_test_manual_vias $retained
+}
+
+proc editAddRoute {x y} {
+    lappend ::mptdc_test_manual_command_calls [list editAddRoute $x $y]
+    lappend ::mptdc_test_manual_route_points [list $x $y]
+}
+
+proc editCommitRoute {x y} {
+    lappend ::mptdc_test_manual_command_calls [list editCommitRoute $x $y]
+    lappend ::mptdc_test_manual_route_points [list $x $y]
+    set xs {}
+    set ys {}
+    foreach point $::mptdc_test_manual_route_points {
+        lappend xs [lindex $point 0]
+        lappend ys [lindex $point 1]
+    }
+    set half [expr {$::mptdc_test_manual_edit_width / 2.0}]
+    set sorted_xs [lsort -real $xs]
+    set sorted_ys [lsort -real $ys]
+    set box [list \
+        [expr {[lindex $sorted_xs 0] - $half}] \
+        [expr {[lindex $sorted_ys 0] - $half}] \
+        [expr {[lindex $sorted_xs end] + $half}] \
+        [expr {[lindex $sorted_ys end] + $half}]]
+    lappend ::mptdc_test_manual_wires [dict create \
+        net $::mptdc_test_manual_edit_net \
+        layer $::mptdc_test_manual_edit_horizontal \
+        box $box \
+        width $::mptdc_test_manual_edit_width \
+        points $::mptdc_test_manual_route_points]
+    set ::mptdc_test_manual_route_points {}
+}
+
+proc editAddVia {x y} {
+    lappend ::mptdc_test_manual_command_calls [list editAddVia $x $y]
+    set pair [list $::mptdc_test_manual_edit_horizontal $::mptdc_test_manual_edit_vertical]
+    switch -- $pair {
+        {MET1 MET2} { set name VIA1_MANUAL }
+        {MET3 MET2} { set name VIA2_MANUAL }
+        default { error "unsupported manual fixture via pair: $pair" }
+    }
+    lappend ::mptdc_test_manual_vias [dict create \
+        net $::mptdc_test_manual_edit_net name $name point [list $x $y]]
+}
+
 source $helper
+
+if {[mptdc_ckpt_manual_flat_point 220.64] ne {}} {
+    error "manual point normalizer accepted a scalar coordinate"
+}
 
 set result [mptdc_ckpt_set_net_route_layers u_net_a MET3 MET3]
 if {[dict get $result bottom_layer] ne "MET3" || [dict get $result top_layer] ne "MET3"} {
@@ -247,7 +401,9 @@ foreach expected {
     {TARGET_WIRE_COUNT=3}
     {TARGET_VIA_COUNT=3}
     {NEARBY_PG_SHAPE_COUNT=2}
+    {HELP_CAPTURE_PASS_COUNT=15}
     {HELP_CAPTURE_STATUS=PASS}
+    {SCHEMA_CAPTURE_PASS_COUNT=7}
     {SCHEMA_CAPTURE_STATUS=PASS}
     {PROBE_STATUS=PASS}
 } {
@@ -255,11 +411,90 @@ foreach expected {
         error "geometry probe report is missing $expected"
     }
 }
+if {![regexp {CELLTERM_PIN_RECTS_COMMAND=dbGet .*\.cellTerm\.pins\.layerShapeShapes\.shapes\.rect} $probe_text] ||
+    [regexp {LIBTERM_PIN_.*_COMMAND=dbGet .*\.term\.pins} $probe_text] ||
+    ![regexp {BOTTOM_RECTS_COMMAND=dbGet .*\.botRects} $probe_text]} {
+    error "geometry probe did not use the captured instTerm/via schema paths"
+}
 if {![catch {mptdc_ckpt_probe_target_geometry {u_core_n_57563}} err] ||
     ![string match "*exact bounded target set*" $err]} {
     error "geometry probe target-set guard did not fail as expected: $err"
 }
 set ::mptdc_test_probe_mode 0
+
+set ::mptdc_test_manual_mode 1
+set ::mptdc_test_manual_vias [list \
+    [dict create net u_core_n_66687 name VIA1_o point {220.64 179.48}] \
+    [dict create net u_core_n_66687 name VIA2_o point {220.64 179.48}] \
+    [dict create net u_core_n_67240 name VIA1_Y_so point {219.80 224.14}] \
+    [dict create net u_core_n_67240 name VIA2_so point {219.80 224.14}] \
+    [dict create net u_core_n_57563 name VIA1_X_so point {364.84 328.44}]]
+set ::mptdc_test_manual_wires [list \
+    [dict create net u_core_n_66687 layer MET1 \
+        box {220.525 179.365 220.78 179.595} width 0.23 \
+        points {{220.64 179.48} {220.78 179.48}}] \
+    [dict create net u_core_n_66687 layer MET3 \
+        box {220.45 179.34 225.03 179.62} width 0.28 \
+        points {{220.64 179.48} {224.84 179.48}}] \
+    [dict create net u_core_n_67240 layer MET3 \
+        box {219.66 224.14 221.06 224.42} width 0.28 \
+        points {{219.80 224.28} {220.92 224.28}}]]
+set ::mptdc_test_manual_command_calls {}
+set ::mptdc_test_manual_verify_count 0
+proc mptdc_ckpt_verify_snapshot {tag} {
+    incr ::mptdc_test_manual_verify_count
+    if {$::mptdc_test_manual_verify_count == 1} {
+        return [dict create \
+            total_violations 3 shorts 1 regular_bad 0 \
+            special_non_ro_failures 0]
+    }
+    return [dict create \
+        total_violations 0 shorts 0 regular_bad 0 \
+        special_non_ro_failures 0]
+}
+set manual [mptdc_ckpt_manual_three_marker_eco_v4]
+if {[dict get $manual status] ne "PASS" || ![file exists [dict get $manual report]]} {
+    error "manual three-marker ECO helper did not pass: $manual"
+}
+if {[llength [mptdc_ckpt_manual_vias_at u_core_n_66687 {220.64 179.48}]] != 0 ||
+    [llength [mptdc_ckpt_manual_vias_at u_core_n_67240 {219.80 224.14}]] != 0} {
+    error "manual ECO retained an old offending via stack"
+}
+foreach spec {
+    {u_core_n_66687 {221.20 179.48}}
+    {u_core_n_67240 {221.20 224.28}}
+} {
+    lassign $spec net point
+    set rows [mptdc_ckpt_manual_vias_at $net $point]
+    lassign [mptdc_ckpt_manual_via_name_classes $rows] via1_count via2_count
+    if {[llength $rows] != 2 || $via1_count != 1 || $via2_count != 1} {
+        error "manual ECO did not create the expected stack for $net at $point: $rows"
+    }
+}
+if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57563 MET1 {365.12 328.44}]} {
+    error "manual ECO did not create the MET1 minimum-area landing patch"
+}
+set fh [open [dict get $manual report] r]
+set manual_text [read $fh]
+close $fh
+foreach expected {
+    {MANUAL_ECO_MODE=EXACT_VIA_ESCAPE_AND_MIN_AREA_PATCH}
+    {PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED}
+    {PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED}
+    {POST_DRC=0}
+    {POST_SHORTS=0}
+    {MANUAL_ECO_STATUS=PASS}
+} {
+    if {[string first $expected $manual_text] < 0} {
+        error "manual ECO report is missing $expected"
+    }
+}
+foreach call $::mptdc_test_manual_command_calls {
+    if {[lindex $call 0] in {routeDesign globalDetailRoute detailRoute ecoRoute createRouteBlk editPowerVia}} {
+        error "manual ECO invoked a prohibited broad or PG command: $call"
+    }
+}
+set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir
 
 puts "MPTDC_ROUTE_CHECKPOINT_REPAIR_HELPERS_TEST=PASS"

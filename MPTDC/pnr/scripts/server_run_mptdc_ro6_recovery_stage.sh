@@ -311,34 +311,23 @@ run_route_geometry_repair_stage() {
   local final_drc final_shorts final_regular final_special final_special_raw
   local final_special_non_ro final_unrouted final_route_gate final_status
   local final_special_report final_dangling_count final_checkpoint_exists final_def
+  local manual_eco_report="$RUN_DIR/reports/manual_geometry_eco_v4.rpt"
+  local manual_eco_status=UNKNOWN
   local tap_slow=0 tap_fast=0 tap_total=0 publish_rc=99 next_head
 
   mkdir -p "$RUN_DIR/reports" "$RUN_DIR/logs" "$RUN_DIR/manifests"
   cat > "$commands_file" <<'COMMANDS'
-mptdc_ckpt_set_net_route_layers u_core_n_66687 MET3 MET3
-mptdc_ckpt_create_route_blockage MPTDC_RBLK_N66687_MET2 {MET2} {220.10 177.80 221.20 181.20}
-mptdc_ckpt_delete_regular_drc_wires u_core_n_66687
-mptdc_ckpt_route_selected_nets_route_design {u_core_n_66687}
-mptdc_ckpt_delete_route_blockage MPTDC_RBLK_N66687_MET2
-mptdc_ckpt_set_net_route_layers u_core_n_67240 MET3 MET3
-mptdc_ckpt_create_route_blockage MPTDC_RBLK_N67240_MET12 {MET1 MET2} {219.30 222.80 221.20 225.90}
-mptdc_ckpt_delete_regular_drc_wires u_core_n_67240
-mptdc_ckpt_route_selected_nets_route_design {u_core_n_67240}
-mptdc_ckpt_delete_route_blockage MPTDC_RBLK_N67240_MET12
-mptdc_ckpt_set_net_route_layers u_core_n_57563 MET2 MET3
-mptdc_ckpt_create_route_blockage MPTDC_RBLK_N57563_MET1 {MET1} {364.79 328.10 364.89 328.78}
-mptdc_ckpt_delete_regular_drc_wires u_core_n_57563
-mptdc_ckpt_route_selected_nets_route_design {u_core_n_57563}
-mptdc_ckpt_delete_route_blockage MPTDC_RBLK_N57563_MET1
-mptdc_ckpt_assert_geometry_regular_clean
+mptdc_ckpt_manual_three_marker_eco_v4
 COMMANDS
   {
     echo "# Exact bounded command payload supplied to Innovus"
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
-    echo "REPAIR_METHOD=LOCAL_HARD_KEEPOUT_SELECTED_ROUTE_V3"
-    echo "REPAIR_LAYER_POLICY=u_core_n_66687:MET3-MET3,u_core_n_67240:MET3-MET3,u_core_n_57563:MET2-MET3"
-    echo "REPAIR_KEEPOUT_POLICY=u_core_n_66687:MET2:{220.10 177.80 221.20 181.20},u_core_n_67240:{MET1 MET2}:{219.30 222.80 221.20 225.90},u_core_n_57563:MET1:{364.79 328.10 364.89 328.78}"
+    echo "REPAIR_METHOD=MANUAL_VIA_ESCAPE_AND_MIN_AREA_PATCH_V4"
+    echo "REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,179.48;u_core_n_67240:219.80,224.14->221.20,224.28"
+    echo "REPAIR_MIN_AREA_PATCH_POLICY=u_core_n_57563:MET1:364.84,328.44->365.40,328.44:width=0.28"
+    echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
+    echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     cat "$commands_file"
   } > "$commands_evidence"
 
@@ -375,6 +364,7 @@ COMMANDS
   final_dangling_count="$(special_dangling_count "$final_special_report")"
   final_checkpoint_exists="$(report_value "$status_report" FINAL_CHECKPOINT_DAT_EXISTS)"
   final_def="$(report_value "$status_report" FINAL_DEF)"
+  manual_eco_status="$(report_value "$manual_eco_report" MANUAL_ECO_STATUS)"
 
   if [[ -s "$final_def" ]]; then
     tap_slow="$(tap_def_count "$final_def" ro_slow_tap0_o)"
@@ -386,7 +376,8 @@ COMMANDS
       > "$RUN_DIR/reports/tap_pin_def_excerpt.rpt"
   fi
 
-  if [[ "$repair_rc" -eq 0 && "$initial_drc" == 3 && "$initial_shorts" == 1 && \
+  if [[ "$repair_rc" -eq 0 && "$manual_eco_status" == PASS && \
+        "$initial_drc" == 3 && "$initial_shorts" == 1 && \
         "$initial_regular" == 0 && "$initial_special" == 1 && \
         "$initial_special_raw" == 1 && "$initial_special_non_ro" == 0 && \
         "$initial_dangling_count" == 12 && \
@@ -398,7 +389,8 @@ COMMANDS
         "$tap_fast" == 1 && "$tap_total" == 2 ]]; then
     gate_mode=FULL_ROUTE_GATE_CLEAN
     decision=PASS_CONTINUE
-  elif [[ "$repair_rc" -eq 0 && "$initial_drc" == 3 && "$initial_shorts" == 1 && \
+  elif [[ "$repair_rc" -eq 0 && "$manual_eco_status" == PASS && \
+          "$initial_drc" == 3 && "$initial_shorts" == 1 && \
           "$initial_regular" == 0 && "$initial_special" == 1 && \
           "$initial_special_raw" == 1 && "$initial_special_non_ro" == 0 && \
           "$initial_dangling_count" == 12 && \
@@ -420,9 +412,13 @@ COMMANDS
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
     echo "REPAIR_RC=$repair_rc"
-    echo "REPAIR_METHOD=LOCAL_HARD_KEEPOUT_SELECTED_ROUTE_V3"
-    echo "REPAIR_LAYER_POLICY=u_core_n_66687:MET3-MET3,u_core_n_67240:MET3-MET3,u_core_n_57563:MET2-MET3"
-    echo "REPAIR_KEEPOUT_POLICY=u_core_n_66687:MET2:{220.10 177.80 221.20 181.20},u_core_n_67240:{MET1 MET2}:{219.30 222.80 221.20 225.90},u_core_n_57563:MET1:{364.79 328.10 364.89 328.78}"
+    echo "MANUAL_ECO_STATUS=$manual_eco_status"
+    echo "MANUAL_ECO_REPORT=$manual_eco_report"
+    echo "REPAIR_METHOD=MANUAL_VIA_ESCAPE_AND_MIN_AREA_PATCH_V4"
+    echo "REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,179.48;u_core_n_67240:219.80,224.14->221.20,224.28"
+    echo "REPAIR_MIN_AREA_PATCH_POLICY=u_core_n_57563:MET1:364.84,328.44->365.40,328.44:width=0.28"
+    echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
+    echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     echo "REPAIR_NETS=u_core_n_66687,u_core_n_67240,u_core_n_57563"
     echo "INITIAL_DRC=$initial_drc"
     echo "INITIAL_SHORTS=$initial_shorts"
@@ -825,7 +821,7 @@ if [[ -z "$RUN_ID" ]]; then
   elif [[ "$STAGE" == "route-geometry-probe" ]]; then
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_geometry_probe_$(date +%H%M%S)"
   elif [[ "$STAGE" == "route-geometry-repair" ]]; then
-    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_local_keepout_repair_v3_$(date +%H%M%S)"
+    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_manual_geometry_repair_v4_$(date +%H%M%S)"
   else
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_mettpfix_physical_$(date +%H%M%S)"
   fi

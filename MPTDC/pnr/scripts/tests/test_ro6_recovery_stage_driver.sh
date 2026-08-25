@@ -394,23 +394,9 @@ CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
 RPT
   exit 0
 fi
-grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_66687' "$commands_file"
-grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_67240' "$commands_file"
-grep -qx 'mptdc_ckpt_delete_regular_drc_wires u_core_n_57563' "$commands_file"
-grep -qx 'mptdc_ckpt_set_net_route_layers u_core_n_66687 MET3 MET3' "$commands_file"
-grep -qx 'mptdc_ckpt_set_net_route_layers u_core_n_67240 MET3 MET3' "$commands_file"
-grep -qx 'mptdc_ckpt_set_net_route_layers u_core_n_57563 MET2 MET3' "$commands_file"
-grep -qx 'mptdc_ckpt_create_route_blockage MPTDC_RBLK_N66687_MET2 {MET2} {220.10 177.80 221.20 181.20}' "$commands_file"
-grep -qx 'mptdc_ckpt_create_route_blockage MPTDC_RBLK_N67240_MET12 {MET1 MET2} {219.30 222.80 221.20 225.90}' "$commands_file"
-grep -qx 'mptdc_ckpt_create_route_blockage MPTDC_RBLK_N57563_MET1 {MET1} {364.79 328.10 364.89 328.78}' "$commands_file"
-grep -qx 'mptdc_ckpt_route_selected_nets_route_design {u_core_n_66687}' "$commands_file"
-grep -qx 'mptdc_ckpt_route_selected_nets_route_design {u_core_n_67240}' "$commands_file"
-grep -qx 'mptdc_ckpt_route_selected_nets_route_design {u_core_n_57563}' "$commands_file"
-grep -qx 'mptdc_ckpt_delete_route_blockage MPTDC_RBLK_N66687_MET2' "$commands_file"
-grep -qx 'mptdc_ckpt_delete_route_blockage MPTDC_RBLK_N67240_MET12' "$commands_file"
-grep -qx 'mptdc_ckpt_delete_route_blockage MPTDC_RBLK_N57563_MET1' "$commands_file"
-! grep -qE 'globalDetailRoute|detailRoute|ecoRoute' "$commands_file"
-grep -qx 'mptdc_ckpt_assert_geometry_regular_clean' "$commands_file"
+grep -qx 'mptdc_ckpt_manual_three_marker_eco_v4' "$commands_file"
+test "$(wc -l < "$commands_file")" -eq 1
+! grep -qE 'globalDetailRoute|detailRoute|ecoRoute|routeDesign|createRouteBlk' "$commands_file"
 
 run="$work/$run_id"
 mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
@@ -427,6 +413,12 @@ for report in "$initial_special" "$final_special"; do
     echo '    12 Problem(s) (IMPVFC-94): The net has dangling wire(s).'
   } > "$report"
 done
+cat > "$run/reports/manual_geometry_eco_v4.rpt" <<'RPT'
+MANUAL_ECO_MODE=EXACT_VIA_ESCAPE_AND_MIN_AREA_PATCH
+PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED
+PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
+MANUAL_ECO_STATUS=PASS
+RPT
 
 final_drc=0
 final_shorts=0
@@ -660,9 +652,12 @@ env "${COMMON_ENV[@]}" bash "$DRIVER" \
   > "$TMP_ROOT/geometry_repair_clean.stdout"
 grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/geometry_repair_clean.stdout"
 grep -qx 'INITIAL_DRC=3' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
-grep -qx 'REPAIR_METHOD=LOCAL_HARD_KEEPOUT_SELECTED_ROUTE_V3' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
-grep -qx 'REPAIR_LAYER_POLICY=u_core_n_66687:MET3-MET3,u_core_n_67240:MET3-MET3,u_core_n_57563:MET2-MET3' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
-grep -Fqx 'REPAIR_KEEPOUT_POLICY=u_core_n_66687:MET2:{220.10 177.80 221.20 181.20},u_core_n_67240:{MET1 MET2}:{219.30 222.80 221.20 225.90},u_core_n_57563:MET1:{364.79 328.10 364.89 328.78}' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'MANUAL_ECO_STATUS=PASS' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'REPAIR_METHOD=MANUAL_VIA_ESCAPE_AND_MIN_AREA_PATCH_V4' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -Fqx 'REPAIR_VIA_ESCAPE_POLICY=u_core_n_66687:220.64,179.48->221.20,179.48;u_core_n_67240:219.80,224.14->221.20,224.28' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -Fqx 'REPAIR_MIN_AREA_PATCH_POLICY=u_core_n_57563:MET1:364.84,328.44->365.40,328.44:width=0.28' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
+grep -qx 'PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'FINAL_DRC=0' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'FINAL_SHORTS=0' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
 grep -qx 'FINAL_REGULAR_CONNECTIVITY_BAD=0' "$WORK/innovus/geometry_repair_clean/reports/operator_gate_route_geometry_repair.rpt"
