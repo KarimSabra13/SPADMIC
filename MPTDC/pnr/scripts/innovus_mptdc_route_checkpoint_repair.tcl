@@ -934,6 +934,22 @@ proc mptdc_ckpt_manual_pwire_rows {net} {
     return $rows
 }
 
+proc mptdc_ckpt_manual_net_route_handles {net attribute} {
+    if {$attribute ni {pWires sWires}} {
+        error "unsupported net route-object attribute: $attribute"
+    }
+    set net_handles [mptdc_ckpt_probe_valid_handles \
+        [dbGet -e top.nets.name $net -p]]
+    if {[llength $net_handles] == 0} {
+        return {}
+    }
+    if {[llength $net_handles] != 1} {
+        error "expected exactly one net named $net, found [llength $net_handles]"
+    }
+    set nh [lindex $net_handles 0]
+    return [lsort [mptdc_ckpt_probe_valid_handles [dbGet ${nh}.${attribute}]]]
+}
+
 proc mptdc_ckpt_manual_require_patch_edit_support {fh} {
     set report_dir [mptdc_signoff_report_dir]
     set help_rpt [file join $report_dir minarea_v6_help_setEditMode.rpt]
@@ -1571,42 +1587,48 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v1 {} {
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v2 {} {
-    error "minimum-area V2 is retired after Innovus absorbed the u_core_n_57556 VIA1 handle into normalized route geometry; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
+    error "minimum-area V2 is retired after Innovus absorbed the u_core_n_57556 VIA1 handle into normalized route geometry; use mptdc_ckpt_manual_two_minarea_landing_patch_v6r"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v3 {} {
-    error "minimum-area V3 is retired because its away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
+    error "minimum-area V3 is retired because its away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v6r"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v4 {} {
-    error "minimum-area V4 is retired because its direct VIA1-anchored away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
+    error "minimum-area V4 is retired because its direct VIA1-anchored away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v6r"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v5 {} {
-    error "minimum-area V5 is retired because bounded ecoRoute returned success without changing the 0.1777/0.202 marker; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
+    error "minimum-area V5 is retired because bounded ecoRoute returned success without changing the 0.1777/0.202 marker; use mptdc_ckpt_manual_two_minarea_landing_patch_v6r"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v6 {} {
+    error "minimum-area V6 is retired because Wire Editor created a floating _SADP_FILLS_RESERVED patch instead of a u_core_n_57556 pWire; use mptdc_ckpt_manual_two_minarea_landing_patch_v6r"
+}
+
+proc mptdc_ckpt_manual_two_minarea_landing_patch_v6r {} {
     set report_dir [mptdc_signoff_report_dir]
-    set report [file join $report_dir min_area_landing_patch_v6.rpt]
+    set report [file join $report_dir min_area_landing_patch_v6r.rpt]
     set fh [open $report w]
-    puts $fh "# MPTDC Two-Stub Base and Exact MET1 Patch Wire V6"
-    puts $fh "MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE"
+    puts $fh "# MPTDC Calibrated Two-Stub Regular MET1 Repair V6R"
+    puts $fh "MANUAL_ECO_MODE=CALIBRATED_TWO_STUB_REGULAR_MET1_REPAIR"
     puts $fh "SOURCE_BASELINE=DRC_2_SHORTS_0_REGULAR_0_SPECIAL_NON_RO_0"
-    puts $fh "BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1777_OF_0.202"
     puts $fh "TARGET_NETS=u_core_n_57960,u_core_n_57556"
-    puts $fh "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
-    puts $fh "PATCH_WIRE_POLICY=u_core_n_57556:MET1:385.175,328.405->385.175,328.155;width=0.23;status=fixed;type=patch"
-    puts $fh "PATCH_WIRE_EXPECTED_BOX=385.060 328.040 385.290 328.520"
-    puts $fh "PATCH_WIRE_GROSS_AREA_UM2=0.0575"
+    puts $fh "REPAIR_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.30,328.44;width=0.28"
+    puts $fh "CALIBRATION_SOURCE=V1_0.84UM_EXTENSION_GAINED_0.0713UM2"
     puts $fh "MINAREA_DEFICIT_UM2=0.0243"
-    puts $fh "VIA_EDIT_POLICY=NO_VIAS_MODIFIED"
+    puts $fh "CALCULATED_EXTRA_LENGTH_UM=0.2863"
+    puts $fh "SELECTED_EXTRA_LENGTH_UM=0.42"
+    puts $fh "SELECTED_TOTAL_EXTENSION_UM=1.26"
+    puts $fh "PREDICTED_AREA_UM2=0.21335"
+    puts $fh "PREDICTED_AREA_MARGIN_UM2=0.01135"
+    puts $fh "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED"
     puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
 
     set body_status [catch {
-        set baseline [mptdc_ckpt_verify_snapshot minarea_v6_pre]
+        set baseline [mptdc_ckpt_verify_snapshot minarea_v6r_pre]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 2 0 0
 
         mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_PRE \
@@ -1614,57 +1636,74 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v6 {} {
         mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_PRE \
             u_core_n_57556 {385.56 328.44} {VIA1_o}
 
-        mptdc_ckpt_manual_add_wire_path $fh N57960_BASE_MET1_LANDING_PATCH \
+        if {[mptdc_ckpt_manual_wire_covers_point \
+                u_core_n_57556 MET1 {384.51 328.44}]} {
+            error "u_core_n_57556 calibrated extension point is already covered"
+        }
+
+        set target_pwire_pre [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 pWires]
+        set target_swire_pre [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 sWires]
+        set reserved_pwire_pre [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED pWires]
+        set reserved_swire_pre [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED sWires]
+        puts $fh "TARGET_PWIRE_PRE_COUNT=[llength $target_pwire_pre]"
+        puts $fh "TARGET_SWIRE_PRE_COUNT=[llength $target_swire_pre]"
+        puts $fh "RESERVED_FILL_PWIRE_PRE_COUNT=[llength $reserved_pwire_pre]"
+        puts $fh "RESERVED_FILL_SWIRE_PRE_COUNT=[llength $reserved_swire_pre]"
+
+        mptdc_ckpt_manual_add_wire_path $fh N57960_MET1_LANDING_STUB \
             u_core_n_57960 MET1 0.28 \
             {{363.72 358.12} {364.56 358.12}}
-        mptdc_ckpt_manual_add_wire_path $fh N57556_BASE_MET1_LANDING_PATCH \
+        mptdc_ckpt_manual_add_wire_path $fh N57556_CALIBRATED_MET1_LANDING_STUB \
             u_core_n_57556 MET1 0.28 \
-            {{385.56 328.44} {384.72 328.44}}
+            {{385.56 328.44} {384.30 328.44}}
 
-        set base [mptdc_ckpt_verify_snapshot minarea_v6_base]
-        mptdc_ckpt_manual_assert_snapshot_tuple $fh BASE $base 1 0 0
-        mptdc_ckpt_manual_assert_minarea_01777_marker \
-            $fh BASE_MINAREA_MARKER $base
-
-        set base_n57960_vias [mptdc_ckpt_manual_via_names_at \
-            u_core_n_57960 {363.72 358.12}]
-        set base_n57556_vias [mptdc_ckpt_manual_via_names_at \
-            u_core_n_57556 {385.56 328.44}]
-        set base_n57960_pwire_rows [mptdc_ckpt_manual_pwire_rows u_core_n_57960]
-        puts $fh "BASE_N57960_VIA_NAMES=[join $base_n57960_vias ,]"
-        puts $fh "BASE_N57556_VIA_NAMES=[join $base_n57556_vias ,]"
-        puts $fh "BASE_N57960_PATCH_WIRE_COUNT=[llength $base_n57960_pwire_rows]"
-
-        mptdc_ckpt_manual_require_patch_edit_support $fh
-        set patch [mptdc_ckpt_manual_add_patch_wire $fh N57556_PATCH_WIRE \
-            u_core_n_57556 MET1 0.23 \
-            {385.175 328.405} {385.175 328.155} \
-            {385.060 328.040 385.290 328.520}]
-        puts $fh "PATCH_WIRE_STATUS=PASS"
-        puts $fh "PATCH_WIRE_HANDLE=[dict get $patch handle]"
-        puts $fh "PATCH_WIRE_COUNT_DELTA=[dict get $patch count_delta]"
-        puts $fh "PATCH_WIRE_LAYER=[dict get $patch layer]"
-        puts $fh "PATCH_WIRE_WIDTH=[dict get $patch width]"
-        puts $fh "PATCH_WIRE_DB_STATUS=[dict get $patch status]"
-        puts $fh "PATCH_WIRE_BOX=[dict get $patch box]"
-        puts $fh "PATCH_WIRE_BOX_STATUS=PASS"
-
-        set post_n57960_vias [mptdc_ckpt_manual_via_names_at \
-            u_core_n_57960 {363.72 358.12}]
-        set post_n57556_vias [mptdc_ckpt_manual_via_names_at \
-            u_core_n_57556 {385.56 328.44}]
-        set post_n57960_pwire_rows [mptdc_ckpt_manual_pwire_rows u_core_n_57960]
-        if {$post_n57960_vias ne $base_n57960_vias ||
-            $post_n57556_vias ne $base_n57556_vias ||
-            $post_n57960_pwire_rows ne $base_n57960_pwire_rows} {
-            puts $fh "PATCH_UNRELATED_OBJECT_STATUS=FAIL"
-            error "V6 patch changed a via or the non-target u_core_n_57960 patch-wire set"
+        if {![mptdc_ckpt_manual_wire_covers_point \
+                u_core_n_57960 MET1 {364.14 358.12}] ||
+            ![mptdc_ckpt_manual_wire_covers_point \
+                u_core_n_57556 MET1 {384.51 328.44}]} {
+            puts $fh "CALIBRATED_STUB_POST_COVERAGE_STATUS=FAIL"
+            error "one calibrated MET1 landing stub did not materialize on its target net"
         }
-        puts $fh "PATCH_UNRELATED_OBJECT_STATUS=PASS"
+        puts $fh "CALIBRATED_STUB_STATUS=PASS"
+        puts $fh "CALIBRATED_STUB_NET=u_core_n_57556"
+        puts $fh "CALIBRATED_STUB_LAYER=MET1"
+        puts $fh "CALIBRATED_STUB_WIDTH=0.28"
+        puts $fh "CALIBRATED_STUB_START=385.56 328.44"
+        puts $fh "CALIBRATED_STUB_END=384.30 328.44"
+        puts $fh "CALIBRATED_STUB_POST_COVERAGE_STATUS=PASS"
 
-        set final [mptdc_ckpt_verify_snapshot minarea_v6_post]
+        set target_pwire_post [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 pWires]
+        set target_swire_post [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 sWires]
+        set reserved_pwire_post [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED pWires]
+        set reserved_swire_post [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED sWires]
+        puts $fh "TARGET_PWIRE_POST_COUNT=[llength $target_pwire_post]"
+        puts $fh "TARGET_SWIRE_POST_COUNT=[llength $target_swire_post]"
+        puts $fh "RESERVED_FILL_PWIRE_POST_COUNT=[llength $reserved_pwire_post]"
+        puts $fh "RESERVED_FILL_SWIRE_POST_COUNT=[llength $reserved_swire_post]"
+        if {$target_swire_post ne $target_swire_pre} {
+            puts $fh "TARGET_SPECIAL_OBJECT_STATUS=FAIL"
+            error "V6R created a special wire on the regular target net"
+        }
+        puts $fh "TARGET_SPECIAL_OBJECT_STATUS=UNCHANGED"
+        puts $fh "TARGET_REGULAR_OBJECT_STATUS=AUDITED_TARGET_OWNED"
+        if {$reserved_pwire_post ne $reserved_pwire_pre ||
+            $reserved_swire_post ne $reserved_swire_pre} {
+            puts $fh "RESERVED_FILL_OBJECT_STATUS=FAIL"
+            error "V6R changed _SADP_FILLS_RESERVED route objects"
+        }
+        puts $fh "RESERVED_FILL_OBJECT_STATUS=UNCHANGED"
+
+        set final [mptdc_ckpt_verify_snapshot minarea_v6r_post]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
-        puts $fh "POST_PATCH_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
+        puts $fh "POST_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
     } body_error body_opts]
 
     catch {uiSetTool select}
@@ -1678,7 +1717,7 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v6 {} {
     puts $fh "MANUAL_ECO_STATUS=PASS"
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
-    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V6_REPORT=$report"
+    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V6R_REPORT=$report"
     return [dict create status PASS report $report]
 }
 

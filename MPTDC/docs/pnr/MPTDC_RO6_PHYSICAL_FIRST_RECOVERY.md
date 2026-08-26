@@ -135,15 +135,23 @@ exact one-marker state and successfully ran the bounded native DRC command, but
 the command was a physical no-op: the same `u_core_n_57556` marker remained.
 Do not rerun any of those candidates or another broad route command.
 
-The only active implementation is V6. In one fresh proof process it reproduces
-the two proven stubs, creates one exact fixed MET1 patch `pWire` on
-`u_core_n_57556`, proves its layer, width, status, and bounding box in the
-Innovus database, and requires zero geometry DRC without changing unrelated
-wires or vias. A passing proof is published before a second fresh process
-replays the same edit from the original guarded-halo checkpoint and runs RC
-extraction, TC timing, DRV, and power. PVS may consume only that canonical
-replay checkpoint. If the V6 proof fails, stop for manual OA review; there is no
-automatic V7 experiment.
+V6 is complete and rejected. Innovus accepted the patch-mode Wire Editor
+commands but created a floating special wire on `_SADP_FILLS_RESERVED`, not a
+target-owned regular object on `u_core_n_57556`. That produced five DRCs and one
+short, while the original `0.1777/0.202` minimum-area marker remained. The V6
+checkpoint is not a repair source.
+
+The only active implementation is V6R. It uses the regular Wire Editor mode
+already proven by V1 and extends the `u_core_n_57556` westward MET1 stub from
+0.84 um to 1.26 um. V1 measured a 0.0713 um2 area gain for 0.84 um; the
+remaining 0.0243 um2 deficit therefore needs 0.2863 um more at that measured
+rate. V6R selects 0.42 um extra, predicting 0.21335 um2 total area and
+0.01135 um2 margin. The proof requires zero DRC and verifies that no target
+special wire and no `_SADP_FILLS_RESERVED` route object changed. A passing
+proof is published before a second fresh process replays the edit from the
+original guarded-halo checkpoint and runs RC extraction, TC timing, DRV, and
+power. If V6R fails, stop for manual OA review; do not create another automated
+coordinate trial.
 
 ## Acceptance Order
 
@@ -159,11 +167,12 @@ automatic V7 experiment.
 5. Require two created guarded blockages, 21.2 um X / 14.48 um Y placement
    clearance, zero post-place 10 um audit-halo intrusions, valid instance boxes,
    phase-buffer clearance at least 10 um, and exactly two RO macros.
-6. In a fresh V6 proof process, require the exact two-stub base, one materialized
-   fixed MET1 patch wire with the expected box, zero geometry DRC, zero shorts,
-   zero regular and non-RO special failures, zero unrouted nets, and the exact
-   unchanged 15-endpoint PG fingerprint.
-7. Replay V6 from the original failed-route checkpoint in another fresh
+6. In a fresh V6R proof process, require both calibrated regular MET1 stubs,
+   target-owned regular geometry at the measured extension point, unchanged
+   target special objects and `_SADP_FILLS_RESERVED` objects, zero geometry
+   DRC, zero shorts, zero regular and non-RO special failures, zero unrouted
+   nets, and the exact unchanged 15-endpoint PG fingerprint.
+7. Replay V6R from the original failed-route checkpoint in another fresh
    process. Require the same physical result plus TC setup PASS, TC hold PASS,
    DRV PASS, and successful power-report capture.
 8. Require ordinary signal top MET3, router command top METTP, the temporary
@@ -195,8 +204,8 @@ log tails are what make remote analysis possible.
 | PnR LEF preparation | preparation PASS, `S[0:7]` plus `rstb` present, MET2/MET3 windows nonzero, unexpected-pin count 0, OBS trims nonzero | bundled into physical `innovus` snapshot |
 | Physical PnR | exact handoff/PG proof/LEF, two audited 10 um RO halos with zero intrusions, TC setup/hold and DRV PASS, signal top MET3, router top METTP, temporary blockage removed, zero geometry/short/regular/non-RO/unrouted debt, exactly two south MET3 tap0 pins, and either raw special clean or the exact `HALO10_PNRLEF_15` PVS-candidate fingerprint | `innovus` |
 | Route minimum-area probe | exact published 2-minimum-area/0-short guarded-halo source, exact 15-endpoint special profile, fresh single restore, no route edits, identical initial/final tuple, both target nets and their term/wire/via queries captured, exactly two tap0 pins | `innovus` |
-| Route minimum-area patch trial | original guarded-halo source, one fresh restore, V6 command PASS, exact fixed MET1 patch object and box PASS, unrelated objects unchanged, DRC/short/regular/non-RO/unrouted all zero, exact 15-endpoint PG fingerprint, two tap0 pins, `DECISION=PASS_REPLAY` | `innovus` |
-| Route minimum-area canonical replay | tracked passing trial with matching source, second fresh restore of the original checkpoint, identical V6 patch proof, extraction/setup/hold/DRV/power PASS, exact 15-endpoint PG fingerprint, two tap0 pins, `DECISION=PVS_CANDIDATE_CONTINUE` | `innovus` |
+| Route minimum-area patch trial | original guarded-halo source, one fresh restore, V6R command PASS, calibrated regular MET1 stub and coverage PASS, target special objects unchanged, reserved-fill objects unchanged, DRC/short/regular/non-RO/unrouted all zero, exact 15-endpoint PG fingerprint, two tap0 pins, `DECISION=PASS_REPLAY` | `innovus` |
+| Route minimum-area canonical replay | tracked passing V6R trial with matching source, second fresh restore of the original checkpoint, identical calibrated repair proof, extraction/setup/hold/DRV/power PASS, exact 15-endpoint PG fingerprint, two tap0 pins, `DECISION=PVS_CANDIDATE_CONTINUE` | `innovus` |
 | Route geometry probe | exact published 3-DRC/1-short source signature, fresh single restore, no route-edit command, identical initial/final physical tuple, all three target nets and endpoint terms found, nearby PG shapes captured, command help/schema evidence present, exactly two tap0 pins | `innovus` |
 | Route geometry repair | retired diagnostic path; V4-V7 outputs are never downstream sources | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
@@ -277,23 +286,25 @@ special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact `HALO10_PNRLEF_15` PVS-candidate
 fingerprint.
 
-### 2. Current Commands: Exact V6 Patch Proof and Canonical Replay
+### 2. Current Commands: Calibrated V6R Proof and Canonical Replay
 
 V5 completed successfully as a command but did not modify the remaining
 minimum-area defect. Its published final tuple stayed at one DRC, zero shorts,
 zero regular failures, and zero non-RO special failures. Repeating V5, changing
 another endpoint, or invoking a broader router is not justified.
 
-V6 uses the already-proven two-stub base and adds exactly one database-visible
-fixed patch wire:
+V6 attempted a patch-mode wire and is rejected: Innovus assigned the new
+special object to `_SADP_FILLS_RESERVED`, left the target minimum-area marker,
+and introduced a short. V6R instead uses the regular Wire Editor primitive that
+V1 already proved. It keeps the first stub and lengthens only the second:
 
 ```text
-net: u_core_n_57556
-layer/type/status: MET1 / patch / fixed
-width: 0.23 um
-start: 385.175 328.405
-end: 385.175 328.155
-expected box: 385.060 328.040 385.290 328.520
+first stub:  u_core_n_57960 MET1 363.72,358.12 -> 364.56,358.12 width 0.28
+second stub: u_core_n_57556 MET1 385.56,328.44 -> 384.30,328.44 width 0.28
+measured V1 gain: 0.0713 um2 from 0.84 um
+calculated extra length: 0.2863 um
+selected extra length: 0.42 um
+predicted final area: 0.21335 um2, 0.01135 um2 above the 0.202 requirement
 ```
 
 The proof and replay are deliberately separate. Each restores the original
@@ -303,7 +314,7 @@ after the passing proof snapshot is committed and pushed, then repeats the
 same edit from the original checkpoint and performs extraction, TC timing,
 DRV, and power. Never use the proof checkpoint as the replay source.
 
-#### 2A. Run the V6 Proof Only
+#### 2A. Run the V6R Proof Only
 
 Copy this block exactly. It does not close the SSH shell when a guard fails.
 
@@ -312,7 +323,7 @@ set +e
 
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260825_mptdc_bufftap0_halo10_physical_130313
-PATCH_TRIAL_RUN="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_patch_trial_v6_$(date +%H%M%S)"
+PATCH_TRIAL_RUN="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_patch_trial_v6r_$(date +%H%M%S)"
 DRIVER_LOG="/tmp/${PATCH_TRIAL_RUN}.driver.log"
 SYNC_RC=99
 CHECKOUT_RC=99
@@ -350,20 +361,20 @@ if [ "$REPO_READY" -eq 1 ]; then
     2>&1 | tee "$DRIVER_LOG"
   PATCH_TRIAL_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: V6 patch proof was not launched"
+  echo "STOP: V6R proof was not launched"
 fi
 
 PATCH_TRIAL_DIR=/sim/ksabra/SPADMIC_work/innovus/$PATCH_TRIAL_RUN
 
-echo "===== V6 PROOF RESULT ====="
+echo "===== V6R PROOF RESULT ====="
 echo "SYNC_RC=$SYNC_RC"
 echo "PATCH_TRIAL_RUN=$PATCH_TRIAL_RUN"
 echo "PATCH_TRIAL_DRIVER_RC=$PATCH_TRIAL_DRIVER_RC"
 grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|PATCH_TRIAL_GATE_MODE|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PATCH_TRIAL_RUN_ID)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -20
 
-echo "===== V6 PROOF GATE ====="
-grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|MANUAL_(PRE|BASE|POST)_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES)|BASE_MINAREA_MARKER_STATUS|PATCH_(EDIT_HELP_STATUS|WIRE_SCHEMA_STATUS|WIRE_STATUS|WIRE_COUNT_DELTA|WIRE_LAYER|WIRE_WIDTH|WIRE_DB_STATUS|WIRE_BOX|WIRE_BOX_STATUS|UNRELATED_OBJECT_STATUS)|POST_PATCH_MINAREA_MARKER_COUNT|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|PATCH_TRIAL_GATE_MODE|DECISION)=' \
+echo "===== V6R PROOF GATE ====="
+grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|MANUAL_(PRE|POST)_(DRC|SHORTS)|CALIBRATION_SOURCE|CALCULATED_EXTRA_LENGTH_UM|SELECTED_(EXTRA_LENGTH|TOTAL_EXTENSION)_UM|PREDICTED_AREA(_MARGIN)?_UM2|CALIBRATED_STUB_(STATUS|NET|LAYER|WIDTH|START|END|POST_COVERAGE_STATUS)|TARGET_(SPECIAL|REGULAR)_OBJECT_STATUS|RESERVED_FILL_OBJECT_STATUS|POST_MINAREA_MARKER_COUNT|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|PATCH_TRIAL_GATE_MODE|DECISION)=' \
   "$PATCH_TRIAL_DIR/reports/operator_gate_route_min_area_patch_trial.rpt" 2>/dev/null
 ```
 
@@ -381,13 +392,16 @@ NEXT_REQUIRED_PATCH_TRIAL_RUN_ID=<proof run id>
 ```
 
 The proof gate must also report command 1 PASS, command 2 MISSING,
-`MANUAL_ECO_STATUS=PASS`, base DRC 1, patch count delta 1, MET1, width 0.23,
-fixed status, exact box PASS, unrelated-object PASS, final DRC/short/regular/
-non-RO special/unrouted all zero, exact 15-endpoint fingerprint PASS, two tap
-pins, and `TIMING_GATE_STATUS=NOT_RUN_PROOF_ONLY`. Any missing or different
-field is a stop. Do not run the replay or PVS after a failed proof.
+`MANUAL_ECO_STATUS=PASS`, calibrated stub PASS on `u_core_n_57556` MET1 at
+width 0.28 from `385.56 328.44` to `384.30 328.44`, target special objects
+UNCHANGED, target regular objects `AUDITED_TARGET_OWNED`, reserved-fill objects
+UNCHANGED, final DRC/short/regular/non-RO special/unrouted all zero, exact
+15-endpoint fingerprint PASS, two tap pins, and
+`TIMING_GATE_STATUS=NOT_RUN_PROOF_ONLY`. Any missing or different field is a
+stop. Do not run replay or PVS after a failed proof. A V6R failure ends the
+automated repair path and requires manual OA review.
 
-#### 2B. Replay V6 Canonically and Run Timing
+#### 2B. Replay V6R Canonically and Run Timing
 
 Set `PATCH_TRIAL_RUN` to the exact `NEXT_REQUIRED_PATCH_TRIAL_RUN_ID` printed by
 2A. The initial pull is mandatory because 2A publishes its proof gate to Git.
@@ -398,7 +412,7 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260825_mptdc_bufftap0_halo10_physical_130313
 PATCH_TRIAL_RUN=REPLACE_WITH_NEXT_REQUIRED_PATCH_TRIAL_RUN_ID
-REPLAY_RUN="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_replay_v6_$(date +%H%M%S)"
+REPLAY_RUN="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_replay_v6r_$(date +%H%M%S)"
 DRIVER_LOG="/tmp/${REPLAY_RUN}.driver.log"
 SYNC_RC=99
 CHECKOUT_RC=99
@@ -438,12 +452,12 @@ if [ "$REPO_READY" -eq 1 ]; then
     2>&1 | tee "$DRIVER_LOG"
   REPLAY_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: V6 canonical replay was not launched"
+  echo "STOP: V6R canonical replay was not launched"
 fi
 
 REPLAY_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPLAY_RUN
 
-echo "===== V6 REPLAY RESULT ====="
+echo "===== V6R REPLAY RESULT ====="
 echo "SYNC_RC=$SYNC_RC"
 echo "PATCH_TRIAL_RUN=$PATCH_TRIAL_RUN"
 echo "REPLAY_RUN=$REPLAY_RUN"
@@ -451,8 +465,8 @@ echo "REPLAY_DRIVER_RC=$REPLAY_DRIVER_RC"
 grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|MINAREA_REPAIR_GATE_MODE|NEXT_EXPECTED_HEAD|NEXT_STAGE|NEXT_REQUIRED_PNR_RUN_ID)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -20
 
-echo "===== V6 REPLAY GATE ====="
-grep -E '^(SOURCE_(PNR|PATCH_TRIAL)_RUN_ID|COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|PATCH_(STAGE_MODE|EDIT_HELP_STATUS|WIRE_SCHEMA_STATUS|WIRE_STATUS|WIRE_COUNT_DELTA|WIRE_LAYER|WIRE_WIDTH|WIRE_DB_STATUS|WIRE_BOX_STATUS|UNRELATED_OBJECT_STATUS)|POST_PATCH_MINAREA_MARKER_COUNT|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
+echo "===== V6R REPLAY GATE ====="
+grep -E '^(SOURCE_(PNR|PATCH_TRIAL)_RUN_ID|COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|PATCH_STAGE_MODE|CALIBRATION_SOURCE|CALCULATED_EXTRA_LENGTH_UM|SELECTED_(EXTRA_LENGTH|TOTAL_EXTENSION)_UM|PREDICTED_AREA(_MARGIN)?_UM2|CALIBRATED_STUB_(STATUS|NET|LAYER|WIDTH|START|END|POST_COVERAGE_STATUS)|TARGET_(SPECIAL|REGULAR)_OBJECT_STATUS|RESERVED_FILL_OBJECT_STATUS|POST_MINAREA_MARKER_COUNT|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
   "$REPLAY_DIR/reports/operator_gate_route_min_area_repair.rpt" 2>/dev/null
 ```
 
@@ -469,17 +483,17 @@ NEXT_STAGE=PVS
 NEXT_REQUIRED_PNR_RUN_ID=<canonical replay run id>
 ```
 
-The replay gate must bind the exact source and proof run ids, repeat every V6
-patch-object check, report command 1 and command 2 PASS, final DRC/short/
+The replay gate must bind the exact source and proof run ids, repeat every V6R
+calibration and ownership check, report command 1 and command 2 PASS, final DRC/short/
 regular/non-RO special/unrouted all zero, exact PG fingerprint PASS, setup,
 hold, DRV, power, and timing gate PASS, and exactly two tap pins. Raw special
 connectivity remains one only for the exact 15 audited VDD/VSS wire ends. The
 PVS driver independently revalidates the complete source -> proof -> replay
 lineage and opens only `checkpoints/repaired_route.enc.dat`.
 
-If 2A fails despite `PATCH_EDIT_HELP_STATUS=PASS`, preserve the published
-evidence and move to a manual OA/GUI patch review. Do not generate V7, do not
-restore a rejected proof checkpoint, and do not waive the marker.
+If 2A fails, preserve the published evidence and move to a manual OA/GUI review.
+Do not generate V7, do not restore a rejected proof checkpoint, and do not
+waive the marker.
 
 ### Completed V1-V5 Minimum-Area Attempts (Do Not Run)
 
@@ -1027,7 +1041,7 @@ bounded evidence snapshot. Do not run PVS after any other decision.
 Replace only `REPLACE_WITH_CANONICAL_REPLAY_RUN_ID` with the
 `NEXT_REQUIRED_PNR_RUN_ID` printed by step 2B. Pull first so the tracked proof
 and replay gates are present locally. The PVS driver independently validates
-the original two-marker source, the matching V6 proof, the canonical replay
+the original two-marker source, the matching V6R proof, the canonical replay
 gate, and the local repaired checkpoint before preparation starts. The RO GDS
 path below is the known real-OA export; stop and replace it if the OA layout has
 changed since that export.
@@ -1051,7 +1065,7 @@ The command stops at the first failed PVS gate. Full success requires:
 
 ```text
 CADENCE_ENV_STATUS=PASS
-PNR_CANDIDATE_KIND=MINAREA_V6_CANONICAL_REPLAY
+PNR_CANDIDATE_KIND=MINAREA_V6R_CANONICAL_REPLAY
 CANDIDATE_GATE_STATUS=PASS
 SOURCE_CKPT=/sim/ksabra/SPADMIC_work/innovus/<canonical replay run id>/checkpoints/repaired_route.enc.dat
 PVS_DRIVER_RC=0

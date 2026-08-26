@@ -13,6 +13,7 @@ set ::mptdc_test_manual_mode 0
 set ::mptdc_test_manual_vias {}
 set ::mptdc_test_manual_wires {}
 set ::mptdc_test_manual_pwires {}
+set ::mptdc_test_manual_swires {}
 set ::mptdc_test_manual_edit_net ""
 set ::mptdc_test_manual_edit_horizontal ""
 set ::mptdc_test_manual_edit_vertical ""
@@ -141,6 +142,17 @@ proc dbGet {args} {
             foreach row $::mptdc_test_manual_pwires {
                 if {[dict get $row net] eq $net} {
                     lappend handles "mpwire:$idx"
+                }
+                incr idx
+            }
+            return $handles
+        }
+        if {[regexp {^net:(.+)\.sWires$} $expression -> net]} {
+            set handles {}
+            set idx 0
+            foreach row $::mptdc_test_manual_swires {
+                if {[dict get $row net] eq $net} {
+                    lappend handles "mswire:$idx"
                 }
                 incr idx
             }
@@ -686,8 +698,10 @@ proc mptdc_ckpt_verify_snapshot {tag} {
         !$::mptdc_test_manual_drc_wire_deleted(u_core_n_67240)} {
         error "n67240 DRC-wire snapshot occurred before the bounded deletion"
     }
-    if {$tag eq "minarea_v6_post" && [llength $::mptdc_test_manual_pwires] != 1} {
-        error "minimum-area V6 post snapshot occurred before the exact patch wire materialized"
+    if {$tag eq "minarea_v6r_post" &&
+        ![mptdc_ckpt_manual_wire_covers_point \
+            u_core_n_57556 MET1 {384.51 328.44}]} {
+        error "minimum-area V6R post snapshot occurred before the calibrated regular stub materialized"
     }
     set tuple [dict get $::mptdc_test_manual_snapshot_tuples $tag]
     lassign $tuple drc shorts regular marker_rpt
@@ -920,12 +934,6 @@ if {$route_start_count != 2 || $route_commit_count != 2} {
     error "minimum-area helper expected two bounded wire starts/commits, found $route_start_count/$route_commit_count"
 }
 
-set minarea_v6_marker [file join $::mptdc_test_report_dir minarea_v6_base_markers.tsv]
-set marker_fh [open $minarea_v6_marker w]
-puts $marker_fh "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"
-puts $marker_fh "1\tfixture\t{385.06 328.29 385.75 328.52}\tMET1\tGeometry\tMinimal_Area\tRegular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000 Type: Minimum Area"
-close $marker_fh
-
 set ::mptdc_test_manual_vias [list \
     [dict create net u_core_n_57960 name VIA1_o point {363.72 358.12} status routed \
         bot_rects {{{363.53 357.98 363.91 358.26}}} \
@@ -937,13 +945,13 @@ set ::mptdc_test_manual_vias [list \
         top_rects {{{385.42 328.25 385.70 328.63}}}]]
 set ::mptdc_test_manual_wires {}
 set ::mptdc_test_manual_pwires {}
+set ::mptdc_test_manual_swires {}
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_manual_verify_count 0
 set ::mptdc_test_local_ecoroute_called 0
 set ::mptdc_test_manual_snapshot_tuples [dict create \
-    minarea_v6_pre {2 0 0} \
-    minarea_v6_base [list 1 0 0 $minarea_v6_marker] \
-    minarea_v6_post {0 0 0}]
+    minarea_v6r_pre {2 0 0} \
+    minarea_v6r_post {0 0 0}]
 
 if {![catch {mptdc_ckpt_manual_two_minarea_landing_patch_v2} err] ||
     ![string match "*retired*" $err]} {
@@ -961,59 +969,56 @@ if {![catch {mptdc_ckpt_manual_two_minarea_landing_patch_v5} err] ||
     ![string match "*retired*" $err]} {
     error "minimum-area V5 retirement guard did not fail as expected: $err"
 }
-set minarea_v6 [mptdc_ckpt_manual_two_minarea_landing_patch_v6]
-if {[dict get $minarea_v6 status] ne "PASS" ||
-    ![file exists [dict get $minarea_v6 report]]} {
-    error "exact minimum-area V6 helper did not pass: $minarea_v6"
+if {![catch {mptdc_ckpt_manual_two_minarea_landing_patch_v6} err] ||
+    ![string match "*retired*" $err]} {
+    error "minimum-area V6 retirement guard did not fail as expected: $err"
 }
-if {$::mptdc_test_manual_verify_count != 3} {
-    error "minimum-area V6 helper expected three verification tuples, found $::mptdc_test_manual_verify_count"
+set minarea_v6r [mptdc_ckpt_manual_two_minarea_landing_patch_v6r]
+if {[dict get $minarea_v6r status] ne "PASS" ||
+    ![file exists [dict get $minarea_v6r report]]} {
+    error "calibrated minimum-area V6R helper did not pass: $minarea_v6r"
+}
+if {$::mptdc_test_manual_verify_count != 2} {
+    error "minimum-area V6R helper expected two verification tuples, found $::mptdc_test_manual_verify_count"
 }
 if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57960 MET1 {364.14 358.12}] ||
-    ![mptdc_ckpt_manual_wire_covers_point u_core_n_57556 MET1 {385.14 328.44}]} {
-    error "minimum-area V6 helper did not reproduce both proven base stubs"
+    ![mptdc_ckpt_manual_wire_covers_point u_core_n_57556 MET1 {384.51 328.44}]} {
+    error "minimum-area V6R helper did not materialize both calibrated stubs"
 }
-set patch_rows [mptdc_ckpt_manual_pwire_rows u_core_n_57556]
-if {[llength $patch_rows] != 1 ||
-    [dict get [lindex $patch_rows 0] layer] ne "MET1" ||
-    ![mptdc_ckpt_manual_close [dict get [lindex $patch_rows 0] width] 0.23] ||
-    [dict get [lindex $patch_rows 0] status] ne "fixed" ||
-    ![mptdc_ckpt_manual_box_equal [dict get [lindex $patch_rows 0] box] \
-        {385.060 328.040 385.290 328.520}]} {
-    error "minimum-area V6 exact patch wire does not match the contract: $patch_rows"
+if {[llength $::mptdc_test_manual_pwires] != 0 ||
+    [llength $::mptdc_test_manual_swires] != 0} {
+    error "minimum-area V6R helper created a patch or special wire"
 }
 
-set fh [open [dict get $minarea_v6 report] r]
-set minarea_v6_text [read $fh]
+set fh [open [dict get $minarea_v6r report] r]
+set minarea_v6r_text [read $fh]
 close $fh
 foreach expected {
-    {MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE}
-    {BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1777_OF_0.202}
-    {BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28}
-    {PATCH_WIRE_POLICY=u_core_n_57556:MET1:385.175,328.405->385.175,328.155;width=0.23;status=fixed;type=patch}
-    {PATCH_WIRE_EXPECTED_BOX=385.060 328.040 385.290 328.520}
+    {MANUAL_ECO_MODE=CALIBRATED_TWO_STUB_REGULAR_MET1_REPAIR}
+    {REPAIR_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.30,328.44;width=0.28}
+    {CALIBRATION_SOURCE=V1_0.84UM_EXTENSION_GAINED_0.0713UM2}
+    {CALCULATED_EXTRA_LENGTH_UM=0.2863}
+    {SELECTED_EXTRA_LENGTH_UM=0.42}
+    {SELECTED_TOTAL_EXTENSION_UM=1.26}
+    {PREDICTED_AREA_UM2=0.21335}
     {ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER}
-    {VIA_EDIT_POLICY=NO_VIAS_MODIFIED}
-    {BASE_DRC=1}
-    {BASE_SHORTS=0}
-    {BASE_MINAREA_MARKER_ACTUAL=0.17770000}
-    {BASE_MINAREA_MARKER_STATUS=PASS}
-    {PATCH_EDIT_HELP_STATUS=PASS}
-    {PATCH_WIRE_SCHEMA_STATUS=PASS}
-    {PATCH_WIRE_STATUS=PASS}
-    {PATCH_WIRE_COUNT_DELTA=1}
-    {PATCH_WIRE_LAYER=MET1}
-    {PATCH_WIRE_WIDTH=0.23}
-    {PATCH_WIRE_DB_STATUS=fixed}
-    {PATCH_WIRE_BOX_STATUS=PASS}
-    {PATCH_UNRELATED_OBJECT_STATUS=PASS}
+    {VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED}
+    {CALIBRATED_STUB_STATUS=PASS}
+    {CALIBRATED_STUB_NET=u_core_n_57556}
+    {CALIBRATED_STUB_LAYER=MET1}
+    {CALIBRATED_STUB_WIDTH=0.28}
+    {CALIBRATED_STUB_END=384.30 328.44}
+    {CALIBRATED_STUB_POST_COVERAGE_STATUS=PASS}
+    {TARGET_SPECIAL_OBJECT_STATUS=UNCHANGED}
+    {TARGET_REGULAR_OBJECT_STATUS=AUDITED_TARGET_OWNED}
+    {RESERVED_FILL_OBJECT_STATUS=UNCHANGED}
     {POST_DRC=0}
     {POST_SHORTS=0}
-    {POST_PATCH_MINAREA_MARKER_COUNT=0}
+    {POST_MINAREA_MARKER_COUNT=0}
     {MANUAL_ECO_STATUS=PASS}
 } {
-    if {[string first $expected $minarea_v6_text] < 0} {
-        error "minimum-area V6 report is missing $expected"
+    if {[string first $expected $minarea_v6r_text] < 0} {
+        error "minimum-area V6R report is missing $expected"
     }
 }
 set route_start_count 0
@@ -1030,14 +1035,14 @@ foreach call $::mptdc_test_manual_command_calls {
         incr eco_call_count
     }
     if {[lindex $call 0] in {editDelete editAddVia routeDesign globalDetailRoute detailRoute createRouteBlk editPowerVia}} {
-        error "minimum-area V6 helper invoked a prohibited command: $call"
+        error "minimum-area V6R helper invoked a prohibited command: $call"
     }
 }
-if {$route_start_count != 3 || $route_commit_count != 3} {
-    error "minimum-area V6 helper expected three bounded wire starts/commits, found $route_start_count/$route_commit_count"
+if {$route_start_count != 2 || $route_commit_count != 2} {
+    error "minimum-area V6R helper expected two bounded wire starts/commits, found $route_start_count/$route_commit_count"
 }
 if {$eco_call_count != 0 || $::mptdc_test_local_ecoroute_called} {
-    error "minimum-area V6 helper invoked ecoRoute"
+    error "minimum-area V6R helper invoked ecoRoute"
 }
 set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir

@@ -56,7 +56,7 @@ Options:
                          identifies the published failed physical PnR source.
   --source-patch-trial-run-id <id>
                          Required for route-minarea-repair; identifies the
-                         published passing V6 proof run to reproduce.
+                         published passing V6R proof run to reproduce.
   --expected-head <sha>  Require the checked-out repository HEAD.
   --genus-run-id <id>    Buffered-tap Genus run id.
   --handoff-dir <path>   PnR-compatible Genus handoff directory.
@@ -437,7 +437,7 @@ run_route_minarea_patch_stage() {
   local commands_evidence="$RUN_DIR/manifests/route_minarea_repair_commands.rpt"
   local repair_log="$RUN_DIR/logs/route_minarea_repair_driver.log"
   local status_report="$RUN_DIR/reports/checkpoint_repair_status.rpt"
-  local manual_eco_report="$RUN_DIR/reports/min_area_landing_patch_v6.rpt"
+  local manual_eco_report="$RUN_DIR/reports/min_area_landing_patch_v6r.rpt"
   local timing_report="$RUN_DIR/reports/extracted_timing_status.rpt"
   local drv_report="$RUN_DIR/reports/drv_status.rpt"
   local power_report="$RUN_DIR/reports/power_status.rpt"
@@ -450,11 +450,14 @@ run_route_minarea_patch_stage() {
   local final_route_gate final_status final_report_route route_report_zero_status=FAIL
   local final_special_report final_dangling_count final_checkpoint_exists final_def
   local command_1_status command_2_status manual_eco_status
-  local manual_pre_drc manual_pre_shorts manual_base_drc manual_base_shorts
-  local manual_base_regular manual_base_special_non_ro
-  local base_marker_status patch_help_status patch_schema_status patch_wire_status
-  local patch_wire_delta patch_wire_layer patch_wire_width patch_wire_db_status
-  local patch_wire_box patch_wire_box_status patch_unrelated_status post_patch_marker_count
+  local manual_pre_drc manual_pre_shorts
+  local calibration_source calculated_extra_length selected_extra_length
+  local selected_total_extension predicted_area predicted_area_margin
+  local calibrated_stub_status calibrated_stub_net calibrated_stub_layer
+  local calibrated_stub_width calibrated_stub_start calibrated_stub_end
+  local calibrated_stub_coverage target_special_status target_regular_status
+  local reserved_fill_status
+  local post_minarea_marker_count
   local manual_post_drc manual_post_shorts
   local setup_status hold_status drv_status power_status
   local special_signature_status=FAIL timing_gate_status=FAIL
@@ -481,7 +484,7 @@ run_route_minarea_patch_stage() {
 
   mkdir -p "$RUN_DIR/reports" "$RUN_DIR/logs" "$RUN_DIR/manifests"
   cat > "$commands_file" <<'COMMANDS'
-mptdc_ckpt_manual_two_minarea_landing_patch_v6
+mptdc_ckpt_manual_two_minarea_landing_patch_v6r
 COMMANDS
   if [[ "$stage_mode" == replay ]]; then
     printf '%s\n' 'mptdc_signoff_extract_and_sta' >> "$commands_file"
@@ -492,12 +495,14 @@ COMMANDS
     echo "SOURCE_PATCH_TRIAL_RUN_ID=${SOURCE_PATCH_TRIAL_RUN_ID:-NONE}"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
     echo "PATCH_STAGE_MODE=$stage_mode"
-    echo "REPAIR_METHOD=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE_V6"
-    echo "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
-    echo "PATCH_WIRE_POLICY=u_core_n_57556:MET1:385.175,328.405->385.175,328.155;width=0.23;status=fixed;type=patch"
-    echo "PATCH_WIRE_EXPECTED_BOX=385.060 328.040 385.290 328.520"
+    echo "REPAIR_METHOD=CALIBRATED_TWO_STUB_REGULAR_MET1_V6R"
+    echo "REPAIR_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.30,328.44;width=0.28"
+    echo "CALIBRATION_SOURCE=V1_0.84UM_EXTENSION_GAINED_0.0713UM2"
+    echo "CALCULATED_EXTRA_LENGTH_UM=0.2863"
+    echo "SELECTED_EXTRA_LENGTH_UM=0.42"
+    echo "SELECTED_TOTAL_EXTENSION_UM=1.26"
     echo "TARGET_VIA_POLICY=u_core_n_57960:VIA1_o@363.72,358.12;u_core_n_57556:VIA1_o@385.56,328.44"
-    echo "VIA_EDIT_POLICY=NO_VIAS_MODIFIED"
+    echo "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED"
     echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     if [[ "$stage_mode" == replay ]]; then
@@ -550,22 +555,23 @@ COMMANDS
   manual_eco_status="$(report_value "$manual_eco_report" MANUAL_ECO_STATUS)"
   manual_pre_drc="$(report_value "$manual_eco_report" PRE_DRC)"
   manual_pre_shorts="$(report_value "$manual_eco_report" PRE_SHORTS)"
-  manual_base_drc="$(report_value "$manual_eco_report" BASE_DRC)"
-  manual_base_shorts="$(report_value "$manual_eco_report" BASE_SHORTS)"
-  manual_base_regular="$(report_value "$manual_eco_report" BASE_REGULAR_CONNECTIVITY_BAD)"
-  manual_base_special_non_ro="$(report_value "$manual_eco_report" BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES)"
-  base_marker_status="$(report_value "$manual_eco_report" BASE_MINAREA_MARKER_STATUS)"
-  patch_help_status="$(report_value "$manual_eco_report" PATCH_EDIT_HELP_STATUS)"
-  patch_schema_status="$(report_value "$manual_eco_report" PATCH_WIRE_SCHEMA_STATUS)"
-  patch_wire_status="$(report_value "$manual_eco_report" PATCH_WIRE_STATUS)"
-  patch_wire_delta="$(report_value "$manual_eco_report" PATCH_WIRE_COUNT_DELTA)"
-  patch_wire_layer="$(report_value "$manual_eco_report" PATCH_WIRE_LAYER)"
-  patch_wire_width="$(report_value "$manual_eco_report" PATCH_WIRE_WIDTH)"
-  patch_wire_db_status="$(report_value "$manual_eco_report" PATCH_WIRE_DB_STATUS)"
-  patch_wire_box="$(report_value "$manual_eco_report" PATCH_WIRE_BOX)"
-  patch_wire_box_status="$(report_value "$manual_eco_report" PATCH_WIRE_BOX_STATUS)"
-  patch_unrelated_status="$(report_value "$manual_eco_report" PATCH_UNRELATED_OBJECT_STATUS)"
-  post_patch_marker_count="$(report_value "$manual_eco_report" POST_PATCH_MINAREA_MARKER_COUNT)"
+  calibration_source="$(report_value "$manual_eco_report" CALIBRATION_SOURCE)"
+  calculated_extra_length="$(report_value "$manual_eco_report" CALCULATED_EXTRA_LENGTH_UM)"
+  selected_extra_length="$(report_value "$manual_eco_report" SELECTED_EXTRA_LENGTH_UM)"
+  selected_total_extension="$(report_value "$manual_eco_report" SELECTED_TOTAL_EXTENSION_UM)"
+  predicted_area="$(report_value "$manual_eco_report" PREDICTED_AREA_UM2)"
+  predicted_area_margin="$(report_value "$manual_eco_report" PREDICTED_AREA_MARGIN_UM2)"
+  calibrated_stub_status="$(report_value "$manual_eco_report" CALIBRATED_STUB_STATUS)"
+  calibrated_stub_net="$(report_value "$manual_eco_report" CALIBRATED_STUB_NET)"
+  calibrated_stub_layer="$(report_value "$manual_eco_report" CALIBRATED_STUB_LAYER)"
+  calibrated_stub_width="$(report_value "$manual_eco_report" CALIBRATED_STUB_WIDTH)"
+  calibrated_stub_start="$(report_value "$manual_eco_report" CALIBRATED_STUB_START)"
+  calibrated_stub_end="$(report_value "$manual_eco_report" CALIBRATED_STUB_END)"
+  calibrated_stub_coverage="$(report_value "$manual_eco_report" CALIBRATED_STUB_POST_COVERAGE_STATUS)"
+  target_special_status="$(report_value "$manual_eco_report" TARGET_SPECIAL_OBJECT_STATUS)"
+  target_regular_status="$(report_value "$manual_eco_report" TARGET_REGULAR_OBJECT_STATUS)"
+  reserved_fill_status="$(report_value "$manual_eco_report" RESERVED_FILL_OBJECT_STATUS)"
+  post_minarea_marker_count="$(report_value "$manual_eco_report" POST_MINAREA_MARKER_COUNT)"
   manual_post_drc="$(report_value "$manual_eco_report" POST_DRC)"
   manual_post_shorts="$(report_value "$manual_eco_report" POST_SHORTS)"
   setup_status="$(report_value "$timing_report" SETUP_STATUS_TC)"
@@ -609,15 +615,24 @@ COMMANDS
 
   if [[ "$repair_rc" -eq 0 && "$command_1_status" == PASS && \
         "$manual_eco_status" == PASS && "$manual_pre_drc" == 2 && \
-        "$manual_pre_shorts" == 0 && "$manual_base_drc" == 1 && \
-        "$manual_base_shorts" == 0 && "$manual_base_regular" == 0 && \
-        "$manual_base_special_non_ro" == 0 && \
-        "$base_marker_status" == PASS && "$patch_help_status" == PASS && \
-        "$patch_schema_status" == PASS && "$patch_wire_status" == PASS && \
-        "$patch_wire_delta" == 1 && "$patch_wire_layer" == MET1 && \
-        "$patch_wire_width" == 0.23 && "$patch_wire_db_status" == fixed && \
-        "$patch_wire_box_status" == PASS && \
-        "$patch_unrelated_status" == PASS && "$post_patch_marker_count" == 0 && \
+        "$manual_pre_shorts" == 0 && \
+        "$calibration_source" == V1_0.84UM_EXTENSION_GAINED_0.0713UM2 && \
+        "$calculated_extra_length" == 0.2863 && \
+        "$selected_extra_length" == 0.42 && \
+        "$selected_total_extension" == 1.26 && \
+        "$predicted_area" == 0.21335 && \
+        "$predicted_area_margin" == 0.01135 && \
+        "$calibrated_stub_status" == PASS && \
+        "$calibrated_stub_net" == u_core_n_57556 && \
+        "$calibrated_stub_layer" == MET1 && \
+        "$calibrated_stub_width" == 0.28 && \
+        "$calibrated_stub_start" == "385.56 328.44" && \
+        "$calibrated_stub_end" == "384.30 328.44" && \
+        "$calibrated_stub_coverage" == PASS && \
+        "$target_special_status" == UNCHANGED && \
+        "$target_regular_status" == AUDITED_TARGET_OWNED && \
+        "$reserved_fill_status" == UNCHANGED && \
+        "$post_minarea_marker_count" == 0 && \
         "$manual_post_drc" == 0 && \
         "$manual_post_shorts" == 0 && "$initial_drc" == 2 && \
         "$initial_shorts" == 0 && "$initial_regular" == 0 && \
@@ -652,12 +667,10 @@ COMMANDS
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
     echo "REPAIR_RC=$repair_rc"
     echo "PATCH_STAGE_MODE=$stage_mode"
-    echo "REPAIR_METHOD=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE_V6"
-    echo "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
-    echo "PATCH_WIRE_POLICY=u_core_n_57556:MET1:385.175,328.405->385.175,328.155;width=0.23;status=fixed;type=patch"
-    echo "PATCH_WIRE_EXPECTED_BOX=385.060 328.040 385.290 328.520"
+    echo "REPAIR_METHOD=CALIBRATED_TWO_STUB_REGULAR_MET1_V6R"
+    echo "REPAIR_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.30,328.44;width=0.28"
     echo "TARGET_VIA_POLICY=u_core_n_57960:VIA1_o@363.72,358.12;u_core_n_57556:VIA1_o@385.56,328.44"
-    echo "VIA_EDIT_POLICY=NO_VIAS_MODIFIED"
+    echo "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED"
     echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     echo "COMMAND_1_STATUS=$command_1_status"
@@ -666,22 +679,23 @@ COMMANDS
     echo "MANUAL_ECO_REPORT=$manual_eco_report"
     echo "MANUAL_PRE_DRC=$manual_pre_drc"
     echo "MANUAL_PRE_SHORTS=$manual_pre_shorts"
-    echo "MANUAL_BASE_DRC=$manual_base_drc"
-    echo "MANUAL_BASE_SHORTS=$manual_base_shorts"
-    echo "MANUAL_BASE_REGULAR_CONNECTIVITY_BAD=$manual_base_regular"
-    echo "MANUAL_BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=$manual_base_special_non_ro"
-    echo "BASE_MINAREA_MARKER_STATUS=$base_marker_status"
-    echo "PATCH_EDIT_HELP_STATUS=$patch_help_status"
-    echo "PATCH_WIRE_SCHEMA_STATUS=$patch_schema_status"
-    echo "PATCH_WIRE_STATUS=$patch_wire_status"
-    echo "PATCH_WIRE_COUNT_DELTA=$patch_wire_delta"
-    echo "PATCH_WIRE_LAYER=$patch_wire_layer"
-    echo "PATCH_WIRE_WIDTH=$patch_wire_width"
-    echo "PATCH_WIRE_DB_STATUS=$patch_wire_db_status"
-    echo "PATCH_WIRE_BOX=$patch_wire_box"
-    echo "PATCH_WIRE_BOX_STATUS=$patch_wire_box_status"
-    echo "PATCH_UNRELATED_OBJECT_STATUS=$patch_unrelated_status"
-    echo "POST_PATCH_MINAREA_MARKER_COUNT=$post_patch_marker_count"
+    echo "CALIBRATION_SOURCE=$calibration_source"
+    echo "CALCULATED_EXTRA_LENGTH_UM=$calculated_extra_length"
+    echo "SELECTED_EXTRA_LENGTH_UM=$selected_extra_length"
+    echo "SELECTED_TOTAL_EXTENSION_UM=$selected_total_extension"
+    echo "PREDICTED_AREA_UM2=$predicted_area"
+    echo "PREDICTED_AREA_MARGIN_UM2=$predicted_area_margin"
+    echo "CALIBRATED_STUB_STATUS=$calibrated_stub_status"
+    echo "CALIBRATED_STUB_NET=$calibrated_stub_net"
+    echo "CALIBRATED_STUB_LAYER=$calibrated_stub_layer"
+    echo "CALIBRATED_STUB_WIDTH=$calibrated_stub_width"
+    echo "CALIBRATED_STUB_START=$calibrated_stub_start"
+    echo "CALIBRATED_STUB_END=$calibrated_stub_end"
+    echo "CALIBRATED_STUB_POST_COVERAGE_STATUS=$calibrated_stub_coverage"
+    echo "TARGET_SPECIAL_OBJECT_STATUS=$target_special_status"
+    echo "TARGET_REGULAR_OBJECT_STATUS=$target_regular_status"
+    echo "RESERVED_FILL_OBJECT_STATUS=$reserved_fill_status"
+    echo "POST_MINAREA_MARKER_COUNT=$post_minarea_marker_count"
     echo "MANUAL_POST_DRC=$manual_post_drc"
     echo "MANUAL_POST_SHORTS=$manual_post_shorts"
     echo "INITIAL_DRC=$initial_drc"
@@ -1216,18 +1230,21 @@ tracked_patch_trial_gate_passes() {
       SOURCE_PNR_RUN_ID "$expected_source_pnr_run_id" \
       SOURCE_PATCH_TRIAL_RUN_ID NONE \
       REPAIR_RC 0 PATCH_STAGE_MODE trial \
-      REPAIR_METHOD PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE_V6 \
+      REPAIR_METHOD CALIBRATED_TWO_STUB_REGULAR_MET1_V6R \
       COMMAND_1_STATUS PASS COMMAND_2_STATUS MISSING MANUAL_ECO_STATUS PASS \
       MANUAL_PRE_DRC 2 MANUAL_PRE_SHORTS 0 \
-      MANUAL_BASE_DRC 1 MANUAL_BASE_SHORTS 0 \
-      MANUAL_BASE_REGULAR_CONNECTIVITY_BAD 0 \
-      MANUAL_BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 \
-      BASE_MINAREA_MARKER_STATUS PASS \
-      PATCH_EDIT_HELP_STATUS PASS PATCH_WIRE_SCHEMA_STATUS PASS \
-      PATCH_WIRE_STATUS PASS PATCH_WIRE_COUNT_DELTA 1 \
-      PATCH_WIRE_LAYER MET1 PATCH_WIRE_WIDTH 0.23 \
-      PATCH_WIRE_DB_STATUS fixed PATCH_WIRE_BOX_STATUS PASS \
-      PATCH_UNRELATED_OBJECT_STATUS PASS POST_PATCH_MINAREA_MARKER_COUNT 0 \
+      CALIBRATION_SOURCE V1_0.84UM_EXTENSION_GAINED_0.0713UM2 \
+      CALCULATED_EXTRA_LENGTH_UM 0.2863 SELECTED_EXTRA_LENGTH_UM 0.42 \
+      SELECTED_TOTAL_EXTENSION_UM 1.26 PREDICTED_AREA_UM2 0.21335 \
+      PREDICTED_AREA_MARGIN_UM2 0.01135 \
+      CALIBRATED_STUB_STATUS PASS CALIBRATED_STUB_NET u_core_n_57556 \
+      CALIBRATED_STUB_LAYER MET1 CALIBRATED_STUB_WIDTH 0.28 \
+      CALIBRATED_STUB_START "385.56 328.44" \
+      CALIBRATED_STUB_END "384.30 328.44" \
+      CALIBRATED_STUB_POST_COVERAGE_STATUS PASS \
+      TARGET_SPECIAL_OBJECT_STATUS UNCHANGED \
+      TARGET_REGULAR_OBJECT_STATUS AUDITED_TARGET_OWNED \
+      RESERVED_FILL_OBJECT_STATUS UNCHANGED POST_MINAREA_MARKER_COUNT 0 \
       FINAL_DRC 0 FINAL_SHORTS 0 FINAL_REGULAR_CONNECTIVITY_BAD 0 \
       FINAL_SPECIAL_CONNECTIVITY_BAD 1 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 1 \
       FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 \
@@ -1395,9 +1412,9 @@ if [[ -z "$RUN_ID" ]]; then
   elif [[ "$STAGE" == "route-minarea-probe" ]]; then
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_probe_$(date +%H%M%S)"
   elif [[ "$STAGE" == "route-minarea-patch-trial" ]]; then
-    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_patch_trial_v6_$(date +%H%M%S)"
+    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_patch_trial_v6r_$(date +%H%M%S)"
   elif [[ "$STAGE" == "route-minarea-repair" ]]; then
-    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_replay_v6_$(date +%H%M%S)"
+    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_replay_v6r_$(date +%H%M%S)"
   elif [[ "$STAGE" == "route-geometry-repair" ]]; then
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_manual_geometry_repair_v7_$(date +%H%M%S)"
   else
@@ -1606,7 +1623,7 @@ elif [[ "$STAGE" == "route-minarea-probe" || \
     SOURCE_PATCH_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PATCH_TRIAL_RUN_ID/reports/operator_gate_route_min_area_patch_trial.rpt"
     if [[ -z "$SOURCE_PATCH_TRIAL_RUN_ID" ]] || \
        ! tracked_patch_trial_gate_passes "$SOURCE_PATCH_TRIAL_GATE" "$SOURCE_PNR_RUN_ID"; then
-      echo "STOP: tracked passing V6 patch trial is missing, mismatched, or incomplete: $SOURCE_PATCH_TRIAL_RUN_ID"
+      echo "STOP: tracked passing V6R patch trial is missing, mismatched, or incomplete: $SOURCE_PATCH_TRIAL_RUN_ID"
       PREFLIGHT=FAIL
     fi
   fi
