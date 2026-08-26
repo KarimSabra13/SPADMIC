@@ -1,0 +1,5 @@
+LABEL=MPTDC_PVS_LVS_GATE
+STATUS=FAIL
+PVS_LVS_STATUS=NOT_PROVEN
+ERROR=pvslvsctl Verilog schematic_path is not exactly the immutable source
+FINAL_PHYSICAL_SIGNOFF_READY=NO
