@@ -1,0 +1,4 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_204425/logs/prepare_pvs_inputs.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+git status --short --untracked-files=no:
