@@ -24,6 +24,8 @@ DCELL_CDL="${MPTDC_PVS_DCELL_CDL:-$DEFAULT_DCELL_CDL}"
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 DRY_RUN=0
 DIAGNOSTIC_ALLOW_BASE_DRC_DEBT=0
+DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX=0
+BLACKBOX_CELL=""
 
 usage() {
   cat <<'USAGE'
@@ -47,6 +49,12 @@ Options:
                             Internal guarded mode: require the diagnostic scope
                             manifest and attributable base DRC, then skip the
                             normal density-DRC prerequisite. Never signoff mode.
+  --diagnostic-ro6-boundary-blackbox
+                            LVS-only diagnostic mode. Add an explicit
+                            lvs_black_box RO_tune6 boundary rule, require its
+                            dedicated scope manifest, and skip DRC prerequisites.
+                            This proves top-level boundary connectivity only and
+                            is never standalone RO or block signoff evidence.
   --dry-run                 Patch and audit templates without launching run.pvs.
   -h, --help                Show this help.
 USAGE
@@ -104,6 +112,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --diagnostic-allow-base-drc-debt)
       DIAGNOSTIC_ALLOW_BASE_DRC_DEBT=1
+      shift
+      ;;
+    --diagnostic-ro6-boundary-blackbox)
+      DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX=1
+      BLACKBOX_CELL=RO_tune6
       shift
       ;;
     --dry-run)
@@ -189,7 +202,84 @@ require_attributable_base_drc() {
   fi
 }
 
+require_ro6_boundary_blackbox_scope() {
+  local scope="$NEW_BASE/manifests/pvs_ro6_boundary_blackbox_scope.rpt"
+  local hcell_entry_count wrapper_count
+
+  mptdc_pvs_require_file "$scope"
+  grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX' "$scope" || \
+    mptdc_pvs_die "RO6 boundary scope has invalid PVS_RUN_CLASS: $scope"
+  grep -qx 'DIAGNOSTIC_SCOPE=LVS_ONLY_RO6_BOUNDARY' "$scope" || \
+    mptdc_pvs_die "RO6 boundary scope is not LVS_ONLY_RO6_BOUNDARY: $scope"
+  grep -qx 'BLACKBOX_CELL=RO_tune6' "$scope" || \
+    mptdc_pvs_die "RO6 boundary scope has an unexpected blackbox cell: $scope"
+  grep -qx 'RO6_STANDALONE_LVS_REQUIRED=YES' "$scope" || \
+    mptdc_pvs_die "RO6 boundary scope does not require standalone macro LVS: $scope"
+  grep -qx 'SIGNOFF_ELIGIBLE=NO' "$scope" || \
+    mptdc_pvs_die "RO6 boundary scope is not marked ineligible for signoff: $scope"
+
+  hcell_entry_count="$(awk 'NF && $1 !~ /^#/ {count++; if ($1 == "RO_tune6" && $2 == "RO_tune6" && NF == 2) exact++} END {print count ":" exact + 0}' "$NEW_HCELL")"
+  [[ "$hcell_entry_count" == "1:1" ]] || \
+    mptdc_pvs_die "RO6 boundary mode requires exactly one 'RO_tune6 RO_tune6' HCell mapping"
+
+  wrapper_count="$(grep -Ec '^[[:space:]]*module[[:space:]]+RO_tune6[[:space:]]*[(]' "$NEW_SRC" 2>/dev/null || true)"
+  [[ "$wrapper_count" == 1 ]] || \
+    mptdc_pvs_die "RO6 boundary mode requires exactly one RO_tune6 source wrapper"
+  for declaration in \
+    'inout[[:space:]]+VDD[[:space:]]*;' \
+    'inout[[:space:]]+VSS[[:space:]]*;' \
+    'inout[[:space:]]+rstb[[:space:]]*;' \
+    'inout[[:space:]]+\[7:0\][[:space:]]+code[[:space:]]*;' \
+    'inout[[:space:]]+\[7:0\][[:space:]]+S[[:space:]]*;'; do
+    grep -Eq "$declaration" "$NEW_SRC" || \
+      mptdc_pvs_die "RO6 source wrapper is missing expected declaration: $declaration"
+  done
+}
+
+write_ro6_boundary_blackbox_gate() {
+  local report="$NEW_BASE/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+  local cls_file_count=0 cls_file="" blackboxed_count=MISSING rule_count=0
+  local rule_status=FAIL application_status=FAIL gate_rc=1
+
+  if [[ -d "$NEW_LVS_RUN" ]]; then
+    cls_file_count="$(find "$NEW_LVS_RUN" -type f -name '*.cls' 2>/dev/null | wc -l | tr -d ' ')"
+  fi
+  if [[ "$cls_file_count" == 1 ]]; then
+    cls_file="$(find "$NEW_LVS_RUN" -type f -name '*.cls' -print -quit)"
+    blackboxed_count="$(awk -F '|' '/Cells that have been blackboxed/ {value=$2; gsub(/[[:space:]]/, "", value); print value; exit}' "$cls_file")"
+    [[ -n "$blackboxed_count" ]] || blackboxed_count=MISSING
+    rule_count="$(grep -Eic '^[[:space:]]*lvs_black_box[[:space:]].*RO_tune6' "$cls_file" 2>/dev/null || true)"
+  fi
+
+  if [[ "$rule_count" -ge 1 ]]; then
+    rule_status=PASS
+  fi
+  if [[ "$blackboxed_count" =~ ^[0-9]+$ && "$blackboxed_count" -ge 1 ]]; then
+    application_status=PASS
+  fi
+  if [[ "$rule_status" == PASS && "$application_status" == PASS ]]; then
+    gate_rc=0
+  fi
+
+  {
+    echo "PVS_LVS_BOUNDARY_MODE=DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX"
+    echo "LVS_BLACKBOX_CELL=RO_tune6"
+    echo "LVS_BLACKBOX_CLS_FILE_COUNT=$cls_file_count"
+    echo "LVS_BLACKBOX_CLS_FILE=${cls_file:-MISSING}"
+    echo "LVS_BLACKBOX_RULE_COUNT=$rule_count"
+    echo "LVS_BLACKBOX_RULE_STATUS=$rule_status"
+    echo "LVS_BLACKBOXED_CELL_COUNT=$blackboxed_count"
+    echo "LVS_BLACKBOX_APPLICATION_STATUS=$application_status"
+    echo "RO6_STANDALONE_LVS_REQUIRED=YES"
+    echo "SIGNOFF_ELIGIBLE=NO"
+  } | tee "$report"
+  return "$gate_rc"
+}
+
 [[ -n "$NEW_BASE" ]] || { usage >&2; mptdc_pvs_die "--prepared-dir is required"; }
+if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" == 1 && "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
+  mptdc_pvs_die "diagnostic base-DRC debt and RO6 boundary-blackbox modes are mutually exclusive"
+fi
 NEW_GDS="${NEW_GDS:-$NEW_BASE/outputs/mptdc_axis_core_merged_stdcell_ro6.gds}"
 NEW_SRC="${NEW_SRC:-$NEW_BASE/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v}"
 NEW_HCELL="${NEW_HCELL:-$NEW_BASE/outputs/pvs_hcell_ro6.txt}"
@@ -215,6 +305,9 @@ if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" == 1 ]]; then
   require_attributable_base_drc
   [[ ! -e "$NEW_BASE/reports/pvs_drc_density_status.rpt" ]] || \
     mptdc_pvs_die "diagnostic base-DRC plus LVS scope unexpectedly contains density DRC evidence"
+fi
+if [[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
+  require_ro6_boundary_blackbox_scope
 fi
 
 if [[ -e "$NEW_LVS_RUN" ]]; then
@@ -243,6 +336,17 @@ for f in "${PATCH_FILES[@]}"; do
     "$DEFAULT_DCELL_CDL=$DCELL_CDL"
 done
 
+if [[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
+  if grep -Eq '^[[:space:]]*lvs_black_box([[:space:]]|$)' "$NEW_LVS_RUN/pvslvsctl"; then
+    mptdc_pvs_die "template already contains an lvs_black_box rule; refusing ambiguous boundary control"
+  fi
+  {
+    echo
+    echo "// MPTDC diagnostic digital-top boundary comparison; not standalone RO LVS."
+    echo "lvs_black_box $BLACKBOX_CELL;"
+  } >> "$NEW_LVS_RUN/pvslvsctl"
+fi
+
 mptdc_pvs_fail_if_contains_old_path "LVS template run" "$OLD_LVS_RUN" "${PATCH_FILES[@]}"
 mptdc_pvs_fail_if_contains_old_path "LVS old base" "$OLD_BASE" "${PATCH_FILES[@]}"
 mptdc_pvs_fail_if_contains_old_path "LVS old GDS" "$OLD_GDS" "${PATCH_FILES[@]}"
@@ -262,6 +366,8 @@ chmod +x "$NEW_LVS_RUN/run.pvs"
   echo "new_hcell: $NEW_HCELL"
   echo "dcell_cdl: $DCELL_CDL"
   echo "diagnostic_allow_base_drc_debt: $DIAGNOSTIC_ALLOW_BASE_DRC_DEBT"
+  echo "diagnostic_ro6_boundary_blackbox: $DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX"
+  echo "blackbox_cell: ${BLACKBOX_CELL:-NONE}"
   echo "dry_run: $DRY_RUN"
 } | tee "$NEW_BASE/manifests/pvs_lvs_replay_manifest.txt"
 
@@ -270,7 +376,7 @@ chmod +x "$NEW_LVS_RUN/run.pvs"
   sed -n '1,180p' "$NEW_LVS_RUN/run.pvs"
   echo
   echo "===== Patched LVS config scan ====="
-  grep -RniE 'mptdc_axis_core_merged_stdcell_ro6|NO_DCELL|RO6|RO_tune6|xh018_D_CELLS|LVS_FIND_SHORTS|VDD|VSS|hcell|HCell|SOURCE|source|verilog|cdl|CDL' \
+  grep -RniE 'mptdc_axis_core_merged_stdcell_ro6|NO_DCELL|RO6|RO_tune6|xh018_D_CELLS|LVS_FIND_SHORTS|VDD|VSS|hcell|HCell|black_box|BLACK_BOX|SOURCE|source|verilog|cdl|CDL' \
     "$NEW_LVS_RUN/run.pvs" "$NEW_LVS_RUN/pvslvsctl" "$NEW_LVS_RUN/.config.rul" "$NEW_LVS_RUN/.technology.rul" | sed -n '1,420p' || true
 } | tee "$NEW_BASE/reports/pvs_lvs_replay_preflight.rpt"
 
@@ -279,7 +385,7 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" != 1 ]]; then
+if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" != 1 && "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" != 1 ]]; then
   for variant in base density; do
     drc_status="$NEW_BASE/reports/pvs_drc_${variant}_status.rpt"
     mptdc_pvs_require_file "$drc_status"
@@ -330,7 +436,18 @@ python3 "$SCRIPT_DIR/06_gate_pvs_lvs.py" \
 GATE_RC=$?
 set -e
 
+BLACKBOX_GATE_RC=0
+if [[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
+  set +e
+  write_ro6_boundary_blackbox_gate
+  BLACKBOX_GATE_RC=$?
+  set -e
+fi
+
 if [[ "$PVS_RC" -ne 0 ]]; then
   exit "$PVS_RC"
 fi
-exit "$GATE_RC"
+if [[ "$GATE_RC" -ne 0 ]]; then
+  exit "$GATE_RC"
+fi
+exit "$BLACKBOX_GATE_RC"

@@ -19,6 +19,7 @@ NEW_SOURCE="$PREPARED/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_R
 NEW_HCELL="$PREPARED/outputs/pvs_hcell_ro6.txt"
 DCELL_CDL="$TMP_ROOT/xh018_D_CELLS_JIHD.cdl"
 SCOPE="$PREPARED/manifests/pvs_diagnostic_scope.rpt"
+BOUNDARY_SCOPE="$PREPARED/manifests/pvs_ro6_boundary_blackbox_scope.rpt"
 DRC_STATUS="$PREPARED/reports/pvs_drc_base_status.rpt"
 RULE_REPORT="$PREPARED/reports/pvs_drc_base_nonzero_rules.tsv"
 
@@ -26,6 +27,18 @@ mkdir -p "$REPO/MPTDC/scripts/pvs" "$PREPARED/outputs" "$PREPARED/manifests" \
   "$PREPARED/reports" "$TEMPLATE" "$OLD_BASE"
 cp -p "$PVS_DIR/03_replay_pvs_lvs_from_template.sh" "$REPLAY"
 cp -p "$PVS_DIR/lib_pvs_common.sh" "$REPO/MPTDC/scripts/pvs/lib_pvs_common.sh"
+cat > "$REPO/MPTDC/scripts/pvs/06_gate_pvs_lvs.py" <<'PY'
+#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--out", required=True)
+parser.add_argument("--inventory", required=True)
+args, _ = parser.parse_known_args()
+Path(args.out).write_text("STATUS=PASS\nPVS_LVS_STATUS=MATCH\nPVS_RC=0\n")
+Path(args.inventory).write_text("path\tnegative\tpositive\treport_level\n")
+PY
 
 git init -q -b SPADMIC_test "$REPO"
 git -C "$REPO" config user.name 'MPTDC LVS diagnostic guard test'
@@ -35,7 +48,16 @@ git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
 printf 'new gds\n' > "$NEW_GDS"
-printf 'module mptdc_axis_core; endmodule\n' > "$NEW_SOURCE"
+cat > "$NEW_SOURCE" <<'EOF'
+module mptdc_axis_core; endmodule
+module RO_tune6 (VDD, VSS, rstb, code, S);
+  inout VDD;
+  inout VSS;
+  inout rstb;
+  inout [7:0] code;
+  inout [7:0] S;
+endmodule
+EOF
 printf 'RO_tune6 RO_tune6\n' > "$NEW_HCELL"
 printf '.SUBCKT INV A Y VDD VSS\n.ENDS\n' > "$DCELL_CDL"
 printf 'old gds\n' > "$OLD_GDS"
@@ -59,6 +81,13 @@ DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS
 DEFERRED_INNOVUS_DRC_COUNT=1
 DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA
 DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE
+SIGNOFF_ELIGIBLE=NO
+EOF
+cat > "$BOUNDARY_SCOPE" <<'EOF'
+PVS_RUN_CLASS=DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX
+DIAGNOSTIC_SCOPE=LVS_ONLY_RO6_BOUNDARY
+BLACKBOX_CELL=RO_tune6
+RO6_STANDALONE_LVS_REQUIRED=YES
 SIGNOFF_ELIGIBLE=NO
 EOF
 printf 'rule\tprimary\texpanded\nM1.MIN.AREA\t3\t3\n' > "$RULE_REPORT"
@@ -94,6 +123,43 @@ run_dry() {
     --dry-run
 }
 
+run_boundary_dry() {
+  local run_dir="$1"
+  bash "$REPLAY" \
+    --prepared-dir "$PREPARED" \
+    --template-run "$TEMPLATE" \
+    --new-gds "$NEW_GDS" \
+    --new-source "$NEW_SOURCE" \
+    --new-hcell "$NEW_HCELL" \
+    --dcell-cdl "$DCELL_CDL" \
+    --old-base "$OLD_BASE" \
+    --old-gds "$OLD_GDS" \
+    --old-source "$OLD_SOURCE" \
+    --old-hcell "$OLD_HCELL" \
+    --new-run-dir "$run_dir" \
+    --expected-head "$HEAD_SHA" \
+    --diagnostic-ro6-boundary-blackbox \
+    --dry-run
+}
+
+run_boundary() {
+  local run_dir="$1"
+  bash "$REPLAY" \
+    --prepared-dir "$PREPARED" \
+    --template-run "$TEMPLATE" \
+    --new-gds "$NEW_GDS" \
+    --new-source "$NEW_SOURCE" \
+    --new-hcell "$NEW_HCELL" \
+    --dcell-cdl "$DCELL_CDL" \
+    --old-base "$OLD_BASE" \
+    --old-gds "$OLD_GDS" \
+    --old-source "$OLD_SOURCE" \
+    --old-hcell "$OLD_HCELL" \
+    --new-run-dir "$run_dir" \
+    --expected-head "$HEAD_SHA" \
+    --diagnostic-ro6-boundary-blackbox
+}
+
 run_dry "$TMP_ROOT/lvs_valid" > "$TMP_ROOT/valid.stdout"
 grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
 
@@ -113,5 +179,61 @@ BAD_HASH_RC=$?
 set -e
 test "$BAD_HASH_RC" -ne 0
 grep -Fq 'rule inventory hash mismatch' "$TMP_ROOT/bad_hash.stdout"
+
+run_boundary_dry "$TMP_ROOT/lvs_boundary_valid" > "$TMP_ROOT/boundary_valid.stdout"
+grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
+grep -qx 'lvs_black_box RO_tune6;' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
+grep -qx 'diagnostic_ro6_boundary_blackbox: 1' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
+grep -qx 'blackbox_cell: RO_tune6' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
+
+mv "$BOUNDARY_SCOPE" "${BOUNDARY_SCOPE}.saved"
+set +e
+run_boundary_dry "$TMP_ROOT/lvs_boundary_missing_scope" > "$TMP_ROOT/boundary_missing_scope.stdout" 2>&1
+BOUNDARY_MISSING_SCOPE_RC=$?
+set -e
+mv "${BOUNDARY_SCOPE}.saved" "$BOUNDARY_SCOPE"
+test "$BOUNDARY_MISSING_SCOPE_RC" -ne 0
+grep -Fq 'required file does not exist' "$TMP_ROOT/boundary_missing_scope.stdout"
+
+printf 'RO_tune6 RO_tune6\nEXTRA EXTRA\n' > "$NEW_HCELL"
+set +e
+run_boundary_dry "$TMP_ROOT/lvs_boundary_bad_hcell" > "$TMP_ROOT/boundary_bad_hcell.stdout" 2>&1
+BOUNDARY_BAD_HCELL_RC=$?
+set -e
+test "$BOUNDARY_BAD_HCELL_RC" -ne 0
+grep -Fq "requires exactly one 'RO_tune6 RO_tune6' HCell mapping" "$TMP_ROOT/boundary_bad_hcell.stdout"
+
+printf 'RO_tune6 RO_tune6\n' > "$NEW_HCELL"
+cat > "$TEMPLATE/run.pvs" <<'EOF'
+#!/bin/sh
+if [ "${MPTDC_TEST_BLACKBOX_EFFECTIVE:-1}" = 1 ]; then
+  blackboxed=1
+else
+  blackboxed=0
+fi
+cat > boundary_lvs.sum.cls <<CLS
+LVS Rules Given in the Rules File
+    lvs_black_box RO_tune6
+Cells that have been blackboxed              |         $blackboxed
+#####  Run Result                    :     MATCH
+CLS
+exit 0
+EOF
+
+MPTDC_TEST_BLACKBOX_EFFECTIVE=1 \
+run_boundary "$TMP_ROOT/lvs_boundary_effective" > "$TMP_ROOT/boundary_effective.stdout"
+grep -qx 'LVS_BLACKBOX_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BLACKBOXED_CELL_COUNT=1' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BLACKBOX_APPLICATION_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+
+set +e
+MPTDC_TEST_BLACKBOX_EFFECTIVE=0 \
+run_boundary "$TMP_ROOT/lvs_boundary_ineffective" > "$TMP_ROOT/boundary_ineffective.stdout" 2>&1
+BOUNDARY_INEFFECTIVE_RC=$?
+set -e
+test "$BOUNDARY_INEFFECTIVE_RC" -ne 0
+grep -qx 'LVS_BLACKBOX_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BLACKBOXED_CELL_COUNT=0' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BLACKBOX_APPLICATION_STATUS=FAIL' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 
 echo "MPTDC_PVS_LVS_DIAGNOSTIC_GUARD_TEST=PASS"

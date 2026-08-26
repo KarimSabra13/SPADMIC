@@ -2018,8 +2018,90 @@ only. Stop on any other result. The next engineering decision comes from the
 published mismatch classes; do not alter HCell, source filtering, the RO macro,
 or routed geometry before that review.
 
-For review, send only `PVS_RUN`, `PVS_DRIVER_RC`, and `FINAL_HEAD`. The driver
-publishes preparation, audit, base-DRC, and LVS snapshots automatically.
+### Prove the digital top across the RO6 blackbox boundary
+
+The published mismatch is fully accounted for by two schematic `RO_tune6`
+wrappers versus the 380 devices extracted from the two layout macros. The HCell
+mapping was loaded, but PVS reported zero blackboxed cells. This command reuses
+the exact immutable GDS, source, CDL, and HCell inputs and launches only one new
+LVS comparison with an explicit `lvs_black_box RO_tune6` rule. It does not run
+Innovus, streamout, or PVS DRC.
+
+This is a diagnostic digital-top boundary proof. A match does not prove the
+internal RO layout and cannot close the block without separate attributable
+`RO_tune6` LVS evidence and a later zero-DRC canonical replay.
+
+```bash
+###############################################################################
+# MPTDC LVS-only digital-top proof across the RO_tune6 blackbox boundary
+###############################################################################
+
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+cd "$REPO"
+
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+SOURCE_PVS_RUN=20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334
+BOUNDARY_PVS_RUN="$(date +%Y%m%d)_mptdc_bufftap0_ro6_boundary_lvs_$(date +%H%M%S)"
+BOUNDARY_PVS_DIR=$MPTDC_INNOVUS_WORK/$BOUNDARY_PVS_RUN
+DRIVER_LOG=/tmp/${BOUNDARY_PVS_RUN}.driver.log
+
+if [ "$SYNC_RC" -eq 0 ] && \
+   [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$SOURCE_PVS_RUN" ]; then
+  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_boundary_lvs.sh \
+    --source-pvs-run-id "$SOURCE_PVS_RUN" \
+    --run-id "$BOUNDARY_PVS_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  BOUNDARY_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, or source-PVS-run preflight failed"
+  BOUNDARY_DRIVER_RC=99
+fi
+
+echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "SOURCE_PVS_RUN=$SOURCE_PVS_RUN"
+echo "BOUNDARY_PVS_RUN=$BOUNDARY_PVS_RUN"
+echo "BOUNDARY_DRIVER_RC=$BOUNDARY_DRIVER_RC"
+grep -E '^(PVS_BOUNDARY_RECOVERY_STATUS|PVS_LVS|LVS_BLACKBOX_RULE_STATUS|LVS_BLACKBOX_APPLICATION_STATUS|LVS_BLACKBOXED_CELL_COUNT|RO6_STANDALONE_LVS_REQUIRED|DRC_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -20
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+
+echo "===== BOUNDARY GATE ====="
+cat "$BOUNDARY_PVS_DIR/reports/operator_gate_pvs_ro6_boundary_lvs.rpt" 2>/dev/null
+```
+
+Interpret the result before doing anything else:
+
+- Continue only when `BOUNDARY_DRIVER_RC=0`,
+  `PVS_BOUNDARY_RECOVERY_STATUS=PASS`, `PVS_LVS=MATCH`, both blackbox statuses
+  are `PASS`, `LVS_BLACKBOXED_CELL_COUNT` is at least one,
+  `DECISION=PASS_BOUNDARY_CONTINUE`, and `PUBLISH_RC=0`.
+- The expected next stage is
+  `RO6_STANDALONE_LVS_EVIDENCE_AND_MINAREA_REPAIR`. Send the compact `SEND BACK`
+  block and stop so the two independent debts can be ordered from evidence.
+- `RO6_STANDALONE_LVS_REQUIRED=YES`, `DRC_STATUS=NOT_RUN_BY_SCOPE`, and
+  `SIGNOFF_ELIGIBLE=NO` are mandatory even on a match. Never report this run as
+  block LVS signoff.
+- On any mismatch, ineffective blackbox rule, nonzero driver RC, or publish
+  failure, stop. The wrapper publishes the bounded controls and comparison
+  report; do not rerun PnR or edit the remaining minimum-area geometry first.
+
+For boundary review, send only the compact `SEND BACK` block above. The driver
+publishes the bounded control, scope manifest, gate reports, and comparison
+evidence automatically.
 
 ## What to Send for Review
 
