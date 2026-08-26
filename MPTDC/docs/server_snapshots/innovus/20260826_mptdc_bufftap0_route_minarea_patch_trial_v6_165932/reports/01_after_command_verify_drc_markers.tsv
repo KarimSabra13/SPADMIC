@@ -1,0 +1,57 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7f4ff7bd56d0	{715.82 452.59 716.15 453.49}	MET3	Antenna	AntSAreaRatio	Pin of Net conv_arm_i Actual:     1199.82     Max:     380
+2	0x7f4ff7bd5700	{791.39 537.245 791.73 538.555}	MET3	Antenna	AntSAreaRatio	Pin of Net fifo_clr_i Actual:     513.358     Max:     380
+3	0x7f5017c3ba00	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7f5017c3ba60	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+5	0x7f5017c3baf0	{121.16 648.32 121.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+6	0x7f5017c3bb20	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+7	0x7f5017c3bb80	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+8	0x7f5017c3bbe0	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+9	0x7f5017c3bca0	{125.16 648.32 125.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7f4ff7bd4f80	{688.38 264.4 689.22 264.8}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[0] Actual:     2638.87     Max:     380
+11	0x7f4ff7bd4fe0	{710.22 250.4 711.06 250.8}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[2] Actual:     2477.96     Max:     380
+12	0x7f4ff7bd5010	{696.22 264.4 697.06 264.8}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[3] Actual:     2546.35     Max:     380
+13	0x7f4ff7bd5040	{688.38 273.36 689.22 273.76}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[4] Actual:     2620.92     Max:     380
+14	0x7f4ff7bd5070	{709.66 264.4 710.5 264.8}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[5] Actual:     2546.91     Max:     380
+15	0x7f4ff7bd50a0	{690.62 268.32 691.46 268.72}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[6] Actual:     2572.13     Max:     380
+16	0x7f4ff7bd50d0	{694.54 255.44 695.38 255.84}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[7] Actual:     2561.22     Max:     380
+17	0x7f4ff7bd5100	{714.7 286.24 715.54 286.64}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[0] Actual:     2470.36     Max:     380
+18	0x7f4ff7bd5130	{714.7 291.28 715.54 291.68}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[1] Actual:     2466.73     Max:     380
+19	0x7f4ff7bd5160	{693.42 291.28 694.26 291.68}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[2] Actual:     2524.77     Max:     380
+20	0x7f4ff7bd5550	{736.54 431.34 737.355 431.69}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[3] Actual:     449.219     Max:     380
+21	0x7f4ff7bd5520	{736.465 411.71 736.54 412.05}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[2] Actual:     538.04     Max:     380
+22	0x7f4ff7bd54f0	{737.56 429.1 737.94 429.915}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[2] Actual:     538.04     Max:     380
+23	0x7f4ff7bd54c0	{739.34 420.11 739.62 421.01}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[2] Actual:     538.04     Max:     380
+24	0x7f4ff7bd5490	{736.54 407.26 736.82 408.1}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[2] Actual:     538.04     Max:     380
+25	0x7f4ff7bd5460	{735.98 429.61 736.795 429.94}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[1] Actual:     547.537     Max:     380
+26	0x7f4ff7bd5430	{730.94 407.26 731.22 408.1}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[0] Actual:     694.281     Max:     380
+27	0x7f4ff7bd5400	{724.205 420.57 724.5 421.57}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[3] Actual:     449.219     Max:     380
+28	0x7f4ff7bd53d0	{724.22 416.75 724.5 417.65}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[3] Actual:     449.219     Max:     380
+29	0x7f4ff7bd53a0	{724.22 407.26 724.5 408.1}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[3] Actual:     449.219     Max:     380
+30	0x7f4ff7bd5370	{715.77 420.67 716.1 421.57}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[1] Actual:     547.537     Max:     380
+31	0x7f4ff7bd5340	{716.38 416.73 717.22 417.11}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[1] Actual:     547.537     Max:     380
+32	0x7f4ff7bd5310	{715.82 407.26 716.1 408.1}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[1] Actual:     547.537     Max:     380
+33	0x7f4ff7bd52e0	{716.38 420.67 716.71 421.57}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[0] Actual:     694.281     Max:     380
+34	0x7f4ff7bd52b0	{714.7 425.15 714.98 426.05}	MET3	Antenna	AntSAreaRatio	Pin of Net max_hits_i[0] Actual:     694.281     Max:     380
+35	0x7f4ff7bd5280	{714.7 304.16 715.54 304.56}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[5] Actual:     2402.52     Max:     380
+36	0x7f4ff7bd5250	{707.98 277.28 708.82 277.68}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[7] Actual:     2451.31     Max:     380
+37	0x7f4ff7bd5220	{708.54 273.36 709.38 273.76}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[6] Actual:     2460.56     Max:     380
+38	0x7f4ff7bd51f0	{688.38 277.28 689.22 277.68}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[4] Actual:     649.86     Max:     380
+39	0x7f4ff7bd51c0	{693.42 277.28 694.26 277.68}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[3] Actual:     2540.19     Max:     380
+40	0x7f4ff7bd5190	{693.42 291.28 694.26 291.68}	MET2	Antenna	AntSAreaRatio	Pin of Net ro_slow_code_i[2] Actual:     380.191     Max:     380
+41	0x7f4ff7bd4fb0	{709.66 259.36 710.5 259.76}	MET3	Antenna	AntSAreaRatio	Pin of Net ro_fast_code_i[1] Actual:     2539.64     Max:     380
+42	0x7f4ff7bd4f50	{1007.86 107.07 1007.935 107.41}	MET3	Antenna	AntSAreaRatio	Pin of Net soft_reset_i Actual:     386.058     Max:     380
+43	0x7f4ff7bd4f20	{1004.17 106.54 1004.5 107.41}	MET3	Antenna	AntSAreaRatio	Pin of Net soft_reset_i Actual:     386.058     Max:     380
+44	0x7f5017c3ba30	{48.0 201.16 48.0 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+45	0x7f5017c3ba90	{221.75 201.16 221.75 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+46	0x7f5017c3bac0	{121.16 233.62 121.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+47	0x7f5017c3bb50	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+48	0x7f5017c3bbb0	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+49	0x7f5017c3bc10	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+50	0x7f5017c3bc40	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+51	0x7f5017c3bc70	{125.16 233.62 125.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+52	0x7f5017c3bd00	{385.055 328.15 385.285 328.4}	MET1	Geometry	Floating_Patch	Special Wire of Net _SADP_FILLS_RESERVED Type: Floating Patch # -1 -1 201 1 : 385.0550 328.1500 385.2850 328.4000 1
+53	0x7f5017c3bd90	{385.055 328.15 385.285 328.4}	MET1	Geometry	Minimal_Area	Special Wire of Net _SADP_FILLS_RESERVED Actual: 0.05750000 Required: 0.20200000 Type: Minimum Area # 57500 202000 64 0      LEF Description:  AREA 0.202000 ; 
+54	0x7f5017c3bdc0	{385.06 328.29 385.75 328.52}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000 Type: Minimum Area # 177700 202000 64 1 : 385.3700 328.2650 385.7500 328.5450 1     LEF Description:  AREA 0.202000 ; 
+55	0x7f5017c3bdf0	{385.06 328.29 385.285 328.4}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_n_57556 & Special Wire of Net _SADP_FILLS_RESERVED Type: Metal Short # -1 -1 9 2 : 385.0600 328.2900 385.2850 328.4000 1: 385.0600 328.2900 385.2850 328.4000 1
+56	0x7f5017c3be20	{385.285 328.265 385.37 328.29}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_57556 Actual: 0.085000 Required: 0.230000 Type: ParallelRunLength Spacing # 85 230 3 2 : 385.0550 328.2650 385.2850 328.2900 1: 385.3700 328.2650 385.6500 328.5450 1     LEF Description:  SPACING 0.230000 

@@ -1,0 +1,19 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_two_minarea_landing_patch_v6
+REPORT_STATUS=FAILED
+ERROR=N57556_PATCH_WIRE expected exactly one new patch wire
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N57556_PATCH_WIRE expected exactly one new patch wire
+    while executing
+"error "$label expected exactly one new patch wire""
+    (procedure "mptdc_ckpt_manual_add_patch_wire" line 29)
+    invoked from within
+"mptdc_ckpt_manual_add_patch_wire $fh N57556_PATCH_WIRE  u_core_n_57556 MET1 0.23  {385.175 328.405} {385.175 328.155}  {385.060 328.040 385.290 328.52..."
+    (procedure "mptdc_ckpt_manual_two_minarea_landing_patch_v6" line 42)
+    invoked from within
+"mptdc_ckpt_manual_two_minarea_landing_patch_v6"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
