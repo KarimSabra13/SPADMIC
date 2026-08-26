@@ -18,7 +18,7 @@ set ::mptdc_test_manual_edit_vertical ""
 set ::mptdc_test_manual_edit_width 0.28
 set ::mptdc_test_manual_route_points {}
 set ::mptdc_test_manual_command_calls {}
-set ::mptdc_test_minarea_v2_mode 0
+set ::mptdc_test_minarea_v3_mode 0
 set ::mptdc_test_report_dir [file join [file dirname [file normalize [info script]]] .probe_fixture_reports]
 
 proc mptdc_signoff_report_dir {} {
@@ -387,10 +387,27 @@ proc mptdc_test_manual_rename_via {net point new_name} {
     set ::mptdc_test_manual_vias $updated
 }
 
+proc mptdc_test_manual_remove_via {net point} {
+    set retained {}
+    set removed 0
+    foreach row $::mptdc_test_manual_vias {
+        if {[dict get $row net] eq $net &&
+            [mptdc_ckpt_manual_point_equal [dict get $row point] $point]} {
+            incr removed
+        } else {
+            lappend retained $row
+        }
+    }
+    if {$removed != 1} {
+        error "fixture expected one via to remove for $net at $point, found $removed"
+    }
+    set ::mptdc_test_manual_vias $retained
+}
+
 proc editCommitRoute {x y} {
     lappend ::mptdc_test_manual_command_calls [list editCommitRoute $x $y]
     lappend ::mptdc_test_manual_route_points [list $x $y]
-    if {$::mptdc_test_minarea_v2_mode &&
+    if {$::mptdc_test_minarea_v3_mode &&
         $::mptdc_test_manual_edit_net eq "u_core_n_57556" &&
         [mptdc_ckpt_manual_point_equal \
             [lindex $::mptdc_test_manual_route_points 0] {385.56 328.44}]} {
@@ -399,8 +416,8 @@ proc editCommitRoute {x y} {
             box {385.06 328.29 385.75 328.52} width 0.23 \
             points {{385.56 328.405} {385.175 328.405}} \
             status fixed shape 0x0 length 0.385]
-        mptdc_test_manual_rename_via \
-            u_core_n_57556 {385.56 328.44} VIA1_X_so
+        mptdc_test_manual_remove_via \
+            u_core_n_57556 {385.56 328.44}
         set ::mptdc_test_manual_route_points {}
         return
     }
@@ -434,7 +451,7 @@ proc editCommitRoute {x y} {
         width $::mptdc_test_manual_edit_width \
         points $::mptdc_test_manual_route_points \
         status fixed shape 0x0 length $length]
-    if {$::mptdc_test_minarea_v2_mode &&
+    if {$::mptdc_test_minarea_v3_mode &&
         $::mptdc_test_manual_edit_net eq "u_core_n_57960"} {
         mptdc_test_manual_rename_via \
             u_core_n_57960 {363.72 358.12} VIA1_X_so
@@ -875,8 +892,8 @@ if {$route_start_count != 2 || $route_commit_count != 2} {
     error "minimum-area helper expected two bounded wire starts/commits, found $route_start_count/$route_commit_count"
 }
 
-set minarea_v2_marker [file join $::mptdc_test_report_dir minarea_v2_base_markers.tsv]
-set marker_fh [open $minarea_v2_marker w]
+set minarea_v3_marker [file join $::mptdc_test_report_dir minarea_v3_base_markers.tsv]
+set marker_fh [open $minarea_v3_marker w]
 puts $marker_fh "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"
 puts $marker_fh "1\tfixture\t{385.06 328.29 385.75 328.52}\tMET1\tGeometry\tMinimal_Area\tRegular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000 Type: Minimum Area"
 close $marker_fh
@@ -893,49 +910,57 @@ set ::mptdc_test_manual_vias [list \
 set ::mptdc_test_manual_wires {}
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_manual_verify_count 0
-set ::mptdc_test_minarea_v2_mode 1
+set ::mptdc_test_minarea_v3_mode 1
 set ::mptdc_test_manual_snapshot_tuples [dict create \
-    minarea_v2_pre {2 0 0} \
-    minarea_v2_base [list 1 0 0 $minarea_v2_marker] \
-    minarea_v2_post {0 0 0}]
+    minarea_v3_pre {2 0 0} \
+    minarea_v3_base [list 1 0 0 $minarea_v3_marker] \
+    minarea_v3_post {0 0 0}]
 
-set minarea_v2 [mptdc_ckpt_manual_two_minarea_landing_patch_v2]
-if {[dict get $minarea_v2 status] ne "PASS" ||
-    ![file exists [dict get $minarea_v2 report]]} {
-    error "staged minimum-area V2 helper did not pass: $minarea_v2"
+if {![catch {mptdc_ckpt_manual_two_minarea_landing_patch_v2} err] ||
+    ![string match "*retired*" $err]} {
+    error "minimum-area V2 retirement guard did not fail as expected: $err"
+}
+set minarea_v3 [mptdc_ckpt_manual_two_minarea_landing_patch_v3]
+if {[dict get $minarea_v3 status] ne "PASS" ||
+    ![file exists [dict get $minarea_v3 report]]} {
+    error "staged minimum-area V3 helper did not pass: $minarea_v3"
 }
 if {$::mptdc_test_manual_verify_count != 3} {
-    error "minimum-area V2 helper expected three verification tuples, found $::mptdc_test_manual_verify_count"
+    error "minimum-area V3 helper expected three verification tuples, found $::mptdc_test_manual_verify_count"
 }
 if {[mptdc_ckpt_manual_via_names_at u_core_n_57960 {363.72 358.12}] ne {VIA1_X_so} ||
-    [mptdc_ckpt_manual_via_names_at u_core_n_57556 {385.56 328.44}] ne {VIA1_X_so}} {
-    error "minimum-area V2 helper rejected or lost canonical VIA1 variants"
+    [mptdc_ckpt_manual_via_names_at u_core_n_57556 {385.56 328.44}] ne {}} {
+    error "minimum-area V3 helper did not tolerate the observed post-base via topology"
 }
 if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57556 MET1 {385.84 328.405}]} {
-    error "minimum-area V2 helper did not create the normalized via-side extension"
+    error "minimum-area V3 helper did not create the normalized via-side extension"
 }
 
-set fh [open [dict get $minarea_v2 report] r]
-set minarea_v2_text [read $fh]
+set fh [open [dict get $minarea_v3 report] r]
+set minarea_v3_text [read $fh]
 close $fh
 foreach expected {
-    {MANUAL_ECO_MODE=STAGED_BASE_STUBS_THEN_NORMALIZED_VIA_SIDE_EXTENSION}
+    {MANUAL_ECO_MODE=STAGED_BASE_STUBS_THEN_EXACT_MARKER_DERIVED_VIA_SIDE_EXTENSION}
     {BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1777_OF_0.202}
     {VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_ALLOWED}
+    {VIA_OBJECT_POLICY=POST_BASE_VIA_HANDLE_NOT_REQUIRED_CONNECTIVITY_AND_MET1_GEOMETRY_ARE_AUTHORITATIVE}
     {BASE_DRC=1}
     {BASE_SHORTS=0}
     {BASE_MINAREA_MARKER_STATUS=PASS}
-    {BASE_CANONICAL_VIA_SIDE_CANDIDATE_COUNT=1}
-    {BASE_CANONICAL_VIA_SIDE_NEAR=385.56 328.405}
-    {BASE_CANONICAL_VIA_SIDE_FAR=385.175 328.405}
-    {BASE_CANONICAL_VIA_SIDE_STATUS=PASS}
+    {BASE_VIA_SIDE_RESOLUTION_METHOD=EXACT_0.1777_MARKER_CENTERLINE_AND_MET1_COVERAGE}
+    {BASE_VIA_SIDE_MARKER_CENTER_Y=328.405}
+    {BASE_VIA_SIDE_START_COVERED=1}
+    {BASE_VIA_SIDE_SOURCE_ENDPOINT_COVERED=1}
+    {BASE_VIA_SIDE_EXTENSION_PRECOVERED=0}
+    {BASE_VIA_SIDE_RESOLUTION_STATUS=PASS}
     {VIA_SIDE_DIRECTION=AWAY_FROM_SOURCE_EAST}
+    {POST_VIA_SIDE_EXTENSION_COVERED=1}
     {POST_DRC=0}
     {POST_SHORTS=0}
     {MANUAL_ECO_STATUS=PASS}
 } {
-    if {[string first $expected $minarea_v2_text] < 0} {
-        error "minimum-area V2 report is missing $expected"
+    if {[string first $expected $minarea_v3_text] < 0} {
+        error "minimum-area V3 report is missing $expected"
     }
 }
 set route_start_count 0
@@ -948,13 +973,13 @@ foreach call $::mptdc_test_manual_command_calls {
         incr route_commit_count
     }
     if {[lindex $call 0] in {editDelete editAddVia routeDesign globalDetailRoute detailRoute ecoRoute createRouteBlk editPowerVia}} {
-        error "minimum-area V2 helper invoked a prohibited command: $call"
+        error "minimum-area V3 helper invoked a prohibited command: $call"
     }
 }
 if {$route_start_count != 3 || $route_commit_count != 3} {
-    error "minimum-area V2 helper expected three bounded wire starts/commits, found $route_start_count/$route_commit_count"
+    error "minimum-area V3 helper expected three bounded wire starts/commits, found $route_start_count/$route_commit_count"
 }
-set ::mptdc_test_minarea_v2_mode 0
+set ::mptdc_test_minarea_v3_mode 0
 set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir
 

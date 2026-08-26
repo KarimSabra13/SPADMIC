@@ -264,7 +264,7 @@ special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact `HALO10_PNRLEF_15` PVS-candidate
 fingerprint.
 
-### 2. Current Command: Staged Normalized Via-Side Repair V2
+### 2. Current Command: Exact Marker-Derived Via-Side Repair V3
 
 The read-only probe completed as
 `20260825_mptdc_bufftap0_route_minarea_probe_143229`. It proved that the source
@@ -283,7 +283,17 @@ shorts, zero regular-connectivity failures, and zero non-RO special-connectivity
 failures. Innovus also canonicalized `VIA1_o` to the legal VIA1-class variant
 `VIA1_X_so`; exact post-edit via-name equality was therefore an invalid gate.
 
-This is the only Innovus command to run now. V2 restores the original
+V2 completed as
+`20260825_mptdc_bufftap0_route_minarea_repair_v2_152021`. Both bounded base
+stubs committed successfully and again produced the exact one-marker state with
+zero shorts and zero regular or non-RO special connectivity failures. Innovus
+retained `u_core_n_57960` as `VIA1_X_so`, but absorbed the
+`u_core_n_57556` VIA1 database handle into the normalized routed geometry.
+Requiring that stale handle stopped V2 before its intermediate snapshot; it was
+an object-representation failure, not a physical or connectivity regression.
+Do not rerun V2.
+
+This is the only Innovus command to run now. V3 restores the original
 guarded-halo checkpoint in one fresh process and first reproduces only these two
 MET1 landing stubs:
 
@@ -292,13 +302,16 @@ u_core_n_57960: (363.72,358.12) -> (364.56,358.12), width 0.28
 u_core_n_57556: (385.56,328.44) -> (384.72,328.44), width 0.28
 ```
 
-V2 must then prove the exact intermediate state: one geometry DRC, zero shorts,
+V3 must then prove the exact intermediate state: one geometry DRC, zero shorts,
 zero regular and non-RO special connectivity failures, and the sole geometry
-marker `u_core_n_57556` at `0.1777/0.202`. It discovers the actual normalized
-fixed MET1 stub endpoint from the Innovus database and adds one `0.56 um`,
-`0.28 um`-requested segment eastward from its via-side endpoint. This is the
+marker `u_core_n_57556` at `0.1777/0.202`. The exact marker box fixes the
+normalized centerline at `y=328.405`. V3 requires existing MET1 coverage at
+both `(385.56,328.405)` and the source-side endpoint
+`(385.175,328.405)`, requires the east extension probe to be initially clear,
+then adds one `0.56 um`, `0.28 um`-requested segment eastward. This is the
 repository-validated method for a Wire Editor stub that saturates at
-`0.1777/0.202`.
+`0.1777/0.202`, without depending on a transient via handle or wire-status
+suffix.
 
 The command issues no explicit via add/delete, PG edit, placement edit, route
 blockage, or router optimization command. Innovus VIA1-class canonicalization
@@ -358,7 +371,7 @@ grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|MINAREA_RE
   "$DRIVER_LOG" 2>/dev/null | tail -20
 
 echo "===== OPERATOR GATE ====="
-grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|MANUAL_(PRE|BASE|POST)_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES)|BASE_(MINAREA_MARKER|CANONICAL_VIA_SIDE)_STATUS|INITIAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
+grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|MANUAL_(PRE|BASE|POST)_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES)|BASE_MINAREA_MARKER_STATUS|BASE_VIA_SIDE_RESOLUTION_STATUS|INITIAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
   "$REPAIR_DIR/reports/operator_gate_route_min_area_repair.rpt" 2>/dev/null
 ```
 
@@ -381,7 +394,7 @@ The operator gate must additionally show `COMMAND_1_STATUS=PASS`,
 `MANUAL_BASE_REGULAR_CONNECTIVITY_BAD=0`,
 `MANUAL_BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0`,
 `BASE_MINAREA_MARKER_STATUS=PASS`,
-`BASE_CANONICAL_VIA_SIDE_STATUS=PASS`, final `DRC=0` and `SHORTS=0`, zero
+`BASE_VIA_SIDE_RESOLUTION_STATUS=PASS`, final `DRC=0` and `SHORTS=0`, zero
 regular and non-RO special connectivity failures, unchanged
 `SPECIAL_DANGLING_COUNT=15`,
 `SPECIAL_SIGNATURE_STATUS=PASS`, `TIMING_GATE_STATUS=PASS`, and
