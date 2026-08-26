@@ -1921,6 +1921,10 @@ Interpret the result as follows:
   template is expected to use `STREAM_MAP_BINDING_MODE=ENV_SELECTED_MAP`; the
   wrapper sets that environment value to the selected, hashed XH018 map before
   sourcing the template.
+- Innovus preparation must print `MPTDC_PVS_PREP_BATCH_STATUS=PASS` and return
+  to the shell before PVS starts. The wrapper supplies the historical
+  `STD_GDS` alias from the validated D-cell GDS and closes Innovus stdin, so an
+  init-script failure cannot consume later shell commands as Tcl.
 - After manual repair, rerun the normal canonical flow. Final acceptance still
   requires Innovus DRC zero, base PVS DRC zero, density PVS DRC zero, and an
   explicit LVS `MATCH` on one immutable input set.

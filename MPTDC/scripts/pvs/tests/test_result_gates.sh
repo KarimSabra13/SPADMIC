@@ -14,9 +14,14 @@ grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP "$STREAM_MAP"' "$PRE
 grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" PATCHED_STREAMOUT "$PATCHED_STREAMOUT"' "$PREP_SCRIPT"
 
 STREAM_MAP_SET_LINE="$(grep -n 'set ::env(STREAM_MAP) $stream_map' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
+STD_GDS_SET_LINE="$(grep -n 'set ::env(STD_GDS) $dcell_gds' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
 STREAMOUT_SOURCE_LINE="$(grep -n 'mptdc_pvs_try source_streamout' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
-[[ -n "$STREAM_MAP_SET_LINE" && -n "$STREAMOUT_SOURCE_LINE" ]]
+[[ -n "$STREAM_MAP_SET_LINE" && -n "$STD_GDS_SET_LINE" && -n "$STREAMOUT_SOURCE_LINE" ]]
 [[ "$STREAM_MAP_SET_LINE" -lt "$STREAMOUT_SOURCE_LINE" ]]
+[[ "$STD_GDS_SET_LINE" -lt "$STREAMOUT_SOURCE_LINE" ]]
+grep -Fq 'MPTDC_PVS_PREP_FATAL_LABEL=$label' "$PREP_SCRIPT"
+grep -Fq 'MPTDC_PVS_PREP_BATCH_STATUS=PASS' "$PREP_SCRIPT"
+grep -Fq 'innovus -nowin -init "$GENERATED_TCL" -log "$LOG_DIR/innovus_prepare_pvs_inputs.log" </dev/null' "$PREP_SCRIPT"
 
 SELECTED_MAP="/pdk/selected/pnr_streamout.map"
 ENV_MAP_TEMPLATE="$TMP_ROOT/streamout_env_map.tcl"

@@ -259,7 +259,11 @@ GENERATED_TCL="$WORK_DIR/prepare_pvs_inputs.tcl"
 proc mptdc_pvs_try {label cmd} {
   set rc [catch {uplevel #0 $cmd} err]
   puts "MPTDC_PVS_PREP_${label}_RC=$rc ERR=$err"
-  if {$rc} { error $err }
+  if {$rc} {
+    puts stderr "MPTDC_PVS_PREP_FATAL_LABEL=$label"
+    puts stderr "MPTDC_PVS_PREP_FATAL_ERROR=$err"
+    exit 1
+  }
 }
 
 file mkdir $output_dir
@@ -288,6 +292,7 @@ if {[file exists $patched_streamout]} {
   set ::env(PG_V) $pg_v
   set ::env(PHYS_PG_V) $phys_pg_v
   set ::env(DCELL_GDS) $dcell_gds
+  set ::env(STD_GDS) $dcell_gds
   set ::env(RO_GDS) $ro_gds
   set ::env(STREAM_MAP) $stream_map
   mptdc_pvs_try source_streamout [list source $patched_streamout]
@@ -299,8 +304,12 @@ if {[file exists $patched_streamout]} {
   if {$stream_map ne ""} { lappend merge_args -mapFile $stream_map }
   mptdc_pvs_try streamOut_merged [concat [list streamOut] $merge_args]
 } else {
-  error "No streamout template and generated streamout disabled"
+  puts stderr "MPTDC_PVS_PREP_FATAL_LABEL=streamout_selection"
+  puts stderr "MPTDC_PVS_PREP_FATAL_ERROR=No streamout template and generated streamout disabled"
+  exit 1
 }
+puts "MPTDC_PVS_PREP_BATCH_STATUS=PASS"
+exit 0
 TCL
 } > "$GENERATED_TCL"
 
@@ -311,7 +320,7 @@ fi
 set +e
 (
   cd "$REPO_ROOT"
-  innovus -nowin -init "$GENERATED_TCL" -log "$LOG_DIR/innovus_prepare_pvs_inputs.log"
+  innovus -nowin -init "$GENERATED_TCL" -log "$LOG_DIR/innovus_prepare_pvs_inputs.log" </dev/null
 ) 2>&1 | tee -a "$RUN_LOG"
 INNOVUS_RC=${PIPESTATUS[0]}
 set -e
