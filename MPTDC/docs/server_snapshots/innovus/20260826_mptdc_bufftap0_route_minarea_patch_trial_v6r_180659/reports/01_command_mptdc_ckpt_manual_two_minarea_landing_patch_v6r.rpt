@@ -1,0 +1,16 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_two_minarea_landing_patch_v6r
+REPORT_STATUS=FAILED
+ERROR=one calibrated MET1 landing stub did not materialize on its target net
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+one calibrated MET1 landing stub did not materialize on its target net
+    while executing
+"error "one calibrated MET1 landing stub did not materialize on its target net""
+    (procedure "mptdc_ckpt_manual_two_minarea_landing_patch_v6r" line 48)
+    invoked from within
+"mptdc_ckpt_manual_two_minarea_landing_patch_v6r"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
