@@ -1,0 +1,89 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7ff66eecdcd0	{715.485 452.54 716.485 453.54}	MET3	Antenna	Antenna	Regular Wire of Net conv_arm_i Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+2	0x7ff66eecdd00	{715.82 452.59 716.15 453.49}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net conv_arm_i Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+3	0x7ff66eecdd30	{791.06 537.4 792.06 538.4}	MET3	Antenna	Antenna	Regular Wire of Net fifo_clr_i Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+4	0x7ff66eecdd60	{791.39 537.245 791.73 538.555}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net fifo_clr_i Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+5	0x7ff641b38da0	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+6	0x7ff641b38e00	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+7	0x7ff641b38e90	{121.16 648.32 121.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+8	0x7ff641b38ec0	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+9	0x7ff641b38f20	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7ff641b38f80	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+11	0x7ff641b39040	{125.16 648.32 125.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7ff641b38410	{730.94 407.26 731.22 408.1}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+13	0x7ff641b383e0	{730.58 407.18 731.58 408.18}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+14	0x7ff641b383b0	{735.98 429.61 736.795 429.94}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+15	0x7ff641b38380	{735.887 429.275 736.887 430.275}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+16	0x7ff641b381a0	{736.447 431.015 737.447 432.015}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+17	0x7ff641b381d0	{736.54 431.34 737.355 431.69}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+18	0x7ff641b38200	{736.002 411.38 737.002 412.38}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+19	0x7ff641b38230	{736.465 411.71 736.54 412.05}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+20	0x7ff641b38260	{737.25 429.007 738.25 430.007}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+21	0x7ff641b38290	{737.56 429.1 737.94 429.915}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+22	0x7ff641b382c0	{738.98 420.06 739.98 421.06}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+23	0x7ff641b382f0	{739.34 420.11 739.62 421.01}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+24	0x7ff641b38320	{736.18 407.18 737.18 408.18}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+25	0x7ff641b38350	{736.54 407.26 736.82 408.1}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+26	0x7ff641b38710	{714.7 425.15 714.98 426.05}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+27	0x7ff641b386e0	{714.34 425.1 715.34 426.1}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+28	0x7ff641b386b0	{716.38 420.67 716.71 421.57}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+29	0x7ff641b38680	{716.045 420.62 717.045 421.62}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+30	0x7ff641b38650	{715.82 407.26 716.1 408.1}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+31	0x7ff641b38620	{715.46 407.18 716.46 408.18}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+32	0x7ff641b385f0	{716.38 416.73 717.22 417.11}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+33	0x7ff641b385c0	{716.3 416.42 717.3 417.42}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+34	0x7ff641b38590	{715.77 420.67 716.1 421.57}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+35	0x7ff641b38560	{715.435 420.62 716.435 421.62}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+36	0x7ff641b38530	{724.22 407.26 724.5 408.1}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+37	0x7ff641b38500	{723.86 407.18 724.86 408.18}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+38	0x7ff641b384d0	{724.22 416.75 724.5 417.65}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+39	0x7ff641b384a0	{723.86 416.7 724.86 417.7}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+40	0x7ff641b38470	{724.205 420.57 724.5 421.57}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+41	0x7ff641b38440	{723.852 420.57 724.852 421.57}	MET3	Antenna	Antenna	Regular Wire of Net max_hits_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+42	0x7ff641b38740	{714.62 303.86 715.62 304.86}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[5] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+43	0x7ff641b38770	{714.7 304.16 715.54 304.56}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[5] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+44	0x7ff641b389b0	{709.66 259.36 710.5 259.76}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+45	0x7ff641b38950	{693.42 291.28 694.26 291.68}	MET2	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+46	0x7ff641b38920	{693.34 290.98 694.34 291.98}	MET2	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+47	0x7ff641b388f0	{693.42 277.28 694.26 277.68}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+48	0x7ff641b388c0	{693.34 276.98 694.34 277.98}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+49	0x7ff641b38890	{688.38 277.28 689.22 277.68}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[4] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+50	0x7ff641b38860	{688.3 276.98 689.3 277.98}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[4] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+51	0x7ff641b38830	{708.54 273.36 709.38 273.76}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[6] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+52	0x7ff641b38800	{708.46 273.06 709.46 274.06}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[6] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+53	0x7ff641b387d0	{707.98 277.28 708.82 277.68}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[7] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+54	0x7ff641b387a0	{707.9 276.98 708.9 277.98}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[7] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+55	0x7ff66eecdd90	{688.3 264.1 689.3 265.1}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+56	0x7ff66eecddc0	{688.38 264.4 689.22 264.8}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+57	0x7ff66eecddf0	{710.14 250.1 711.14 251.1}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+58	0x7ff66eecde20	{710.22 250.4 711.06 250.8}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+59	0x7ff66eecde50	{696.14 264.1 697.14 265.1}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+60	0x7ff66eecde80	{696.22 264.4 697.06 264.8}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[3] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+61	0x7ff66eecdeb0	{688.3 273.06 689.3 274.06}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[4] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+62	0x7ff66eecdee0	{688.38 273.36 689.22 273.76}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[4] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+63	0x7ff66eecdf10	{709.58 264.1 710.58 265.1}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[5] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+64	0x7ff66eecdf40	{709.66 264.4 710.5 264.8}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[5] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+65	0x7ff66eecdf70	{690.54 268.02 691.54 269.02}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[6] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+66	0x7ff66eecdfa0	{690.62 268.32 691.46 268.72}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[6] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+67	0x7ff641b38020	{694.46 255.14 695.46 256.14}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[7] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+68	0x7ff641b38050	{694.54 255.44 695.38 255.84}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_fast_code_i[7] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+69	0x7ff641b38080	{714.62 285.94 715.62 286.94}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+70	0x7ff641b380b0	{714.7 286.24 715.54 286.64}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[0] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+71	0x7ff641b380e0	{714.62 290.98 715.62 291.98}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+72	0x7ff641b38110	{714.7 291.28 715.54 291.68}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+73	0x7ff641b38140	{693.34 290.98 694.34 291.98}	MET3	Antenna	Antenna	Regular Wire of Net ro_slow_code_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+74	0x7ff641b38170	{693.42 291.28 694.26 291.68}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net ro_slow_code_i[2] Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+75	0x7ff641b38980	{709.58 259.06 710.58 260.06}	MET3	Antenna	Antenna	Regular Wire of Net ro_fast_code_i[1] Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+76	0x7ff641b389e0	{1007.397 106.74 1008.397 107.74}	MET3	Antenna	Antenna	Regular Wire of Net soft_reset_i Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+77	0x7ff641b38a10	{1007.86 107.07 1007.935 107.41}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net soft_reset_i Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+78	0x7ff641b38a40	{1003.835 106.475 1004.835 107.475}	MET3	Antenna	Antenna	Regular Wire of Net soft_reset_i Actual: 0.000000 Required: 0.000000 Type: Antenna # 0 0 48 0 
+79	0x7ff641b38a70	{1004.17 106.54 1004.5 107.41}	MET3	Antenna	Antenna_Side_Area_Ratio	Regular Wire of Net soft_reset_i Actual: 0.000000 Required: 0.000000 Type: Antenna Side Area Ratio # 0 0 50 0 
+80	0x7ff641b38dd0	{48.0 201.16 48.0 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+81	0x7ff641b38e30	{221.75 201.16 221.75 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+82	0x7ff641b38e60	{121.16 233.62 121.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+83	0x7ff641b38ef0	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+84	0x7ff641b38f50	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+85	0x7ff641b38fb0	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+86	0x7ff641b38fe0	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+87	0x7ff641b39010	{125.16 233.62 125.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+88	0x7ff641b39070	{385.06 328.29 385.75 328.52}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000 Type: Minimum Area # 177700 202000 64 1 : 385.3700 328.2650 385.7500 328.5450 1     LEF Description:  AREA 0.202000 ; 

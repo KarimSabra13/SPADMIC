@@ -1,0 +1,19 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_two_minarea_landing_patch_v5
+REPORT_STATUS=FAILED
+ERROR=POST expected tuple DRC=0 SHORTS=0 REGULAR=0 SPECIAL_NON_RO=0, found DRC=1 SHORTS=0 REGULAR=0 SPECIAL_NON_RO=0
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+POST expected tuple DRC=0 SHORTS=0 REGULAR=0 SPECIAL_NON_RO=0, found DRC=1 SHORTS=0 REGULAR=0 SPECIAL_NON_RO=0
+    while executing
+"error "$label expected tuple DRC=$expected_drc SHORTS=$expected_shorts REGULAR=$expected_regular SPECIAL_NON_RO=0, found DRC=$actual_drc SHORTS=$actua..."
+    (procedure "mptdc_ckpt_manual_assert_snapshot_tuple" line 14)
+    invoked from within
+"mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0"
+    (procedure "mptdc_ckpt_manual_two_minarea_landing_patch_v5" line 37)
+    invoked from within
+"mptdc_ckpt_manual_two_minarea_landing_patch_v5"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
