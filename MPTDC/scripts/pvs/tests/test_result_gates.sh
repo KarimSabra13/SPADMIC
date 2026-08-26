@@ -15,10 +15,18 @@ grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" PATCHED_STREAMOUT "$PATCHED_STR
 
 STREAM_MAP_SET_LINE="$(grep -n 'set ::env(STREAM_MAP) $stream_map' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
 STD_GDS_SET_LINE="$(grep -n 'set ::env(STD_GDS) $dcell_gds' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
-STREAMOUT_SOURCE_LINE="$(grep -n 'mptdc_pvs_try source_streamout' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
+STREAMOUT_SOURCE_LINE="$(grep -n 'set source_rc \[catch {source $patched_streamout}' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
 [[ -n "$STREAM_MAP_SET_LINE" && -n "$STD_GDS_SET_LINE" && -n "$STREAMOUT_SOURCE_LINE" ]]
 [[ "$STREAM_MAP_SET_LINE" -lt "$STREAMOUT_SOURCE_LINE" ]]
 [[ "$STD_GDS_SET_LINE" -lt "$STREAMOUT_SOURCE_LINE" ]]
+grep -Fq 'rename restoreDesign mptdc_pvs_saved_restoreDesign' "$PREP_SCRIPT"
+grep -Fq 'rename mptdc_pvs_saved_restoreDesign restoreDesign' "$PREP_SCRIPT"
+grep -Fq 'MPTDC_PVS_PREP_TEMPLATE_RESTORE_SKIP_COUNT=' "$PREP_SCRIPT"
+grep -Fq 'MPTDC_PVS_PREP_TEMPLATE_RESTORE_GUARD_STATUS=PASS' "$PREP_SCRIPT"
+if grep -Fq 'restore_db_stop_at_design_in_memory' "$PREP_SCRIPT"; then
+  echo "ERROR: preparation script disables Innovus restore protection" >&2
+  exit 1
+fi
 grep -Fq 'MPTDC_PVS_PREP_FATAL_LABEL=$label' "$PREP_SCRIPT"
 grep -Fq 'MPTDC_PVS_PREP_BATCH_STATUS=PASS' "$PREP_SCRIPT"
 grep -Fq 'innovus -nowin -init "$GENERATED_TCL" -log "$LOG_DIR/innovus_prepare_pvs_inputs.log" </dev/null' "$PREP_SCRIPT"

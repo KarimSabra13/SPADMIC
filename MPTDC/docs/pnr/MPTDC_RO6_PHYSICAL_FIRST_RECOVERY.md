@@ -1925,6 +1925,10 @@ Interpret the result as follows:
   to the shell before PVS starts. The wrapper supplies the historical
   `STD_GDS` alias from the validated D-cell GDS and closes Innovus stdin, so an
   init-script failure cannot consume later shell commands as Tcl.
+- The historical template attempts one redundant `restoreDesign`. Preparation
+  must report `MPTDC_PVS_PREP_TEMPLATE_RESTORE_SKIP_COUNT=1` and
+  `MPTDC_PVS_PREP_TEMPLATE_RESTORE_GUARD_STATUS=PASS`; the wrapper keeps the
+  already restored candidate and never disables Innovus restore protection.
 - After manual repair, rerun the normal canonical flow. Final acceptance still
   requires Innovus DRC zero, base PVS DRC zero, density PVS DRC zero, and an
   explicit LVS `MATCH` on one immutable input set.

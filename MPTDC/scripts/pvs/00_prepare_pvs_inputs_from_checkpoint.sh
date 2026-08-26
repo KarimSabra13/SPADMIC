@@ -295,7 +295,29 @@ if {[file exists $patched_streamout]} {
   set ::env(STD_GDS) $dcell_gds
   set ::env(RO_GDS) $ro_gds
   set ::env(STREAM_MAP) $stream_map
-  mptdc_pvs_try source_streamout [list source $patched_streamout]
+  set ::mptdc_pvs_template_restore_skip_count 0
+  rename restoreDesign mptdc_pvs_saved_restoreDesign
+  proc restoreDesign {args} {
+    incr ::mptdc_pvs_template_restore_skip_count
+    puts "MPTDC_PVS_PREP_TEMPLATE_RESTORE_SKIPPED_ARGS=$args"
+    return 3
+  }
+  set source_rc [catch {source $patched_streamout} source_err]
+  rename restoreDesign {}
+  rename mptdc_pvs_saved_restoreDesign restoreDesign
+  puts "MPTDC_PVS_PREP_source_streamout_RC=$source_rc ERR=$source_err"
+  puts "MPTDC_PVS_PREP_TEMPLATE_RESTORE_SKIP_COUNT=$::mptdc_pvs_template_restore_skip_count"
+  if {$source_rc} {
+    puts stderr "MPTDC_PVS_PREP_FATAL_LABEL=source_streamout"
+    puts stderr "MPTDC_PVS_PREP_FATAL_ERROR=$source_err"
+    exit 1
+  }
+  if {$::mptdc_pvs_template_restore_skip_count > 1} {
+    puts stderr "MPTDC_PVS_PREP_FATAL_LABEL=template_restore_guard"
+    puts stderr "MPTDC_PVS_PREP_FATAL_ERROR=legacy template attempted more than one restore"
+    exit 1
+  }
+  puts "MPTDC_PVS_PREP_TEMPLATE_RESTORE_GUARD_STATUS=PASS"
 } elseif {[info exists ::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)] && $::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)} {
   set args [list $top_only_gds -libName DesignLib -units 1000 -mode ALL]
   if {$stream_map ne ""} { lappend args -mapFile $stream_map }
