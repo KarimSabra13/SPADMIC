@@ -24,6 +24,7 @@ set ::mptdc_test_manual_edit_status routed
 set ::mptdc_test_manual_route_points {}
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_local_ecoroute_called 0
+set ::mptdc_test_normalize_minarea_v8 0
 set ::mptdc_test_report_dir [file join [file dirname [file normalize [info script]]] .probe_fixture_reports]
 
 proc mptdc_signoff_report_dir {} {
@@ -101,6 +102,19 @@ proc set_db {objects attribute value} {
         error "fixture rejects $attribute"
     }
     lappend ::mptdc_test_set_db_calls [list $objects $attribute $value]
+}
+
+proc dbSet {expression value} {
+    if {![regexp {^mwire:([0-9]+)\.(beginExt|endExt)$} \
+            $expression -> idx attribute]} {
+        error "fixture rejects dbSet expression: $expression"
+    }
+    set row [lindex $::mptdc_test_manual_wires $idx]
+    dict set row $attribute $value
+    set ::mptdc_test_manual_wires [lreplace \
+        $::mptdc_test_manual_wires $idx $idx $row]
+    lappend ::mptdc_test_set_db_calls [list $expression $value]
+    return $value
 }
 
 proc setAttribute {args} {
@@ -194,6 +208,13 @@ proc dbGet {args} {
                         return [dict get $row length]
                     }
                     return UNKNOWN
+                }
+                beginExt -
+                endExt {
+                    if {[dict exists $row $attribute]} {
+                        return [dict get $row $attribute]
+                    }
+                    return 0.0
                 }
                 default { return 0x0 }
             }
@@ -479,13 +500,32 @@ proc editCommitRoute {x y} {
             points $::mptdc_test_manual_route_points \
             status $::mptdc_test_manual_edit_status]
     } else {
+        set wire_layer $::mptdc_test_manual_edit_horizontal
+        set wire_box $box
+        set wire_width $::mptdc_test_manual_edit_width
+        set wire_points $::mptdc_test_manual_route_points
+        set wire_length $length
+        set begin_ext 0.0
+        set end_ext 0.0
+        if {$::mptdc_test_normalize_minarea_v8 &&
+            $::mptdc_test_manual_edit_net eq "u_core_n_57556" &&
+            [mptdc_ckpt_manual_point_equal \
+                [lindex $::mptdc_test_manual_route_points 0] {385.56 328.44}] &&
+            [mptdc_ckpt_manual_point_equal \
+                [lindex $::mptdc_test_manual_route_points end] {384.72 328.44}]} {
+            set wire_layer MET1
+            set wire_box {385.06 328.29 385.75 328.52}
+            set wire_width 0.23
+            set wire_points {{385.56 328.405} {385.175 328.405}}
+            set wire_length 0.385
+            set begin_ext 0.115
+            set end_ext 0.115
+        }
         lappend ::mptdc_test_manual_wires [dict create \
             net $::mptdc_test_manual_edit_net \
-            layer $::mptdc_test_manual_edit_horizontal \
-            box $box \
-            width $::mptdc_test_manual_edit_width \
-            points $::mptdc_test_manual_route_points \
-            status fixed shape 0x0 length $length]
+            layer $wire_layer box $wire_box width $wire_width \
+            points $wire_points status fixed shape 0x0 length $wire_length \
+            beginExt $begin_ext endExt $end_ext]
     }
     set ::mptdc_test_manual_route_points {}
 }
@@ -702,6 +742,21 @@ proc mptdc_ckpt_verify_snapshot {tag} {
         ![mptdc_ckpt_manual_wire_covers_point \
             u_core_n_57556 MET1 {384.51 328.44}]} {
         error "minimum-area V6R post snapshot occurred before the calibrated regular stub materialized"
+    }
+    if {$tag in {minarea_v8_trial_post minarea_v8_replay_post}} {
+        set extended_count 0
+        foreach row $::mptdc_test_manual_wires {
+            if {[dict get $row net] eq "u_core_n_57556" &&
+                [dict exists $row length] &&
+                [mptdc_ckpt_manual_close [dict get $row length] 0.385] &&
+                [dict exists $row endExt] &&
+                [mptdc_ckpt_manual_close [dict get $row endExt] 0.255]} {
+                incr extended_count
+            }
+        }
+        if {$extended_count != 1} {
+            error "minimum-area V8 post snapshot expected one endpoint-extended canonical stub, found $extended_count"
+        }
     }
     set tuple [dict get $::mptdc_test_manual_snapshot_tuples $tag]
     lassign $tuple drc shorts regular marker_rpt
@@ -1043,6 +1098,159 @@ if {$route_start_count != 2 || $route_commit_count != 2} {
 }
 if {$eco_call_count != 0 || $::mptdc_test_local_ecoroute_called} {
     error "minimum-area V6R helper invoked ecoRoute"
+}
+
+set minarea_01777_marker [file join \
+    $::mptdc_test_report_dir minarea_01777_marker.tsv]
+set fh [open $minarea_01777_marker w]
+puts $fh "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"
+puts $fh "1\t0x1\t{385.06 328.29 385.75 328.52}\tMET1\tGeometry\tMinimal_Area\tRegular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000"
+close $fh
+
+set ::mptdc_test_manual_vias [list \
+    [dict create net u_core_n_57556 name VIA1_o point {385.56 328.44} status routed \
+        bot_rects {{{385.37 328.30 385.75 328.58}}} \
+        cut_rects {{{385.43 328.31 385.69 328.57}}} \
+        top_rects {{{385.42 328.25 385.70 328.63}}}]]
+set ::mptdc_test_manual_wires [list \
+    [dict create net u_core_n_57556 layer MET1 \
+        box {385.06 328.29 385.75 328.52} width 0.23 \
+        points {{385.56 328.405} {385.175 328.405}} \
+        status fixed shape 0x0 length 0.385 beginExt 0.115 endExt 0.115]]
+set ::mptdc_test_manual_pwires [list \
+    [dict create net u_core_n_57556 layer MET1 box {380 320 381 321} \
+        width 0.23 points {{380 320} {381 320}} status fixed] \
+    [dict create net _SADP_FILLS_RESERVED layer MET1 box {10 10 11 11} \
+        width 0.23 points {{10 10} {11 10}} status fixed]]
+set ::mptdc_test_manual_swires [list \
+    [dict create net u_core_n_57556] \
+    [dict create net _SADP_FILLS_RESERVED]]
+set ::mptdc_test_manual_command_calls {}
+set ::mptdc_test_set_db_calls {}
+set ::mptdc_test_manual_verify_count 0
+set ::mptdc_test_manual_snapshot_tuples [dict create \
+    minarea_v8_trial_pre [list 1 0 0 $minarea_01777_marker] \
+    minarea_v8_trial_post {0 0 0}]
+
+set minarea_v8_trial [mptdc_ckpt_manual_single_minarea_endext_trial_v8]
+if {[dict get $minarea_v8_trial status] ne "PASS" ||
+    ![file exists [dict get $minarea_v8_trial report]]} {
+    error "minimum-area V8 endpoint-extension trial did not pass: $minarea_v8_trial"
+}
+if {$::mptdc_test_manual_verify_count != 2} {
+    error "minimum-area V8 trial expected two verification tuples, found $::mptdc_test_manual_verify_count"
+}
+if {$::mptdc_test_set_db_calls ne {{mwire:0.endExt 0.255}}} {
+    error "minimum-area V8 trial changed an unexpected DB attribute: $::mptdc_test_set_db_calls"
+}
+set fh [open [dict get $minarea_v8_trial report] r]
+set minarea_v8_trial_text [read $fh]
+close $fh
+foreach expected {
+    {MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V8}
+    {V8_STAGE_MODE=trial}
+    {PRE_DRC=1}
+    {PRE_SHORTS=0}
+    {PRE_MINAREA_MARKER_STATUS=PASS}
+    {N57556_END_EXT_CANONICAL_STUB_STATUS=PASS}
+    {N57556_END_EXT_CANONICAL_STUB_WIDTH=0.23}
+    {N57556_END_EXT_CANONICAL_STUB_LENGTH=0.385}
+    {N57556_END_EXT_FREE_END_ATTRIBUTE=endExt}
+    {N57556_END_EXT_FREE_END_EXTENSION_DELTA_UM=0.14}
+    {FIXED_WIRE_EXTENSION_STATUS=PASS}
+    {TARGET_WIRE_HANDLE_STATUS=UNCHANGED}
+    {TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED}
+    {RESERVED_FILL_OBJECT_STATUS=UNCHANGED}
+    {POST_DRC=0}
+    {POST_SHORTS=0}
+    {POST_MINAREA_MARKER_COUNT=0}
+    {MANUAL_ECO_STATUS=PASS}
+} {
+    if {[string first $expected $minarea_v8_trial_text] < 0} {
+        error "minimum-area V8 trial report is missing $expected"
+    }
+}
+foreach call $::mptdc_test_manual_command_calls {
+    if {[lindex $call 0] in {editAddRoute editCommitRoute editDelete editAddVia ecoRoute routeDesign globalDetailRoute detailRoute createRouteBlk editPowerVia}} {
+        error "minimum-area V8 trial invoked a prohibited routing command: $call"
+    }
+}
+
+set ::mptdc_test_manual_vias [list \
+    [dict create net u_core_n_57960 name VIA1_o point {363.72 358.12} status routed \
+        bot_rects {{{363.53 357.98 363.91 358.26}}} \
+        cut_rects {{{363.59 357.99 363.85 358.25}}} \
+        top_rects {{{363.58 357.93 363.86 358.31}}}] \
+    [dict create net u_core_n_57556 name VIA1_o point {385.56 328.44} status routed \
+        bot_rects {{{385.37 328.30 385.75 328.58}}} \
+        cut_rects {{{385.43 328.31 385.69 328.57}}} \
+        top_rects {{{385.42 328.25 385.70 328.63}}}]]
+set ::mptdc_test_manual_wires {}
+set ::mptdc_test_manual_pwires [list \
+    [dict create net u_core_n_57556 layer MET1 box {380 320 381 321} \
+        width 0.23 points {{380 320} {381 320}} status fixed] \
+    [dict create net _SADP_FILLS_RESERVED layer MET1 box {10 10 11 11} \
+        width 0.23 points {{10 10} {11 10}} status fixed]]
+set ::mptdc_test_manual_swires [list \
+    [dict create net u_core_n_57556] \
+    [dict create net _SADP_FILLS_RESERVED]]
+set ::mptdc_test_manual_command_calls {}
+set ::mptdc_test_set_db_calls {}
+set ::mptdc_test_manual_verify_count 0
+set ::mptdc_test_normalize_minarea_v8 1
+set ::mptdc_test_manual_snapshot_tuples [dict create \
+    minarea_v8_replay_pre {2 0 0} \
+    minarea_v8_replay_intermediate [list 1 0 0 $minarea_01777_marker] \
+    minarea_v8_replay_post {0 0 0}]
+
+set minarea_v8_replay [mptdc_ckpt_manual_two_minarea_landing_patch_v8]
+set ::mptdc_test_normalize_minarea_v8 0
+if {[dict get $minarea_v8_replay status] ne "PASS" ||
+    ![file exists [dict get $minarea_v8_replay report]]} {
+    error "minimum-area V8 canonical replay did not pass: $minarea_v8_replay"
+}
+if {$::mptdc_test_manual_verify_count != 3} {
+    error "minimum-area V8 replay expected three verification tuples, found $::mptdc_test_manual_verify_count"
+}
+if {[llength $::mptdc_test_set_db_calls] != 1 ||
+    [lindex [lindex $::mptdc_test_set_db_calls 0] 0] ne "mwire:1.endExt"} {
+    error "minimum-area V8 replay changed an unexpected DB attribute: $::mptdc_test_set_db_calls"
+}
+set fh [open [dict get $minarea_v8_replay report] r]
+set minarea_v8_replay_text [read $fh]
+close $fh
+foreach expected {
+    {V8_STAGE_MODE=replay}
+    {PRE_DRC=2}
+    {PRE_SHORTS=0}
+    {INTERMEDIATE_DRC=1}
+    {INTERMEDIATE_SHORTS=0}
+    {INTERMEDIATE_MINAREA_MARKER_STATUS=PASS}
+    {FIXED_WIRE_EXTENSION_STATUS=PASS}
+    {POST_DRC=0}
+    {POST_SHORTS=0}
+    {POST_MINAREA_MARKER_COUNT=0}
+    {MANUAL_ECO_STATUS=PASS}
+} {
+    if {[string first $expected $minarea_v8_replay_text] < 0} {
+        error "minimum-area V8 replay report is missing $expected"
+    }
+}
+set route_start_count 0
+set route_commit_count 0
+foreach call $::mptdc_test_manual_command_calls {
+    if {[lindex $call 0] eq "editAddRoute"} {
+        incr route_start_count
+    }
+    if {[lindex $call 0] eq "editCommitRoute"} {
+        incr route_commit_count
+    }
+    if {[lindex $call 0] in {editDelete editAddVia ecoRoute routeDesign globalDetailRoute detailRoute createRouteBlk editPowerVia}} {
+        error "minimum-area V8 replay invoked a prohibited command: $call"
+    }
+}
+if {$route_start_count != 2 || $route_commit_count != 2} {
+    error "minimum-area V8 replay expected two bounded stub routes, found $route_start_count/$route_commit_count"
 }
 set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir

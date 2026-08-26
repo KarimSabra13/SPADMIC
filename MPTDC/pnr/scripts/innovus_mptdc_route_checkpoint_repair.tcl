@@ -1479,6 +1479,96 @@ proc mptdc_ckpt_manual_find_canonical_via_side_stub {
     return $candidate
 }
 
+proc mptdc_ckpt_manual_wire_handles {net} {
+    set handles {}
+    foreach row [mptdc_ckpt_manual_wire_rows $net] {
+        lappend handles [dict get $row handle]
+    }
+    return [lsort $handles]
+}
+
+proc mptdc_ckpt_manual_extend_canonical_stub_v8 {
+        fh label net marker_box via_point extension_delta} {
+    if {![string is double -strict $extension_delta] || $extension_delta <= 0} {
+        error "$label requires a positive numeric extension delta"
+    }
+
+    set candidate [mptdc_ckpt_manual_find_canonical_via_side_stub \
+        $fh ${label}_CANONICAL_STUB $net $marker_box $via_point -1]
+    set handle [dict get $candidate handle]
+    set points [dict get $candidate points]
+    set near [dict get $candidate near]
+    if {[llength $points] != 4} {
+        error "$label expected two flattened stub points, found $points"
+    }
+
+    set first [lrange $points 0 1]
+    set second [lrange $points 2 3]
+    if {[mptdc_ckpt_manual_point_equal $first $near]} {
+        set near_attribute beginExt
+        set free_attribute endExt
+    } elseif {[mptdc_ckpt_manual_point_equal $second $near]} {
+        set near_attribute endExt
+        set free_attribute beginExt
+    } else {
+        error "$label could not bind the canonical stub endpoint nearest $via_point"
+    }
+
+    set near_pre [lindex [dbGet ${handle}.${near_attribute}] 0]
+    set free_pre [lindex [dbGet ${handle}.${free_attribute}] 0]
+    if {![string is double -strict $near_pre] ||
+        ![string is double -strict $free_pre]} {
+        error "$label found nonnumeric wire extensions: near=$near_pre free=$free_pre"
+    }
+    set free_target [expr {double($free_pre) + double($extension_delta)}]
+
+    puts $fh "${label}_HANDLE=$handle"
+    puts $fh "${label}_NEAR_END_ATTRIBUTE=$near_attribute"
+    puts $fh "${label}_FREE_END_ATTRIBUTE=$free_attribute"
+    puts $fh "${label}_NEAR_END_EXTENSION_PRE_UM=$near_pre"
+    puts $fh "${label}_FREE_END_EXTENSION_PRE_UM=$free_pre"
+    puts $fh "${label}_FREE_END_EXTENSION_DELTA_UM=$extension_delta"
+    puts $fh "${label}_FREE_END_EXTENSION_TARGET_UM=$free_target"
+
+    set edit_method UNKNOWN
+    if {![catch {dbSet ${handle}.${free_attribute} $free_target} dbset_error]} {
+        set edit_method dbSet
+    } else {
+        set stylus_attribute [expr {
+            $free_attribute eq "beginExt" ? ".begin_ext" : ".end_ext"
+        }]
+        if {[catch {set_db $handle $stylus_attribute $free_target} setdb_error]} {
+            error "$label could not set $free_attribute: dbSet={$dbset_error}; set_db={$setdb_error}"
+        }
+        set edit_method set_db
+    }
+
+    set near_post [lindex [dbGet ${handle}.${near_attribute}] 0]
+    set free_post [lindex [dbGet ${handle}.${free_attribute}] 0]
+    set box_post [mptdc_signoff_flat_box [dbGet ${handle}.box]]
+    puts $fh "${label}_EDIT_METHOD=$edit_method"
+    puts $fh "${label}_NEAR_END_EXTENSION_POST_UM=$near_post"
+    puts $fh "${label}_FREE_END_EXTENSION_POST_UM=$free_post"
+    puts $fh "${label}_BOX_POST=$box_post"
+    if {![mptdc_ckpt_manual_close $near_post $near_pre] ||
+        ![mptdc_ckpt_manual_close $free_post $free_target]} {
+        error "$label endpoint extension did not persist: near=$near_post free=$free_post target=$free_target"
+    }
+    puts $fh "${label}_STATUS=PASS"
+    return [dict merge $candidate [dict create \
+        status PASS \
+        edit_method $edit_method \
+        near_attribute $near_attribute \
+        free_attribute $free_attribute \
+        near_pre $near_pre \
+        near_post $near_post \
+        free_pre $free_pre \
+        free_post $free_post \
+        free_target $free_target \
+        extension_delta $extension_delta \
+        box_post $box_post]]
+}
+
 proc mptdc_ckpt_manual_add_single_via1 {fh label net point} {
     if {[llength [mptdc_ckpt_manual_vias_at $net $point]] != 0} {
         error "$label expected no existing vias at the new point $point"
@@ -1719,6 +1809,144 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v6r {} {
     close $fh
     puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V6R_REPORT=$report"
     return [dict create status PASS report $report]
+}
+
+proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
+    if {$mode ni {trial replay}} {
+        error "minimum-area V8 mode must be trial or replay"
+    }
+    set report_dir [mptdc_signoff_report_dir]
+    set report [file join $report_dir [expr {
+        $mode eq "trial" ?
+            "min_area_fixed_wire_endext_trial_v8.rpt" :
+            "min_area_fixed_wire_endext_replay_v8.rpt"
+    }]]
+    set fh [open $report w]
+    puts $fh "# MPTDC Canonical Fixed-Wire Free-End Extension V8"
+    puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V8"
+    puts $fh "V8_STAGE_MODE=$mode"
+    puts $fh "TARGET_NET=u_core_n_57556"
+    puts $fh "TARGET_MARKER=MET1_MINIMUM_AREA_0.1777_OF_0.202"
+    puts $fh "CANONICAL_STUB_PROFILE=FIXED_MET1_WIDTH_0.23_LENGTH_0.385"
+    puts $fh "FREE_END_EXTENSION_DELTA_UM=0.14"
+    puts $fh "ATTRIBUTE_EDIT_POLICY=ONLY_CANONICAL_STUB_BEGINEXT_OR_ENDEXT"
+    puts $fh "VIA_EDIT_POLICY=NO_VIAS_MODIFIED"
+    puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
+    puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
+    puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
+
+    set body_status [catch {
+        if {$mode eq "trial"} {
+            set baseline [mptdc_ckpt_verify_snapshot minarea_v8_trial_pre]
+            mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 1 0 0
+            mptdc_ckpt_manual_assert_minarea_01777_marker \
+                $fh PRE_MINAREA_MARKER $baseline
+        } else {
+            set baseline [mptdc_ckpt_verify_snapshot minarea_v8_replay_pre]
+            mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 2 0 0
+            mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_PRE \
+                u_core_n_57960 {363.72 358.12} {VIA1_o}
+            mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_PRE \
+                u_core_n_57556 {385.56 328.44} {VIA1_o}
+
+            mptdc_ckpt_manual_add_wire_path $fh N57960_MET1_LANDING_STUB \
+                u_core_n_57960 MET1 0.28 \
+                {{363.72 358.12} {364.56 358.12}}
+            mptdc_ckpt_manual_add_wire_path $fh N57556_MET1_LANDING_STUB \
+                u_core_n_57556 MET1 0.28 \
+                {{385.56 328.44} {384.72 328.44}}
+
+            if {![mptdc_ckpt_manual_wire_covers_point \
+                    u_core_n_57960 MET1 {364.14 358.12}] ||
+                ![mptdc_ckpt_manual_wire_covers_point \
+                    u_core_n_57556 MET1 {385.14 328.44}]} {
+                error "V8 replay landing stubs did not materialize on their target nets"
+            }
+            set intermediate [mptdc_ckpt_verify_snapshot minarea_v8_replay_intermediate]
+            mptdc_ckpt_manual_assert_snapshot_tuple $fh INTERMEDIATE $intermediate 1 0 0
+            mptdc_ckpt_manual_assert_minarea_01777_marker \
+                $fh INTERMEDIATE_MINAREA_MARKER $intermediate
+        }
+
+        mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_BEFORE_EXTENSION \
+            u_core_n_57556 {385.56 328.44} {VIA1_o}
+        set target_wire_pre [mptdc_ckpt_manual_wire_handles u_core_n_57556]
+        set target_pwire_pre [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 pWires]
+        set target_swire_pre [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 sWires]
+        set reserved_pwire_pre [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED pWires]
+        set reserved_swire_pre [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED sWires]
+
+        set extension [mptdc_ckpt_manual_extend_canonical_stub_v8 \
+            $fh N57556_END_EXT u_core_n_57556 \
+            {385.06 328.29 385.75 328.52} {385.56 328.44} 0.14]
+        puts $fh "FIXED_WIRE_EXTENSION_STATUS=[dict get $extension status]"
+        puts $fh "FIXED_WIRE_EXTENSION_METHOD=[dict get $extension edit_method]"
+        puts $fh "FIXED_WIRE_EXTENSION_ATTRIBUTE=[dict get $extension free_attribute]"
+        puts $fh "FIXED_WIRE_EXTENSION_PRE_UM=[dict get $extension free_pre]"
+        puts $fh "FIXED_WIRE_EXTENSION_POST_UM=[dict get $extension free_post]"
+
+        set target_wire_post [mptdc_ckpt_manual_wire_handles u_core_n_57556]
+        set target_pwire_post [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 pWires]
+        set target_swire_post [mptdc_ckpt_manual_net_route_handles \
+            u_core_n_57556 sWires]
+        set reserved_pwire_post [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED pWires]
+        set reserved_swire_post [mptdc_ckpt_manual_net_route_handles \
+            _SADP_FILLS_RESERVED sWires]
+
+        if {$target_wire_post ne $target_wire_pre} {
+            puts $fh "TARGET_WIRE_HANDLE_STATUS=FAIL"
+            error "V8 changed the target net wire-handle set"
+        }
+        puts $fh "TARGET_WIRE_HANDLE_STATUS=UNCHANGED"
+        if {$target_pwire_post ne $target_pwire_pre ||
+            $target_swire_post ne $target_swire_pre} {
+            puts $fh "TARGET_OTHER_ROUTE_OBJECT_STATUS=FAIL"
+            error "V8 changed target pWire/sWire objects"
+        }
+        puts $fh "TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED"
+        if {$reserved_pwire_post ne $reserved_pwire_pre ||
+            $reserved_swire_post ne $reserved_swire_pre} {
+            puts $fh "RESERVED_FILL_OBJECT_STATUS=FAIL"
+            error "V8 changed _SADP_FILLS_RESERVED route objects"
+        }
+        puts $fh "RESERVED_FILL_OBJECT_STATUS=UNCHANGED"
+        mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_AFTER_EXTENSION \
+            u_core_n_57556 {385.56 328.44} {VIA1_o}
+
+        set final [mptdc_ckpt_verify_snapshot [expr {
+            $mode eq "trial" ? "minarea_v8_trial_post" : "minarea_v8_replay_post"
+        }]]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
+        puts $fh "POST_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
+    } body_error body_opts]
+
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+    if {$body_status} {
+        puts $fh "MANUAL_ECO_STATUS=FAIL"
+        puts $fh "MANUAL_ECO_ERROR=[mptdc_signoff_report_value $body_error]"
+        close $fh
+        return -options $body_opts $body_error
+    }
+    puts $fh "MANUAL_ECO_STATUS=PASS"
+    puts $fh "MANUAL_ECO_REPORT=$report"
+    close $fh
+    puts "MPTDC_CKPT_MIN_AREA_END_EXT_V8_REPORT=$report"
+    return [dict create status PASS report $report mode $mode]
+}
+
+proc mptdc_ckpt_manual_single_minarea_endext_trial_v8 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl trial]
+}
+
+proc mptdc_ckpt_manual_two_minarea_landing_patch_v8 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl replay]
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {

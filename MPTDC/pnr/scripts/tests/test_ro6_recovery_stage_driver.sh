@@ -607,7 +607,21 @@ if grep -qx 'mptdc_ckpt_manual_two_minarea_landing_patch_v6r' "$commands_file"; 
   post_minarea_marker_count=0
   final_drc=0
   final_status=PASS_GEOMETRY_REVIEW_CONNECTIVITY
-  if [[ "${FAKE_MINAREA_REPAIR_DIRTY:-0}" == 1 ]]; then
+  manual_post_drc=0
+  manual_post_shorts=0
+  if [[ "${FAKE_MINAREA_V6R_CANONICALIZES:-0}" == 1 ]]; then
+    manual_status=FAIL
+    command_1_status=FAIL
+    calibrated_stub_status=MISSING
+    target_special_status=MISSING
+    target_regular_status=MISSING
+    reserved_fill_status=MISSING
+    post_minarea_marker_count=MISSING
+    manual_post_drc=MISSING
+    manual_post_shorts=MISSING
+    final_drc=1
+    final_status=FAIL_COMMAND
+  elif [[ "${FAKE_MINAREA_REPAIR_DIRTY:-0}" == 1 ]]; then
     manual_status=FAIL
     command_1_status=FAIL
     calibrated_stub_status=FAIL
@@ -639,13 +653,20 @@ TARGET_SPECIAL_OBJECT_STATUS=$target_special_status
 TARGET_REGULAR_OBJECT_STATUS=$target_regular_status
 RESERVED_FILL_OBJECT_STATUS=$reserved_fill_status
 POST_MINAREA_MARKER_COUNT=$post_minarea_marker_count
-POST_DRC=$final_drc
-POST_SHORTS=0
+POST_DRC=$manual_post_drc
+POST_SHORTS=$manual_post_shorts
 VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED
 PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED
 PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
 MANUAL_ECO_STATUS=$manual_status
 RPT
+
+  if [[ "${FAKE_MINAREA_V6R_CANONICALIZES:-0}" == 1 ]]; then
+    cat > "$run/reports/${final_index}_after_command_verify_drc_markers.tsv" <<'RPT'
+idx	marker_handle	box	layer	type	subType	message
+1	0x1	{385.06 328.29 385.75 328.52}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000
+RPT
+  fi
 
   if [[ "$command_count" -eq 2 ]]; then
     setup_status=PASS
@@ -695,6 +716,124 @@ FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
 FINAL_DEF=$run/def/repaired_route.def
 FINAL_CHECKPOINT_DAT_EXISTS=1
 CHECKPOINT_REPAIR_STATUS=$final_status
+RPT
+  exit 0
+fi
+if grep -Eq '^mptdc_ckpt_manual_(single_minarea_endext_trial_v8|two_minarea_landing_patch_v8)$' "$commands_file"; then
+  if grep -qx 'mptdc_ckpt_manual_single_minarea_endext_trial_v8' "$commands_file"; then
+    test "$(wc -l < "$commands_file")" -eq 1
+    mode=trial
+    initial_drc=1
+    final_index=01
+    command_2_status=MISSING
+    helper_report_name=min_area_fixed_wire_endext_trial_v8.rpt
+  else
+    grep -qx 'mptdc_ckpt_manual_two_minarea_landing_patch_v8' "$commands_file"
+    grep -qx 'mptdc_signoff_extract_and_sta' "$commands_file"
+    test "$(wc -l < "$commands_file")" -eq 2
+    mode=replay
+    initial_drc=2
+    final_index=02
+    command_2_status=PASS
+    helper_report_name=min_area_fixed_wire_endext_replay_v8.rpt
+  fi
+  ! grep -qE 'globalDetailRoute|detailRoute|ecoRoute|routeDesign|createRouteBlk|editAddVia|editDelete' "$commands_file"
+
+  run="$work/$run_id"
+  mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
+  initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
+  final_special="$run/reports/${final_index}_after_command_verify_connectivity_special.rpt"
+  write_exact_pg_report_pair "$initial_special"
+  write_exact_pg_report_pair "$final_special"
+
+  pre_marker_status=MISSING
+  intermediate_drc=MISSING
+  intermediate_shorts=MISSING
+  intermediate_marker_status=MISSING
+  if [[ "$mode" == trial ]]; then
+    pre_marker_status=PASS
+  else
+    intermediate_drc=1
+    intermediate_shorts=0
+    intermediate_marker_status=PASS
+  fi
+  cat > "$run/reports/$helper_report_name" <<RPT
+MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V8
+V8_STAGE_MODE=$mode
+PRE_DRC=$initial_drc
+PRE_SHORTS=0
+PRE_MINAREA_MARKER_STATUS=$pre_marker_status
+INTERMEDIATE_DRC=$intermediate_drc
+INTERMEDIATE_SHORTS=$intermediate_shorts
+INTERMEDIATE_MINAREA_MARKER_STATUS=$intermediate_marker_status
+N57556_END_EXT_CANONICAL_STUB_STATUS=PASS
+N57556_END_EXT_CANONICAL_STUB_WIDTH=0.23
+N57556_END_EXT_CANONICAL_STUB_LENGTH=0.385
+N57556_END_EXT_FREE_END_EXTENSION_DELTA_UM=0.14
+FIXED_WIRE_EXTENSION_STATUS=PASS
+FIXED_WIRE_EXTENSION_METHOD=dbSet
+FIXED_WIRE_EXTENSION_ATTRIBUTE=endExt
+FIXED_WIRE_EXTENSION_PRE_UM=0.115
+FIXED_WIRE_EXTENSION_POST_UM=0.255
+TARGET_WIRE_HANDLE_STATUS=UNCHANGED
+TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED
+RESERVED_FILL_OBJECT_STATUS=UNCHANGED
+POST_MINAREA_MARKER_COUNT=0
+POST_DRC=0
+POST_SHORTS=0
+MANUAL_ECO_STATUS=PASS
+RPT
+
+  if [[ "$mode" == replay ]]; then
+    setup_status=PASS
+    if [[ "${FAKE_MINAREA_TIMING_FAIL:-0}" == 1 ]]; then setup_status=FAIL; fi
+    cat > "$run/reports/extracted_timing_status.rpt" <<RPT
+SETUP_STATUS_TC=$setup_status
+TC_HOLD_STATUS=PASS
+RPT
+    printf 'DRV_STATUS=PASS\n' > "$run/reports/drv_status.rpt"
+    printf 'POWER_REPORT_CAPTURE_STATUS=PASS\n' > "$run/reports/power_status.rpt"
+  fi
+  cat > "$run/reports/${final_index}_after_command_report_route.rpt" <<'RPT'
+#num needed restored net=0
+#need_extraction net=0 (total=16329)
+RPT
+  printf 'idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage\n' \
+    > "$run/reports/${final_index}_after_command_verify_drc_markers.tsv"
+  cat > "$run/def/repaired_route.def" <<'DEF'
+VERSION 5.8 ;
+PINS 2 ;
+- ro_slow_tap0_o + NET ro_slow_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 1000 0 ) N ;
+- ro_fast_tap0_o + NET ro_fast_tap0_o + DIRECTION OUTPUT + USE SIGNAL
+  + LAYER MET3 ( -200 -200 ) ( 200 200 ) + PLACED ( 2000 0 ) N ;
+END PINS
+END DESIGN
+DEF
+  cat > "$run/reports/checkpoint_repair_status.rpt" <<RPT
+INITIAL_DRC=$initial_drc
+INITIAL_SHORTS=0
+INITIAL_REGULAR_CONNECTIVITY_BAD=0
+INITIAL_SPECIAL_CONNECTIVITY_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+INITIAL_SPECIAL_CONNECTIVITY_REPORT=$initial_special
+COMMAND_1_STATUS=PASS
+COMMAND_2_STATUS=$command_2_status
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_UNROUTED_NETS=UNKNOWN
+FINAL_UNROUTED_NETS_SOURCE=report_route_parse_unresolved
+FINAL_ROUTE_GATE_PASS=0
+FINAL_REPORT_ROUTE=$run/reports/${final_index}_after_command_report_route.rpt
+FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
+FINAL_DEF=$run/def/repaired_route.def
+FINAL_CHECKPOINT_DAT_EXISTS=1
+CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY
 RPT
   exit 0
 fi
@@ -1090,87 +1229,124 @@ env "${COMMON_ENV[@]}" bash "$DRIVER" \
 MINAREA_NO_TRIAL_RC=$?
 set -e
 test "$MINAREA_NO_TRIAL_RC" -eq 4
-grep -qx 'STOP: --source-patch-trial-run-id is required for route-minarea-repair' \
+grep -qx 'STOP: --source-endext-trial-run-id is required for route-minarea-repair' \
   "$TMP_ROOT/minarea_repair_without_trial.stdout"
 
 set +e
-env "${COMMON_ENV[@]}" FAKE_MINAREA_REPAIR_DIRTY=1 bash "$DRIVER" \
-  --stage route-minarea-patch-trial --run-id minarea_patch_trial_dirty \
-  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
-  > "$TMP_ROOT/minarea_patch_trial_dirty.stdout"
-MINAREA_TRIAL_DIRTY_RC=$?
-set -e
-test "$MINAREA_TRIAL_DIRTY_RC" -ne 0
-grep -qx 'PATCH_TRIAL_GATE_MODE=FAIL' \
-  "$WORK/innovus/minarea_patch_trial_dirty/reports/operator_gate_route_min_area_patch_trial.rpt"
-grep -qx 'DECISION=FAIL_STOP' \
-  "$WORK/innovus/minarea_patch_trial_dirty/reports/operator_gate_route_min_area_patch_trial.rpt"
-
-PATCH_TRIAL_ID=minarea_patch_trial_clean
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
-  --stage route-minarea-patch-trial --run-id "$PATCH_TRIAL_ID" \
+  --stage route-minarea-endext-trial --run-id minarea_endext_without_v6r \
   --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
-  > "$TMP_ROOT/minarea_patch_trial_clean.stdout"
-PATCH_TRIAL_REPORT="$WORK/innovus/$PATCH_TRIAL_ID/reports/operator_gate_route_min_area_patch_trial.rpt"
-grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/minarea_patch_trial_clean.stdout"
-grep -qx 'PATCH_STAGE_MODE=trial' "$PATCH_TRIAL_REPORT"
-grep -qx 'REPAIR_METHOD=CALIBRATED_TWO_STUB_REGULAR_MET1_V6R' "$PATCH_TRIAL_REPORT"
-grep -qx 'COMMAND_1_STATUS=PASS' "$PATCH_TRIAL_REPORT"
-grep -qx 'COMMAND_2_STATUS=MISSING' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATION_SOURCE=V1_0.84UM_EXTENSION_GAINED_0.0713UM2' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALCULATED_EXTRA_LENGTH_UM=0.2863' "$PATCH_TRIAL_REPORT"
-grep -qx 'SELECTED_EXTRA_LENGTH_UM=0.42' "$PATCH_TRIAL_REPORT"
-grep -qx 'SELECTED_TOTAL_EXTENSION_UM=1.26' "$PATCH_TRIAL_REPORT"
-grep -qx 'PREDICTED_AREA_UM2=0.21335' "$PATCH_TRIAL_REPORT"
-grep -qx 'PREDICTED_AREA_MARGIN_UM2=0.01135' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATED_STUB_STATUS=PASS' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATED_STUB_NET=u_core_n_57556' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATED_STUB_LAYER=MET1' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATED_STUB_WIDTH=0.28' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATED_STUB_START=385.56 328.44' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATED_STUB_END=384.30 328.44' "$PATCH_TRIAL_REPORT"
-grep -qx 'CALIBRATED_STUB_POST_COVERAGE_STATUS=PASS' "$PATCH_TRIAL_REPORT"
-grep -qx 'TARGET_SPECIAL_OBJECT_STATUS=UNCHANGED' "$PATCH_TRIAL_REPORT"
-grep -qx 'TARGET_REGULAR_OBJECT_STATUS=AUDITED_TARGET_OWNED' "$PATCH_TRIAL_REPORT"
-grep -qx 'RESERVED_FILL_OBJECT_STATUS=UNCHANGED' "$PATCH_TRIAL_REPORT"
-grep -qx 'POST_MINAREA_MARKER_COUNT=0' "$PATCH_TRIAL_REPORT"
-grep -qx 'FINAL_DRC=0' "$PATCH_TRIAL_REPORT"
-grep -qx 'FINAL_SHORTS=0' "$PATCH_TRIAL_REPORT"
-grep -qx 'FINAL_UNROUTED_NETS_RAW=UNKNOWN' "$PATCH_TRIAL_REPORT"
-grep -qx 'FINAL_UNROUTED_NETS=0' "$PATCH_TRIAL_REPORT"
-grep -qx 'FINAL_REPORT_ROUTE_ZERO_STATUS=PASS' "$PATCH_TRIAL_REPORT"
-grep -qx 'TIMING_GATE_STATUS=NOT_RUN_PROOF_ONLY' "$PATCH_TRIAL_REPORT"
-grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$PATCH_TRIAL_REPORT"
-grep -qx 'PATCH_TRIAL_GATE_MODE=PASS_EXACT_PG_FINGERPRINT' "$PATCH_TRIAL_REPORT"
-grep -qx 'DECISION=PASS_REPLAY' "$PATCH_TRIAL_REPORT"
-grep -q "innovus $PATCH_TRIAL_ID .* ROUTE_MIN_AREA_PATCH_TRIAL" "$PUBLISH_CALLS"
-grep -qx 'NEXT_STAGE=ROUTE_MINAREA_CANONICAL_REPLAY' "$TMP_ROOT/minarea_patch_trial_clean.stdout"
-grep -qx "NEXT_REQUIRED_PATCH_TRIAL_RUN_ID=$PATCH_TRIAL_ID" "$TMP_ROOT/minarea_patch_trial_clean.stdout"
+  > "$TMP_ROOT/minarea_endext_without_v6r.stdout"
+MINAREA_ENDEXT_NO_V6R_RC=$?
+set -e
+test "$MINAREA_ENDEXT_NO_V6R_RC" -eq 4
+grep -qx 'STOP: --source-patch-trial-run-id is required for route-minarea-endext-trial' \
+  "$TMP_ROOT/minarea_endext_without_v6r.stdout"
 
-PATCH_TRIAL_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/innovus/$PATCH_TRIAL_ID"
-mkdir -p "$PATCH_TRIAL_SNAPSHOT"
-cp -R "$WORK/innovus/$PATCH_TRIAL_ID/reports" "$PATCH_TRIAL_SNAPSHOT/"
-git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$PATCH_TRIAL_ID"
-git -C "$REPO" commit -q -m 'add passing V6R patch proof'
+FAILED_V6R_ID=minarea_patch_trial_v6r_failed
+set +e
+env "${COMMON_ENV[@]}" FAKE_MINAREA_V6R_CANONICALIZES=1 bash "$DRIVER" \
+  --stage route-minarea-patch-trial --run-id "$FAILED_V6R_ID" \
+  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_patch_trial_v6r_failed.stdout"
+FAILED_V6R_RC=$?
+set -e
+test "$FAILED_V6R_RC" -ne 0
+FAILED_V6R_REPORT="$WORK/innovus/$FAILED_V6R_ID/reports/operator_gate_route_min_area_patch_trial.rpt"
+grep -qx 'COMMAND_1_STATUS=FAIL' "$FAILED_V6R_REPORT"
+grep -qx 'MANUAL_ECO_STATUS=FAIL' "$FAILED_V6R_REPORT"
+grep -qx 'FINAL_DRC=1' "$FAILED_V6R_REPORT"
+grep -qx 'FINAL_SHORTS=0' "$FAILED_V6R_REPORT"
+grep -qx 'CHECKPOINT_REPAIR_STATUS=FAIL_COMMAND' "$FAILED_V6R_REPORT"
+grep -qx 'PATCH_TRIAL_GATE_MODE=FAIL' "$FAILED_V6R_REPORT"
+grep -qx 'DECISION=FAIL_STOP' "$FAILED_V6R_REPORT"
+grep -q 'Actual: 0.17770000 Required: 0.20200000' \
+  "$WORK/innovus/$FAILED_V6R_ID/reports/01_after_command_verify_drc_markers.tsv"
+test -d "$WORK/innovus/$FAILED_V6R_ID/checkpoints/repaired_route.enc.dat"
+grep -q "innovus $FAILED_V6R_ID .* ROUTE_MIN_AREA_PATCH_TRIAL" "$PUBLISH_CALLS"
+
+set +e
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-minarea-endext-trial --run-id minarea_endext_untracked_v6r \
+  --source-pnr-run-id "$MINAREA_PNR_ID" \
+  --source-patch-trial-run-id "$FAILED_V6R_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_endext_untracked_v6r.stdout"
+MINAREA_UNTRACKED_V6R_RC=$?
+set -e
+test "$MINAREA_UNTRACKED_V6R_RC" -eq 4
+grep -qx "STOP: tracked failed V6R one-marker proof is missing, mismatched, or incomplete: $FAILED_V6R_ID" \
+  "$TMP_ROOT/minarea_endext_untracked_v6r.stdout"
+
+FAILED_V6R_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/innovus/$FAILED_V6R_ID"
+mkdir -p "$FAILED_V6R_SNAPSHOT"
+cp -R "$WORK/innovus/$FAILED_V6R_ID/reports" "$FAILED_V6R_SNAPSHOT/"
+git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$FAILED_V6R_ID"
+git -C "$REPO" commit -q -m 'add failed normalized V6R proof'
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
+ENDEXT_TRIAL_ID=minarea_endext_trial_v8_clean
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-minarea-endext-trial --run-id "$ENDEXT_TRIAL_ID" \
+  --source-pnr-run-id "$MINAREA_PNR_ID" \
+  --source-patch-trial-run-id "$FAILED_V6R_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_endext_trial_v8_clean.stdout"
+ENDEXT_TRIAL_REPORT="$WORK/innovus/$ENDEXT_TRIAL_ID/reports/operator_gate_route_min_area_endext_trial.rpt"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/minarea_endext_trial_v8_clean.stdout"
+grep -qx "SOURCE_PATCH_TRIAL_RUN_ID=$FAILED_V6R_ID" "$ENDEXT_TRIAL_REPORT"
+grep -qx 'PATCH_STAGE_MODE=trial' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'REPAIR_METHOD=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V8' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'COMMAND_1_STATUS=PASS' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'COMMAND_2_STATUS=MISSING' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'MANUAL_ECO_STATUS=PASS' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'PRE_DRC=1' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'PRE_MINAREA_MARKER_STATUS=PASS' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'N57556_END_EXT_CANONICAL_STUB_WIDTH=0.23' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'N57556_END_EXT_CANONICAL_STUB_LENGTH=0.385' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'FIXED_WIRE_EXTENSION_METHOD=dbSet' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'FIXED_WIRE_EXTENSION_ATTRIBUTE=endExt' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'FIXED_WIRE_EXTENSION_PRE_UM=0.115' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'FIXED_WIRE_EXTENSION_POST_UM=0.255' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'FINAL_DRC=0' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'FINAL_SHORTS=0' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'SPECIAL_SIGNATURE_STATUS=PASS' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'TIMING_GATE_STATUS=NOT_RUN_PROOF_ONLY' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'ENDEXT_TRIAL_GATE_MODE=PASS_EXACT_PG_FINGERPRINT' "$ENDEXT_TRIAL_REPORT"
+grep -qx 'DECISION=PASS_REPLAY' "$ENDEXT_TRIAL_REPORT"
+grep -q "innovus $ENDEXT_TRIAL_ID .* ROUTE_MIN_AREA_ENDEXT_TRIAL" "$PUBLISH_CALLS"
+grep -qx 'NEXT_STAGE=ROUTE_MINAREA_CANONICAL_REPLAY' "$TMP_ROOT/minarea_endext_trial_v8_clean.stdout"
+grep -qx "NEXT_REQUIRED_ENDEXT_TRIAL_RUN_ID=$ENDEXT_TRIAL_ID" "$TMP_ROOT/minarea_endext_trial_v8_clean.stdout"
+
+ENDEXT_TRIAL_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/innovus/$ENDEXT_TRIAL_ID"
+mkdir -p "$ENDEXT_TRIAL_SNAPSHOT"
+cp -R "$WORK/innovus/$ENDEXT_TRIAL_ID/reports" "$ENDEXT_TRIAL_SNAPSHOT/"
+git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$ENDEXT_TRIAL_ID"
+git -C "$REPO" commit -q -m 'add passing V8 endpoint extension proof'
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage route-minarea-repair --run-id minarea_repair_clean \
   --source-pnr-run-id "$MINAREA_PNR_ID" \
-  --source-patch-trial-run-id "$PATCH_TRIAL_ID" --expected-head "$HEAD_SHA" \
+  --source-endext-trial-run-id "$ENDEXT_TRIAL_ID" --expected-head "$HEAD_SHA" \
   > "$TMP_ROOT/minarea_repair_clean.stdout"
 MINAREA_REPAIR_REPORT="$WORK/innovus/minarea_repair_clean/reports/operator_gate_route_min_area_repair.rpt"
 grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/minarea_repair_clean.stdout"
-grep -qx "SOURCE_PATCH_TRIAL_RUN_ID=$PATCH_TRIAL_ID" "$MINAREA_REPAIR_REPORT"
+grep -qx "SOURCE_PATCH_TRIAL_RUN_ID=$FAILED_V6R_ID" "$MINAREA_REPAIR_REPORT"
+grep -qx "SOURCE_ENDEXT_TRIAL_RUN_ID=$ENDEXT_TRIAL_ID" "$MINAREA_REPAIR_REPORT"
 grep -qx 'PATCH_STAGE_MODE=replay' "$MINAREA_REPAIR_REPORT"
-grep -qx 'REPAIR_METHOD=CALIBRATED_TWO_STUB_REGULAR_MET1_V6R' "$MINAREA_REPAIR_REPORT"
+grep -qx 'REPAIR_METHOD=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V8' "$MINAREA_REPAIR_REPORT"
 grep -qx 'COMMAND_1_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
 grep -qx 'COMMAND_2_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
 grep -qx 'MANUAL_ECO_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
-grep -qx 'CALIBRATED_STUB_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
-grep -qx 'CALIBRATED_STUB_POST_COVERAGE_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
-grep -qx 'TARGET_SPECIAL_OBJECT_STATUS=UNCHANGED' "$MINAREA_REPAIR_REPORT"
-grep -qx 'TARGET_REGULAR_OBJECT_STATUS=AUDITED_TARGET_OWNED' "$MINAREA_REPAIR_REPORT"
+grep -qx 'V8_STAGE_MODE=replay' "$MINAREA_REPAIR_REPORT"
+grep -qx 'INTERMEDIATE_DRC=1' "$MINAREA_REPAIR_REPORT"
+grep -qx 'INTERMEDIATE_SHORTS=0' "$MINAREA_REPAIR_REPORT"
+grep -qx 'INTERMEDIATE_MINAREA_MARKER_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'FIXED_WIRE_EXTENSION_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'N57556_END_EXT_CANONICAL_STUB_WIDTH=0.23' "$MINAREA_REPAIR_REPORT"
+grep -qx 'N57556_END_EXT_CANONICAL_STUB_LENGTH=0.385' "$MINAREA_REPAIR_REPORT"
+grep -qx 'TARGET_WIRE_HANDLE_STATUS=UNCHANGED' "$MINAREA_REPAIR_REPORT"
+grep -qx 'TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED' "$MINAREA_REPAIR_REPORT"
 grep -qx 'RESERVED_FILL_OBJECT_STATUS=UNCHANGED' "$MINAREA_REPAIR_REPORT"
 grep -qx 'FINAL_DRC=0' "$MINAREA_REPAIR_REPORT"
 grep -qx 'FINAL_SHORTS=0' "$MINAREA_REPAIR_REPORT"
@@ -1194,7 +1370,7 @@ set +e
 env "${COMMON_ENV[@]}" FAKE_MINAREA_TIMING_FAIL=1 bash "$DRIVER" \
   --stage route-minarea-repair --run-id minarea_repair_timing_fail \
   --source-pnr-run-id "$MINAREA_PNR_ID" \
-  --source-patch-trial-run-id "$PATCH_TRIAL_ID" --expected-head "$HEAD_SHA" \
+  --source-endext-trial-run-id "$ENDEXT_TRIAL_ID" --expected-head "$HEAD_SHA" \
   > "$TMP_ROOT/minarea_repair_timing_fail.stdout"
 MINAREA_TIMING_FAIL_RC=$?
 set -e
