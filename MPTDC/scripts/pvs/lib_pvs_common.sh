@@ -117,6 +117,64 @@ mptdc_pvs_patch_file_paths() {
   done
 }
 
+mptdc_pvs_rewrite_drc_density_control() {
+  local control="$1"
+  local variant="$2"
+  local replacement
+  local joined_count density_count popping_count
+  local define_count undefine_count
+  local popping_before popping_after
+
+  mptdc_pvs_require_file "$control"
+  case "$variant" in
+    base) replacement="#UNDEFINE DENSITY" ;;
+    density) replacement="#DEFINE DENSITY" ;;
+    *) mptdc_pvs_die "DRC variant must be base or density: $variant" ;;
+  esac
+
+  joined_count="$(grep -Ec '#(UN)?DEFINE[[:space:]]+[[:alnum:]_]+.*#(UN)?DEFINE[[:space:]]+' "$control" || true)"
+  [[ "$joined_count" -eq 0 ]] || \
+    mptdc_pvs_die "joined configurator directives found in $control"
+
+  density_count="$(grep -Ec '^[[:space:]]*#(UN)?DEFINE[[:space:]]+DENSITY[[:space:]]*$' "$control" || true)"
+  [[ "$density_count" -eq 1 ]] || \
+    mptdc_pvs_die "expected exactly one DENSITY control in $control"
+
+  popping_count="$(grep -Ec '^[[:space:]]*#(UN)?DEFINE[[:space:]]+POPPING[[:space:]]*$' "$control" || true)"
+  [[ "$popping_count" -eq 1 ]] || \
+    mptdc_pvs_die "expected exactly one POPPING control in $control"
+  popping_before="$(grep -E '^[[:space:]]*#(UN)?DEFINE[[:space:]]+POPPING[[:space:]]*$' "$control" | tr -d '\r')"
+
+  # Match horizontal whitespace only so the record terminator is never consumed.
+  perl -pi -e '
+    BEGIN { $replacement = shift @ARGV }
+    s/^([ \t]*)#(?:UN)?DEFINE[ \t]+DENSITY[ \t]*(\r?)$/${1}${replacement}${2}/
+  ' "$replacement" "$control"
+
+  define_count="$(grep -Ec '^[[:space:]]*#DEFINE[[:space:]]+DENSITY[[:space:]]*$' "$control" || true)"
+  undefine_count="$(grep -Ec '^[[:space:]]*#UNDEFINE[[:space:]]+DENSITY[[:space:]]*$' "$control" || true)"
+  if [[ "$variant" == "base" ]]; then
+    [[ "$define_count" -eq 0 && "$undefine_count" -eq 1 ]] || \
+      mptdc_pvs_die "base DRC control rewrite did not produce exactly one #UNDEFINE DENSITY"
+  else
+    [[ "$define_count" -eq 1 && "$undefine_count" -eq 0 ]] || \
+      mptdc_pvs_die "density DRC control rewrite did not produce exactly one #DEFINE DENSITY"
+  fi
+
+  joined_count="$(grep -Ec '#(UN)?DEFINE[[:space:]]+[[:alnum:]_]+.*#(UN)?DEFINE[[:space:]]+' "$control" || true)"
+  [[ "$joined_count" -eq 0 ]] || \
+    mptdc_pvs_die "joined configurator directives remain after rewrite in $control"
+  popping_after="$(grep -E '^[[:space:]]*#(UN)?DEFINE[[:space:]]+POPPING[[:space:]]*$' "$control" | tr -d '\r')"
+  [[ "$popping_after" == "$popping_before" ]] || \
+    mptdc_pvs_die "POPPING control changed during DENSITY rewrite in $control"
+
+  echo "PVS_DRC_CONTROL_REWRITE_STATUS=PASS"
+  echo "PVS_DRC_CONTROL_VARIANT=$variant"
+  echo "PVS_DRC_DENSITY_CONTROL=$replacement"
+  echo "PVS_DRC_POPPING_CONTROL=$popping_after"
+  echo "PVS_DRC_JOINED_DIRECTIVE_COUNT=$joined_count"
+}
+
 mptdc_pvs_streamout_map_binding_mode() {
   local template="$1"
   local selected_map="$2"

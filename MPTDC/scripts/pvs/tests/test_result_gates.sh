@@ -4,12 +4,48 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PVS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PREP_SCRIPT="$PVS_DIR/00_prepare_pvs_inputs_from_checkpoint.sh"
+DRC_REPLAY_SCRIPT="$PVS_DIR/02_replay_pvs_drc_from_template.sh"
 # shellcheck source=MPTDC/scripts/pvs/lib_pvs_common.sh
 source "$PVS_DIR/lib_pvs_common.sh"
 TMP_ROOT="$(mktemp -d /tmp/mptdc_pvs_gate_test.XXXXXX)"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
+BASE_CONTROL="$TMP_ROOT/pvsdrcctl.base"
+printf '#UNDEFINE DENSITY\n#UNDEFINE POPPING\n#UNDEFINE PIMIDE\n' > "$BASE_CONTROL"
+mptdc_pvs_rewrite_drc_density_control "$BASE_CONTROL" base \
+  > "$TMP_ROOT/base_control_rewrite.rpt"
+grep -qx 'PVS_DRC_CONTROL_REWRITE_STATUS=PASS' "$TMP_ROOT/base_control_rewrite.rpt"
+grep -qx 'PVS_DRC_DENSITY_CONTROL=#UNDEFINE DENSITY' "$TMP_ROOT/base_control_rewrite.rpt"
+grep -qx 'PVS_DRC_JOINED_DIRECTIVE_COUNT=0' "$TMP_ROOT/base_control_rewrite.rpt"
+test "$(sed -n '1p' "$BASE_CONTROL")" = '#UNDEFINE DENSITY'
+test "$(sed -n '2p' "$BASE_CONTROL")" = '#UNDEFINE POPPING'
+test "$(wc -l < "$BASE_CONTROL")" -eq 3
+
+DENSITY_CONTROL="$TMP_ROOT/pvsdrcctl.density"
+printf '#UNDEFINE DENSITY\r\n#UNDEFINE POPPING\r\n' > "$DENSITY_CONTROL"
+mptdc_pvs_rewrite_drc_density_control "$DENSITY_CONTROL" density \
+  > "$TMP_ROOT/density_control_rewrite.rpt"
+grep -qx 'PVS_DRC_CONTROL_REWRITE_STATUS=PASS' "$TMP_ROOT/density_control_rewrite.rpt"
+grep -qx 'PVS_DRC_DENSITY_CONTROL=#DEFINE DENSITY' "$TMP_ROOT/density_control_rewrite.rpt"
+perl -0 -e '
+  local $/;
+  my $text = <>;
+  exit($text eq "#DEFINE DENSITY\r\n#UNDEFINE POPPING\r\n" ? 0 : 1);
+' "$DENSITY_CONTROL"
+
+MALFORMED_CONTROL="$TMP_ROOT/pvsdrcctl.malformed"
+printf '#UNDEFINE DENSITY#UNDEFINE POPPING\n' > "$MALFORMED_CONTROL"
+if (mptdc_pvs_rewrite_drc_density_control "$MALFORMED_CONTROL" base) \
+    > "$TMP_ROOT/malformed_control_rewrite.log" 2>&1; then
+  echo "ERROR: joined DRC configurator directives unexpectedly passed" >&2
+  exit 1
+fi
+grep -Fq 'joined configurator directives found' "$TMP_ROOT/malformed_control_rewrite.log"
+
 grep -Fq 'RO_TAP_OBSERVABILITY_PIN_COUNT=' "$PREP_SCRIPT"
+grep -Fq 'mptdc_pvs_rewrite_drc_density_control "$NEW_DRC_RUN/pvsdrcctl" "$VARIANT"' \
+  "$DRC_REPLAY_SCRIPT"
+grep -Fq 'pvs_drc_${VARIANT}_control_rewrite.rpt' "$DRC_REPLAY_SCRIPT"
 grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP "$STREAM_MAP"' "$PREP_SCRIPT"
 grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" PATCHED_STREAMOUT "$PATCHED_STREAMOUT"' "$PREP_SCRIPT"
 

@@ -138,14 +138,10 @@ for f in "${PATCH_FILES[@]}"; do
     "$OLD_BASE=$NEW_BASE"
 done
 
-DENSITY_CONTROL_COUNT="$(grep -Ec '^[[:space:]]*#(UN)?DEFINE[[:space:]]+DENSITY[[:space:]]*$' "$NEW_DRC_RUN/pvsdrcctl" || true)"
-[[ "$DENSITY_CONTROL_COUNT" -eq 1 ]] || \
-  mptdc_pvs_die "expected exactly one DENSITY control in $NEW_DRC_RUN/pvsdrcctl"
-if [[ "$VARIANT" == "density" ]]; then
-  perl -pi -e 's/^(\s*)#(?:UN)?DEFINE\s+DENSITY\s*$/${1}#DEFINE DENSITY/' "$NEW_DRC_RUN/pvsdrcctl"
-else
-  perl -pi -e 's/^(\s*)#(?:UN)?DEFINE\s+DENSITY\s*$/${1}#UNDEFINE DENSITY/' "$NEW_DRC_RUN/pvsdrcctl"
-fi
+CONTROL_REWRITE_REPORT="$NEW_BASE/reports/pvs_drc_${VARIANT}_control_rewrite.rpt"
+mptdc_pvs_rewrite_drc_density_control "$NEW_DRC_RUN/pvsdrcctl" "$VARIANT" \
+  > "$CONTROL_REWRITE_REPORT"
+cat "$CONTROL_REWRITE_REPORT"
 
 mptdc_pvs_fail_if_contains_old_path "DRC template run" "$OLD_DRC_RUN" "${PATCH_FILES[@]}"
 mptdc_pvs_fail_if_contains_old_path "DRC old base" "$OLD_BASE" "${PATCH_FILES[@]}"
@@ -163,11 +159,15 @@ chmod +x "$NEW_DRC_RUN/run.pvs"
   echo "new_gds: $NEW_GDS"
   echo "variant: $VARIANT"
   echo "dry_run: $DRY_RUN"
+  echo "control_rewrite_report: $CONTROL_REWRITE_REPORT"
 } | tee "$NEW_BASE/manifests/pvs_drc_${VARIANT}_replay_manifest.txt"
 
 {
   echo "===== Patched run.pvs ====="
   sed -n '1,180p' "$NEW_DRC_RUN/run.pvs"
+  echo
+  echo "===== DRC control rewrite audit ====="
+  cat "$CONTROL_REWRITE_REPORT"
   echo
   echo "===== Patched DRC config scan ====="
   grep -RniE 'mptdc_axis_core_merged_stdcell_ro6|xh018_DRC|metalswitch|DENSITY|DRC|drc|rulesFile|GDS|gds' \

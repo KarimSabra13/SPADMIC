@@ -1894,6 +1894,9 @@ echo "FINAL_HEAD=$FINAL_HEAD"
 grep -E '^(PVS_RECOVERY_STATUS|DIAGNOSTIC_COLLECTION_STATUS|PVS_RUN_CLASS|PVS_DRC_BASE|PVS_DRC_BASE_EVIDENCE_STATUS|PVS_DRC_BASE_TOTAL_PRIMARY|PVS_DRC_BASE_TOTAL_EXPANDED|PVS_DRC_BASE_NONZERO_RULE_COUNT|PVS_DRC_DENSITY|PVS_LVS|MPTDC_TC_PVS_CLOSED|FINAL_DECISION|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -30
 
+echo "===== DRC CONTROL REWRITE ====="
+cat "$PVS_DIR/reports/pvs_drc_base_control_rewrite.rpt" 2>/dev/null
+
 echo "===== BASE DRC RULE INVENTORY ====="
 cat "$PVS_DIR/reports/pvs_drc_base_nonzero_rules.tsv" 2>/dev/null
 
@@ -1921,6 +1924,13 @@ Interpret the result as follows:
   template is expected to use `STREAM_MAP_BINDING_MODE=ENV_SELECTED_MAP`; the
   wrapper sets that environment value to the selected, hashed XH018 map before
   sourcing the template.
+- Before PVS starts, `reports/pvs_drc_base_control_rewrite.rpt` must report
+  `PVS_DRC_CONTROL_REWRITE_STATUS=PASS` and
+  `PVS_DRC_JOINED_DIRECTIVE_COUNT=0`. The generated control must contain
+  `#UNDEFINE DENSITY` and `#UNDEFINE POPPING` on separate lines.
+- `DENSITY#UNDEFINE`, `Cannot read file POPPING`, or a missing DRC summary means
+  the control replay is malformed. Stop and start a fresh diagnostic run after
+  fixing the replay script; never continue to LVS from that run directory.
 - Innovus preparation must print `MPTDC_PVS_PREP_BATCH_STATUS=PASS` and return
   to the shell before PVS starts. The wrapper supplies the historical
   `STD_GDS` alias from the validated D-cell GDS and closes Innovus stdin, so an
