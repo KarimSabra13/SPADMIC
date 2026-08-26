@@ -1,0 +1,24 @@
+# MPTDC PVS Input Preparation
+date: 2026-08-26T21:00:45+02:00
+repo: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+head: 81d5eee6cb701fdbb78ffeb4684bc17cf6fa36e1
+run_id: 20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044
+result_dir: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044
+source_checkpoint: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_route_minarea_patch_trial_v6r_180659/checkpoints/repaired_route.enc.dat
+top_cell: mptdc_axis_core
+streamout_template: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/work/streamout_mptdc_merged_ro6.tcl
+old_base: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608
+old_proof_base: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_pvs_pg_short_proof_20260702_151108
+dcell_gds: /data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/gds/xh018_D_CELLS_JIHD.gds
+dcell_cdl: /data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/cdl/xh018_D_CELLS_JIHD.cdl
+original_ro_gds: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds
+local_ro_gds: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044/merge_libs/RO_tune6_from_OA.gds
+stream_map: /data/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_1131/pnr_streamout.map
+strict_attribution: 1
+top_only_gds: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044/outputs/mptdc_axis_core_top_only.gds
+merged_gds: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044/outputs/mptdc_axis_core_merged_stdcell_ro6.gds
+pg_verilog: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044/outputs/mptdc_axis_core_pnr_lvs_with_pg.v
+filtered_verilog: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v
+hcell: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210044/outputs/pvs_hcell_ro6.txt
+
+git status --short --untracked-files=no:
