@@ -526,6 +526,20 @@ proc editCommitRoute {x y} {
             layer $wire_layer box $wire_box width $wire_width \
             points $wire_points status fixed shape 0x0 length $wire_length \
             beginExt $begin_ext endExt $end_ext]
+        if {$::mptdc_test_normalize_minarea_v8 &&
+            $::mptdc_test_manual_edit_net eq "u_core_n_57556"} {
+            set retained_vias {}
+            foreach row $::mptdc_test_manual_vias {
+                if {[dict get $row net] eq "u_core_n_57556" &&
+                    [dict get $row name] eq "VIA1_o" &&
+                    [mptdc_ckpt_manual_point_equal \
+                        [dict get $row point] {385.56 328.44}]} {
+                    continue
+                }
+                lappend retained_vias $row
+            }
+            set ::mptdc_test_manual_vias $retained_vias
+        }
     }
     set ::mptdc_test_manual_route_points {}
 }
@@ -1108,10 +1122,10 @@ puts $fh "1\t0x1\t{385.06 328.29 385.75 328.52}\tMET1\tGeometry\tMinimal_Area\tR
 close $fh
 
 set ::mptdc_test_manual_vias [list \
-    [dict create net u_core_n_57556 name VIA1_o point {385.56 328.44} status routed \
-        bot_rects {{{385.37 328.30 385.75 328.58}}} \
-        cut_rects {{{385.43 328.31 385.69 328.57}}} \
-        top_rects {{{385.42 328.25 385.70 328.63}}}]]
+    [dict create net u_core_n_57556 name VIA2_CH1_so point {385.56 330.12} status routed \
+        bot_rects {{{385.42 329.93 386.22 330.31}}} \
+        cut_rects {{{385.43 329.99 385.69 330.25} {385.95 329.99 386.21 330.25}}} \
+        top_rects {{{385.37 329.98 386.27 330.26}}}]]
 set ::mptdc_test_manual_wires [list \
     [dict create net u_core_n_57556 layer MET1 \
         box {385.06 328.29 385.75 328.52} width 0.23 \
@@ -1161,6 +1175,8 @@ foreach expected {
     {TARGET_WIRE_HANDLE_STATUS=UNCHANGED}
     {TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED}
     {RESERVED_FILL_OBJECT_STATUS=UNCHANGED}
+    {N57556_LANDING_REPRESENTATION_STATUS=UNCHANGED}
+    {TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED}
     {POST_DRC=0}
     {POST_SHORTS=0}
     {POST_MINAREA_MARKER_COUNT=0}
@@ -1184,7 +1200,11 @@ set ::mptdc_test_manual_vias [list \
     [dict create net u_core_n_57556 name VIA1_o point {385.56 328.44} status routed \
         bot_rects {{{385.37 328.30 385.75 328.58}}} \
         cut_rects {{{385.43 328.31 385.69 328.57}}} \
-        top_rects {{{385.42 328.25 385.70 328.63}}}]]
+        top_rects {{{385.42 328.25 385.70 328.63}}}] \
+    [dict create net u_core_n_57556 name VIA2_CH1_so point {385.56 330.12} status routed \
+        bot_rects {{{385.42 329.93 386.22 330.31}}} \
+        cut_rects {{{385.43 329.99 385.69 330.25} {385.95 329.99 386.21 330.25}}} \
+        top_rects {{{385.37 329.98 386.27 330.26}}}]]
 set ::mptdc_test_manual_wires {}
 set ::mptdc_test_manual_pwires [list \
     [dict create net u_core_n_57556 layer MET1 box {380 320 381 321} \
@@ -1227,6 +1247,8 @@ foreach expected {
     {INTERMEDIATE_SHORTS=0}
     {INTERMEDIATE_MINAREA_MARKER_STATUS=PASS}
     {FIXED_WIRE_EXTENSION_STATUS=PASS}
+    {N57556_LANDING_REPRESENTATION_STATUS=UNCHANGED}
+    {TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED}
     {POST_DRC=0}
     {POST_SHORTS=0}
     {POST_MINAREA_MARKER_COUNT=0}

@@ -1202,6 +1202,33 @@ proc mptdc_ckpt_manual_via_names_at {net point} {
     return [lsort $names]
 }
 
+proc mptdc_ckpt_manual_via_fingerprint {fh label net} {
+    set nh [mptdc_ckpt_manual_net_handle $net]
+    set signatures {}
+    set idx 0
+    foreach handle [mptdc_ckpt_probe_valid_handles [dbGet ${nh}.vias]] {
+        incr idx
+        set name [lindex [dbGet ${handle}.via.name] 0]
+        set point [mptdc_ckpt_manual_flat_point [dbGet ${handle}.pt]]
+        set status [lindex [dbGet ${handle}.status] 0]
+        set bot_rects [dbGet ${handle}.botRects]
+        set cut_rects [dbGet ${handle}.cutRects]
+        set top_rects [dbGet ${handle}.topRects]
+        set row_label [format "%s_%02d" $label $idx]
+        puts $fh "${row_label}_HANDLE=$handle"
+        puts $fh "${row_label}_NAME=$name"
+        puts $fh "${row_label}_POINT=$point"
+        puts $fh "${row_label}_STATUS=$status"
+        puts $fh "${row_label}_BOT_RECTS=$bot_rects"
+        puts $fh "${row_label}_CUT_RECTS=$cut_rects"
+        puts $fh "${row_label}_TOP_RECTS=$top_rects"
+        lappend signatures [list \
+            $handle $name $point $status $bot_rects $cut_rects $top_rects]
+    }
+    puts $fh "${label}_COUNT=$idx"
+    return [lsort $signatures]
+}
+
 proc mptdc_ckpt_manual_assert_via_names {fh label net point expected_names} {
     set names [mptdc_ckpt_manual_via_names_at $net $point]
     puts $fh "${label}_VIA_NAMES=[join $names ,]"
@@ -1868,8 +1895,16 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
                 $fh INTERMEDIATE_MINAREA_MARKER $intermediate
         }
 
-        mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_BEFORE_EXTENSION \
-            u_core_n_57556 {385.56 328.44} {VIA1_o}
+        set landing_via_names_pre [mptdc_ckpt_manual_via_names_at \
+            u_core_n_57556 {385.56 328.44}]
+        puts $fh "N57556_LANDING_BEFORE_EXTENSION_VIA_NAMES=[join $landing_via_names_pre ,]"
+        if {$landing_via_names_pre ne {} &&
+            $landing_via_names_pre ne {VIA1_o}} {
+            error "V8 found an unsupported landing-via representation before extension: $landing_via_names_pre"
+        }
+        puts $fh "N57556_LANDING_REPRESENTATION_PRE_STATUS=PASS"
+        set target_via_pre [mptdc_ckpt_manual_via_fingerprint \
+            $fh TARGET_VIA_PRE u_core_n_57556]
         set target_wire_pre [mptdc_ckpt_manual_wire_handles u_core_n_57556]
         set target_pwire_pre [mptdc_ckpt_manual_net_route_handles \
             u_core_n_57556 pWires]
@@ -1916,8 +1951,21 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
             error "V8 changed _SADP_FILLS_RESERVED route objects"
         }
         puts $fh "RESERVED_FILL_OBJECT_STATUS=UNCHANGED"
-        mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_AFTER_EXTENSION \
-            u_core_n_57556 {385.56 328.44} {VIA1_o}
+        set landing_via_names_post [mptdc_ckpt_manual_via_names_at \
+            u_core_n_57556 {385.56 328.44}]
+        puts $fh "N57556_LANDING_AFTER_EXTENSION_VIA_NAMES=[join $landing_via_names_post ,]"
+        if {$landing_via_names_post ne $landing_via_names_pre} {
+            puts $fh "N57556_LANDING_REPRESENTATION_STATUS=FAIL"
+            error "V8 changed the landing-via representation from $landing_via_names_pre to $landing_via_names_post"
+        }
+        puts $fh "N57556_LANDING_REPRESENTATION_STATUS=UNCHANGED"
+        set target_via_post [mptdc_ckpt_manual_via_fingerprint \
+            $fh TARGET_VIA_POST u_core_n_57556]
+        if {$target_via_post ne $target_via_pre} {
+            puts $fh "TARGET_VIA_FINGERPRINT_STATUS=FAIL"
+            error "V8 changed the target net via fingerprint"
+        }
+        puts $fh "TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED"
 
         set final [mptdc_ckpt_verify_snapshot [expr {
             $mode eq "trial" ? "minarea_v8_trial_post" : "minarea_v8_replay_post"

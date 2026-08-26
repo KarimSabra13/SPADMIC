@@ -814,6 +814,7 @@ run_route_minarea_endext_stage() {
   local fixed_extension_status fixed_extension_method fixed_extension_attribute
   local fixed_extension_pre fixed_extension_post canonical_status canonical_width canonical_length
   local extension_delta target_wire_status target_other_status reserved_fill_status
+  local landing_representation_status target_via_fingerprint_status
   local post_minarea_count helper_post_drc helper_post_shorts
   local setup_status hold_status drv_status power_status timing_gate_status=FAIL
   local special_signature_status=FAIL expected_initial_drc
@@ -925,6 +926,8 @@ run_route_minarea_endext_stage() {
   target_wire_status="$(report_value "$helper_report" TARGET_WIRE_HANDLE_STATUS)"
   target_other_status="$(report_value "$helper_report" TARGET_OTHER_ROUTE_OBJECT_STATUS)"
   reserved_fill_status="$(report_value "$helper_report" RESERVED_FILL_OBJECT_STATUS)"
+  landing_representation_status="$(report_value "$helper_report" N57556_LANDING_REPRESENTATION_STATUS)"
+  target_via_fingerprint_status="$(report_value "$helper_report" TARGET_VIA_FINGERPRINT_STATUS)"
   post_minarea_count="$(report_value "$helper_report" POST_MINAREA_MARKER_COUNT)"
   helper_post_drc="$(report_value "$helper_report" POST_DRC)"
   helper_post_shorts="$(report_value "$helper_report" POST_SHORTS)"
@@ -985,6 +988,8 @@ run_route_minarea_endext_stage() {
         "$target_wire_status" == UNCHANGED && \
         "$target_other_status" == UNCHANGED && \
         "$reserved_fill_status" == UNCHANGED && \
+        "$landing_representation_status" == UNCHANGED && \
+        "$target_via_fingerprint_status" == UNCHANGED && \
         "$post_minarea_count" == 0 && "$helper_post_drc" == 0 && \
         "$helper_post_shorts" == 0 && \
         "$initial_drc" == "$expected_initial_drc" && "$initial_shorts" == 0 && \
@@ -1045,6 +1050,8 @@ run_route_minarea_endext_stage() {
     echo "TARGET_WIRE_HANDLE_STATUS=$target_wire_status"
     echo "TARGET_OTHER_ROUTE_OBJECT_STATUS=$target_other_status"
     echo "RESERVED_FILL_OBJECT_STATUS=$reserved_fill_status"
+    echo "N57556_LANDING_REPRESENTATION_STATUS=$landing_representation_status"
+    echo "TARGET_VIA_FINGERPRINT_STATUS=$target_via_fingerprint_status"
     echo "POST_MINAREA_MARKER_COUNT=$post_minarea_count"
     echo "MANUAL_POST_DRC=$helper_post_drc"
     echo "MANUAL_POST_SHORTS=$helper_post_shorts"
@@ -1689,7 +1696,9 @@ tracked_endext_trial_gate_passes() {
       N57556_END_EXT_FREE_END_EXTENSION_DELTA_UM 0.14 \
       TARGET_WIRE_HANDLE_STATUS UNCHANGED \
       TARGET_OTHER_ROUTE_OBJECT_STATUS UNCHANGED \
-      RESERVED_FILL_OBJECT_STATUS UNCHANGED POST_MINAREA_MARKER_COUNT 0 \
+      RESERVED_FILL_OBJECT_STATUS UNCHANGED \
+      N57556_LANDING_REPRESENTATION_STATUS UNCHANGED \
+      TARGET_VIA_FINGERPRINT_STATUS UNCHANGED POST_MINAREA_MARKER_COUNT 0 \
       FINAL_DRC 0 FINAL_SHORTS 0 FINAL_REGULAR_CONNECTIVITY_BAD 0 \
       FINAL_SPECIAL_CONNECTIVITY_BAD 1 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 1 \
       FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 FINAL_SPECIAL_DANGLING_COUNT 15 \

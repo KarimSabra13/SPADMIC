@@ -148,8 +148,17 @@ canonical fixed MET1 segment. The sole `u_core_n_57556` marker stayed at
 `0.1777/0.202`, with one DRC and zero shorts. Do not rerun V6R and do not try
 another endpoint coordinate.
 
-The only active implementation is V8. The read-only wire schema proves that the
-canonical fixed wire exposes settable `beginExt` and `endExt` properties. V8
+The first V8 harness run
+`20260826_mptdc_bufftap0_route_minarea_endext_trial_v8_185831` is preserved as
+failed pre-edit evidence. It did not execute `dbSet` or `set_db`: the stale
+guard expected `VIA1_o@385.56,328.44`, but V6R had already canonicalized that
+landing-via object out of `net.vias` while preserving zero regular-connectivity
+failures and the exact one-marker state. This is a harness failure, not a
+failed endpoint-extension experiment. Do not reuse that run as proof lineage.
+
+The only active implementation remains the corrected V8R proof. The read-only
+wire schema proves that the canonical fixed wire exposes settable `beginExt`
+and `endExt` properties. V8
 identifies the sole fixed MET1 wire with width 0.23 um and length 0.385 um that
 overlaps the remaining marker, preserves the via-side extension, and increases
 only the free-side extension by 0.14 um. That adds 0.0322 um2, exceeding the
@@ -158,7 +167,10 @@ immutable failed V6R checkpoint and runs no router or timing command. A passing
 proof is published before another fresh process restores the original
 two-marker guarded-halo checkpoint, reproduces the two proven V1 stubs, applies
 the same endpoint-property edit, and runs extraction, TC timing, DRV, and
-power. If this single V8 proof fails, stop for manual OA/GUI review.
+power. V8R fingerprints every remaining target-net via before and after the
+wire-property edit instead of requiring the consumed landing-via object. If
+this corrected proof reaches the property edit and fails, stop for manual
+OA/GUI review.
 
 ## Acceptance Order
 
@@ -177,8 +189,9 @@ power. If this single V8 proof fails, stop for manual OA/GUI review.
 6. In a fresh V8 proof process, restore only the published failed V6R
    checkpoint. Require the exact `0.1777/0.202` source marker, the canonical
    fixed MET1 wire profile, a persisted 0.14 um free-end extension, unchanged
-   target/PG/reserved-fill object sets, zero geometry DRC, zero shorts, zero
-   regular and non-RO special failures, zero unrouted nets, and the exact
+   target/PG/reserved-fill object sets, an unchanged full target-via
+   fingerprint and landing-via representation, zero geometry DRC, zero shorts,
+   zero regular and non-RO special failures, zero unrouted nets, and the exact
    unchanged 15-endpoint PG fingerprint.
 7. Replay V8 from the original two-marker failed-route checkpoint in another
    fresh process. Require the one-marker intermediate signature, the identical
@@ -296,7 +309,7 @@ special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact `HALO10_PNRLEF_15` PVS-candidate
 fingerprint.
 
-### 2. Current Commands: V8 Endpoint-Extension Proof and Canonical Replay
+### 2. Current Commands: Corrected V8R Endpoint-Extension Proof and Canonical Replay
 
 V6R is now immutable failed evidence. Innovus normalized the requested longer
 route back to one fixed MET1 wire with width 0.23 um, length 0.385 um, and the
@@ -305,6 +318,13 @@ changes only the canonical wire's free-side `beginExt` or `endExt` property by
 0.14 um. The via-side extension, wire handles, other target route objects,
 reserved-fill objects, PG geometry, placement, and vias must remain unchanged.
 
+The failed `...v8_185831` run stopped before the property mutation because its
+exact landing-via assertion described the pre-V6R database, not the normalized
+V6R checkpoint. V8R removes only that stale assertion. It now accepts the
+audited normalized landing representation, fingerprints every target-net via
+including geometry, and requires the entire fingerprint and landing
+representation to remain byte-for-byte unchanged across the endpoint edit.
+
 The proof and replay are separate fresh processes. The proof restores only the
 failed V6R checkpoint and runs no timing. The replay is allowed only after the
 proof snapshot is committed and pushed; it restores the original two-marker
@@ -312,7 +332,7 @@ checkpoint, recreates the two V1 landing stubs, proves the intermediate sole
 `0.1777/0.202` marker, applies the same property edit, and runs extraction, TC
 timing, DRV, and power. Never use the proof checkpoint as the replay source.
 
-#### 2A. Run the V8 Endpoint-Extension Proof Only
+#### 2A. Run the Corrected V8R Endpoint-Extension Proof Only
 
 Copy this block exactly. It does not close the SSH shell when a guard fails.
 
@@ -322,7 +342,7 @@ set +e
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 SOURCE_PNR_RUN=20260825_mptdc_bufftap0_halo10_physical_130313
 FAILED_V6R_RUN=20260826_mptdc_bufftap0_route_minarea_patch_trial_v6r_180659
-ENDEXT_TRIAL_RUN="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_endext_trial_v8_$(date +%H%M%S)"
+ENDEXT_TRIAL_RUN="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_endext_trial_v8r_$(date +%H%M%S)"
 DRIVER_LOG="/tmp/${ENDEXT_TRIAL_RUN}.driver.log"
 SYNC_RC=99
 CHECKOUT_RC=99
@@ -375,7 +395,7 @@ grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|ENDEXT_TRI
   "$DRIVER_LOG" 2>/dev/null | tail -20
 
 echo "===== V8 PROOF GATE ====="
-grep -E '^(SOURCE_(PNR|PATCH_TRIAL|ENDEXT_TRIAL)_RUN_ID|COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|V8_STAGE_MODE|PRE_(DRC|SHORTS|MINAREA_MARKER_STATUS)|FIXED_WIRE_EXTENSION_(STATUS|METHOD|ATTRIBUTE|PRE_UM|POST_UM)|N57556_END_EXT_(CANONICAL_STUB_(STATUS|WIDTH|LENGTH)|FREE_END_EXTENSION_DELTA_UM)|TARGET_(WIRE_HANDLE|OTHER_ROUTE_OBJECT)_STATUS|RESERVED_FILL_OBJECT_STATUS|POST_MINAREA_MARKER_COUNT|MANUAL_POST_(DRC|SHORTS)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|ENDEXT_TRIAL_GATE_MODE|DECISION)=' \
+grep -E '^(SOURCE_(PNR|PATCH_TRIAL|ENDEXT_TRIAL)_RUN_ID|COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|V8_STAGE_MODE|PRE_(DRC|SHORTS|MINAREA_MARKER_STATUS)|FIXED_WIRE_EXTENSION_(STATUS|METHOD|ATTRIBUTE|PRE_UM|POST_UM)|N57556_(END_EXT_(CANONICAL_STUB_(STATUS|WIDTH|LENGTH)|FREE_END_EXTENSION_DELTA_UM)|LANDING_REPRESENTATION_STATUS)|TARGET_(WIRE_HANDLE|OTHER_ROUTE_OBJECT|VIA_FINGERPRINT)_STATUS|RESERVED_FILL_OBJECT_STATUS|POST_MINAREA_MARKER_COUNT|MANUAL_POST_(DRC|SHORTS)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|ENDEXT_TRIAL_GATE_MODE|DECISION)=' \
   "$ENDEXT_TRIAL_DIR/reports/operator_gate_route_min_area_endext_trial.rpt" 2>/dev/null
 ```
 
@@ -397,8 +417,9 @@ The gate must also show `COMMAND_1_STATUS=PASS`, `COMMAND_2_STATUS=MISSING`,
 `PRE_SHORTS=0`, `PRE_MINAREA_MARKER_STATUS=PASS`, canonical width `0.23`,
 canonical length `0.385`, extension status PASS through `dbSet` or `set_db`,
 attribute `beginExt` or `endExt`, exact extension delta `0.14`, all three
-object-set checks UNCHANGED, zero post/final DRC and shorts, zero regular and
-non-RO special failures, zero unrouted nets, exact 15-endpoint fingerprint
+object-set checks UNCHANGED, `N57556_LANDING_REPRESENTATION_STATUS=UNCHANGED`,
+`TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED`, zero post/final DRC and shorts, zero
+regular and non-RO special failures, zero unrouted nets, exact 15-endpoint fingerprint
 PASS, two tap pins, and `TIMING_GATE_STATUS=NOT_RUN_PROOF_ONLY`. Any missing or
 different field is a stop. Do not run 2B or PVS after a failed proof.
 
@@ -467,7 +488,7 @@ grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|MINAREA_RE
   "$DRIVER_LOG" 2>/dev/null | tail -20
 
 echo "===== V8 REPLAY GATE ====="
-grep -E '^(SOURCE_(PNR|PATCH_TRIAL|ENDEXT_TRIAL)_RUN_ID|COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|V8_STAGE_MODE|PRE_(DRC|SHORTS)|INTERMEDIATE_(DRC|SHORTS|MINAREA_MARKER_STATUS)|FIXED_WIRE_EXTENSION_(STATUS|METHOD|ATTRIBUTE|PRE_UM|POST_UM)|N57556_END_EXT_(CANONICAL_STUB_(STATUS|WIDTH|LENGTH)|FREE_END_EXTENSION_DELTA_UM)|TARGET_(WIRE_HANDLE|OTHER_ROUTE_OBJECT)_STATUS|RESERVED_FILL_OBJECT_STATUS|POST_MINAREA_MARKER_COUNT|MANUAL_POST_(DRC|SHORTS)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
+grep -E '^(SOURCE_(PNR|PATCH_TRIAL|ENDEXT_TRIAL)_RUN_ID|COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|V8_STAGE_MODE|PRE_(DRC|SHORTS)|INTERMEDIATE_(DRC|SHORTS|MINAREA_MARKER_STATUS)|FIXED_WIRE_EXTENSION_(STATUS|METHOD|ATTRIBUTE|PRE_UM|POST_UM)|N57556_(END_EXT_(CANONICAL_STUB_(STATUS|WIDTH|LENGTH)|FREE_END_EXTENSION_DELTA_UM)|LANDING_REPRESENTATION_STATUS)|TARGET_(WIRE_HANDLE|OTHER_ROUTE_OBJECT|VIA_FINGERPRINT)_STATUS|RESERVED_FILL_OBJECT_STATUS|POST_MINAREA_MARKER_COUNT|MANUAL_POST_(DRC|SHORTS)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|UNROUTED_NETS|REPORT_ROUTE_ZERO_STATUS|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
   "$REPLAY_DIR/reports/operator_gate_route_min_area_repair.rpt" 2>/dev/null
 ```
 
@@ -494,9 +515,10 @@ connectivity remains one only for the exact 15 audited VDD/VSS wire ends. The
 PVS driver revalidates the full original -> failed V6R -> V8 proof -> V8 replay
 lineage and opens only `checkpoints/repaired_route.enc.dat`.
 
-If 2A fails, preserve its published evidence and move to manual OA/GUI review.
-Do not generate V9, restore a rejected proof checkpoint, waive the marker, or
-run a broader router.
+If corrected 2A reaches `FIXED_WIRE_EXTENSION_*` and still fails, preserve its
+published evidence and move to manual OA/GUI review. Do not generate V9,
+restore a rejected proof checkpoint, waive the marker, or run a broader
+router.
 
 ### Completed V1-V6R Minimum-Area Attempts (Do Not Run)
 
