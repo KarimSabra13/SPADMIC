@@ -1943,6 +1943,81 @@ Interpret the result as follows:
   requires Innovus DRC zero, base PVS DRC zero, density PVS DRC zero, and an
   explicit LVS `MATCH` on one immutable input set.
 
+### Collect the existing LVS mismatch detail without rerunning tools
+
+Use this only for the published diagnostic run
+`20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334`. PVS completed with
+return code zero but reported a connectivity mismatch (`213790` layout
+instances versus `213412` source instances). This step republishes the existing
+run with the raw `.cls` comparison and `svdb/mismatched` text; it does not rerun
+Innovus, PVS DRC, or PVS LVS and does not modify any design input.
+
+```bash
+###############################################################################
+# MPTDC read-only collection of the existing PVS LVS mismatch detail
+###############################################################################
+
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+cd "$REPO"
+
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+PVS_RUN=20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334
+PVS_DIR=/sim/ksabra/SPADMIC_work/innovus/$PVS_RUN
+TRIAGE_ID="${PVS_RUN}_lvs_triage_$(date +%Y%m%d_%H%M%S)"
+TRIAGE_PUBLISH_RC=99
+
+if [ "$SYNC_RC" -eq 0 ] && \
+   [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$PVS_DIR/pvs_lvs" ]; then
+  MPTDC_SNAPSHOT_MAX_TEXT_BYTES=8388608 \
+  bash MPTDC/ci/publish_mptdc_server_snapshot.sh \
+    pvs \
+    "$TRIAGE_ID" \
+    "$PVS_DIR" \
+    PVS_LVS_TRIAGE
+  TRIAGE_PUBLISH_RC=$?
+else
+  echo "STOP: sync, tracked-tree, or existing PVS-run preflight failed"
+fi
+
+SNAPSHOT_DIR=$REPO/MPTDC/docs/server_snapshots/pvs/$TRIAGE_ID
+CLS_COUNT=0
+MISMATCHED_COUNT=0
+if [ -d "$SNAPSHOT_DIR" ]; then
+  CLS_COUNT="$(find "$SNAPSHOT_DIR/pvs_lvs" -type f -name '*.cls' 2>/dev/null | wc -l | tr -d ' ')"
+  MISMATCHED_COUNT="$(find "$SNAPSHOT_DIR/pvs_lvs" -type f -name mismatched 2>/dev/null | wc -l | tr -d ' ')"
+fi
+
+if [ "$TRIAGE_PUBLISH_RC" -eq 0 ] && \
+   [ "$CLS_COUNT" -ge 1 ] && \
+   [ "$MISMATCHED_COUNT" -ge 1 ]; then
+  TRIAGE_DECISION=PASS_REVIEW_PUBLISHED_EVIDENCE
+else
+  TRIAGE_DECISION=FAIL_STOP
+fi
+
+echo "===== SEND BACK ====="
+echo "PVS_RUN=$PVS_RUN"
+echo "TRIAGE_ID=$TRIAGE_ID"
+echo "TRIAGE_PUBLISH_RC=$TRIAGE_PUBLISH_RC"
+echo "CLS_COUNT=$CLS_COUNT"
+echo "MISMATCHED_COUNT=$MISMATCHED_COUNT"
+echo "TRIAGE_DECISION=$TRIAGE_DECISION"
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Proceed only when `TRIAGE_PUBLISH_RC=0`, both evidence counts are at least one,
+and `TRIAGE_DECISION=PASS_REVIEW_PUBLISHED_EVIDENCE`. Send the seven final lines
+only. Stop on any other result. The next engineering decision comes from the
+published mismatch classes; do not alter HCell, source filtering, the RO macro,
+or routed geometry before that review.
+
 For review, send only `PVS_RUN`, `PVS_DRIVER_RC`, and `FINAL_HEAD`. The driver
 publishes preparation, audit, base-DRC, and LVS snapshots automatically.
 

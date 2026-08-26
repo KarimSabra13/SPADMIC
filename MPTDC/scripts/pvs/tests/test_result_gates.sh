@@ -209,8 +209,8 @@ pvs -lvs -top_cell mptdc_axis_core -source_top_cell mptdc_axis_core -control $LV
 EOF
 cat > "$LVS_RUN/pvslvsctl" <<EOF
 layout_path "$GDS";
-schematic_path "$SOURCE" verilog;
-schematic_path "$CDL" spice;
+schematic_path "$SOURCE" verilog -keep_backslash;
+schematic_path "$CDL" cdl;
 EOF
 printf 'fixture config\n' > "$LVS_RUN/.config.rul"
 printf 'fixture technology\n' > "$LVS_RUN/.technology.rul"
@@ -230,6 +230,29 @@ python3 "$PVS_DIR/06_gate_pvs_lvs.py" \
   --inventory "$TMP_ROOT/lvs_pass_inventory.tsv"
 grep -qx 'PVS_LVS_STATUS=MATCH' "$TMP_ROOT/lvs_pass.rpt"
 
+sed -i 's/verilog -keep_backslash;/verilog -keep_backslash -unsupported;/' \
+  "$LVS_RUN/pvslvsctl"
+if python3 "$PVS_DIR/06_gate_pvs_lvs.py" \
+  --run-dir "$LVS_RUN" \
+  --tool-rc 0 \
+  --gds "$GDS" \
+  --source "$SOURCE" \
+  --cdl "$CDL" \
+  --hcell "$HCELL" \
+  --hash-manifest "$HASH_MANIFEST" \
+  --layout-top mptdc_axis_core \
+  --source-top mptdc_axis_core \
+  --out "$TMP_ROOT/lvs_option_fail.rpt" \
+  --inventory "$TMP_ROOT/lvs_option_fail_inventory.tsv"; then
+  echo "ERROR: unsupported LVS source option unexpectedly passed" >&2
+  exit 1
+fi
+grep -Fqx \
+  "ERROR=pvslvsctl Verilog schematic_path has unsupported options: ('-keep_backslash', '-unsupported')" \
+  "$TMP_ROOT/lvs_option_fail.rpt"
+sed -i 's/verilog -keep_backslash -unsupported;/verilog -keep_backslash;/' \
+  "$LVS_RUN/pvslvsctl"
+
 printf 'The net-lists do not match.\n' > "$LVS_RUN/final_lvs.sum"
 if python3 "$PVS_DIR/06_gate_pvs_lvs.py" \
   --run-dir "$LVS_RUN" \
@@ -246,6 +269,8 @@ if python3 "$PVS_DIR/06_gate_pvs_lvs.py" \
   echo "ERROR: LVS mismatch unexpectedly passed" >&2
   exit 1
 fi
-grep -qx 'PVS_LVS_STATUS=NOT_PROVEN' "$TMP_ROOT/lvs_fail.rpt"
+grep -qx 'PVS_LVS_STATUS=MISMATCH' "$TMP_ROOT/lvs_fail.rpt"
+grep -qx 'PVS_RC=0' "$TMP_ROOT/lvs_fail.rpt"
+grep -Fq 'ERROR=explicit LVS mismatch evidence found in ' "$TMP_ROOT/lvs_fail.rpt"
 
 echo "MPTDC_PVS_RESULT_GATE_TEST=PASS"

@@ -128,10 +128,11 @@ copy_text_tree() {
     find "$root" -type f \
       \( -name '*.rpt' -o -name '*.csv' -o -name '*.tsv' -o -name '*.txt' \
          -o -name '*.md' -o -name '*.sum' -o -name '*.shorts' -o -name '*.out' \
-         -o -name '*.err' -o -name '*.rep' -o -name '*.RPT' -o -name '*.CSV' \
+         -o -name '*.err' -o -name '*.rep' -o -name '*.cls' -o -name 'mismatched' \
+         -o -name '*.RPT' -o -name '*.CSV' \
          -o -name '*.TSV' -o -name '*.TXT' -o -name '*.MD' -o -name '*.SUM' \
          -o -name '*.SHORTS' -o -name '*.OUT' -o -name '*.ERR' \
-         -o -name '*.REP' \) 2>/dev/null | sort
+         -o -name '*.REP' -o -name '*.CLS' \) 2>/dev/null | sort
   )
 }
 

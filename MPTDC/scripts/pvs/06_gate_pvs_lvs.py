@@ -36,12 +36,22 @@ class GateError(RuntimeError):
     pass
 
 
+class MismatchError(GateError):
+    pass
+
+
 @dataclass(frozen=True)
 class Evidence:
     path: Path
     negative: int
     positive: int
     report_level: bool
+
+
+@dataclass(frozen=True)
+class PathDirective:
+    path: Path
+    arguments: tuple[str, ...]
 
 
 def sha256(path: Path) -> str:
@@ -84,12 +94,25 @@ def verify_manifest_item(
     return actual
 
 
-def quoted_directives(text: str, directive: str, suffix: str = "") -> list[Path]:
-    pattern = re.compile(
-        rf'(?im)^\s*{re.escape(directive)}\s+"([^"]+)"'
-        + (rf"\s+{re.escape(suffix)}\s*;" if suffix else r"\s*;")
+def path_directives(text: str, directive: str) -> list[PathDirective]:
+    candidate_pattern = re.compile(
+        rf"(?im)^\s*{re.escape(directive)}\b[^\r\n]*$"
     )
-    return [Path(value).expanduser().resolve() for value in pattern.findall(text)]
+    directive_pattern = re.compile(
+        rf'^\s*{re.escape(directive)}\s+"([^"\r\n]+)"([^;\r\n]*)\s*;\s*$'
+    )
+    directives: list[PathDirective] = []
+    for candidate in candidate_pattern.findall(text):
+        match = directive_pattern.fullmatch(candidate)
+        if match is None:
+            raise GateError(f"malformed {directive} directive: {candidate.strip()}")
+        directives.append(
+            PathDirective(
+                Path(match.group(1)).expanduser().resolve(),
+                tuple(match.group(2).split()),
+            )
+        )
+    return directives
 
 
 def option_paths(text: str, option: str) -> list[Path]:
@@ -114,13 +137,42 @@ def verify_controls(
     run_text = run_control.read_text(errors="replace")
     lvs_text = lvs_control.read_text(errors="replace")
 
-    if quoted_directives(lvs_text, "layout_path") != [gds]:
+    layout_directives = path_directives(lvs_text, "layout_path")
+    if layout_directives != [PathDirective(gds, ())]:
         raise GateError("pvslvsctl layout_path is not exactly the immutable merged GDS")
-    if quoted_directives(lvs_text, "schematic_path", "verilog") != [source]:
+
+    schematic_directives = path_directives(lvs_text, "schematic_path")
+    verilog_directives = [
+        item
+        for item in schematic_directives
+        if item.arguments and item.arguments[0].lower() == "verilog"
+    ]
+    cdl_directives = [
+        item
+        for item in schematic_directives
+        if item.arguments and item.arguments[0].lower() in {"cdl", "spice"}
+    ]
+    if len(schematic_directives) != 2:
+        raise GateError(
+            "pvslvsctl must contain exactly one Verilog and one CDL schematic_path"
+        )
+    if len(verilog_directives) != 1 or verilog_directives[0].path != source:
         raise GateError("pvslvsctl Verilog schematic_path is not exactly the immutable source")
-    spice_paths = quoted_directives(lvs_text, "schematic_path", "spice")
-    if spice_paths != [cdl]:
-        raise GateError(f"pvslvsctl must reference only the expected D_CELLS CDL: {spice_paths}")
+    if verilog_directives[0].arguments[1:] not in {(), ("-keep_backslash",)}:
+        raise GateError(
+            "pvslvsctl Verilog schematic_path has unsupported options: "
+            f"{verilog_directives[0].arguments[1:]}"
+        )
+    if len(cdl_directives) != 1 or cdl_directives[0].path != cdl:
+        raise GateError(
+            "pvslvsctl must reference only the expected D_CELLS CDL: "
+            f"{[item.path for item in cdl_directives]}"
+        )
+    if cdl_directives[0].arguments[1:]:
+        raise GateError(
+            "pvslvsctl D_CELLS schematic_path has unsupported options: "
+            f"{cdl_directives[0].arguments[1:]}"
+        )
 
     layout_tops = re.findall(r"-top_cell\s+[\"{]?([A-Za-z_][A-Za-z0-9_$]*)", run_text)
     source_tops = re.findall(r"-source_top_cell\s+[\"{]?([A-Za-z_][A-Za-z0-9_$]*)", run_text)
@@ -198,12 +250,14 @@ def write_inventory(path: Path, run_dir: Path, rows: list[Evidence]) -> None:
             )
 
 
-def write_failure(path: Path, error: Exception) -> None:
+def write_failure(path: Path, error: Exception, tool_rc: int) -> None:
+    lvs_status = "MISMATCH" if isinstance(error, MismatchError) else "NOT_PROVEN"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "LABEL=MPTDC_PVS_LVS_GATE\n"
         "STATUS=FAIL\n"
-        "PVS_LVS_STATUS=NOT_PROVEN\n"
+        f"PVS_LVS_STATUS={lvs_status}\n"
+        f"PVS_RC={tool_rc}\n"
         f"ERROR={error}\n"
         "FINAL_PHYSICAL_SIGNOFF_READY=NO\n"
     )
@@ -253,7 +307,9 @@ def main() -> int:
         inventory.parent.mkdir(parents=True, exist_ok=True)
         write_inventory(inventory, run_dir, rows)
         if negatives:
-            raise GateError(f"explicit LVS mismatch evidence found in {negatives[0]}")
+            raise MismatchError(
+                f"explicit LVS mismatch evidence found in {negatives[0]}"
+            )
         if not positives:
             raise GateError("no explicit report-level LVS MATCH evidence found")
 
@@ -289,7 +345,7 @@ def main() -> int:
         print(report, end="")
         return 0
     except GateError as exc:
-        write_failure(out, exc)
+        write_failure(out, exc, args.tool_rc)
         print(out.read_text(), end="")
         return 8
 

@@ -16,7 +16,7 @@ mkdir -p \
   "$SRC/manifests" \
   "$SRC/outputs" \
   "$SRC/pvs_drc/run_base" \
-  "$SRC/pvs_lvs/run_lvs"
+  "$SRC/pvs_lvs/run_lvs/svdb"
 
 printf 'STATUS=PASS\n' > "$SRC/reports/operator_gate_fixture.rpt"
 printf 'STRICT_ATTRIBUTION=1\n' > "$SRC/manifests/pvs_input_hashes.rpt"
@@ -30,6 +30,10 @@ printf 'pvs -lvs run control\n' > "$SRC/pvs_lvs/run_lvs/run.pvs"
 printf 'lvs control\n' > "$SRC/pvs_lvs/run_lvs/pvslvsctl"
 printf 'Final comparison: MATCH\n' > "$SRC/pvs_lvs/run_lvs/PIPO1.OUT"
 printf 'INFO LVS started\nPASS LVS complete\n' > "$SRC/pvs_lvs/run_lvs/PIPO1.LOG"
+printf 'Run Summary: Connectivity Mismatches\n' \
+  > "$SRC/pvs_lvs/run_lvs/mptdc_axis_core_lvs.sum.cls"
+printf 'layout_instances=213790 source_instances=213412\n' \
+  > "$SRC/pvs_lvs/run_lvs/svdb/mismatched"
 
 MPTDC_SNAPSHOT_ROOT="$SNAPSHOT_ROOT" \
 MPTDC_SNAPSHOT_SOURCE_DIR="$SRC" \
@@ -45,6 +49,8 @@ test -s "$SNAPSHOT/pvs_drc/run_base/pvs_replay.stdout.messages.tail"
 test -s "$SNAPSHOT/pvs_lvs/run_lvs/PIPO1.OUT"
 test -s "$SNAPSHOT/pvs_lvs/run_lvs/PIPO1.OUT.messages.tail"
 test -s "$SNAPSHOT/pvs_lvs/run_lvs/PIPO1.LOG.messages.tail"
+test -s "$SNAPSHOT/pvs_lvs/run_lvs/mptdc_axis_core_lvs.sum.cls"
+test -s "$SNAPSHOT/pvs_lvs/run_lvs/svdb/mismatched"
 test ! -e "$SNAPSHOT/reports/oversized.rpt"
 test ! -e "$SNAPSHOT/outputs/layout.gds"
 grep -Fq 'oversized.rpt' "$SNAPSHOT/README.md"
