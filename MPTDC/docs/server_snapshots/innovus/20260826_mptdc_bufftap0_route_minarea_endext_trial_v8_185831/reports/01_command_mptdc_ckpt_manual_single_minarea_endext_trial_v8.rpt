@@ -1,0 +1,22 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_single_minarea_endext_trial_v8
+REPORT_STATUS=FAILED
+ERROR=N57556_LANDING_BEFORE_EXTENSION expected via names VIA1_o at 385.56 328.44, found 
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N57556_LANDING_BEFORE_EXTENSION expected via names VIA1_o at 385.56 328.44, found 
+    while executing
+"error "$label expected via names $expected_names at $point, found $names""
+    (procedure "mptdc_ckpt_manual_assert_via_names" line 5)
+    invoked from within
+"mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_BEFORE_EXTENSION  u_core_n_57556 {385.56 328.44} {VIA1_o}"
+    (procedure "mptdc_ckpt_manual_minarea_endext_v8_impl" line 48)
+    invoked from within
+"mptdc_ckpt_manual_minarea_endext_v8_impl trial"
+    (procedure "mptdc_ckpt_manual_single_minarea_endext_trial_v8" line 2)
+    invoked from within
+"mptdc_ckpt_manual_single_minarea_endext_trial_v8"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
