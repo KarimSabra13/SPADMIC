@@ -432,7 +432,7 @@ run_route_minarea_repair_stage() {
   local commands_evidence="$RUN_DIR/manifests/route_minarea_repair_commands.rpt"
   local repair_log="$RUN_DIR/logs/route_minarea_repair_driver.log"
   local status_report="$RUN_DIR/reports/checkpoint_repair_status.rpt"
-  local manual_eco_report="$RUN_DIR/reports/min_area_landing_patch_v3.rpt"
+  local manual_eco_report="$RUN_DIR/reports/min_area_landing_patch_v4.rpt"
   local timing_report="$RUN_DIR/reports/extracted_timing_status.rpt"
   local drv_report="$RUN_DIR/reports/drv_status.rpt"
   local power_report="$RUN_DIR/reports/power_status.rpt"
@@ -445,7 +445,7 @@ run_route_minarea_repair_stage() {
   local command_1_status command_2_status manual_eco_status
   local manual_pre_drc manual_pre_shorts manual_base_drc manual_base_shorts
   local manual_base_regular manual_base_special_non_ro
-  local base_marker_status base_resolution_status
+  local base_marker_status base_anchor_status post_outward_covered
   local manual_post_drc manual_post_shorts
   local setup_status hold_status drv_status power_status
   local special_signature_status=FAIL timing_gate_status=FAIL
@@ -453,19 +453,19 @@ run_route_minarea_repair_stage() {
 
   mkdir -p "$RUN_DIR/reports" "$RUN_DIR/logs" "$RUN_DIR/manifests"
   cat > "$commands_file" <<'COMMANDS'
-mptdc_ckpt_manual_two_minarea_landing_patch_v3
+mptdc_ckpt_manual_two_minarea_landing_patch_v4
 mptdc_signoff_extract_and_sta
 COMMANDS
   {
     echo "# Exact bounded command payload supplied to Innovus"
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
-    echo "REPAIR_METHOD=STAGED_BASE_STUBS_THEN_EXACT_MARKER_DERIVED_VIA_SIDE_EXTENSION_V3"
-    echo "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
-    echo "VIA_SIDE_POLICY=u_core_n_57556:EXACT_0.1777_MARKER_CENTERLINE_AT_X_385.56->EAST_0.56;width=0.28"
+    echo "REPAIR_METHOD=PROVEN_N57960_STUB_THEN_DIRECT_N57556_VIA1_OUTWARD_EXTENSION_V4"
+    echo "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;width=0.28"
+    echo "OUTWARD_PATCH_POLICY=u_core_n_57556:VIA1_o@385.56,328.44->386.12,328.44;width=0.28"
     echo "TARGET_VIA_POLICY=u_core_n_57960:VIA1_o@363.72,358.12;u_core_n_57556:VIA1_o@385.56,328.44"
-    echo "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_ALLOWED"
-    echo "VIA_OBJECT_POLICY=POST_BASE_VIA_HANDLE_NOT_REQUIRED_CONNECTIVITY_AND_MET1_GEOMETRY_ARE_AUTHORITATIVE"
+    echo "ANCHOR_POLICY=USE_ORIGINAL_ROUTED_VIA1_CENTER_NOT_DRC_RECTANGLE_CENTER"
+    echo "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS"
     echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     echo "POST_REPAIR_ANALYSIS=EXTRACT_RC_TC_SETUP_TC_HOLD_DRV_POWER"
@@ -516,7 +516,8 @@ COMMANDS
   manual_base_regular="$(report_value "$manual_eco_report" BASE_REGULAR_CONNECTIVITY_BAD)"
   manual_base_special_non_ro="$(report_value "$manual_eco_report" BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES)"
   base_marker_status="$(report_value "$manual_eco_report" BASE_MINAREA_MARKER_STATUS)"
-  base_resolution_status="$(report_value "$manual_eco_report" BASE_VIA_SIDE_RESOLUTION_STATUS)"
+  base_anchor_status="$(report_value "$manual_eco_report" BASE_VIA_ANCHOR_STATUS)"
+  post_outward_covered="$(report_value "$manual_eco_report" POST_OUTWARD_PATCH_COVERED)"
   manual_post_drc="$(report_value "$manual_eco_report" POST_DRC)"
   manual_post_shorts="$(report_value "$manual_eco_report" POST_SHORTS)"
   setup_status="$(report_value "$timing_report" SETUP_STATUS_TC)"
@@ -549,7 +550,8 @@ COMMANDS
         "$manual_pre_shorts" == 0 && "$manual_base_drc" == 1 && \
         "$manual_base_shorts" == 0 && "$manual_base_regular" == 0 && \
         "$manual_base_special_non_ro" == 0 && \
-        "$base_marker_status" == PASS && "$base_resolution_status" == PASS && \
+        "$base_marker_status" == PASS && "$base_anchor_status" == PASS && \
+        "$post_outward_covered" == 1 && \
         "$manual_post_drc" == 0 && \
         "$manual_post_shorts" == 0 && "$initial_drc" == 2 && \
         "$initial_shorts" == 0 && "$initial_regular" == 0 && \
@@ -572,12 +574,12 @@ COMMANDS
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$source_checkpoint"
     echo "REPAIR_RC=$repair_rc"
-    echo "REPAIR_METHOD=STAGED_BASE_STUBS_THEN_EXACT_MARKER_DERIVED_VIA_SIDE_EXTENSION_V3"
-    echo "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
-    echo "VIA_SIDE_POLICY=u_core_n_57556:EXACT_0.1777_MARKER_CENTERLINE_AT_X_385.56->EAST_0.56;width=0.28"
+    echo "REPAIR_METHOD=PROVEN_N57960_STUB_THEN_DIRECT_N57556_VIA1_OUTWARD_EXTENSION_V4"
+    echo "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;width=0.28"
+    echo "OUTWARD_PATCH_POLICY=u_core_n_57556:VIA1_o@385.56,328.44->386.12,328.44;width=0.28"
     echo "TARGET_VIA_POLICY=u_core_n_57960:VIA1_o@363.72,358.12;u_core_n_57556:VIA1_o@385.56,328.44"
-    echo "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_ALLOWED"
-    echo "VIA_OBJECT_POLICY=POST_BASE_VIA_HANDLE_NOT_REQUIRED_CONNECTIVITY_AND_MET1_GEOMETRY_ARE_AUTHORITATIVE"
+    echo "ANCHOR_POLICY=USE_ORIGINAL_ROUTED_VIA1_CENTER_NOT_DRC_RECTANGLE_CENTER"
+    echo "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS"
     echo "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     echo "COMMAND_1_STATUS=$command_1_status"
@@ -591,7 +593,8 @@ COMMANDS
     echo "MANUAL_BASE_REGULAR_CONNECTIVITY_BAD=$manual_base_regular"
     echo "MANUAL_BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=$manual_base_special_non_ro"
     echo "BASE_MINAREA_MARKER_STATUS=$base_marker_status"
-    echo "BASE_VIA_SIDE_RESOLUTION_STATUS=$base_resolution_status"
+    echo "BASE_VIA_ANCHOR_STATUS=$base_anchor_status"
+    echo "POST_OUTWARD_PATCH_COVERED=$post_outward_covered"
     echo "MANUAL_POST_DRC=$manual_post_drc"
     echo "MANUAL_POST_SHORTS=$manual_post_shorts"
     echo "INITIAL_DRC=$initial_drc"
@@ -1245,7 +1248,7 @@ if [[ -z "$RUN_ID" ]]; then
   elif [[ "$STAGE" == "route-minarea-probe" ]]; then
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_probe_$(date +%H%M%S)"
   elif [[ "$STAGE" == "route-minarea-repair" ]]; then
-    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_repair_v3_$(date +%H%M%S)"
+    RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_route_minarea_repair_v4_$(date +%H%M%S)"
   elif [[ "$STAGE" == "route-geometry-repair" ]]; then
     RUN_ID="$(date +%Y%m%d)_mptdc_bufftap0_manual_geometry_repair_v7_$(date +%H%M%S)"
   else
