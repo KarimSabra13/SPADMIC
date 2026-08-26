@@ -1,0 +1,12 @@
+# MPTDC Route Checkpoint Repair Wrapper
+date: 2026-08-26T15:31:08+02:00
+repo: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+branch: SPADMIC_test
+head: 5f5638f5136429b0b5c1903b13a9dbebff676791
+run_id: 20260826_mptdc_bufftap0_route_minarea_repair_v3_153108
+result_dir: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_route_minarea_repair_v3_153108
+source_checkpoint: /sim/ksabra/SPADMIC_work/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/checkpoints/04_route_failed.enc.dat
+commands_file: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_route_minarea_repair_v3_153108/manifests/route_minarea_repair.commands.tcl
+top_cell: mptdc_axis_core
+
+git status --short --untracked-files=no:

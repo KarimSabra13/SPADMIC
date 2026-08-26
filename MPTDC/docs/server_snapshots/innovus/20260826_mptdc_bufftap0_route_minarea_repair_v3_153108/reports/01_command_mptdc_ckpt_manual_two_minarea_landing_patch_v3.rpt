@@ -1,0 +1,16 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_manual_two_minarea_landing_patch_v3
+REPORT_STATUS=FAILED
+ERROR=u_core_n_57556 via-side extension did not materialize
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+u_core_n_57556 via-side extension did not materialize
+    while executing
+"error "u_core_n_57556 via-side extension did not materialize""
+    (procedure "mptdc_ckpt_manual_two_minarea_landing_patch_v3" line 65)
+    invoked from within
+"mptdc_ckpt_manual_two_minarea_landing_patch_v3"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
