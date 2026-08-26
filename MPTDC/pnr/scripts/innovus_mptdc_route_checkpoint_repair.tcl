@@ -1429,32 +1429,37 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v1 {} {
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v2 {} {
-    error "minimum-area V2 is retired after Innovus absorbed the u_core_n_57556 VIA1 handle into normalized route geometry; use mptdc_ckpt_manual_two_minarea_landing_patch_v4"
+    error "minimum-area V2 is retired after Innovus absorbed the u_core_n_57556 VIA1 handle into normalized route geometry; use mptdc_ckpt_manual_two_minarea_landing_patch_v5"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v3 {} {
-    error "minimum-area V3 is retired because the DRC-box center y=328.405 is not the routed VIA1 anchor y=328.44 and the final Wire Editor command was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v4"
+    error "minimum-area V3 is retired because its away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v5"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v4 {} {
+    error "minimum-area V4 is retired because its direct VIA1-anchored away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v5"
+}
+
+proc mptdc_ckpt_manual_two_minarea_landing_patch_v5 {} {
     set report_dir [mptdc_signoff_report_dir]
-    set report [file join $report_dir min_area_landing_patch_v4.rpt]
+    set report [file join $report_dir min_area_landing_patch_v5.rpt]
     set fh [open $report w]
-    puts $fh "# MPTDC Staged VIA1-Anchored Outward Minimum-Area Patch V4"
-    puts $fh "MANUAL_ECO_MODE=PROVEN_N57960_STUB_THEN_DIRECT_N57556_VIA1_OUTWARD_EXTENSION"
+    puts $fh "# MPTDC Two-Stub Base and Local MET1 DRC Repair V5"
+    puts $fh "MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_BOUNDED_MET1_ECOROUTE_FIX_DRC"
     puts $fh "SOURCE_BASELINE=DRC_2_SHORTS_0_REGULAR_0_SPECIAL_NON_RO_0"
-    puts $fh "BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1064_OF_0.202"
+    puts $fh "BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1777_OF_0.202"
     puts $fh "TARGET_NETS=u_core_n_57960,u_core_n_57556"
-    puts $fh "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;width=0.28"
-    puts $fh "OUTWARD_PATCH_POLICY=u_core_n_57556:VIA1_o@385.56,328.44->386.12,328.44;width=0.28"
-    puts $fh "ANCHOR_POLICY=USE_ORIGINAL_ROUTED_VIA1_CENTER_NOT_DRC_RECTANGLE_CENTER"
-    puts $fh "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS"
+    puts $fh "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
+    puts $fh "LOCAL_ECOROUTE_POLICY=ecoRoute_-fix_drc_MET1:MET1_area_384.22_327.45_386.59_329.28"
+    puts $fh "LOCAL_ECOROUTE_AREA=384.22 327.45 386.59 329.28"
+    puts $fh "LOCAL_ECOROUTE_LAYER_RANGE=MET1:MET1"
+    puts $fh "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED"
     puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
-    puts $fh "ROUTE_OPTIMIZER_POLICY=NO_BROAD_OR_TARGETED_ROUTER_COMMANDS"
+    puts $fh "ROUTE_OPTIMIZER_POLICY=ONE_MARKER_WINDOW_AND_MET1_ONLY"
 
     set body_status [catch {
-        set baseline [mptdc_ckpt_verify_snapshot minarea_v4_pre]
+        set baseline [mptdc_ckpt_verify_snapshot minarea_v5_pre]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 2 0 0
 
         mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_PRE \
@@ -1462,39 +1467,25 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v4 {} {
         mptdc_ckpt_manual_assert_via_names $fh N57556_LANDING_PRE \
             u_core_n_57556 {385.56 328.44} {VIA1_o}
 
-        set outward_probe {385.84 328.44}
-        set outward_precovered [mptdc_ckpt_manual_wire_covers_point \
-            u_core_n_57556 MET1 $outward_probe]
-        puts $fh "BASE_OUTWARD_PATCH_PRECOVERED=$outward_precovered"
-        if {$outward_precovered} {
-            error "u_core_n_57556 outward patch probe is already covered"
-        }
-
         mptdc_ckpt_manual_add_wire_path $fh N57960_BASE_MET1_LANDING_PATCH \
             u_core_n_57960 MET1 0.28 \
             {{363.72 358.12} {364.56 358.12}}
-
-        set base [mptdc_ckpt_verify_snapshot minarea_v4_base]
-        mptdc_ckpt_manual_assert_snapshot_tuple $fh BASE $base 1 0 0
-        mptdc_ckpt_manual_assert_minarea_01064_marker \
-            $fh BASE_MINAREA_MARKER $base
-        mptdc_ckpt_manual_assert_via_names $fh N57556_BASE_ANCHOR \
-            u_core_n_57556 {385.56 328.44} {VIA1_o}
-        puts $fh "BASE_VIA_ANCHOR_STATUS=PASS"
-
-        mptdc_ckpt_manual_add_wire_path $fh N57556_OUTWARD_MET1_PATCH \
+        mptdc_ckpt_manual_add_wire_path $fh N57556_BASE_MET1_LANDING_PATCH \
             u_core_n_57556 MET1 0.28 \
-            {{385.56 328.44} {386.12 328.44}}
+            {{385.56 328.44} {384.72 328.44}}
 
-        set outward_postcovered [mptdc_ckpt_manual_wire_covers_point \
-            u_core_n_57556 MET1 $outward_probe]
-        puts $fh "POST_OUTWARD_PATCH_COVERED=$outward_postcovered"
-        if {!$outward_postcovered} {
-            error "u_core_n_57556 direct VIA1-anchored outward patch did not materialize"
-        }
+        set base [mptdc_ckpt_verify_snapshot minarea_v5_base]
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh BASE $base 1 0 0
+        mptdc_ckpt_manual_assert_minarea_01777_marker \
+            $fh BASE_MINAREA_MARKER $base
 
-        set final [mptdc_ckpt_verify_snapshot minarea_v4_post]
+        set repair_area {384.22 327.45 386.59 329.28}
+        mptdc_ckpt_manual_log_command $fh LOCAL_ECOROUTE \
+            [list ecoRoute -fix_drc -layer_range MET1:MET1 $repair_area]
+
+        set final [mptdc_ckpt_verify_snapshot minarea_v5_post]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
+        puts $fh "POST_LOCAL_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
     } body_error body_opts]
 
     catch {uiSetTool select}
@@ -1508,7 +1499,7 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v4 {} {
     puts $fh "MANUAL_ECO_STATUS=PASS"
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
-    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V4_REPORT=$report"
+    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V5_REPORT=$report"
     return [dict create status PASS report $report]
 }
 

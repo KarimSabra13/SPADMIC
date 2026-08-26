@@ -264,7 +264,7 @@ special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact `HALO10_PNRLEF_15` PVS-candidate
 fingerprint.
 
-### 2. Current Command: Direct VIA1-Anchored Outward Repair V4
+### 2. Current Command: Bounded Native MET1 DRC Repair V5
 
 The read-only probe completed as
 `20260825_mptdc_bufftap0_route_minarea_probe_143229`. It proved that the source
@@ -296,31 +296,40 @@ Do not rerun V2.
 V3 completed as
 `20260826_mptdc_bufftap0_route_minarea_repair_v3_153108`. It proved the exact
 intermediate tuple and marker signature, but its final Wire Editor command was
-a no-op. The error was coordinate semantics: `y=328.405` is the center of the
-DRC rectangle, while the routed VIA1 and wire anchor remains at `y=328.44`.
-Innovus accepted the off-center command syntactically but created no wire. No
-new DRC, short, or connectivity failure was introduced. Do not rerun V3.
+a no-op. V4 then completed as
+`20260826_mptdc_bufftap0_route_minarea_repair_v4_154757`. It removed the
+coordinate ambiguity by proving the untouched `VIA1_o` at
+`(385.56,328.44)`, but the direct east extension was still a no-op. Both runs
+preserved zero shorts and zero regular or non-RO special connectivity
+failures. Together with V1, the result is decisive: the west, toward-source
+stub materializes and improves `u_core_n_57556` to `0.1777/0.202`; an east,
+away-from-source Wire Editor extension does not materialize. Do not rerun V3
+or V4, and do not continue changing manual endpoint coordinates.
 
-This is the only Innovus command to run now. V4 restores the original
-guarded-halo checkpoint in one fresh process. It first applies only the proven
-`u_core_n_57960` MET1 landing stub:
+This is the only Innovus command to run now. V5 restores the original
+guarded-halo checkpoint in one fresh process and reproduces both proven MET1
+landing stubs:
 
 ```text
 u_core_n_57960: (363.72,358.12) -> (364.56,358.12), width 0.28
+u_core_n_57556: (385.56,328.44) -> (384.72,328.44), width 0.28
 ```
 
-V4 must then prove the exact intermediate state: one geometry DRC, zero shorts,
-zero regular and non-RO special connectivity failures, the sole
-`u_core_n_57556` marker at its original `0.1064/0.202`, and the untouched
-`VIA1_o` anchor at `(385.56,328.44)`. Before Innovus can normalize that via
-object away, V4 adds one `0.56 um`, `0.28 um`-requested MET1 segment directly
-east from the routed anchor to `(386.12,328.44)`. The east midpoint must be
-absent before the edit and present afterward.
+V5 must prove the exact intermediate state: one geometry DRC, zero shorts,
+zero regular and non-RO special connectivity failures, and the sole
+`u_core_n_57556` marker at `0.1777/0.202`. It then delegates only that final
+marker to the native DRC repair engine with this exact bounded command:
 
-The command issues no explicit via add/delete, PG edit, placement edit, route
-blockage, or router optimization command. Innovus VIA1-class canonicalization
-is allowed and audited. It then extracts RC, runs TC setup/hold and DRV/power
-checks, saves a new checkpoint, and publishes the evidence automatically.
+```text
+ecoRoute -fix_drc -layer_range MET1:MET1 {384.22 327.45 386.59 329.28}
+```
+
+The box is inside the reviewed `FE_RC_5_0` instance and contains only the
+remaining marker. The command cannot edit another routing layer and is not a
+selected-net or global route replay. It issues no explicit via add/delete, PG
+edit, placement edit, route blockage, waiver, or broad optimizer command. It
+then extracts RC, runs TC setup/hold and DRV/power checks, saves a new
+checkpoint, and publishes the evidence automatically.
 
 ```bash
 set +e
@@ -375,7 +384,7 @@ grep -E '^(RECOVERY_STAGE|RECOVERY_RUN_ID|TOOL_RC|DECISION|PUBLISH_RC|MINAREA_RE
   "$DRIVER_LOG" 2>/dev/null | tail -20
 
 echo "===== OPERATOR GATE ====="
-grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|MANUAL_(PRE|BASE|POST)_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES)|BASE_MINAREA_MARKER_STATUS|BASE_VIA_ANCHOR_STATUS|POST_OUTWARD_PATCH_COVERED|INITIAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
+grep -E '^(COMMAND_[12]_STATUS|MANUAL_ECO_STATUS|MANUAL_(PRE|BASE|POST)_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES)|BASE_MINAREA_MARKER_STATUS|LOCAL_ECOROUTE_STATUS|POST_LOCAL_MINAREA_MARKER_COUNT|INITIAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT)|FINAL_(DRC|SHORTS|REGULAR_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_BAD|SPECIAL_CONNECTIVITY_RAW_BAD|SPECIAL_CONNECTIVITY_NON_RO_FAILURES|SPECIAL_DANGLING_COUNT|CHECKPOINT_DAT_EXISTS)|SPECIAL_SIGNATURE_STATUS|SETUP_STATUS_TC|TC_HOLD_STATUS|DRV_STATUS|POWER_REPORT_CAPTURE_STATUS|TIMING_GATE_STATUS|RO_TAP_OBSERVABILITY_PIN_COUNT|MINAREA_REPAIR_GATE_MODE|DECISION)=' \
   "$REPAIR_DIR/reports/operator_gate_route_min_area_repair.rpt" 2>/dev/null
 ```
 
@@ -398,8 +407,8 @@ The operator gate must additionally show `COMMAND_1_STATUS=PASS`,
 `MANUAL_BASE_REGULAR_CONNECTIVITY_BAD=0`,
 `MANUAL_BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0`,
 `BASE_MINAREA_MARKER_STATUS=PASS`,
-`BASE_VIA_ANCHOR_STATUS=PASS`, `POST_OUTWARD_PATCH_COVERED=1`, final `DRC=0`
-and `SHORTS=0`, zero
+`LOCAL_ECOROUTE_STATUS=PASS`, `POST_LOCAL_MINAREA_MARKER_COUNT=0`, final
+`DRC=0` and `SHORTS=0`, zero
 regular and non-RO special connectivity failures, unchanged
 `SPECIAL_DANGLING_COUNT=15`,
 `SPECIAL_SIGNATURE_STATUS=PASS`, `TIMING_GATE_STATUS=PASS`, and
