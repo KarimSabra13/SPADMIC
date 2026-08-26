@@ -1,0 +1,8 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210658/logs/operator_drc_base.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+[WARN]: LAYOUT_FORMAT at line 78 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_DRC.rul is skipped. It is set in control file.
+[WARN] Switch entry DENSITY#UNDEFINE in control file is not existed in rules.
+[INPUT ERROR] Cannot read file POPPING
+STATUS=FAIL
+ERROR=expected one *_drc.sum or DRC summary report under /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210658/pvs_drc/mptdc_axis_core_merged_base_script

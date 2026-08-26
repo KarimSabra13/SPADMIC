@@ -1,0 +1,5 @@
+LABEL=MPTDC_PVS_DRC_GATE
+STATUS=FAIL
+PVS_DRC_STATUS=NOT_PROVEN
+ERROR=expected one *_drc.sum or DRC summary report under /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210658/pvs_drc/mptdc_axis_core_merged_base_script
+FINAL_PHYSICAL_SIGNOFF_READY=NO

@@ -1,0 +1,10 @@
+# MPTDC PVS DRC Replay Manifest
+date: 2026-08-26T21:07:54+02:00
+old_drc_run: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged
+new_drc_run: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210658/pvs_drc/mptdc_axis_core_merged_base_script
+old_base: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608
+new_base: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210658
+old_gds: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/outputs/mptdc_axis_core_merged_stdcell_ro6.gds
+new_gds: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_210658/outputs/mptdc_axis_core_merged_stdcell_ro6.gds
+variant: base
+dry_run: 0
