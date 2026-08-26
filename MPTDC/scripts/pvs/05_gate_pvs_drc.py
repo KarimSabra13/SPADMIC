@@ -73,7 +73,7 @@ def discover_summary(run_dir: Path) -> Path:
     raise GateError(f"expected one *_drc.sum or DRC summary report under {run_dir}")
 
 
-def parse_summary(path: Path) -> tuple[int, int, int]:
+def parse_summary(path: Path) -> tuple[int, int, list[tuple[str, int, int]]]:
     rules: list[tuple[str, int, int]] = []
     totals: set[tuple[int, int]] = set()
     declared: int | None = None
@@ -96,7 +96,16 @@ def parse_summary(path: Path) -> tuple[int, int, int]:
             raise GateError(f"rule totals {rule_totals} do not match report total {(primary, expanded)}")
         if declared is not None and declared != len(rules):
             raise GateError(f"declared rulecheck count {declared} does not match parsed {len(rules)}")
-    return primary, expanded, len([row for row in rules if row[1] or row[2]])
+    return primary, expanded, [row for row in rules if row[1] or row[2]]
+
+
+def write_rule_inventory(path: Path, rules: list[tuple[str, int, int]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["rule\tprimary\texpanded"]
+    for name, primary, expanded in rules:
+        clean_name = name.replace("\t", " ").replace("\r", " ").replace("\n", " ")
+        lines.append(f"{clean_name}\t{primary}\t{expanded}")
+    path.write_text("\n".join(lines) + "\n")
 
 
 def one_path(text: str, directive: str, label: str) -> Path:
@@ -159,6 +168,7 @@ def main() -> int:
     parser.add_argument("--expected-top", required=True)
     parser.add_argument("--hash-manifest", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--rules-out", type=Path)
     args = parser.parse_args()
 
     out = args.out.expanduser().resolve()
@@ -173,6 +183,12 @@ def main() -> int:
         run_control, drc_control, layout = verify_controls(run_dir, args.variant, args.expected_top)
         hash_manifest = require_file(args.hash_manifest, "PVS input hash manifest")
         layout_hash = verify_layout_manifest(hash_manifest, layout)
+        rules_out = (
+            args.rules_out.expanduser().resolve()
+            if args.rules_out
+            else out.with_name(f"{out.stem}_nonzero_rules.tsv")
+        )
+        write_rule_inventory(rules_out, nonzero_rules)
         status = "PASS" if (primary, expanded) == (0, 0) else "FAIL"
         report = "\n".join(
             [
@@ -184,7 +200,9 @@ def main() -> int:
                 f"LAYOUT_TOP={args.expected_top}",
                 f"DRC_TOTAL_PRIMARY={primary}",
                 f"DRC_TOTAL_EXPANDED={expanded}",
-                f"NONZERO_RULE_COUNT={nonzero_rules}",
+                f"NONZERO_RULE_COUNT={len(nonzero_rules)}",
+                f"NONZERO_RULE_REPORT={rules_out}",
+                f"NONZERO_RULE_REPORT_SHA256={sha256(rules_out)}",
                 f"LAYOUT_INPUT={layout}",
                 f"LAYOUT_INPUT_SHA256={layout_hash}",
                 f"HASH_MANIFEST={hash_manifest}",

@@ -199,6 +199,7 @@ grep -RIna --binary-files=without-match \
 
 HASH_MANIFEST="$NEW_BASE/manifests/pvs_input_hashes.rpt"
 GATE_REPORT="$NEW_BASE/reports/pvs_drc_${VARIANT}_status.rpt"
+RULE_REPORT="$NEW_BASE/reports/pvs_drc_${VARIANT}_nonzero_rules.tsv"
 set +e
 python3 "$SCRIPT_DIR/05_gate_pvs_drc.py" \
   --run-dir "$NEW_DRC_RUN" \
@@ -206,7 +207,8 @@ python3 "$SCRIPT_DIR/05_gate_pvs_drc.py" \
   --variant "$VARIANT" \
   --expected-top mptdc_axis_core \
   --hash-manifest "$HASH_MANIFEST" \
-  --out "$GATE_REPORT"
+  --out "$GATE_REPORT" \
+  --rules-out "$RULE_REPORT"
 GATE_RC=$?
 set -e
 

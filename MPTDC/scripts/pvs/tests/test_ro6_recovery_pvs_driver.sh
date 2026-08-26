@@ -137,15 +137,30 @@ while [[ $# -gt 0 ]]; do
     *) shift ;;
   esac
 done
-status=PASS; total=0; rc=0
-if [[ "${FAKE_DRC_FAIL_VARIANT:-}" == "$variant" ]]; then status=FAIL; total=1; rc=8; fi
+status=PASS; total=0; nonzero=0; pvs_rc=0; rc=0
+if [[ "${FAKE_DRC_FAIL_VARIANT:-}" == "$variant" ]]; then
+  status=FAIL; total=1; nonzero=0; pvs_rc=1; rc=8
+elif [[ "${FAKE_DRC_NONZERO_VARIANT:-}" == "$variant" ]]; then
+  status=FAIL; total=3; nonzero=1; pvs_rc=0; rc=9
+fi
+rule_report="$dir/reports/pvs_drc_${variant}_nonzero_rules.tsv"
+printf 'rule\tprimary\texpanded\n' > "$rule_report"
+if [[ "$nonzero" == 1 ]]; then
+  printf 'M1.MIN.AREA\t3\t3\n' >> "$rule_report"
+fi
+rule_hash="$(sha256sum "$rule_report" | awk '{print $1}')"
 cat > "$dir/reports/pvs_drc_${variant}_status.rpt" <<RPT
 STATUS=$status
 PVS_DRC_STATUS=$status
 PVS_DRC_VARIANT=${variant^^}
+PVS_RC=$pvs_rc
 DRC_TOTAL_PRIMARY=$total
 DRC_TOTAL_EXPANDED=$total
+NONZERO_RULE_COUNT=$nonzero
+NONZERO_RULE_REPORT=$rule_report
+NONZERO_RULE_REPORT_SHA256=$rule_hash
 RPT
+if [[ -n "${DRC_CALLS:-}" ]]; then printf '%s\n' "$variant" >> "$DRC_CALLS"; fi
 exit "$rc"
 EOF
 
@@ -153,10 +168,26 @@ FAKE_LVS="$TMP_ROOT/fake_lvs.sh"
 cat > "$FAKE_LVS" <<'EOF'
 #!/usr/bin/env bash
 set -eu
-dir=""
+dir=""; diagnostic=0
 while [[ $# -gt 0 ]]; do
-  case "$1" in --prepared-dir) dir="$2"; shift 2 ;; *) shift ;; esac
+  case "$1" in
+    --prepared-dir) dir="$2"; shift 2 ;;
+    --diagnostic-allow-base-drc-debt) diagnostic=1; shift ;;
+    *) shift ;;
+  esac
 done
+if [[ "${EXPECT_DIAGNOSTIC_LVS:-0}" == 1 ]]; then
+  test "$diagnostic" = 1
+  grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF' \
+    "$dir/manifests/pvs_diagnostic_scope.rpt"
+else
+  test "$diagnostic" = 0
+fi
+if [[ -n "${LVS_CALLS:-}" ]]; then printf '%s\n' "$diagnostic" >> "$LVS_CALLS"; fi
+if [[ "${FAKE_LVS_MISMATCH:-0}" == 1 ]]; then
+  printf 'STATUS=FAIL\nPVS_LVS_STATUS=NOT_PROVEN\nPVS_RC=0\n' > "$dir/reports/pvs_lvs_status.rpt"
+  exit 8
+fi
 printf 'STATUS=PASS\nPVS_LVS_STATUS=MATCH\nPVS_RC=0\n' > "$dir/reports/pvs_lvs_status.rpt"
 EOF
 
@@ -172,11 +203,24 @@ run_driver() {
   local pvs_run="$1"
   local calls="$2"
   local pnr_run="$PNR_RUN"
+  local extra_env=()
+  local driver_args=()
   shift 2
   if [[ "${1:-}" == --test-pnr-run ]]; then
     pnr_run="$2"
     shift 2
   fi
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --diagnostic-deferred-minarea)
+        driver_args+=("$1")
+        ;;
+      *)
+        extra_env+=("$1")
+        ;;
+    esac
+    shift
+  done
   env \
     MPTDC_RECOVERY_REPO_ROOT="$REPO" \
     MPTDC_RECOVERY_PUBLISHER="$FAKE_PUBLISHER" \
@@ -187,9 +231,9 @@ run_driver() {
     MPTDC_CADENCE_ENV="$FAKE_CADENCE_ENV" \
     MPTDC_INNOVUS_WORK="$WORK" \
     PUBLISH_CALLS="$calls" \
-    "$@" \
+    "${extra_env[@]}" \
     bash "$DRIVER" --pnr-run-id "$pnr_run" --run-id "$pvs_run" \
-      --expected-head "$HEAD_SHA" --ro-gds "$RO_GDS"
+      --expected-head "$HEAD_SHA" --ro-gds "$RO_GDS" "${driver_args[@]}"
 }
 
 write_exact_pg_wire_end_report() {
@@ -323,10 +367,11 @@ MINAREA_SOURCE_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$MINAREA_SOURC
 MINAREA_FAILED_V6R_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$MINAREA_FAILED_V6R_RUN/reports"
 MINAREA_ENDEXT_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$MINAREA_ENDEXT_TRIAL_RUN/reports"
 MINAREA_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$MINAREA_REPLAY_RUN/reports"
+MINAREA_FAILED_V6R_CKPT="$WORK/$MINAREA_FAILED_V6R_RUN/checkpoints/repaired_route.enc.dat"
 MINAREA_REPLAY_CKPT="$WORK/$MINAREA_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
 mkdir -p "$MINAREA_SOURCE_REPORTS" "$MINAREA_FAILED_V6R_REPORTS" \
   "$MINAREA_ENDEXT_TRIAL_REPORTS" \
-  "$MINAREA_REPLAY_REPORTS" "$MINAREA_REPLAY_CKPT"
+  "$MINAREA_REPLAY_REPORTS" "$MINAREA_FAILED_V6R_CKPT" "$MINAREA_REPLAY_CKPT"
 
 cat > "$MINAREA_SOURCE_REPORTS/operator_gate_physical_pnr.rpt" <<'EOF'
 STEP=PHYSICAL_PNR
@@ -524,6 +569,108 @@ write_exact_pg_wire_end_report \
 
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m minarea-replay-fixtures
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
+FAILED_V6R_NORMAL_CALLS="$TMP_ROOT/failed_v6r_normal.calls"
+set +e
+run_driver pvs_failed_v6r_normal "$FAILED_V6R_NORMAL_CALLS" \
+  --test-pnr-run "$MINAREA_FAILED_V6R_RUN" > "$TMP_ROOT/failed_v6r_normal.stdout"
+FAILED_V6R_NORMAL_RC=$?
+set -e
+test "$FAILED_V6R_NORMAL_RC" -eq 4
+grep -qx 'PVS_RUN_CLASS=SIGNOFF_CANDIDATE' "$TMP_ROOT/failed_v6r_normal.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=FAIL' "$TMP_ROOT/failed_v6r_normal.stdout"
+test ! -e "$FAILED_V6R_NORMAL_CALLS"
+
+DIAGNOSTIC_CALLS="$TMP_ROOT/failed_v6r_diagnostic.calls"
+DIAGNOSTIC_DRC_CALLS="$TMP_ROOT/failed_v6r_diagnostic.drc_calls"
+DIAGNOSTIC_LVS_CALLS="$TMP_ROOT/failed_v6r_diagnostic.lvs_calls"
+run_driver pvs_failed_v6r_diagnostic "$DIAGNOSTIC_CALLS" \
+  --test-pnr-run "$MINAREA_FAILED_V6R_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$MINAREA_FAILED_V6R_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base EXPECT_DIAGNOSTIC_LVS=1 \
+  DRC_CALLS="$DIAGNOSTIC_DRC_CALLS" LVS_CALLS="$DIAGNOSTIC_LVS_CALLS" \
+  --diagnostic-deferred-minarea > "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PNR_CANDIDATE_KIND=FAILED_V6R_ONE_MINAREA_DIAGNOSTIC' \
+  "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=PASS' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_RECOVERY_STATUS=DIAGNOSTIC_COMPLETE' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'DIAGNOSTIC_COLLECTION_STATUS=PASS' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_DRC_BASE=FAIL' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_DRC_BASE_EVIDENCE_STATUS=ATTRIBUTABLE' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_DRC_DENSITY=NOT_RUN_BY_SCOPE' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_LVS=MATCH' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'MPTDC_TC_PVS_CLOSED=NO' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'DECISION=DIAGNOSTIC_COMPLETE' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'NEXT_STAGE=MANUAL_MINAREA_REPAIR_THEN_CANONICAL_SIGNOFF_REPLAY' \
+  "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF' \
+  "$WORK/pvs_failed_v6r_diagnostic/manifests/pvs_diagnostic_scope.rpt"
+grep -qx 'DECISION=DIAGNOSTIC_CONTINUE' \
+  "$WORK/pvs_failed_v6r_diagnostic/reports/operator_gate_pvs_drc_base.rpt"
+grep -qx 'DIAGNOSTIC_COLLECTION_STATUS=PASS' \
+  "$WORK/pvs_failed_v6r_diagnostic/reports/operator_gate_pvs_diagnostic_summary.rpt"
+grep -qx 'MPTDC_TC_PVS_CLOSED=NO' \
+  "$WORK/pvs_failed_v6r_diagnostic/reports/operator_gate_pvs_diagnostic_summary.rpt"
+grep -qx 'NEXT_STAGE=MANUAL_MINAREA_REPAIR_THEN_CANONICAL_SIGNOFF_REPLAY' \
+  "$WORK/pvs_failed_v6r_diagnostic/reports/operator_gate_pvs_diagnostic_summary.rpt"
+test "$(wc -l < "$DIAGNOSTIC_CALLS")" -eq 4
+test "$(cat "$DIAGNOSTIC_DRC_CALLS")" = base
+test "$(cat "$DIAGNOSTIC_LVS_CALLS")" = 1
+test ! -e "$WORK/pvs_failed_v6r_diagnostic/reports/pvs_drc_density_status.rpt"
+
+DIAGNOSTIC_MISMATCH_CALLS="$TMP_ROOT/failed_v6r_diagnostic_mismatch.calls"
+set +e
+run_driver pvs_failed_v6r_diagnostic_mismatch "$DIAGNOSTIC_MISMATCH_CALLS" \
+  --test-pnr-run "$MINAREA_FAILED_V6R_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$MINAREA_FAILED_V6R_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base EXPECT_DIAGNOSTIC_LVS=1 FAKE_LVS_MISMATCH=1 \
+  --diagnostic-deferred-minarea > "$TMP_ROOT/failed_v6r_diagnostic_mismatch.stdout"
+DIAGNOSTIC_MISMATCH_RC=$?
+set -e
+test "$DIAGNOSTIC_MISMATCH_RC" -ne 0
+test "$(wc -l < "$DIAGNOSTIC_MISMATCH_CALLS")" -eq 4
+grep -qx 'DIAGNOSTIC_COLLECTION_STATUS=FAIL' \
+  "$WORK/pvs_failed_v6r_diagnostic_mismatch/reports/operator_gate_pvs_diagnostic_summary.rpt"
+grep -qx 'FINAL_DECISION=DIAGNOSTIC_LVS_NOT_MATCHED' \
+  "$WORK/pvs_failed_v6r_diagnostic_mismatch/reports/operator_gate_pvs_diagnostic_summary.rpt"
+grep -qx 'NEXT_STAGE=LVS_TRIAGE_BEFORE_MANUAL_DRC_REPAIR' \
+  "$TMP_ROOT/failed_v6r_diagnostic_mismatch.stdout"
+
+mv "$MINAREA_FAILED_V6R_CKPT" "${MINAREA_FAILED_V6R_CKPT}.saved"
+MISSING_DIAGNOSTIC_CALLS="$TMP_ROOT/missing_diagnostic_checkpoint.calls"
+set +e
+run_driver pvs_missing_diagnostic_checkpoint "$MISSING_DIAGNOSTIC_CALLS" \
+  --test-pnr-run "$MINAREA_FAILED_V6R_RUN" \
+  --diagnostic-deferred-minarea > "$TMP_ROOT/missing_diagnostic_checkpoint.stdout"
+MISSING_DIAGNOSTIC_RC=$?
+set -e
+mv "${MINAREA_FAILED_V6R_CKPT}.saved" "$MINAREA_FAILED_V6R_CKPT"
+test "$MISSING_DIAGNOSTIC_RC" -eq 4
+grep -Fqx "STOP: accepted route checkpoint missing: $MINAREA_FAILED_V6R_CKPT" \
+  "$TMP_ROOT/missing_diagnostic_checkpoint.stdout"
+test ! -e "$MISSING_DIAGNOSTIC_CALLS"
+
+sed -i 's/Actual: 0.17770000/Actual: 0.17780000/' \
+  "$MINAREA_FAILED_V6R_REPORTS/01_after_command_verify_drc_markers.tsv"
+git -C "$REPO" add MPTDC
+git -C "$REPO" commit -q -m altered-failed-v6r-marker
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+ALTERED_V6R_CALLS="$TMP_ROOT/altered_failed_v6r.calls"
+set +e
+run_driver pvs_altered_failed_v6r "$ALTERED_V6R_CALLS" \
+  --test-pnr-run "$MINAREA_FAILED_V6R_RUN" \
+  --diagnostic-deferred-minarea > "$TMP_ROOT/altered_failed_v6r.stdout"
+ALTERED_V6R_RC=$?
+set -e
+test "$ALTERED_V6R_RC" -eq 4
+grep -qx 'CANDIDATE_GATE_STATUS=FAIL' "$TMP_ROOT/altered_failed_v6r.stdout"
+test ! -e "$ALTERED_V6R_CALLS"
+
+sed -i 's/Actual: 0.17780000/Actual: 0.17770000/' \
+  "$MINAREA_FAILED_V6R_REPORTS/01_after_command_verify_drc_markers.tsv"
+git -C "$REPO" add MPTDC
+git -C "$REPO" commit -q -m restore-failed-v6r-marker
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
 REPLAY_CALLS="$TMP_ROOT/replay.calls"

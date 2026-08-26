@@ -1826,6 +1826,101 @@ cat "$PVS_DIR/reports/pvs_drc_density_status.rpt" 2>/dev/null
 cat "$PVS_DIR/reports/pvs_lvs_status.rpt" 2>/dev/null
 ```
 
+### Diagnostic base DRC plus LVS from the one-marker V6R checkpoint
+
+This is a bounded diagnostic detour, not a DRC waiver and not a signoff run.
+It freezes the published failed-V6R checkpoint with one remaining
+`u_core_n_57556` MET1 minimum-area marker, runs attributable base PVS DRC,
+skips density by explicit scope, and then runs LVS on the same immutable merged
+GDS. The normal PVS command still rejects this checkpoint.
+
+Run this block exactly from the server login shell. It does not use `set -e`,
+`exit`, or a failed guard that closes the SSH session.
+
+```bash
+###############################################################################
+# MPTDC diagnostic PVS base DRC + LVS from exact failed V6R one-marker proof
+###############################################################################
+
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+cd "$REPO"
+
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+PNR_RUN=20260826_mptdc_bufftap0_route_minarea_patch_trial_v6r_180659
+PNR_DIR=$MPTDC_INNOVUS_WORK/$PNR_RUN
+SOURCE_CKPT=$PNR_DIR/checkpoints/repaired_route.enc.dat
+RO_GDS=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds
+PVS_RUN="$(date +%Y%m%d)_mptdc_bufftap0_v6r_diagnostic_base_lvs_$(date +%H%M%S)"
+PVS_DIR=$MPTDC_INNOVUS_WORK/$PVS_RUN
+DRIVER_LOG=/tmp/${PVS_RUN}.driver.log
+
+if [ "$SYNC_RC" -eq 0 ] && \
+   [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$SOURCE_CKPT" ] && \
+   [ -s "$RO_GDS" ]; then
+  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_recovery_pvs.sh \
+    --pnr-run-id "$PNR_RUN" \
+    --run-id "$PVS_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    --ro-gds "$RO_GDS" \
+    --diagnostic-deferred-minarea \
+    2>&1 | tee "$DRIVER_LOG"
+  PVS_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, failed-V6R checkpoint, or real RO GDS preflight failed"
+  PVS_DRIVER_RC=99
+fi
+
+FINAL_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+
+echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "PNR_RUN=$PNR_RUN"
+echo "PVS_RUN=$PVS_RUN"
+echo "PVS_DRIVER_RC=$PVS_DRIVER_RC"
+echo "FINAL_HEAD=$FINAL_HEAD"
+
+grep -E '^(PVS_RECOVERY_STATUS|DIAGNOSTIC_COLLECTION_STATUS|PVS_RUN_CLASS|PVS_DRC_BASE|PVS_DRC_BASE_EVIDENCE_STATUS|PVS_DRC_BASE_TOTAL_PRIMARY|PVS_DRC_BASE_TOTAL_EXPANDED|PVS_DRC_BASE_NONZERO_RULE_COUNT|PVS_DRC_DENSITY|PVS_LVS|MPTDC_TC_PVS_CLOSED|FINAL_DECISION|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -30
+
+echo "===== BASE DRC RULE INVENTORY ====="
+cat "$PVS_DIR/reports/pvs_drc_base_nonzero_rules.tsv" 2>/dev/null
+
+echo "===== LVS GATE ====="
+cat "$PVS_DIR/reports/pvs_lvs_status.rpt" 2>/dev/null
+```
+
+Interpret the result as follows:
+
+- Continue to manual minimum-area repair only when `PVS_DRIVER_RC=0`,
+  `PVS_RECOVERY_STATUS=DIAGNOSTIC_COMPLETE`,
+  `PVS_DRC_BASE_EVIDENCE_STATUS=ATTRIBUTABLE`, `PVS_LVS=MATCH`,
+  `PUBLISH_RC=0`, and
+  `NEXT_STAGE=MANUAL_MINAREA_REPAIR_THEN_CANONICAL_SIGNOFF_REPLAY`.
+- `PVS_DRC_BASE=FAIL` is allowed only in this diagnostic mode when its totals
+  and complete nonzero-rule TSV are attributable. It remains physical debt.
+- On `PVS_LVS_STATUS=NOT_PROVEN`, `DECISION=FAIL_STOP`, or any nonzero publish
+  RC, stop. Triage LVS before changing geometry.
+- `PVS_DRC_DENSITY=NOT_RUN_BY_SCOPE`, `MPTDC_TC_PVS_CLOSED=NO`,
+  `FINAL_SIGNOFF=NO`, and `READY_FOR_TAPEOUT=NO` are mandatory for this run.
+- After manual repair, rerun the normal canonical flow. Final acceptance still
+  requires Innovus DRC zero, base PVS DRC zero, density PVS DRC zero, and an
+  explicit LVS `MATCH` on one immutable input set.
+
+For review, send only `PVS_RUN`, `PVS_DRIVER_RC`, and `FINAL_HEAD`. The driver
+publishes preparation, audit, base-DRC, and LVS snapshots automatically.
+
 ## What to Send for Review
 
 Do not paste full Innovus or PVS logs into chat. After a step returns, send only
@@ -1847,7 +1942,9 @@ controls, and diagnostic log tails.
 
 - Continue only when the current short driver prints either
   `DECISION=PASS_CONTINUE` or `DECISION=PVS_CANDIDATE_CONTINUE`, together with
-  `PUBLISH_RC=0` and the explicit next stage.
+  `PUBLISH_RC=0` and the explicit next stage. The diagnostic exception uses
+  `DECISION=DIAGNOSTIC_COMPLETE` only under the stricter conditions listed in
+  the preceding diagnostic section.
 - On `DECISION=FAIL_STOP`, let the failed snapshot push complete, send the five
   lines above, and do not launch the next command.
 - On a nonzero publish RC, stop and paste the final `EVIDENCE_*` lines because

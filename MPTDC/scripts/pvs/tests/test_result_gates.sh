@@ -65,6 +65,8 @@ python3 "$PVS_DIR/05_gate_pvs_drc.py" \
   --hash-manifest "$HASH_MANIFEST" \
   --out "$TMP_ROOT/drc_base_pass.rpt"
 grep -qx 'PVS_DRC_STATUS=PASS' "$TMP_ROOT/drc_base_pass.rpt"
+grep -qx $'rule\tprimary\texpanded' "$TMP_ROOT/drc_base_pass_nonzero_rules.tsv"
+test "$(wc -l < "$TMP_ROOT/drc_base_pass_nonzero_rules.tsv")" -eq 1
 
 DIRTY_DRC="$TMP_ROOT/drc_dirty"
 make_drc_fixture "$DIRTY_DRC" "#UNDEFINE DENSITY" 1
@@ -79,6 +81,9 @@ if python3 "$PVS_DIR/05_gate_pvs_drc.py" \
   exit 1
 fi
 grep -qx 'PVS_DRC_STATUS=FAIL' "$TMP_ROOT/drc_dirty_fail.rpt"
+grep -qx $'RULE_A\t1\t1' "$TMP_ROOT/drc_dirty_fail_nonzero_rules.tsv"
+grep -Fqx "NONZERO_RULE_REPORT=$TMP_ROOT/drc_dirty_fail_nonzero_rules.tsv" \
+  "$TMP_ROOT/drc_dirty_fail.rpt"
 
 ARCHIVED_DRC_SUM="$PVS_DIR/../../docs/signoff_notes/pvs_drc_realro6_20260707_01_evidence/mptdc_axis_core_drc.sum"
 if [[ -s "$ARCHIVED_DRC_SUM" ]]; then

@@ -27,6 +27,20 @@ The preparation step also requires an explicitly selected GDS export of the
 real `RO_tune6` OA layout. A proxy, LEF-generated shell, or no-RO streamout is
 not an acceptable substitute.
 
+The only dirty-checkpoint exception is explicit diagnostic mode:
+
+```bash
+MPTDC/scripts/pvs/server_run_mptdc_ro6_recovery_pvs.sh \
+  --pnr-run-id 20260826_mptdc_bufftap0_route_minarea_patch_trial_v6r_180659 \
+  --ro-gds "$RO_GDS" \
+  --expected-head "$EXPECTED_HEAD" \
+  --diagnostic-deferred-minarea
+```
+
+That mode admits only the tracked failed-V6R one-MET1-minimum-area signature,
+runs base DRC plus LVS, skips density, and always reports
+`PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF` and `MPTDC_TC_PVS_CLOSED=NO`.
+
 ## Replay Sequence
 
 Run in the foreground after sourcing the Cadence environment:
@@ -90,6 +104,8 @@ fi
 - `manifests/pvs_input_hashes.rpt`: exact GDS, source, CDL, HCell, DEF, map,
   and real-RO hashes.
 - `reports/pvs_drc_base_status.rpt`: `PVS_DRC_STATUS=PASS` and both totals zero.
+- `reports/pvs_drc_base_nonzero_rules.tsv`: complete rule-level inventory when
+  diagnostic base DRC is nonzero; it is evidence of debt, never a pass.
 - `reports/pvs_drc_density_status.rpt`: the same, with `DENSITY` proven enabled.
 - `reports/pvs_lvs_status.rpt`: `PVS_LVS_STATUS=MATCH` with explicit
   report-level match evidence.

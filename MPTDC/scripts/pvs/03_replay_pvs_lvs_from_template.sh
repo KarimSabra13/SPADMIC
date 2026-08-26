@@ -23,6 +23,7 @@ NEW_HCELL=""
 DCELL_CDL="${MPTDC_PVS_DCELL_CDL:-$DEFAULT_DCELL_CDL}"
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 DRY_RUN=0
+DIAGNOSTIC_ALLOW_BASE_DRC_DEBT=0
 
 usage() {
   cat <<'USAGE'
@@ -42,6 +43,10 @@ Options:
   --old-hcell <path>        Old HCell path to replace.
   --new-run-dir <dir>       Explicit new PVS LVS run directory.
   --expected-head <sha>     Require repository HEAD to match this commit.
+  --diagnostic-allow-base-drc-debt
+                            Internal guarded mode: require the diagnostic scope
+                            manifest and attributable base DRC, then skip the
+                            normal density-DRC prerequisite. Never signoff mode.
   --dry-run                 Patch and audit templates without launching run.pvs.
   -h, --help                Show this help.
 USAGE
@@ -97,6 +102,10 @@ while [[ $# -gt 0 ]]; do
       EXPECTED_HEAD_VALUE="${2:?missing --expected-head value}"
       shift 2
       ;;
+    --diagnostic-allow-base-drc-debt)
+      DIAGNOSTIC_ALLOW_BASE_DRC_DEBT=1
+      shift
+      ;;
     --dry-run)
       DRY_RUN=1
       shift
@@ -112,6 +121,73 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+report_value() {
+  local report="$1"
+  local key="$2"
+  sed -n "s/^${key}=//p" "$report" 2>/dev/null | tail -1
+}
+
+require_diagnostic_scope() {
+  local scope="$NEW_BASE/manifests/pvs_diagnostic_scope.rpt"
+  mptdc_pvs_require_file "$scope"
+  grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF' "$scope" || \
+    mptdc_pvs_die "diagnostic LVS scope has invalid PVS_RUN_CLASS: $scope"
+  grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS' "$scope" || \
+    mptdc_pvs_die "diagnostic LVS scope is not BASE_DRC_PLUS_LVS: $scope"
+  grep -qx 'DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE' "$scope" || \
+    mptdc_pvs_die "diagnostic LVS scope did not explicitly exclude density DRC: $scope"
+  grep -qx 'SIGNOFF_ELIGIBLE=NO' "$scope" || \
+    mptdc_pvs_die "diagnostic LVS scope is not marked ineligible for signoff: $scope"
+  grep -qx 'DEFERRED_INNOVUS_DRC_COUNT=1' "$scope" || \
+    mptdc_pvs_die "diagnostic LVS scope does not carry exactly one deferred Innovus DRC: $scope"
+  grep -qx 'DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA' "$scope" || \
+    mptdc_pvs_die "diagnostic LVS scope has an unexpected deferred rule: $scope"
+}
+
+require_attributable_base_drc() {
+  local status_report="$NEW_BASE/reports/pvs_drc_base_status.rpt"
+  local rule_report="$NEW_BASE/reports/pvs_drc_base_nonzero_rules.tsv"
+  local status gate variant pvs_rc primary expanded nonzero reported_rules reported_hash
+  local actual_hash actual_rows
+
+  mptdc_pvs_require_file "$status_report"
+  mptdc_pvs_require_file "$rule_report"
+  status="$(report_value "$status_report" STATUS)"
+  gate="$(report_value "$status_report" PVS_DRC_STATUS)"
+  variant="$(report_value "$status_report" PVS_DRC_VARIANT)"
+  pvs_rc="$(report_value "$status_report" PVS_RC)"
+  primary="$(report_value "$status_report" DRC_TOTAL_PRIMARY)"
+  expanded="$(report_value "$status_report" DRC_TOTAL_EXPANDED)"
+  nonzero="$(report_value "$status_report" NONZERO_RULE_COUNT)"
+  reported_rules="$(report_value "$status_report" NONZERO_RULE_REPORT)"
+  reported_hash="$(report_value "$status_report" NONZERO_RULE_REPORT_SHA256)"
+
+  [[ "$variant" == BASE && "$pvs_rc" == 0 ]] || \
+    mptdc_pvs_die "diagnostic LVS requires attributable BASE DRC with PVS_RC=0: $status_report"
+  [[ "$status" == "$gate" && ( "$status" == PASS || "$status" == FAIL ) ]] || \
+    mptdc_pvs_die "diagnostic LVS base DRC status is inconsistent: $status_report"
+  [[ "$primary" =~ ^[0-9]+$ && "$expanded" =~ ^[0-9]+$ && "$nonzero" =~ ^[0-9]+$ ]] || \
+    mptdc_pvs_die "diagnostic LVS base DRC totals are not numeric: $status_report"
+  [[ "$reported_rules" == "$rule_report" ]] || \
+    mptdc_pvs_die "diagnostic LVS rule inventory path is not canonical: $reported_rules"
+  actual_hash="$(mptdc_pvs_sha256 "$rule_report")"
+  [[ "$reported_hash" == "$actual_hash" ]] || \
+    mptdc_pvs_die "diagnostic LVS rule inventory hash mismatch: $rule_report"
+  actual_rows="$(awk -F '\t' 'NR > 1 && NF >= 3 {count++} END {print count + 0}' "$rule_report")"
+  [[ "$actual_rows" == "$nonzero" ]] || \
+    mptdc_pvs_die "diagnostic LVS rule inventory count mismatch: report=$nonzero rows=$actual_rows"
+
+  if [[ "$status" == PASS ]]; then
+    [[ "$primary" == 0 && "$expanded" == 0 && "$nonzero" == 0 ]] || \
+      mptdc_pvs_die "diagnostic LVS base DRC PASS has nonzero totals: $status_report"
+  else
+    [[ "$primary" != 0 || "$expanded" != 0 ]] || \
+      mptdc_pvs_die "diagnostic LVS base DRC FAIL has zero totals: $status_report"
+    [[ "$nonzero" != 0 ]] || \
+      mptdc_pvs_die "diagnostic LVS base DRC FAIL has no nonzero rule inventory: $status_report"
+  fi
+}
 
 [[ -n "$NEW_BASE" ]] || { usage >&2; mptdc_pvs_die "--prepared-dir is required"; }
 NEW_GDS="${NEW_GDS:-$NEW_BASE/outputs/mptdc_axis_core_merged_stdcell_ro6.gds}"
@@ -132,6 +208,13 @@ for f in "$OLD_LVS_RUN/run.pvs" "$OLD_LVS_RUN/.config.rul" "$OLD_LVS_RUN/.techno
 done
 if grep -q -- '-cell_tree' "$OLD_LVS_RUN/run.pvs"; then
   mptdc_pvs_require_existing_file "$OLD_LVS_RUN/cell_tree.txt"
+fi
+
+if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" == 1 ]]; then
+  require_diagnostic_scope
+  require_attributable_base_drc
+  [[ ! -e "$NEW_BASE/reports/pvs_drc_density_status.rpt" ]] || \
+    mptdc_pvs_die "diagnostic base-DRC plus LVS scope unexpectedly contains density DRC evidence"
 fi
 
 if [[ -e "$NEW_LVS_RUN" ]]; then
@@ -178,6 +261,7 @@ chmod +x "$NEW_LVS_RUN/run.pvs"
   echo "new_source: $NEW_SRC"
   echo "new_hcell: $NEW_HCELL"
   echo "dcell_cdl: $DCELL_CDL"
+  echo "diagnostic_allow_base_drc_debt: $DIAGNOSTIC_ALLOW_BASE_DRC_DEBT"
   echo "dry_run: $DRY_RUN"
 } | tee "$NEW_BASE/manifests/pvs_lvs_replay_manifest.txt"
 
@@ -195,12 +279,14 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-for variant in base density; do
-  drc_status="$NEW_BASE/reports/pvs_drc_${variant}_status.rpt"
-  mptdc_pvs_require_file "$drc_status"
-  grep -qx 'PVS_DRC_STATUS=PASS' "$drc_status" || \
-    mptdc_pvs_die "LVS blocked because $variant DRC is not PASS: $drc_status"
-done
+if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" != 1 ]]; then
+  for variant in base density; do
+    drc_status="$NEW_BASE/reports/pvs_drc_${variant}_status.rpt"
+    mptdc_pvs_require_file "$drc_status"
+    grep -qx 'PVS_DRC_STATUS=PASS' "$drc_status" || \
+      mptdc_pvs_die "LVS blocked because $variant DRC is not PASS: $drc_status"
+  done
+fi
 
 mptdc_pvs_prepend_known_cadence_bins
 mptdc_pvs_forbid_bare_linux_lvm_pvs
