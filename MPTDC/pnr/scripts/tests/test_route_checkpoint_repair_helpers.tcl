@@ -12,10 +12,14 @@ set ::mptdc_test_probe_mode 0
 set ::mptdc_test_manual_mode 0
 set ::mptdc_test_manual_vias {}
 set ::mptdc_test_manual_wires {}
+set ::mptdc_test_manual_pwires {}
 set ::mptdc_test_manual_edit_net ""
 set ::mptdc_test_manual_edit_horizontal ""
 set ::mptdc_test_manual_edit_vertical ""
+set ::mptdc_test_manual_edit_type ""
+set ::mptdc_test_manual_edit_layer ""
 set ::mptdc_test_manual_edit_width 0.28
+set ::mptdc_test_manual_edit_status routed
 set ::mptdc_test_manual_route_points {}
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_local_ecoroute_called 0
@@ -64,6 +68,19 @@ proc mptdc_test_redirect_report {kind name args} {
 }
 
 proc help {name args} {
+    if {$name eq "setEditMode"} {
+        if {[llength $args] != 2 || [lindex $args 0] ne ">"} {
+            error "fixture requires redirected HELP output"
+        }
+        set fh [open [lindex $args 1] w]
+        puts $fh {-type {regular|special|patch}}
+        puts $fh {-layer <layer>}
+        puts $fh {-width <value>}
+        puts $fh {-status {cover|fixed|noshield|routed|shield|auto}}
+        puts $fh {-stop_at_drc {true|false}}
+        close $fh
+        return
+    }
     mptdc_test_redirect_report HELP $name {*}$args
 }
 
@@ -118,6 +135,17 @@ proc dbGet {args} {
             }
             return $handles
         }
+        if {[regexp {^net:(.+)\.pWires$} $expression -> net]} {
+            set handles {}
+            set idx 0
+            foreach row $::mptdc_test_manual_pwires {
+                if {[dict get $row net] eq $net} {
+                    lappend handles "mpwire:$idx"
+                }
+                incr idx
+            }
+            return $handles
+        }
         if {[regexp {^mvia:([0-9]+)\.(.+)$} $expression -> idx attribute]} {
             set row [lindex $::mptdc_test_manual_vias $idx]
             switch -- $attribute {
@@ -155,6 +183,17 @@ proc dbGet {args} {
                     }
                     return UNKNOWN
                 }
+                default { return 0x0 }
+            }
+        }
+        if {[regexp {^mpwire:([0-9]+)\.(.+)$} $expression -> idx attribute]} {
+            set row [lindex $::mptdc_test_manual_pwires $idx]
+            switch -- $attribute {
+                layer.name { return [dict get $row layer] }
+                box { return [dict get $row box] }
+                width { return [dict get $row width] }
+                pts { return [dict get $row points] }
+                status { return [dict get $row status] }
                 default { return 0x0 }
             }
         }
@@ -262,6 +301,9 @@ proc setEditMode {args} {
         set ::mptdc_test_manual_edit_net ""
         set ::mptdc_test_manual_edit_horizontal ""
         set ::mptdc_test_manual_edit_vertical ""
+        set ::mptdc_test_manual_edit_type ""
+        set ::mptdc_test_manual_edit_layer ""
+        set ::mptdc_test_manual_edit_status routed
         set ::mptdc_test_manual_route_points {}
         return
     }
@@ -270,6 +312,10 @@ proc setEditMode {args} {
         {-layer_horizontal mptdc_test_manual_edit_horizontal}
         {-layer_vertical mptdc_test_manual_edit_vertical}
         {-width_horizontal mptdc_test_manual_edit_width}
+        {-type mptdc_test_manual_edit_type}
+        {-layer mptdc_test_manual_edit_layer}
+        {-width mptdc_test_manual_edit_width}
+        {-status mptdc_test_manual_edit_status}
     } {
         lassign $spec option variable
         set idx [lsearch -exact $args $option]
@@ -412,13 +458,23 @@ proc editCommitRoute {x y} {
             abs([lindex $point 1] - [lindex $previous 1])}]
         set previous $point
     }
-    lappend ::mptdc_test_manual_wires [dict create \
-        net $::mptdc_test_manual_edit_net \
-        layer $::mptdc_test_manual_edit_horizontal \
-        box $box \
-        width $::mptdc_test_manual_edit_width \
-        points $::mptdc_test_manual_route_points \
-        status fixed shape 0x0 length $length]
+    if {$::mptdc_test_manual_edit_type eq "patch"} {
+        lappend ::mptdc_test_manual_pwires [dict create \
+            net $::mptdc_test_manual_edit_net \
+            layer $::mptdc_test_manual_edit_layer \
+            box $box \
+            width $::mptdc_test_manual_edit_width \
+            points $::mptdc_test_manual_route_points \
+            status $::mptdc_test_manual_edit_status]
+    } else {
+        lappend ::mptdc_test_manual_wires [dict create \
+            net $::mptdc_test_manual_edit_net \
+            layer $::mptdc_test_manual_edit_horizontal \
+            box $box \
+            width $::mptdc_test_manual_edit_width \
+            points $::mptdc_test_manual_route_points \
+            status fixed shape 0x0 length $length]
+    }
     set ::mptdc_test_manual_route_points {}
 }
 
@@ -630,8 +686,8 @@ proc mptdc_ckpt_verify_snapshot {tag} {
         !$::mptdc_test_manual_drc_wire_deleted(u_core_n_67240)} {
         error "n67240 DRC-wire snapshot occurred before the bounded deletion"
     }
-    if {$tag eq "minarea_v5_post" && !$::mptdc_test_local_ecoroute_called} {
-        error "minimum-area V5 post snapshot occurred before local ecoRoute"
+    if {$tag eq "minarea_v6_post" && [llength $::mptdc_test_manual_pwires] != 1} {
+        error "minimum-area V6 post snapshot occurred before the exact patch wire materialized"
     }
     set tuple [dict get $::mptdc_test_manual_snapshot_tuples $tag]
     lassign $tuple drc shorts regular marker_rpt
@@ -864,8 +920,8 @@ if {$route_start_count != 2 || $route_commit_count != 2} {
     error "minimum-area helper expected two bounded wire starts/commits, found $route_start_count/$route_commit_count"
 }
 
-set minarea_v5_marker [file join $::mptdc_test_report_dir minarea_v5_base_markers.tsv]
-set marker_fh [open $minarea_v5_marker w]
+set minarea_v6_marker [file join $::mptdc_test_report_dir minarea_v6_base_markers.tsv]
+set marker_fh [open $minarea_v6_marker w]
 puts $marker_fh "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"
 puts $marker_fh "1\tfixture\t{385.06 328.29 385.75 328.52}\tMET1\tGeometry\tMinimal_Area\tRegular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000 Type: Minimum Area"
 close $marker_fh
@@ -880,13 +936,14 @@ set ::mptdc_test_manual_vias [list \
         cut_rects {{{385.43 328.31 385.69 328.57}}} \
         top_rects {{{385.42 328.25 385.70 328.63}}}]]
 set ::mptdc_test_manual_wires {}
+set ::mptdc_test_manual_pwires {}
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_manual_verify_count 0
 set ::mptdc_test_local_ecoroute_called 0
 set ::mptdc_test_manual_snapshot_tuples [dict create \
-    minarea_v5_pre {2 0 0} \
-    minarea_v5_base [list 1 0 0 $minarea_v5_marker] \
-    minarea_v5_post {0 0 0}]
+    minarea_v6_pre {2 0 0} \
+    minarea_v6_base [list 1 0 0 $minarea_v6_marker] \
+    minarea_v6_post {0 0 0}]
 
 if {![catch {mptdc_ckpt_manual_two_minarea_landing_patch_v2} err] ||
     ![string match "*retired*" $err]} {
@@ -900,43 +957,63 @@ if {![catch {mptdc_ckpt_manual_two_minarea_landing_patch_v4} err] ||
     ![string match "*retired*" $err]} {
     error "minimum-area V4 retirement guard did not fail as expected: $err"
 }
-set minarea_v5 [mptdc_ckpt_manual_two_minarea_landing_patch_v5]
-if {[dict get $minarea_v5 status] ne "PASS" ||
-    ![file exists [dict get $minarea_v5 report]]} {
-    error "staged minimum-area V5 helper did not pass: $minarea_v5"
+if {![catch {mptdc_ckpt_manual_two_minarea_landing_patch_v5} err] ||
+    ![string match "*retired*" $err]} {
+    error "minimum-area V5 retirement guard did not fail as expected: $err"
+}
+set minarea_v6 [mptdc_ckpt_manual_two_minarea_landing_patch_v6]
+if {[dict get $minarea_v6 status] ne "PASS" ||
+    ![file exists [dict get $minarea_v6 report]]} {
+    error "exact minimum-area V6 helper did not pass: $minarea_v6"
 }
 if {$::mptdc_test_manual_verify_count != 3} {
-    error "minimum-area V5 helper expected three verification tuples, found $::mptdc_test_manual_verify_count"
+    error "minimum-area V6 helper expected three verification tuples, found $::mptdc_test_manual_verify_count"
 }
 if {![mptdc_ckpt_manual_wire_covers_point u_core_n_57960 MET1 {364.14 358.12}] ||
     ![mptdc_ckpt_manual_wire_covers_point u_core_n_57556 MET1 {385.14 328.44}]} {
-    error "minimum-area V5 helper did not reproduce both proven base stubs"
+    error "minimum-area V6 helper did not reproduce both proven base stubs"
+}
+set patch_rows [mptdc_ckpt_manual_pwire_rows u_core_n_57556]
+if {[llength $patch_rows] != 1 ||
+    [dict get [lindex $patch_rows 0] layer] ne "MET1" ||
+    ![mptdc_ckpt_manual_close [dict get [lindex $patch_rows 0] width] 0.23] ||
+    [dict get [lindex $patch_rows 0] status] ne "fixed" ||
+    ![mptdc_ckpt_manual_box_equal [dict get [lindex $patch_rows 0] box] \
+        {385.060 328.040 385.290 328.520}]} {
+    error "minimum-area V6 exact patch wire does not match the contract: $patch_rows"
 }
 
-set fh [open [dict get $minarea_v5 report] r]
-set minarea_v5_text [read $fh]
+set fh [open [dict get $minarea_v6 report] r]
+set minarea_v6_text [read $fh]
 close $fh
 foreach expected {
-    {MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_BOUNDED_MET1_ECOROUTE_FIX_DRC}
+    {MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE}
     {BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1777_OF_0.202}
     {BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28}
-    {LOCAL_ECOROUTE_POLICY=ecoRoute_-fix_drc_MET1:MET1_area_384.22_327.45_386.59_329.28}
-    {LOCAL_ECOROUTE_AREA=384.22 327.45 386.59 329.28}
-    {LOCAL_ECOROUTE_LAYER_RANGE=MET1:MET1}
-    {VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED}
+    {PATCH_WIRE_POLICY=u_core_n_57556:MET1:385.175,328.405->385.175,328.155;width=0.23;status=fixed;type=patch}
+    {PATCH_WIRE_EXPECTED_BOX=385.060 328.040 385.290 328.520}
+    {ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER}
+    {VIA_EDIT_POLICY=NO_VIAS_MODIFIED}
     {BASE_DRC=1}
     {BASE_SHORTS=0}
     {BASE_MINAREA_MARKER_ACTUAL=0.17770000}
     {BASE_MINAREA_MARKER_STATUS=PASS}
-    {LOCAL_ECOROUTE_COMMAND=ecoRoute -fix_drc -layer_range MET1:MET1 {384.22 327.45 386.59 329.28}}
-    {LOCAL_ECOROUTE_STATUS=PASS}
+    {PATCH_EDIT_HELP_STATUS=PASS}
+    {PATCH_WIRE_SCHEMA_STATUS=PASS}
+    {PATCH_WIRE_STATUS=PASS}
+    {PATCH_WIRE_COUNT_DELTA=1}
+    {PATCH_WIRE_LAYER=MET1}
+    {PATCH_WIRE_WIDTH=0.23}
+    {PATCH_WIRE_DB_STATUS=fixed}
+    {PATCH_WIRE_BOX_STATUS=PASS}
+    {PATCH_UNRELATED_OBJECT_STATUS=PASS}
     {POST_DRC=0}
     {POST_SHORTS=0}
-    {POST_LOCAL_MINAREA_MARKER_COUNT=0}
+    {POST_PATCH_MINAREA_MARKER_COUNT=0}
     {MANUAL_ECO_STATUS=PASS}
 } {
-    if {[string first $expected $minarea_v5_text] < 0} {
-        error "minimum-area V5 report is missing $expected"
+    if {[string first $expected $minarea_v6_text] < 0} {
+        error "minimum-area V6 report is missing $expected"
     }
 }
 set route_start_count 0
@@ -951,19 +1028,16 @@ foreach call $::mptdc_test_manual_command_calls {
     }
     if {[lindex $call 0] eq "ecoRoute"} {
         incr eco_call_count
-        if {$call ne {ecoRoute -fix_drc -layer_range MET1:MET1 {384.22 327.45 386.59 329.28}}} {
-            error "minimum-area V5 ecoRoute escaped the exact layer/area contract: $call"
-        }
     }
     if {[lindex $call 0] in {editDelete editAddVia routeDesign globalDetailRoute detailRoute createRouteBlk editPowerVia}} {
-        error "minimum-area V5 helper invoked a prohibited command: $call"
+        error "minimum-area V6 helper invoked a prohibited command: $call"
     }
 }
-if {$route_start_count != 2 || $route_commit_count != 2} {
-    error "minimum-area V5 helper expected two bounded wire starts/commits, found $route_start_count/$route_commit_count"
+if {$route_start_count != 3 || $route_commit_count != 3} {
+    error "minimum-area V6 helper expected three bounded wire starts/commits, found $route_start_count/$route_commit_count"
 }
-if {$eco_call_count != 1 || !$::mptdc_test_local_ecoroute_called} {
-    error "minimum-area V5 helper expected one bounded ecoRoute command"
+if {$eco_call_count != 0 || $::mptdc_test_local_ecoroute_called} {
+    error "minimum-area V6 helper invoked ecoRoute"
 }
 set ::mptdc_test_manual_mode 0
 file delete -force $::mptdc_test_report_dir

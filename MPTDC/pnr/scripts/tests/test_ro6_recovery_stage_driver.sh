@@ -577,34 +577,47 @@ CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
 RPT
   exit 0
 fi
-if grep -qx 'mptdc_ckpt_manual_two_minarea_landing_patch_v5' "$commands_file"; then
-  grep -qx 'mptdc_signoff_extract_and_sta' "$commands_file"
-  test "$(wc -l < "$commands_file")" -eq 2
+if grep -qx 'mptdc_ckpt_manual_two_minarea_landing_patch_v6' "$commands_file"; then
+  command_count="$(wc -l < "$commands_file")"
+  test "$command_count" -eq 1 -o "$command_count" -eq 2
+  if [[ "$command_count" -eq 2 ]]; then
+    grep -qx 'mptdc_signoff_extract_and_sta' "$commands_file"
+    command_2_status=PASS
+    final_index=02
+  else
+    ! grep -q 'mptdc_signoff_extract_and_sta' "$commands_file"
+    command_2_status=MISSING
+    final_index=01
+  fi
   ! grep -qE 'globalDetailRoute|detailRoute|ecoRoute|routeDesign|createRouteBlk|editAddVia|editDelete' "$commands_file"
 
   run="$work/$run_id"
   mkdir -p "$run/reports" "$run/def" "$run/checkpoints/repaired_route.enc.dat"
   initial_special="$run/reports/00_initial_verify_connectivity_special.rpt"
-  final_special="$run/reports/02_after_command_verify_connectivity_special.rpt"
+  final_special="$run/reports/${final_index}_after_command_verify_connectivity_special.rpt"
   write_exact_pg_report_pair "$initial_special"
   write_exact_pg_report_pair "$final_special"
 
   manual_status=PASS
   command_1_status=PASS
-  local_ecoroute_status=PASS
-  post_local_marker_count=0
+  patch_wire_status=PASS
+  patch_wire_delta=1
+  patch_unrelated_status=PASS
+  post_patch_marker_count=0
   final_drc=0
   final_status=PASS_GEOMETRY_REVIEW_CONNECTIVITY
   if [[ "${FAKE_MINAREA_REPAIR_DIRTY:-0}" == 1 ]]; then
     manual_status=FAIL
     command_1_status=FAIL
-    local_ecoroute_status=FAIL
-    post_local_marker_count=1
+    patch_wire_status=FAIL
+    patch_wire_delta=0
+    patch_unrelated_status=FAIL
+    post_patch_marker_count=1
     final_drc=1
     final_status=REVIEW_REQUIRED
   fi
-  cat > "$run/reports/min_area_landing_patch_v5.rpt" <<RPT
-MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_BOUNDED_MET1_ECOROUTE_FIX_DRC
+  cat > "$run/reports/min_area_landing_patch_v6.rpt" <<RPT
+MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE
 PRE_DRC=2
 PRE_SHORTS=0
 BASE_DRC=1
@@ -612,24 +625,39 @@ BASE_SHORTS=0
 BASE_REGULAR_CONNECTIVITY_BAD=0
 BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 BASE_MINAREA_MARKER_STATUS=PASS
-LOCAL_ECOROUTE_STATUS=$local_ecoroute_status
-POST_LOCAL_MINAREA_MARKER_COUNT=$post_local_marker_count
+PATCH_EDIT_HELP_STATUS=PASS
+PATCH_WIRE_SCHEMA_STATUS=PASS
+PATCH_WIRE_STATUS=$patch_wire_status
+PATCH_WIRE_COUNT_DELTA=$patch_wire_delta
+PATCH_WIRE_LAYER=MET1
+PATCH_WIRE_WIDTH=0.23
+PATCH_WIRE_DB_STATUS=fixed
+PATCH_WIRE_BOX=385.06 328.04 385.29 328.52
+PATCH_WIRE_BOX_STATUS=PASS
+PATCH_UNRELATED_OBJECT_STATUS=$patch_unrelated_status
+POST_PATCH_MINAREA_MARKER_COUNT=$post_patch_marker_count
 POST_DRC=$final_drc
 POST_SHORTS=0
-VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED
+VIA_EDIT_POLICY=NO_VIAS_MODIFIED
 PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED
 PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
 MANUAL_ECO_STATUS=$manual_status
 RPT
 
-  setup_status=PASS
-  if [[ "${FAKE_MINAREA_TIMING_FAIL:-0}" == 1 ]]; then setup_status=FAIL; fi
-  cat > "$run/reports/extracted_timing_status.rpt" <<RPT
+  if [[ "$command_count" -eq 2 ]]; then
+    setup_status=PASS
+    if [[ "${FAKE_MINAREA_TIMING_FAIL:-0}" == 1 ]]; then setup_status=FAIL; fi
+    cat > "$run/reports/extracted_timing_status.rpt" <<RPT
 SETUP_STATUS_TC=$setup_status
 TC_HOLD_STATUS=PASS
 RPT
-  printf 'DRV_STATUS=PASS\n' > "$run/reports/drv_status.rpt"
-  printf 'POWER_REPORT_CAPTURE_STATUS=PASS\n' > "$run/reports/power_status.rpt"
+    printf 'DRV_STATUS=PASS\n' > "$run/reports/drv_status.rpt"
+    printf 'POWER_REPORT_CAPTURE_STATUS=PASS\n' > "$run/reports/power_status.rpt"
+  fi
+  cat > "$run/reports/${final_index}_after_command_report_route.rpt" <<'RPT'
+#num needed restored net=0
+#need_extraction net=0 (total=16329)
+RPT
   cat > "$run/def/repaired_route.def" <<'DEF'
 VERSION 5.8 ;
 PINS 2 ;
@@ -649,7 +677,7 @@ INITIAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
 INITIAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 INITIAL_SPECIAL_CONNECTIVITY_REPORT=$initial_special
 COMMAND_1_STATUS=$command_1_status
-COMMAND_2_STATUS=PASS
+COMMAND_2_STATUS=$command_2_status
 FINAL_DRC=$final_drc
 FINAL_SHORTS=0
 FINAL_REGULAR_CONNECTIVITY_BAD=0
@@ -657,7 +685,9 @@ FINAL_SPECIAL_CONNECTIVITY_BAD=1
 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
 FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 FINAL_UNROUTED_NETS=UNKNOWN
+FINAL_UNROUTED_NETS_SOURCE=report_route_parse_unresolved
 FINAL_ROUTE_GATE_PASS=0
+FINAL_REPORT_ROUTE=$run/reports/${final_index}_after_command_report_route.rpt
 FINAL_SPECIAL_CONNECTIVITY_REPORT=$final_special
 FINAL_DEF=$run/def/repaired_route.def
 FINAL_CHECKPOINT_DAT_EXISTS=1
@@ -1049,36 +1079,91 @@ grep -q 'innovus minarea_probe .* ROUTE_MIN_AREA_PROBE' "$PUBLISH_CALLS"
 grep -qx 'NEXT_STAGE=REVIEW_ROUTE_MIN_AREA_PROBE' "$TMP_ROOT/minarea_probe.stdout"
 grep -qx 'NEXT_REQUIRED_PROBE_RUN_ID=minarea_probe' "$TMP_ROOT/minarea_probe.stdout"
 
+set +e
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-minarea-repair --run-id minarea_repair_without_trial \
+  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_repair_without_trial.stdout"
+MINAREA_NO_TRIAL_RC=$?
+set -e
+test "$MINAREA_NO_TRIAL_RC" -eq 4
+grep -qx 'STOP: --source-patch-trial-run-id is required for route-minarea-repair' \
+  "$TMP_ROOT/minarea_repair_without_trial.stdout"
+
+set +e
+env "${COMMON_ENV[@]}" FAKE_MINAREA_REPAIR_DIRTY=1 bash "$DRIVER" \
+  --stage route-minarea-patch-trial --run-id minarea_patch_trial_dirty \
+  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_patch_trial_dirty.stdout"
+MINAREA_TRIAL_DIRTY_RC=$?
+set -e
+test "$MINAREA_TRIAL_DIRTY_RC" -ne 0
+grep -qx 'PATCH_TRIAL_GATE_MODE=FAIL' \
+  "$WORK/innovus/minarea_patch_trial_dirty/reports/operator_gate_route_min_area_patch_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' \
+  "$WORK/innovus/minarea_patch_trial_dirty/reports/operator_gate_route_min_area_patch_trial.rpt"
+
+PATCH_TRIAL_ID=minarea_patch_trial_clean
+env "${COMMON_ENV[@]}" bash "$DRIVER" \
+  --stage route-minarea-patch-trial --run-id "$PATCH_TRIAL_ID" \
+  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/minarea_patch_trial_clean.stdout"
+PATCH_TRIAL_REPORT="$WORK/innovus/$PATCH_TRIAL_ID/reports/operator_gate_route_min_area_patch_trial.rpt"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/minarea_patch_trial_clean.stdout"
+grep -qx 'PATCH_STAGE_MODE=trial' "$PATCH_TRIAL_REPORT"
+grep -qx 'REPAIR_METHOD=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE_V6' "$PATCH_TRIAL_REPORT"
+grep -qx 'COMMAND_1_STATUS=PASS' "$PATCH_TRIAL_REPORT"
+grep -qx 'COMMAND_2_STATUS=MISSING' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_EDIT_HELP_STATUS=PASS' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_WIRE_SCHEMA_STATUS=PASS' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_WIRE_STATUS=PASS' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_WIRE_COUNT_DELTA=1' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_WIRE_LAYER=MET1' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_WIRE_WIDTH=0.23' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_WIRE_DB_STATUS=fixed' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_WIRE_BOX_STATUS=PASS' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_UNRELATED_OBJECT_STATUS=PASS' "$PATCH_TRIAL_REPORT"
+grep -qx 'POST_PATCH_MINAREA_MARKER_COUNT=0' "$PATCH_TRIAL_REPORT"
+grep -qx 'FINAL_DRC=0' "$PATCH_TRIAL_REPORT"
+grep -qx 'FINAL_SHORTS=0' "$PATCH_TRIAL_REPORT"
+grep -qx 'FINAL_UNROUTED_NETS_RAW=UNKNOWN' "$PATCH_TRIAL_REPORT"
+grep -qx 'FINAL_UNROUTED_NETS=0' "$PATCH_TRIAL_REPORT"
+grep -qx 'FINAL_REPORT_ROUTE_ZERO_STATUS=PASS' "$PATCH_TRIAL_REPORT"
+grep -qx 'TIMING_GATE_STATUS=NOT_RUN_PROOF_ONLY' "$PATCH_TRIAL_REPORT"
+grep -qx 'RO_TAP_OBSERVABILITY_PIN_COUNT=2' "$PATCH_TRIAL_REPORT"
+grep -qx 'PATCH_TRIAL_GATE_MODE=PASS_EXACT_PG_FINGERPRINT' "$PATCH_TRIAL_REPORT"
+grep -qx 'DECISION=PASS_REPLAY' "$PATCH_TRIAL_REPORT"
+grep -q "innovus $PATCH_TRIAL_ID .* ROUTE_MIN_AREA_PATCH_TRIAL" "$PUBLISH_CALLS"
+grep -qx 'NEXT_STAGE=ROUTE_MINAREA_CANONICAL_REPLAY' "$TMP_ROOT/minarea_patch_trial_clean.stdout"
+grep -qx "NEXT_REQUIRED_PATCH_TRIAL_RUN_ID=$PATCH_TRIAL_ID" "$TMP_ROOT/minarea_patch_trial_clean.stdout"
+
+PATCH_TRIAL_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/innovus/$PATCH_TRIAL_ID"
+mkdir -p "$PATCH_TRIAL_SNAPSHOT"
+cp -R "$WORK/innovus/$PATCH_TRIAL_ID/reports" "$PATCH_TRIAL_SNAPSHOT/"
+git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$PATCH_TRIAL_ID"
+git -C "$REPO" commit -q -m 'add passing V6 patch proof'
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
 env "${COMMON_ENV[@]}" bash "$DRIVER" \
   --stage route-minarea-repair --run-id minarea_repair_clean \
-  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  --source-pnr-run-id "$MINAREA_PNR_ID" \
+  --source-patch-trial-run-id "$PATCH_TRIAL_ID" --expected-head "$HEAD_SHA" \
   > "$TMP_ROOT/minarea_repair_clean.stdout"
 MINAREA_REPAIR_REPORT="$WORK/innovus/minarea_repair_clean/reports/operator_gate_route_min_area_repair.rpt"
 grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/minarea_repair_clean.stdout"
-grep -qx 'REPAIR_METHOD=PROVEN_TWO_STUB_BASE_THEN_BOUNDED_MET1_ECOROUTE_FIX_DRC_V5' "$MINAREA_REPAIR_REPORT"
-grep -Fqx 'BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28' "$MINAREA_REPAIR_REPORT"
-grep -Fqx 'LOCAL_ECOROUTE_POLICY=ecoRoute_-fix_drc_MET1:MET1_area_384.22_327.45_386.59_329.28' "$MINAREA_REPAIR_REPORT"
-grep -Fqx 'LOCAL_ECOROUTE_AREA=384.22 327.45 386.59 329.28' "$MINAREA_REPAIR_REPORT"
-grep -qx 'LOCAL_ECOROUTE_LAYER_RANGE=MET1:MET1' "$MINAREA_REPAIR_REPORT"
-grep -qx 'VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED' "$MINAREA_REPAIR_REPORT"
-grep -qx 'PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED' "$MINAREA_REPAIR_REPORT"
-grep -qx 'PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED' "$MINAREA_REPAIR_REPORT"
+grep -qx "SOURCE_PATCH_TRIAL_RUN_ID=$PATCH_TRIAL_ID" "$MINAREA_REPAIR_REPORT"
+grep -qx 'PATCH_STAGE_MODE=replay' "$MINAREA_REPAIR_REPORT"
+grep -qx 'REPAIR_METHOD=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE_V6' "$MINAREA_REPAIR_REPORT"
 grep -qx 'COMMAND_1_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
 grep -qx 'COMMAND_2_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
 grep -qx 'MANUAL_ECO_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
-grep -qx 'MANUAL_BASE_DRC=1' "$MINAREA_REPAIR_REPORT"
-grep -qx 'MANUAL_BASE_SHORTS=0' "$MINAREA_REPAIR_REPORT"
-grep -qx 'MANUAL_BASE_REGULAR_CONNECTIVITY_BAD=0' "$MINAREA_REPAIR_REPORT"
-grep -qx 'MANUAL_BASE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0' "$MINAREA_REPAIR_REPORT"
-grep -qx 'BASE_MINAREA_MARKER_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
-grep -qx 'LOCAL_ECOROUTE_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
-grep -qx 'POST_LOCAL_MINAREA_MARKER_COUNT=0' "$MINAREA_REPAIR_REPORT"
-grep -qx 'INITIAL_DRC=2' "$MINAREA_REPAIR_REPORT"
-grep -qx 'INITIAL_SHORTS=0' "$MINAREA_REPAIR_REPORT"
+grep -qx 'PATCH_WIRE_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
+grep -qx 'PATCH_WIRE_BOX_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
 grep -qx 'FINAL_DRC=0' "$MINAREA_REPAIR_REPORT"
 grep -qx 'FINAL_SHORTS=0' "$MINAREA_REPAIR_REPORT"
 grep -qx 'FINAL_REGULAR_CONNECTIVITY_BAD=0' "$MINAREA_REPAIR_REPORT"
 grep -qx 'FINAL_SPECIAL_DANGLING_COUNT=15' "$MINAREA_REPAIR_REPORT"
+grep -qx 'FINAL_UNROUTED_NETS=0' "$MINAREA_REPAIR_REPORT"
 grep -qx 'SPECIAL_SIGNATURE_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
 grep -qx 'SETUP_STATUS_TC=PASS' "$MINAREA_REPAIR_REPORT"
 grep -qx 'TC_HOLD_STATUS=PASS' "$MINAREA_REPAIR_REPORT"
@@ -1095,7 +1180,8 @@ grep -qx 'NEXT_REQUIRED_PNR_RUN_ID=minarea_repair_clean' "$TMP_ROOT/minarea_repa
 set +e
 env "${COMMON_ENV[@]}" FAKE_MINAREA_TIMING_FAIL=1 bash "$DRIVER" \
   --stage route-minarea-repair --run-id minarea_repair_timing_fail \
-  --source-pnr-run-id "$MINAREA_PNR_ID" --expected-head "$HEAD_SHA" \
+  --source-pnr-run-id "$MINAREA_PNR_ID" \
+  --source-patch-trial-run-id "$PATCH_TRIAL_ID" --expected-head "$HEAD_SHA" \
   > "$TMP_ROOT/minarea_repair_timing_fail.stdout"
 MINAREA_TIMING_FAIL_RC=$?
 set -e

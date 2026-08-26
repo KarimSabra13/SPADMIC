@@ -896,6 +896,148 @@ proc mptdc_ckpt_manual_wire_covers_point {net layer point} {
     return 0
 }
 
+proc mptdc_ckpt_manual_box_equal {lhs rhs {tolerance 0.001}} {
+    set lhs [mptdc_signoff_flat_box $lhs]
+    set rhs [mptdc_signoff_flat_box $rhs]
+    if {[llength $lhs] != 4 || [llength $rhs] != 4} {
+        return 0
+    }
+    for {set idx 0} {$idx < 4} {incr idx} {
+        if {![mptdc_ckpt_manual_close \
+                [lindex $lhs $idx] [lindex $rhs $idx] $tolerance]} {
+            return 0
+        }
+    }
+    return 1
+}
+
+proc mptdc_ckpt_manual_pwire_rows {net} {
+    set nh [mptdc_ckpt_manual_net_handle $net]
+    set rows {}
+    foreach handle [mptdc_ckpt_probe_valid_handles [dbGet ${nh}.pWires]] {
+        set layer [lindex [dbGet ${handle}.layer.name] 0]
+        set box [mptdc_signoff_flat_box [dbGet ${handle}.box]]
+        set width {}
+        catch {set width [lindex [dbGet ${handle}.width] 0]}
+        if {![string is double -strict $width] && [llength $box] == 4} {
+            set dx [expr {abs([lindex $box 2] - [lindex $box 0])}]
+            set dy [expr {abs([lindex $box 3] - [lindex $box 1])}]
+            set width [expr {$dx < $dy ? $dx : $dy}]
+        }
+        set status [string tolower [lindex [dbGet ${handle}.status] 0]]
+        set pts {}
+        catch {set pts [dbGet ${handle}.pts]}
+        lappend rows [dict create \
+            handle $handle layer $layer box $box width $width \
+            status $status pts $pts]
+    }
+    return $rows
+}
+
+proc mptdc_ckpt_manual_require_patch_edit_support {fh} {
+    set report_dir [mptdc_signoff_report_dir]
+    set help_rpt [file join $report_dir minarea_v6_help_setEditMode.rpt]
+    set schema_rpt [file join $report_dir minarea_v6_schema_pWire.rpt]
+    set help_result [mptdc_ckpt_probe_capture_redirect \
+        PATCH_HELP setEditMode [list help setEditMode] $help_rpt]
+    puts $fh "PATCH_EDIT_HELP_REPORT=$help_rpt"
+    puts $fh "PATCH_EDIT_HELP_CAPTURE_STATUS=[dict get $help_result status]"
+    if {[dict get $help_result status] ne "PASS" || ![file exists $help_rpt]} {
+        puts $fh "PATCH_EDIT_HELP_STATUS=FAIL"
+        error "installed Innovus could not capture setEditMode help"
+    }
+    set help_fh [open $help_rpt r]
+    set help_text [read $help_fh]
+    close $help_fh
+    set required_patterns [list \
+        {-type[[:space:]]+\{regular\|special\|patch\}} \
+        {-layer[[:space:]]+<layer>} \
+        {-width[[:space:]]+<value>} \
+        {-status[[:space:]]+\{cover\|fixed\|noshield\|routed\|shield\|auto\}} \
+        {-stop_at_drc[[:space:]]+\{true\|false\}}]
+    foreach pattern $required_patterns {
+        if {![regexp -- $pattern $help_text]} {
+            puts $fh "PATCH_EDIT_HELP_STATUS=FAIL"
+            error "installed setEditMode help is missing required patch option: $pattern"
+        }
+    }
+    puts $fh "PATCH_EDIT_HELP_STATUS=PASS"
+
+    set schema_result [mptdc_ckpt_probe_capture_redirect \
+        PATCH_SCHEMA pWire [list dbSchema pWire] $schema_rpt]
+    puts $fh "PATCH_WIRE_SCHEMA_REPORT=$schema_rpt"
+    puts $fh "PATCH_WIRE_SCHEMA_STATUS=[dict get $schema_result status]"
+    if {[dict get $schema_result status] ne "PASS"} {
+        error "installed Innovus could not capture the pWire schema"
+    }
+}
+
+proc mptdc_ckpt_manual_add_patch_wire {fh label net layer width start finish expected_box} {
+    set before [mptdc_ckpt_manual_pwire_rows $net]
+    set before_handles {}
+    foreach row $before {
+        lappend before_handles [dict get $row handle]
+    }
+    puts $fh "${label}_PRE_COUNT=[llength $before]"
+
+    set setup [list setEditMode \
+        -nets $net \
+        -type patch \
+        -layer $layer \
+        -width $width \
+        -status fixed \
+        -snap false \
+        -stop_at_drc true]
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_EDIT_MODE" $setup
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_TOOL" {uiSetTool addWire}
+    mptdc_ckpt_manual_log_command $fh "${label}_START" \
+        [list editAddRoute {*}$start]
+    mptdc_ckpt_manual_log_command $fh "${label}_COMMIT" \
+        [list editCommitRoute {*}$finish]
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+
+    set after [mptdc_ckpt_manual_pwire_rows $net]
+    set new_rows {}
+    foreach row $after {
+        if {[lsearch -exact $before_handles [dict get $row handle]] < 0} {
+            lappend new_rows $row
+        }
+    }
+    puts $fh "${label}_POST_COUNT=[llength $after]"
+    puts $fh "${label}_COUNT_DELTA=[expr {[llength $after] - [llength $before]}]"
+    puts $fh "${label}_NEW_COUNT=[llength $new_rows]"
+    if {[llength $after] != ([llength $before] + 1) || [llength $new_rows] != 1} {
+        puts $fh "${label}_STATUS=FAIL"
+        error "$label expected exactly one new patch wire"
+    }
+
+    set row [lindex $new_rows 0]
+    set handle [dict get $row handle]
+    set actual_layer [dict get $row layer]
+    set actual_width [dict get $row width]
+    set actual_status [dict get $row status]
+    set actual_box [dict get $row box]
+    puts $fh "${label}_HANDLE=$handle"
+    puts $fh "${label}_LAYER=$actual_layer"
+    puts $fh "${label}_WIDTH=$actual_width"
+    puts $fh "${label}_STATUS_VALUE=$actual_status"
+    puts $fh "${label}_BOX=$actual_box"
+    puts $fh "${label}_PTS=[dict get $row pts]"
+    puts $fh "${label}_EXPECTED_BOX=$expected_box"
+    if {$actual_layer ne $layer ||
+        ![string is double -strict $actual_width] ||
+        ![mptdc_ckpt_manual_close $actual_width $width] ||
+        $actual_status ne "fixed" ||
+        ![mptdc_ckpt_manual_box_equal $actual_box $expected_box]} {
+        puts $fh "${label}_STATUS=FAIL"
+        error "$label materialized with unexpected attributes"
+    }
+    puts $fh "${label}_STATUS=PASS"
+    return [dict merge $row [dict create \
+        pre_count [llength $before] post_count [llength $after] count_delta 1]]
+}
+
 proc mptdc_ckpt_manual_log_command {fh label command} {
     puts $fh "${label}_COMMAND=$command"
     flush $fh
@@ -1429,37 +1571,42 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v1 {} {
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v2 {} {
-    error "minimum-area V2 is retired after Innovus absorbed the u_core_n_57556 VIA1 handle into normalized route geometry; use mptdc_ckpt_manual_two_minarea_landing_patch_v5"
+    error "minimum-area V2 is retired after Innovus absorbed the u_core_n_57556 VIA1 handle into normalized route geometry; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v3 {} {
-    error "minimum-area V3 is retired because its away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v5"
+    error "minimum-area V3 is retired because its away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v4 {} {
-    error "minimum-area V4 is retired because its direct VIA1-anchored away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v5"
+    error "minimum-area V4 is retired because its direct VIA1-anchored away-from-source Wire Editor extension was a no-op; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
 }
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v5 {} {
+    error "minimum-area V5 is retired because bounded ecoRoute returned success without changing the 0.1777/0.202 marker; use mptdc_ckpt_manual_two_minarea_landing_patch_v6"
+}
+
+proc mptdc_ckpt_manual_two_minarea_landing_patch_v6 {} {
     set report_dir [mptdc_signoff_report_dir]
-    set report [file join $report_dir min_area_landing_patch_v5.rpt]
+    set report [file join $report_dir min_area_landing_patch_v6.rpt]
     set fh [open $report w]
-    puts $fh "# MPTDC Two-Stub Base and Local MET1 DRC Repair V5"
-    puts $fh "MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_BOUNDED_MET1_ECOROUTE_FIX_DRC"
+    puts $fh "# MPTDC Two-Stub Base and Exact MET1 Patch Wire V6"
+    puts $fh "MANUAL_ECO_MODE=PROVEN_TWO_STUB_BASE_THEN_EXACT_MET1_PATCH_WIRE"
     puts $fh "SOURCE_BASELINE=DRC_2_SHORTS_0_REGULAR_0_SPECIAL_NON_RO_0"
     puts $fh "BASE_EXPECTATION=DRC_1_SHORTS_0_REGULAR_0_U_CORE_N_57556_0.1777_OF_0.202"
     puts $fh "TARGET_NETS=u_core_n_57960,u_core_n_57556"
     puts $fh "BASE_STUB_POLICY=u_core_n_57960:MET1:363.72,358.12->364.56,358.12;u_core_n_57556:MET1:385.56,328.44->384.72,328.44;width=0.28"
-    puts $fh "LOCAL_ECOROUTE_POLICY=ecoRoute_-fix_drc_MET1:MET1_area_384.22_327.45_386.59_329.28"
-    puts $fh "LOCAL_ECOROUTE_AREA=384.22 327.45 386.59 329.28"
-    puts $fh "LOCAL_ECOROUTE_LAYER_RANGE=MET1:MET1"
-    puts $fh "VIA_EDIT_POLICY=NO_EXPLICIT_VIA_COMMANDS_TOOL_CANONICALIZATION_AUDITED"
+    puts $fh "PATCH_WIRE_POLICY=u_core_n_57556:MET1:385.175,328.405->385.175,328.155;width=0.23;status=fixed;type=patch"
+    puts $fh "PATCH_WIRE_EXPECTED_BOX=385.060 328.040 385.290 328.520"
+    puts $fh "PATCH_WIRE_GROSS_AREA_UM2=0.0575"
+    puts $fh "MINAREA_DEFICIT_UM2=0.0243"
+    puts $fh "VIA_EDIT_POLICY=NO_VIAS_MODIFIED"
     puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
-    puts $fh "ROUTE_OPTIMIZER_POLICY=ONE_MARKER_WINDOW_AND_MET1_ONLY"
+    puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
 
     set body_status [catch {
-        set baseline [mptdc_ckpt_verify_snapshot minarea_v5_pre]
+        set baseline [mptdc_ckpt_verify_snapshot minarea_v6_pre]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 2 0 0
 
         mptdc_ckpt_manual_assert_via_names $fh N57960_LANDING_PRE \
@@ -1474,18 +1621,50 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v5 {} {
             u_core_n_57556 MET1 0.28 \
             {{385.56 328.44} {384.72 328.44}}
 
-        set base [mptdc_ckpt_verify_snapshot minarea_v5_base]
+        set base [mptdc_ckpt_verify_snapshot minarea_v6_base]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh BASE $base 1 0 0
         mptdc_ckpt_manual_assert_minarea_01777_marker \
             $fh BASE_MINAREA_MARKER $base
 
-        set repair_area {384.22 327.45 386.59 329.28}
-        mptdc_ckpt_manual_log_command $fh LOCAL_ECOROUTE \
-            [list ecoRoute -fix_drc -layer_range MET1:MET1 $repair_area]
+        set base_n57960_vias [mptdc_ckpt_manual_via_names_at \
+            u_core_n_57960 {363.72 358.12}]
+        set base_n57556_vias [mptdc_ckpt_manual_via_names_at \
+            u_core_n_57556 {385.56 328.44}]
+        set base_n57960_pwire_rows [mptdc_ckpt_manual_pwire_rows u_core_n_57960]
+        puts $fh "BASE_N57960_VIA_NAMES=[join $base_n57960_vias ,]"
+        puts $fh "BASE_N57556_VIA_NAMES=[join $base_n57556_vias ,]"
+        puts $fh "BASE_N57960_PATCH_WIRE_COUNT=[llength $base_n57960_pwire_rows]"
 
-        set final [mptdc_ckpt_verify_snapshot minarea_v5_post]
+        mptdc_ckpt_manual_require_patch_edit_support $fh
+        set patch [mptdc_ckpt_manual_add_patch_wire $fh N57556_PATCH_WIRE \
+            u_core_n_57556 MET1 0.23 \
+            {385.175 328.405} {385.175 328.155} \
+            {385.060 328.040 385.290 328.520}]
+        puts $fh "PATCH_WIRE_STATUS=PASS"
+        puts $fh "PATCH_WIRE_HANDLE=[dict get $patch handle]"
+        puts $fh "PATCH_WIRE_COUNT_DELTA=[dict get $patch count_delta]"
+        puts $fh "PATCH_WIRE_LAYER=[dict get $patch layer]"
+        puts $fh "PATCH_WIRE_WIDTH=[dict get $patch width]"
+        puts $fh "PATCH_WIRE_DB_STATUS=[dict get $patch status]"
+        puts $fh "PATCH_WIRE_BOX=[dict get $patch box]"
+        puts $fh "PATCH_WIRE_BOX_STATUS=PASS"
+
+        set post_n57960_vias [mptdc_ckpt_manual_via_names_at \
+            u_core_n_57960 {363.72 358.12}]
+        set post_n57556_vias [mptdc_ckpt_manual_via_names_at \
+            u_core_n_57556 {385.56 328.44}]
+        set post_n57960_pwire_rows [mptdc_ckpt_manual_pwire_rows u_core_n_57960]
+        if {$post_n57960_vias ne $base_n57960_vias ||
+            $post_n57556_vias ne $base_n57556_vias ||
+            $post_n57960_pwire_rows ne $base_n57960_pwire_rows} {
+            puts $fh "PATCH_UNRELATED_OBJECT_STATUS=FAIL"
+            error "V6 patch changed a via or the non-target u_core_n_57960 patch-wire set"
+        }
+        puts $fh "PATCH_UNRELATED_OBJECT_STATUS=PASS"
+
+        set final [mptdc_ckpt_verify_snapshot minarea_v6_post]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
-        puts $fh "POST_LOCAL_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
+        puts $fh "POST_PATCH_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
     } body_error body_opts]
 
     catch {uiSetTool select}
@@ -1499,7 +1678,7 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v5 {} {
     puts $fh "MANUAL_ECO_STATUS=PASS"
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
-    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V5_REPORT=$report"
+    puts "MPTDC_CKPT_MIN_AREA_LANDING_PATCH_V6_REPORT=$report"
     return [dict create status PASS report $report]
 }
 
