@@ -117,6 +117,33 @@ mptdc_pvs_patch_file_paths() {
   done
 }
 
+mptdc_pvs_streamout_map_binding_mode() {
+  local template="$1"
+  local selected_map="$2"
+
+  [[ -f "$template" && -n "$selected_map" ]] || return 2
+  grep -Fq -- '-mapFile' "$template" || return 1
+
+  if perl -0 -e '
+    my ($map, $file) = @ARGV;
+    open my $fh, "<", $file or exit 2;
+    local $/;
+    my $text = <$fh>;
+    my $quoted = quotemeta($map);
+    exit($text =~ /-mapFile\s+(?:\{|\")?$quoted(?:\}|\")?(?=\s|\\|;|\]|$)/s ? 0 : 1);
+  ' "$selected_map" "$template"; then
+    echo "LITERAL_SELECTED_MAP"
+    return 0
+  fi
+
+  if grep -Eq '\$(::)?env\(STREAM_MAP\)|\$\{(::)?env\(STREAM_MAP\)\}' "$template"; then
+    echo "ENV_SELECTED_MAP"
+    return 0
+  fi
+
+  return 1
+}
+
 mptdc_pvs_fail_if_contains_old_path() {
   local label="$1"
   local old_path="$2"

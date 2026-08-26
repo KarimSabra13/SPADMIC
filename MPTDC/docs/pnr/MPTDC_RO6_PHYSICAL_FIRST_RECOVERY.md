@@ -1897,6 +1897,9 @@ grep -E '^(PVS_RECOVERY_STATUS|DIAGNOSTIC_COLLECTION_STATUS|PVS_RUN_CLASS|PVS_DR
 echo "===== BASE DRC RULE INVENTORY ====="
 cat "$PVS_DIR/reports/pvs_drc_base_nonzero_rules.tsv" 2>/dev/null
 
+echo "===== STREAMOUT MAP BINDING ====="
+cat "$PVS_DIR/reports/streamout_map_binding.rpt" 2>/dev/null
+
 echo "===== LVS GATE ====="
 cat "$PVS_DIR/reports/pvs_lvs_status.rpt" 2>/dev/null
 ```
@@ -1914,6 +1917,10 @@ Interpret the result as follows:
   RC, stop. Triage LVS before changing geometry.
 - `PVS_DRC_DENSITY=NOT_RUN_BY_SCOPE`, `MPTDC_TC_PVS_CLOSED=NO`,
   `FINAL_SIGNOFF=NO`, and `READY_FOR_TAPEOUT=NO` are mandatory for this run.
+- Preparation must report `STREAM_MAP_BINDING_STATUS=PASS`. The historical
+  template is expected to use `STREAM_MAP_BINDING_MODE=ENV_SELECTED_MAP`; the
+  wrapper sets that environment value to the selected, hashed XH018 map before
+  sourcing the template.
 - After manual repair, rerun the normal canonical flow. Final acceptance still
   requires Innovus DRC zero, base PVS DRC zero, density PVS DRC zero, and an
   explicit LVS `MATCH` on one immutable input set.

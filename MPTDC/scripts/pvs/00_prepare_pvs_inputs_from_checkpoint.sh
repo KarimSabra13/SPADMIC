@@ -212,6 +212,8 @@ FINAL_DEF="$OUTPUT_DIR/${TOP_CELL}.def"
 } | tee "$MANIFEST_DIR/pvs_input_manifest.txt" | tee "$RUN_LOG"
 
 PATCHED_STREAMOUT="$WORK_DIR/streamout_mptdc_merged_ro6.replayed.tcl"
+STREAM_MAP_BINDING_REPORT="$REPORT_DIR/streamout_map_binding.rpt"
+STREAM_MAP_BINDING_MODE="GENERATED_STREAMOUT"
 if [[ -f "$STREAMOUT_TEMPLATE" ]]; then
   cp -p "$STREAMOUT_TEMPLATE" "$PATCHED_STREAMOUT"
   mptdc_pvs_patch_file_paths "$PATCHED_STREAMOUT" \
@@ -225,11 +227,19 @@ if [[ -f "$STREAMOUT_TEMPLATE" ]]; then
   mptdc_pvs_fail_if_contains_old_path "streamout old proof checkpoint" "$OLD_PROOF_CKPT" "$PATCHED_STREAMOUT"
   mptdc_pvs_fail_if_contains_old_path "streamout old proof base" "$OLD_PROOF_BASE" "$PATCHED_STREAMOUT"
   mptdc_pvs_fail_if_contains_old_path "streamout old base" "$OLD_BASE" "$PATCHED_STREAMOUT"
-  grep -Fq -- '-mapFile' "$PATCHED_STREAMOUT" || \
-    mptdc_pvs_die "streamout template does not apply an explicit -mapFile: $PATCHED_STREAMOUT"
-  grep -Fq -- "$STREAM_MAP" "$PATCHED_STREAMOUT" || \
-    mptdc_pvs_die "streamout template does not reference the selected map: $STREAM_MAP"
+  if ! STREAM_MAP_BINDING_MODE="$(mptdc_pvs_streamout_map_binding_mode "$PATCHED_STREAMOUT" "$STREAM_MAP")"; then
+    mptdc_pvs_die "streamout template does not bind -mapFile to the selected map or ::env(STREAM_MAP): $PATCHED_STREAMOUT"
+  fi
 fi
+
+{
+  echo "# MPTDC streamout map binding"
+  echo "STREAMOUT_TEMPLATE=$STREAMOUT_TEMPLATE"
+  echo "PATCHED_STREAMOUT=$PATCHED_STREAMOUT"
+  echo "SELECTED_STREAM_MAP=$STREAM_MAP"
+  echo "STREAM_MAP_BINDING_MODE=$STREAM_MAP_BINDING_MODE"
+  echo "STREAM_MAP_BINDING_STATUS=PASS"
+} | tee "$STREAM_MAP_BINDING_REPORT" | tee -a "$RUN_LOG"
 
 GENERATED_TCL="$WORK_DIR/prepare_pvs_inputs.tcl"
 {
@@ -386,6 +396,12 @@ mptdc_pvs_append_hash "$HASH_MANIFEST" DCELL_CDL "$DCELL_CDL"
 mptdc_pvs_append_hash "$HASH_MANIFEST" ORIGINAL_RO_GDS "$ORIGINAL_RO_GDS"
 mptdc_pvs_append_hash "$HASH_MANIFEST" RO_GDS "$RO_GDS"
 mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP "$STREAM_MAP"
+if [[ -s "$PATCHED_STREAMOUT" ]]; then
+  mptdc_pvs_append_hash "$HASH_MANIFEST" PATCHED_STREAMOUT "$PATCHED_STREAMOUT"
+else
+  echo "PATCHED_STREAMOUT_PATH=NOT_USED_GENERATED_STREAMOUT" >> "$HASH_MANIFEST"
+fi
+mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP_BINDING_REPORT "$STREAM_MAP_BINDING_REPORT"
 mptdc_pvs_append_hash "$HASH_MANIFEST" FINAL_DEF "$FINAL_DEF"
 mptdc_pvs_append_hash "$HASH_MANIFEST" TAP_PIN_REPORT "$TAP_PIN_REPORT"
 
@@ -403,6 +419,8 @@ mptdc_pvs_append_hash "$HASH_MANIFEST" TAP_PIN_REPORT "$TAP_PIN_REPORT"
   echo "ORIGINAL_RO_GDS=$ORIGINAL_RO_GDS"
   echo "RO_GDS=$RO_GDS"
   echo "FILTER_REPORT=$FILTER_REPORT"
+  echo "STREAM_MAP_BINDING_REPORT=$STREAM_MAP_BINDING_REPORT"
+  echo "STREAM_MAP_BINDING_MODE=$STREAM_MAP_BINDING_MODE"
   echo "TAP_PIN_REPORT=$TAP_PIN_REPORT"
   echo "INPUT_HASH_MANIFEST=$HASH_MANIFEST"
   echo "STRICT_ATTRIBUTION=$STRICT_ATTRIBUTION"

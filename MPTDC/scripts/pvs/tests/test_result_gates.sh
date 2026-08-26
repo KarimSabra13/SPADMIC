@@ -4,12 +4,49 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PVS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PREP_SCRIPT="$PVS_DIR/00_prepare_pvs_inputs_from_checkpoint.sh"
+# shellcheck source=MPTDC/scripts/pvs/lib_pvs_common.sh
+source "$PVS_DIR/lib_pvs_common.sh"
 TMP_ROOT="$(mktemp -d /tmp/mptdc_pvs_gate_test.XXXXXX)"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 grep -Fq 'RO_TAP_OBSERVABILITY_PIN_COUNT=' "$PREP_SCRIPT"
 grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP "$STREAM_MAP"' "$PREP_SCRIPT"
-grep -Fq "grep -Fq -- '-mapFile'" "$PREP_SCRIPT"
+grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" PATCHED_STREAMOUT "$PATCHED_STREAMOUT"' "$PREP_SCRIPT"
+
+STREAM_MAP_SET_LINE="$(grep -n 'set ::env(STREAM_MAP) $stream_map' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
+STREAMOUT_SOURCE_LINE="$(grep -n 'mptdc_pvs_try source_streamout' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
+[[ -n "$STREAM_MAP_SET_LINE" && -n "$STREAMOUT_SOURCE_LINE" ]]
+[[ "$STREAM_MAP_SET_LINE" -lt "$STREAMOUT_SOURCE_LINE" ]]
+
+SELECTED_MAP="/pdk/selected/pnr_streamout.map"
+ENV_MAP_TEMPLATE="$TMP_ROOT/streamout_env_map.tcl"
+LITERAL_MAP_TEMPLATE="$TMP_ROOT/streamout_literal_map.tcl"
+STALE_MAP_TEMPLATE="$TMP_ROOT/streamout_stale_map.tcl"
+MISSING_MAP_TEMPLATE="$TMP_ROOT/streamout_missing_map.tcl"
+
+cat > "$ENV_MAP_TEMPLATE" <<'EOF'
+streamOut $::env(MERGED_GDS) -mapFile $::env(STREAM_MAP) -mode ALL
+EOF
+cat > "$LITERAL_MAP_TEMPLATE" <<EOF
+streamOut \$::env(MERGED_GDS) -mapFile {$SELECTED_MAP} -mode ALL
+EOF
+cat > "$STALE_MAP_TEMPLATE" <<'EOF'
+streamOut $::env(MERGED_GDS) -mapFile /pdk/stale/streamout.map -mode ALL
+EOF
+cat > "$MISSING_MAP_TEMPLATE" <<'EOF'
+streamOut $::env(MERGED_GDS) -mode ALL
+EOF
+
+[[ "$(mptdc_pvs_streamout_map_binding_mode "$ENV_MAP_TEMPLATE" "$SELECTED_MAP")" == "ENV_SELECTED_MAP" ]]
+[[ "$(mptdc_pvs_streamout_map_binding_mode "$LITERAL_MAP_TEMPLATE" "$SELECTED_MAP")" == "LITERAL_SELECTED_MAP" ]]
+if mptdc_pvs_streamout_map_binding_mode "$STALE_MAP_TEMPLATE" "$SELECTED_MAP"; then
+  echo "ERROR: stale literal streamout map unexpectedly passed" >&2
+  exit 1
+fi
+if mptdc_pvs_streamout_map_binding_mode "$MISSING_MAP_TEMPLATE" "$SELECTED_MAP"; then
+  echo "ERROR: missing streamout map unexpectedly passed" >&2
+  exit 1
+fi
 
 GDS="$TMP_ROOT/mptdc_axis_core.gds"
 SOURCE="$TMP_ROOT/mptdc_axis_core.v"
