@@ -69,6 +69,10 @@ layer-purpose pairs against the exact zero-error XStream log and XH018/1131
 maps, and requires identical OA content and metadata fingerprints before and
 after. `PASS_REVIEW_EXPORT_CONTRACT` is diagnostic evidence only. It selects a
 review action; it is not an LVS pass and does not authorize an OA write.
+Cadence `XSTRM-234` with zero errors is the authoritative translation-complete
+record. The separate `strmout completed.` wrapper message is captured when
+present but is optional because GUI/CIW output is not always copied into the
+XStream log.
 
 ## Physical LVS Source Contract
 

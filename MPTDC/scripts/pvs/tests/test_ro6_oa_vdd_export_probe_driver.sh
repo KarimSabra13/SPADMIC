@@ -113,7 +113,6 @@ layerMap                                $LAYER_MAP
 objectMap                               $OBJECT_MAP
 WARNING (XSTRM-35): The objects in the layer-purpose pair 'MET3:pin' are ignored.
 INFO (XSTRM-234): Translation completed. '0' error(s) and '1' warning(s) found.
-strmout completed.
 EOF
 
 cat > "$BIN_DIR/virtuoso" <<'EOF'
@@ -209,6 +208,8 @@ grep -qx 'RO6_OA_VDD_EXPORT_PROBE_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'SOURCE_MISMATCH_CLASSIFICATION=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'OA_PROBE_CLASSIFICATION_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'OA_READ_ONLY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'XSTREAM_TRANSLATION_ZERO_ERROR_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'XSTREAM_WRAPPER_COMPLETION_STATUS=MISSING_OPTIONAL' "$TMP_ROOT/pass.stdout"
 grep -qx 'SOURCE_EXPORT_READ_ONLY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'STREAM_COLLATERAL_READ_ONLY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'OA_VDD_EXPORT_DIAGNOSIS=VDD_EXPLICIT_LABEL_ABSENT_WHILE_VSS_LABEL_PRESENT' \
@@ -222,6 +223,35 @@ grep -qx 'OA_EXPECTED_TERMINAL_SET_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/oa_ro6_vdd_export_classification.rpt"
 grep -qx 'SIGNOFF_ELIGIBLE=NO' \
   "$WORK/$RUN_ID/reports/operator_gate_ro6_oa_vdd_export_probe.rpt"
+
+BAD_XSTREAM_LOG="$PROJECT_DIR/xstreamOut_nonzero_error.log"
+sed "s/'0' error(s)/'1' error(s)/" "$XSTREAM_LOG" > "$BAD_XSTREAM_LOG"
+set +e
+MPTDC_RO6_OA_PROBE_REPO_ROOT="$REPO" \
+MPTDC_RO6_OA_PROBE_PUBLISHER="$PUBLISHER" \
+MPTDC_RO6_VDD_MISMATCH_CLASSIFIER="$PVS_DIR/09_classify_ro6_vdd_pin_mismatch.py" \
+MPTDC_RO6_OA_PROBE_CLASSIFIER="$PVS_DIR/10_classify_ro6_oa_vdd_export_probe.py" \
+MPTDC_RO6_OA_PROBE_SKILL="$PVS_DIR/probe_ro6_oa_vdd_export_contract.il" \
+MPTDC_CADENCE_ENV="$CADENCE_ENV" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/xstream_fail.publish.args" \
+bash "$DRIVER" \
+  --source-standalone-run-id "$SOURCE_ID" \
+  --run-id ro6_oa_vdd_probe_xstream_fail \
+  --oa-project-dir "$PROJECT_DIR" \
+  --oa-layout-dir "$OA_LAYOUT" \
+  --oa-schematic-dir "$OA_SCHEMATIC" \
+  --stream-layer-map "$LAYER_MAP" \
+  --stream-object-map "$OBJECT_MAP" \
+  --xstream-log "$BAD_XSTREAM_LOG" \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/xstream_fail.stdout" 2>&1
+XSTREAM_FAIL_RC=$?
+set -e
+test "$XSTREAM_FAIL_RC" -eq 4
+grep -qx 'XSTREAM_LOG_BINDING_STATUS=PASS' "$TMP_ROOT/xstream_fail.stdout"
+grep -qx 'XSTREAM_TRANSLATION_ZERO_ERROR_STATUS=FAIL' "$TMP_ROOT/xstream_fail.stdout"
+grep -qx 'XSTREAM_LOG_COMPLETION_STATUS=FAIL' "$TMP_ROOT/xstream_fail.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/xstream_fail.stdout"
 
 BAD_SOURCE_ID=ro6_standalone_wrong_mismatch
 cp -a "$SOURCE_DIR" "$WORK/$BAD_SOURCE_ID"
