@@ -19,6 +19,9 @@ OA_LAYOUT_DIR="${MPTDC_RO6_OA_LAYOUT_DIR:-$DEFAULT_OA_ROOT/layout}"
 OA_SCHEMATIC_DIR="${MPTDC_RO6_OA_SCHEMATIC_DIR:-$DEFAULT_OA_ROOT/schematic}"
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 MAX_EXPORT_AGE_SECONDS="${MPTDC_RO6_MAX_EXPORT_AGE_SECONDS:-86400}"
+CADENCE_ENV="${MPTDC_CADENCE_ENV:-/eda/cadence/eda_2023-2024}"
+CADENCE_ENV_RC=99
+CADENCE_ENV_STATUS=NOT_RUN
 
 usage() {
   cat <<'USAGE'
@@ -36,6 +39,7 @@ Options:
   --oa-schematic-dir <path>  Read-only OA schematic view to fingerprint.
   --max-export-age-seconds <n>
                             Reject older GDS/CDL exports. Default: 86400.
+  MPTDC_CADENCE_ENV=<path>  Override the Cadence site environment file.
   --expected-head <sha>      Require repository HEAD to match this commit.
   --innovus-work <path>      Innovus/PVS result root.
   -h, --help                 Show this help.
@@ -78,6 +82,39 @@ artifact_age_seconds() {
   modified="$(stat -c %Y "$1" 2>/dev/null)" || return 1
   now="$(date +%s)"
   printf '%s\n' "$((now - modified))"
+}
+
+load_cadence_env() {
+  local env_file="$1"
+
+  echo "CADENCE_ENV=$env_file"
+  if [[ ! -r "$env_file" ]]; then
+    CADENCE_ENV_RC=1
+    CADENCE_ENV_STATUS=FAIL_NOT_READABLE
+    echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+    echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
+    return 1
+  fi
+
+  # Site setup files are written for interactive shells and may read unset
+  # variables. Keep nounset disabled only while crossing that boundary.
+  set +u
+  set +e
+  # shellcheck disable=SC1090
+  source "$env_file" >/dev/null 2>&1
+  CADENCE_ENV_RC=$?
+  set +e
+  set -u
+  set -o pipefail
+
+  if [[ "$CADENCE_ENV_RC" -eq 0 ]]; then
+    CADENCE_ENV_STATUS=PASS
+  else
+    CADENCE_ENV_STATUS=FAIL
+  fi
+  echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+  echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
+  [[ "$CADENCE_ENV_STATUS" == PASS ]]
 }
 
 publish_stage() {
@@ -161,6 +198,7 @@ echo "BRANCH=$BRANCH"
 echo "ACTUAL_HEAD=$ACTUAL_HEAD"
 echo "ORIGIN_HEAD=${ORIGIN_HEAD:-MISSING}"
 echo "EXPECTED_HEAD=$EXPECTED_HEAD_VALUE"
+echo "CADENCE_ENV=$CADENCE_ENV"
 
 PREFLIGHT=PASS
 [[ "$BRANCH" == SPADMIC_test ]] || { echo "STOP: branch must be SPADMIC_test"; PREFLIGHT=FAIL; }
@@ -170,6 +208,10 @@ PREFLIGHT=PASS
 for path in "$RO_GDS" "$RO_CDL" "$PREP_HELPER" "$GATE_HELPER" "$PUBLISHER"; do
   [[ -s "$path" ]] || { echo "STOP: required file missing or empty: $path"; PREFLIGHT=FAIL; }
 done
+[[ -r "$CADENCE_ENV" ]] || {
+  echo "STOP: Cadence environment file missing or unreadable: $CADENCE_ENV"
+  PREFLIGHT=FAIL
+}
 for path in "$OA_LAYOUT_DIR" "$OA_SCHEMATIC_DIR"; do
   [[ -d "$path" && -r "$path" && -x "$path" ]] || {
     echo "STOP: OA view directory missing or unreadable: $path"
@@ -225,17 +267,15 @@ set +e
 
 PVS_RC=99
 if [[ "$PREP_RC" -eq 0 && "$COPY_STATUS" == PASS ]]; then
-  if [[ -f /eda/cadence/eda_2023-2024 ]]; then
-    # shellcheck disable=SC1091
-    source /eda/cadence/eda_2023-2024 2>/dev/null || true
+  if load_cadence_env "$CADENCE_ENV"; then
+    set +e
+    (
+      cd "$STANDALONE_RUN" || exit 3
+      bash ./run.pvs
+    ) 2>&1 | tee "$PVS_DIR/logs/pvs_ro6_standalone_lvs.log"
+    PVS_RC=${PIPESTATUS[0]}
+    set +e
   fi
-  set +e
-  (
-    cd "$STANDALONE_RUN" || exit 3
-    bash ./run.pvs
-  ) 2>&1 | tee "$PVS_DIR/logs/pvs_ro6_standalone_lvs.log"
-  PVS_RC=${PIPESTATUS[0]}
-  set +e
 fi
 
 OA_LAYOUT_HASH_POST="$(oa_fingerprint "$OA_LAYOUT_DIR")"
@@ -264,7 +304,8 @@ BLACKBOXED_COUNT="$(report_value "$GATE_REPORT" BLACKBOXED_CELL_COUNT)"
 DECISION=FAIL_STOP
 NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE
 if [[ "$PREP_RC" -eq 0 && "$PREP_STATUS" == PASS && "$CDL_PIN_STATUS" == PASS && \
-      "$COPY_STATUS" == PASS && "$OA_READ_ONLY_STATUS" == PASS && \
+      "$COPY_STATUS" == PASS && "$CADENCE_ENV_STATUS" == PASS && \
+      "$OA_READ_ONLY_STATUS" == PASS && \
       "$GATE_RC" -eq 0 && "$LVS_STATUS" == MATCH && "$CLS_RUN_RESULT" == MATCH && \
       "$BLACKBOXED_COUNT" == 0 ]]; then
   DECISION=PASS_CONTINUE
@@ -284,6 +325,9 @@ fi
   echo "RO_GDS_AGE_SECONDS=$GDS_AGE"
   echo "RO_CDL_AGE_SECONDS=$CDL_AGE"
   echo "MAX_EXPORT_AGE_SECONDS=$MAX_EXPORT_AGE_SECONDS"
+  echo "CADENCE_ENV=$CADENCE_ENV"
+  echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+  echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
   echo "OA_LAYOUT_DIR=$OA_LAYOUT_DIR"
   echo "OA_SCHEMATIC_DIR=$OA_SCHEMATIC_DIR"
   echo "OA_LAYOUT_HASH_PRE=$OA_LAYOUT_HASH_PRE"
@@ -300,6 +344,8 @@ fi
   echo "PREP_STATUS=$PREP_STATUS"
   echo "RO6_CDL_PIN_CONTRACT_STATUS=$CDL_PIN_STATUS"
   echo "INPUT_COPY_STATUS=$COPY_STATUS"
+  echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+  echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
   echo "OA_READ_ONLY_STATUS=$OA_READ_ONLY_STATUS"
   echo "PVS_RC=$PVS_RC"
   echo "GATE_RC=$GATE_RC"
@@ -321,7 +367,11 @@ fi
 echo "PVS_RO6_STANDALONE_RECOVERY_STATUS=$([[ "$DECISION" == PASS_CONTINUE ]] && echo PASS || echo FAIL)"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
 echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
+echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
+echo "PVS_RC=$PVS_RC"
 echo "PVS_LVS=$LVS_STATUS"
+echo "BLACKBOXED_CELL_COUNT=$BLACKBOXED_COUNT"
 echo "OA_READ_ONLY_STATUS=$OA_READ_ONLY_STATUS"
 echo "RO6_CDL_PIN_CONTRACT_STATUS=$CDL_PIN_STATUS"
 echo "SIGNOFF_ELIGIBLE=NO"

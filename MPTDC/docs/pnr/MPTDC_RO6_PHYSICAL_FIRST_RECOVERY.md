@@ -2240,15 +2240,25 @@ echo "RO_OA_PAIR_STATUS=$RO_OA_PAIR_STATUS"
 echo "RO_EXPORT_PREFLIGHT=$RO_EXPORT_PREFLIGHT"
 echo "RO6_STANDALONE_RUN=$RO6_STANDALONE_RUN"
 echo "RO6_STANDALONE_DRIVER_RC=$RO6_STANDALONE_DRIVER_RC"
-grep -E '^(PVS_RO6_STANDALONE_RECOVERY_STATUS|PVS_LVS|OA_READ_ONLY_STATUS|RO6_CDL_PIN_CONTRACT_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
-  "$DRIVER_LOG" 2>/dev/null | tail -20
+grep -E '^(PVS_RO6_STANDALONE_RECOVERY_STATUS|CADENCE_ENV_RC|CADENCE_ENV_STATUS|PVS_RC|PVS_LVS|BLACKBOXED_CELL_COUNT|OA_READ_ONLY_STATUS|RO6_CDL_PIN_CONTRACT_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -30
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```
 
-Continue only with driver RC zero, recovery status `PASS`, explicit
-`PVS_LVS=MATCH`, both read-only/CDL contract statuses `PASS`,
+Continue only with driver RC zero, recovery status `PASS`,
+`CADENCE_ENV_RC=0`, `CADENCE_ENV_STATUS=PASS`, `PVS_RC=0`, explicit
+`PVS_LVS=MATCH`, `BLACKBOXED_CELL_COUNT=0`, both read-only/CDL contract
+statuses `PASS`,
 `DECISION=PASS_CONTINUE`, `PUBLISH_RC=0`, and next stage
 `DIAGNOSTIC_PHYSICAL_PVS_WITH_FRESH_RO_GDS`. `SIGNOFF_ELIGIBLE=NO` is expected.
+
+The incomplete run `20260827_mptdc_ro6_standalone_lvs_130419` is classified as
+a wrapper abort before PVS launch: preflight and the 19-pin contract passed,
+but no PVS console log, `.cls`, `matched`, or `mismatched` artifact existed.
+The driver had sourced the interactive site environment while nounset was
+active. The corrected driver disables nounset only across that source boundary
+and reports the environment status explicitly. This run is not an LVS result
+and must not be reused as a passing standalone source.
 
 If preflight and the CDL contract pass but the driver returns before creating
 `operator_gate_pvs_ro6_standalone_lvs.rpt`, do not rerun PVS. Publish the

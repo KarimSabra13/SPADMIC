@@ -13,6 +13,8 @@ SOURCE_LVS="$WORK/$SOURCE_ID/pvs_lvs/source_lvs_script"
 DRIVER="$REPO/MPTDC/scripts/pvs/server_run_mptdc_ro6_standalone_lvs.sh"
 PVS_BIN="$TMP_ROOT/cadence/bin/pvs"
 PUBLISHER="$TMP_ROOT/publisher_stub.sh"
+CADENCE_ENV="$TMP_ROOT/cadence_env.sh"
+FAILING_CADENCE_ENV="$TMP_ROOT/failing_cadence_env.sh"
 OA_LAYOUT="$TMP_ROOT/oa/RO_tune6/layout"
 OA_SCHEMATIC="$TMP_ROOT/oa/RO_tune6/schematic"
 EXPORT_DIR="$TMP_ROOT/exports"
@@ -61,6 +63,14 @@ exit 8
 EOF
 chmod +x "$PVS_BIN"
 
+cat > "$CADENCE_ENV" <<'EOF'
+#!/usr/bin/env bash
+# Reproduce a site setup that expects nounset to be disabled while sourced.
+: "$MPTDC_TEST_UNSET_SITE_VARIABLE"
+export MPTDC_TEST_CADENCE_ENV_LOADED=1
+EOF
+printf 'return 23\n' > "$FAILING_CADENCE_ENV"
+
 cat > "$SOURCE_LVS/run.pvs" <<EOF
 #!/bin/sh -f
 cd "$SOURCE_LVS" || exit 3
@@ -96,6 +106,7 @@ MPTDC_RO6_STANDALONE_REPO_ROOT="$REPO" \
 MPTDC_RO6_STANDALONE_PUBLISHER="$PUBLISHER" \
 MPTDC_RO6_STANDALONE_PREP="$PVS_DIR/07_prepare_ro6_standalone_lvs.py" \
 MPTDC_RO6_STANDALONE_GATE="$PVS_DIR/08_gate_ro6_standalone_lvs.py" \
+MPTDC_CADENCE_ENV="$CADENCE_ENV" \
 MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/pass.publish.args" \
 bash "$DRIVER" \
@@ -111,6 +122,7 @@ grep -qx 'PVS_RO6_STANDALONE_RECOVERY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'PVS_LVS=MATCH' "$TMP_ROOT/pass.stdout"
 grep -qx 'OA_READ_ONLY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'RO6_CDL_PIN_CONTRACT_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pass.stdout"
 grep -qx 'NEXT_STAGE=DIAGNOSTIC_PHYSICAL_PVS_WITH_FRESH_RO_GDS' "$TMP_ROOT/pass.stdout"
 grep -q "pvs $RUN_ID $WORK/$RUN_ID PVS_RO6_STANDALONE_LVS" "$TMP_ROOT/pass.publish.args"
@@ -124,6 +136,7 @@ MPTDC_RO6_STANDALONE_REPO_ROOT="$REPO" \
 MPTDC_RO6_STANDALONE_PUBLISHER="$PUBLISHER" \
 MPTDC_RO6_STANDALONE_PREP="$PVS_DIR/07_prepare_ro6_standalone_lvs.py" \
 MPTDC_RO6_STANDALONE_GATE="$PVS_DIR/08_gate_ro6_standalone_lvs.py" \
+MPTDC_CADENCE_ENV="$CADENCE_ENV" \
 MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/fail.publish.args" \
 bash "$DRIVER" \
@@ -149,6 +162,7 @@ MPTDC_RO6_STANDALONE_REPO_ROOT="$REPO" \
 MPTDC_RO6_STANDALONE_PUBLISHER="$PUBLISHER" \
 MPTDC_RO6_STANDALONE_PREP="$PVS_DIR/07_prepare_ro6_standalone_lvs.py" \
 MPTDC_RO6_STANDALONE_GATE="$PVS_DIR/08_gate_ro6_standalone_lvs.py" \
+MPTDC_CADENCE_ENV="$CADENCE_ENV" \
 MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/missing_blackbox.publish.args" \
 bash "$DRIVER" \
@@ -165,5 +179,32 @@ test "$MISSING_BLACKBOX_RC" -ne 0
 grep -qx 'BLACKBOXED_CELL_COUNT=MISSING' \
   "$WORK/ro6_standalone_missing_blackbox_count/reports/pvs_ro6_standalone_lvs_status.rpt"
 grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/missing_blackbox.stdout"
+
+set +e
+MPTDC_RO6_STANDALONE_REPO_ROOT="$REPO" \
+MPTDC_RO6_STANDALONE_PUBLISHER="$PUBLISHER" \
+MPTDC_RO6_STANDALONE_PREP="$PVS_DIR/07_prepare_ro6_standalone_lvs.py" \
+MPTDC_RO6_STANDALONE_GATE="$PVS_DIR/08_gate_ro6_standalone_lvs.py" \
+MPTDC_CADENCE_ENV="$FAILING_CADENCE_ENV" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/env_fail.publish.args" \
+bash "$DRIVER" \
+  --source-pvs-run-id "$SOURCE_ID" \
+  --run-id ro6_standalone_env_fail \
+  --ro-gds "$RO_GDS" \
+  --ro-cdl "$RO_CDL" \
+  --oa-layout-dir "$OA_LAYOUT" \
+  --oa-schematic-dir "$OA_SCHEMATIC" \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/env_fail.stdout" 2>&1
+ENV_FAIL_RC=$?
+set -e
+test "$ENV_FAIL_RC" -ne 0
+grep -qx 'CADENCE_ENV_RC=23' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'CADENCE_ENV_STATUS=FAIL' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'PVS_RC=99' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'CADENCE_ENV_STATUS=FAIL' \
+  "$WORK/ro6_standalone_env_fail/reports/operator_gate_pvs_ro6_standalone_lvs.rpt"
+grep -q 'PVS_RO6_STANDALONE_LVS' "$TMP_ROOT/env_fail.publish.args"
 
 echo "MPTDC_RO6_STANDALONE_LVS_DRIVER_TEST=PASS"
