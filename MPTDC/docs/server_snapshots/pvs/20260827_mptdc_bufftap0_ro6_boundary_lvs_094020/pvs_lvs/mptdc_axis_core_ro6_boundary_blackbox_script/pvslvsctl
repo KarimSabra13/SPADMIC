@@ -1,0 +1,39 @@
+text_depth -primary;
+virtual_connect -colon no;
+virtual_connect -semicolon_as_colon yes;
+virtual_connect -noname;
+virtual_connect -report no;
+virtual_connect -depth -primary;
+lvs_ignore_ports no;
+lvs_expand_cell_on_error no;
+lvs_break_ambig_max 32;
+lvs_abort -softchk no;
+lvs_abort -supply_error no;
+lvs_abort -check_device_for_property_rule no;
+lvs_power_name "VDD" "VDD_LEFT" "VDD_RIGHT" "VDD!" "vdd" "vdd!" "vddi" "vddi!";
+lvs_ground_name "VSS" "VSS_LEFT" "VSS_RIGHT" "VSS!" "vss" "vss!" "gndi" "gndi!";
+lvs_find_shorts yes;
+sconnect_upper_shape_count no;
+lvs_report_file "mptdc_axis_core_lvs.sum";
+lvs_report_max 1000 -mismatched_net_limit 100;
+lvs_run_erc_checks no;
+lvs_report_opt -none;
+keep_layers -none;
+schematic_path "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_094020/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v" verilog -keep_backslash;
+schematic_path "/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/cdl/xh018_D_CELLS_JIHD.cdl" cdl;
+abort_on_layout_error yes;
+layout_format gdsii;
+layout_path "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_094020/outputs/mptdc_axis_core_merged_stdcell_ro6.gds";
+//=== Configurator controls ===
+//   LVS CONFIGURATION  
+//   #Select Floating Checks#  
+#UNDEFINE FloatingGate
+#UNDEFINE FloatingWell
+//   #Special Diode Extraction#  
+#UNDEFINE ParaDioAsDevDio
+//   #Select DUMMY Pattern Generation#   
+#UNDEFINE DUMMY_FILL
+//=== End of configurator controls ===
+
+// MPTDC diagnostic digital-top boundary comparison; not standalone RO LVS.
+lvs_black_box RO_tune6;

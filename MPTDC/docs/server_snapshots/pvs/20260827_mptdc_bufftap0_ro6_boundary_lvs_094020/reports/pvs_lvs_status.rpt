@@ -1,0 +1,6 @@
+LABEL=MPTDC_PVS_LVS_GATE
+STATUS=FAIL
+PVS_LVS_STATUS=NOT_PROVEN
+PVS_RC=0
+ERROR=.config.rul missing or empty: /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_094020/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script/.config.rul
+FINAL_PHYSICAL_SIGNOFF_READY=NO
