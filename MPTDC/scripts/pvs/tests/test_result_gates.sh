@@ -48,6 +48,10 @@ grep -Fq 'mptdc_pvs_rewrite_drc_density_control "$NEW_DRC_RUN/pvsdrcctl" "$VARIA
 grep -Fq 'pvs_drc_${VARIANT}_control_rewrite.rpt' "$DRC_REPLAY_SCRIPT"
 grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP "$STREAM_MAP"' "$PREP_SCRIPT"
 grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" PATCHED_STREAMOUT "$PATCHED_STREAMOUT"' "$PREP_SCRIPT"
+grep -Fq -- '--filler-report "$FILLER_REPORT"' "$PREP_SCRIPT"
+grep -Fq -- '--row-infra-report "$ROW_INFRA_REPORT"' "$PREP_SCRIPT"
+grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" FILLER_REPORT "$FILLER_REPORT"' "$PREP_SCRIPT"
+grep -Fq 'mptdc_pvs_append_hash "$HASH_MANIFEST" ROW_INFRA_REPORT "$ROW_INFRA_REPORT"' "$PREP_SCRIPT"
 
 STREAM_MAP_SET_LINE="$(grep -n 'set ::env(STREAM_MAP) $stream_map' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"
 STD_GDS_SET_LINE="$(grep -n 'set ::env(STD_GDS) $dcell_gds' "$PREP_SCRIPT" | head -1 | cut -d: -f1)"

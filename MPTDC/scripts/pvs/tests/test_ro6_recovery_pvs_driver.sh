@@ -77,6 +77,16 @@ COMMON_PHYSICAL_GATE=1
 PHYSICAL_GATE_MODE=STRICT_CLEAN
 DECISION=PASS_CONTINUE
 EOF
+cat > "$(dirname "$PHYSICAL_GATE")/filler_status.rpt" <<'EOF'
+FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
+FILLER_COUNT=3
+FILLER_INSERTION_STATUS=PASS
+EOF
+cat > "$(dirname "$PHYSICAL_GATE")/row_infra_insertion.rpt" <<'EOF'
+FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
+TIE_HIGH_CANDIDATES=LOGIC1DJIHD LOGIC1LVJIHD
+TIE_LOW_CANDIDATES=LOGIC0DJIHD LOGIC0LVJIHD
+EOF
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
@@ -94,16 +104,20 @@ cat > "$FAKE_PREP" <<'EOF'
 #!/usr/bin/env bash
 set -eu
 test "${MPTDC_CADENCE_FIXTURE_LOADED:-0}" = 1
-run_id=""; work=""; checkpoint=""
+run_id=""; work=""; checkpoint=""; filler_report=""; row_infra_report=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id) run_id="$2"; shift 2 ;;
     --innovus-work) work="$2"; shift 2 ;;
     --checkpoint) checkpoint="$2"; shift 2 ;;
+    --filler-report) filler_report="$2"; shift 2 ;;
+    --row-infra-report) row_infra_report="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
 test -d "$checkpoint"
+test -s "$filler_report"
+test -s "$row_infra_report"
 if [[ -n "${EXPECTED_PREP_CHECKPOINT:-}" ]]; then
   test "$checkpoint" = "$EXPECTED_PREP_CHECKPOINT"
 fi
@@ -409,6 +423,16 @@ EOF
   printf '2\tm2\t{385.37 328.3 385.75 328.58}\tMET1\tGeometry\tMinimal_Area\tRegular Wire of Net u_core_n_57556 Actual: 0.10640000 Required: 0.20200000\n'
 } > "$MINAREA_SOURCE_REPORTS/route_drc_markers.tsv"
 write_exact_pg_wire_end_report "$MINAREA_SOURCE_REPORTS/route_connectivity_special_detailed.rpt"
+cat > "$MINAREA_SOURCE_REPORTS/filler_status.rpt" <<'EOF'
+FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
+FILLER_COUNT=3
+FILLER_INSERTION_STATUS=PASS
+EOF
+cat > "$MINAREA_SOURCE_REPORTS/row_infra_insertion.rpt" <<'EOF'
+FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
+TIE_HIGH_CANDIDATES=LOGIC1DJIHD LOGIC1LVJIHD
+TIE_LOW_CANDIDATES=LOGIC0DJIHD LOGIC0LVJIHD
+EOF
 
 cat > "$MINAREA_FAILED_V6R_REPORTS/operator_gate_route_min_area_patch_trial.rpt" <<EOF
 STEP=ROUTE_MIN_AREA_PATCH_TRIAL

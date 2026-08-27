@@ -461,6 +461,32 @@ tracked_physical_gate_passes() {
   tracked_candidate_fingerprint_passes "$report"
 }
 
+tracked_physical_instance_contract_passes() {
+  local source_run_id="$1"
+  local reports_dir filler row filler_rel row_rel
+  local expected_fillers expected_tie_high expected_tie_low count
+
+  reports_dir="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_run_id/reports"
+  filler="$reports_dir/filler_status.rpt"
+  row="$reports_dir/row_infra_insertion.rpt"
+  filler_rel="${filler#"$REPO_ROOT"/}"
+  row_rel="${row#"$REPO_ROOT"/}"
+  git -C "$REPO_ROOT" ls-files --error-unmatch "$filler_rel" >/dev/null 2>&1 || return 1
+  git -C "$REPO_ROOT" ls-files --error-unmatch "$row_rel" >/dev/null 2>&1 || return 1
+  [[ -s "$filler" && -s "$row" ]] || return 1
+
+  expected_fillers="FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD"
+  expected_tie_high="LOGIC1DJIHD LOGIC1LVJIHD"
+  expected_tie_low="LOGIC0DJIHD LOGIC0LVJIHD"
+  [[ "$(report_value "$filler" FILLER_INSERTION_STATUS)" == PASS ]] || return 1
+  [[ "$(report_value "$filler" FILLER_CANDIDATES)" == "$expected_fillers" ]] || return 1
+  [[ "$(report_value "$row" FILLER_CANDIDATES)" == "$expected_fillers" ]] || return 1
+  [[ "$(report_value "$row" TIE_HIGH_CANDIDATES)" == "$expected_tie_high" ]] || return 1
+  [[ "$(report_value "$row" TIE_LOW_CANDIDATES)" == "$expected_tie_low" ]] || return 1
+  count="$(report_value "$filler" FILLER_COUNT)"
+  [[ "$count" =~ ^[0-9]+$ && "$count" -gt 0 ]]
+}
+
 publish_stage() {
   local snapshot_id="$1"
   local step_label="$2"
@@ -540,23 +566,31 @@ if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
   SOURCE_PNR_RUN_ID="$(report_value "$FAILED_V6R_GATE" SOURCE_PNR_RUN_ID)"
   if [[ "$SOURCE_PNR_RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]] && \
      tracked_failed_v6r_gate_passes "$FAILED_V6R_GATE" "$SOURCE_PNR_RUN_ID" && \
-     tracked_two_minarea_source_passes "$SOURCE_PNR_RUN_ID"; then
+     tracked_two_minarea_source_passes "$SOURCE_PNR_RUN_ID" && \
+     tracked_physical_instance_contract_passes "$SOURCE_PNR_RUN_ID"; then
     CANDIDATE_GATE_STATUS=PASS
   fi
 elif git -C "$REPO_ROOT" ls-files --error-unmatch "$MINAREA_REPAIR_GATE_REL" >/dev/null 2>&1 && \
      [[ -s "$MINAREA_REPAIR_GATE" ]]; then
   PNR_CANDIDATE_KIND=MINAREA_V8_CANONICAL_REPLAY
   SOURCE_CKPT="$PNR_DIR/checkpoints/repaired_route.enc.dat"
-  if tracked_minarea_repair_gate_passes "$MINAREA_REPAIR_GATE"; then
+  SOURCE_PNR_RUN_ID="$(report_value "$MINAREA_REPAIR_GATE" SOURCE_PNR_RUN_ID)"
+  if tracked_minarea_repair_gate_passes "$MINAREA_REPAIR_GATE" && \
+     tracked_physical_instance_contract_passes "$SOURCE_PNR_RUN_ID"; then
     CANDIDATE_GATE_STATUS=PASS
   fi
 else
   PNR_CANDIDATE_KIND=PHYSICAL_ROUTE
   SOURCE_CKPT="$PNR_DIR/checkpoints/04_route.enc.dat"
-  if tracked_physical_gate_passes "$PHYSICAL_GATE"; then
+  SOURCE_PNR_RUN_ID="$PNR_RUN_ID"
+  if tracked_physical_gate_passes "$PHYSICAL_GATE" && \
+     tracked_physical_instance_contract_passes "$SOURCE_PNR_RUN_ID"; then
     CANDIDATE_GATE_STATUS=PASS
   fi
 fi
+
+FILLER_REPORT="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PNR_RUN_ID/reports/filler_status.rpt"
+ROW_INFRA_REPORT="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PNR_RUN_ID/reports/row_infra_insertion.rpt"
 
 echo "PNR_RUN_ID=$PNR_RUN_ID"
 echo "PNR_DIR=$PNR_DIR"
@@ -609,6 +643,8 @@ bash "$PREP_SCRIPT" \
   --run-id "$PVS_RUN_ID" \
   --innovus-work "$INNOVUS_WORK" \
   --ro-gds "$RO_GDS" \
+  --filler-report "$FILLER_REPORT" \
+  --row-infra-report "$ROW_INFRA_REPORT" \
   --strict-attribution \
   --expected-head "$EXPECTED_HEAD_VALUE"
 PREP_RC=$?

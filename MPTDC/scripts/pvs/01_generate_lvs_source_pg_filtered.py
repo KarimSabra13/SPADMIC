@@ -3,9 +3,11 @@
 
 The input must be the Innovus ``saveNetlist -phys -includePowerGround`` output.
 Foundry module definitions are removed only when the exact module name exists
-as a canonical CDL ``.SUBCKT``. Physical instances remain in the top module.
-The two RO_tune6 instances and wrapper are rewritten to scalar angle-bracket
-pins so PVS compares the same logical pin index on layout and schematic.
+as a canonical CDL ``.SUBCKT``. Device-empty filler instances are removed only
+when their exact masters and total count are bound to tracked Innovus reports;
+all other physical instances remain in the top module. The two RO_tune6
+instances and wrapper are rewritten to scalar angle-bracket pins so PVS
+compares the same logical pin index on layout and schematic.
 """
 
 from __future__ import annotations
@@ -86,6 +88,80 @@ def read_cdl_subckts(paths: Sequence[Path]) -> set[str]:
     if not names:
         raise ValueError("canonical CDL set contains no .SUBCKT definitions")
     return names
+
+
+def read_key_value_report(path: Path, keys: set[str]) -> dict[str, str]:
+    if not path.is_file():
+        raise ValueError(f"physical-infrastructure report does not exist: {path}")
+    values: dict[str, str] = {}
+    for line_number, raw_line in enumerate(
+        path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1
+    ):
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key not in keys:
+            continue
+        if key in values:
+            raise ValueError(f"duplicate {key} in {path} at line {line_number}")
+        values[key] = value.strip()
+    return values
+
+
+def report_identifiers(values: dict[str, str], key: str, path: Path) -> list[str]:
+    raw = values.get(key, "")
+    names = raw.split()
+    if not names:
+        raise ValueError(f"{key} is missing or empty in {path}")
+    if len(names) != len(set(names)):
+        raise ValueError(f"{key} contains duplicate masters in {path}")
+    invalid = [
+        name
+        for name in names
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_$]*", name) is None
+    ]
+    if invalid:
+        raise ValueError(f"{key} contains invalid Verilog masters in {path}: {invalid}")
+    return names
+
+
+def read_physical_instance_contract(
+    filler_report: Path, row_infra_report: Path
+) -> tuple[list[str], int, list[str]]:
+    filler_values = read_key_value_report(
+        filler_report,
+        {"FILLER_CANDIDATES", "FILLER_COUNT", "FILLER_INSERTION_STATUS"},
+    )
+    row_values = read_key_value_report(
+        row_infra_report,
+        {"FILLER_CANDIDATES", "TIE_HIGH_CANDIDATES", "TIE_LOW_CANDIDATES"},
+    )
+
+    if filler_values.get("FILLER_INSERTION_STATUS") != "PASS":
+        raise ValueError(f"filler insertion is not PASS in {filler_report}")
+    filler_names = report_identifiers(filler_values, "FILLER_CANDIDATES", filler_report)
+    row_filler_names = report_identifiers(row_values, "FILLER_CANDIDATES", row_infra_report)
+    if row_filler_names != filler_names:
+        raise ValueError(
+            "filler candidate contract differs between filler and row-infrastructure reports"
+        )
+
+    raw_count = filler_values.get("FILLER_COUNT", "")
+    if re.fullmatch(r"[0-9]+", raw_count) is None:
+        raise ValueError(f"FILLER_COUNT is missing or non-numeric in {filler_report}")
+    filler_count = int(raw_count)
+
+    tie_high = report_identifiers(row_values, "TIE_HIGH_CANDIDATES", row_infra_report)
+    tie_low = report_identifiers(row_values, "TIE_LOW_CANDIDATES", row_infra_report)
+    tie_names = tie_high + tie_low
+    if len(tie_names) != len(set(tie_names)):
+        raise ValueError(f"tie candidate sets overlap in {row_infra_report}")
+    overlap = sorted(set(filler_names) & set(tie_names))
+    if overlap:
+        raise ValueError(f"filler and tie candidate sets overlap: {overlap}")
+    return filler_names, filler_count, tie_names
 
 
 def remove_cdl_module_definitions(
@@ -351,6 +427,63 @@ def find_top_block(text: str, top: str) -> ModuleBlock:
     return matches[0]
 
 
+def remove_exact_top_instances(
+    text: str, top: str, target_masters: Sequence[str]
+) -> tuple[str, Counter[str], list[str]]:
+    """Remove single-instance statements for an exact, report-bound master set."""
+    top_block = find_top_block(text, top)
+    block_text = top_block.text
+    masked = mask_comments(block_text)
+    target_set = set(target_masters)
+    if not target_set:
+        raise ValueError("physical-only master set is empty")
+    master_alternation = "|".join(
+        re.escape(name) for name in sorted(target_set, key=len, reverse=True)
+    )
+    master_pattern = re.compile(
+        rf"^[ \t]*({master_alternation})[ \t]+",
+        re.MULTILINE,
+    )
+    replacements: list[tuple[int, int, str]] = []
+    removed_counts: Counter[str] = Counter()
+    removed_instances: list[str] = []
+    cursor = 0
+
+    while True:
+        match = master_pattern.search(masked, cursor)
+        if match is None:
+            break
+        master = match.group(1)
+        index = skip_space(masked, match.end())
+        if index < len(masked) and masked[index] == "#":
+            index = skip_space(masked, index + 1)
+            if index >= len(masked) or masked[index] != "(":
+                raise ValueError(f"malformed parameter override for physical-only master {master}")
+            index = skip_space(masked, find_matching_paren(masked, index) + 1)
+        raw_instance, index = read_identifier(masked, index)
+        instance_name = unescape_identifier(raw_instance)
+        index = skip_space(masked, index)
+        if index >= len(masked) or masked[index] != "(":
+            raise ValueError(f"physical-only instance {instance_name} has no connection list")
+        close = find_matching_paren(masked, index)
+        end = skip_space(masked, close + 1)
+        if end >= len(masked) or masked[end] != ";":
+            raise ValueError(
+                f"physical-only instance {instance_name} is not a single-instance statement"
+            )
+        statement_end = end + 1
+        replacement = "\n" * block_text[match.start() : statement_end].count("\n")
+        replacements.append((match.start(), statement_end, replacement))
+        removed_counts[master] += 1
+        removed_instances.append(instance_name)
+        cursor = statement_end
+
+    for start, end, replacement in reversed(replacements):
+        block_text = block_text[:start] + replacement + block_text[end:]
+    updated = text[: top_block.start] + block_text + text[top_block.end :]
+    return updated, removed_counts, removed_instances
+
+
 def instance_masters(module_text: str) -> Counter[str]:
     masked = mask_comments(module_text)
     counts: Counter[str] = Counter()
@@ -380,11 +513,31 @@ def sha256(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", required=True, type=Path, help="Innovus physical PG Verilog")
+    parser.add_argument(
+        "--input", required=True, type=Path, help="Innovus physical PG Verilog"
+    )
     parser.add_argument("--output", required=True, type=Path, help="Attributable Verilog output")
     parser.add_argument("--hcell", required=True, type=Path, help="PVS HCell output")
     parser.add_argument("--report", required=True, type=Path, help="Source-contract report")
-    parser.add_argument("--cdl", required=True, action="append", type=Path, help="Canonical CDL; repeatable")
+    parser.add_argument(
+        "--cdl",
+        required=True,
+        action="append",
+        type=Path,
+        help="Canonical CDL; repeatable",
+    )
+    parser.add_argument(
+        "--filler-report",
+        required=True,
+        type=Path,
+        help="Tracked Innovus filler_status.rpt for the checkpoint lineage",
+    )
+    parser.add_argument(
+        "--row-infra-report",
+        required=True,
+        type=Path,
+        help="Tracked Innovus row_infra_insertion.rpt for filler/tie master sets",
+    )
     parser.add_argument("--top", default="mptdc_axis_core")
     parser.add_argument("--expected-ro-instance-count", type=int, default=2)
     parser.add_argument(
@@ -402,6 +555,24 @@ def main() -> int:
             raise ValueError("input filename must identify saveNetlist -phys -includePowerGround")
         source = args.input.read_text(encoding="utf-8", errors="replace")
         cdl_names = read_cdl_subckts(args.cdl)
+        filler_names, expected_filler_count, tie_candidates = read_physical_instance_contract(
+            args.filler_report, args.row_infra_report
+        )
+        missing_filler_cdl = sorted(set(filler_names) - cdl_names)
+        if missing_filler_cdl:
+            raise ValueError(
+                f"physical-only filler masters are absent from canonical CDL: {missing_filler_cdl}"
+            )
+
+        original_top = find_top_block(source, args.top)
+        original_masters = instance_masters(original_top.text)
+        actual_filler_count = sum(original_masters[name] for name in filler_names)
+        if actual_filler_count != expected_filler_count:
+            raise ValueError(
+                "physical-only filler count does not match tracked report: "
+                f"expected={expected_filler_count} actual={actual_filler_count}"
+            )
+
         filtered, removed, original_blocks = remove_cdl_module_definitions(source, cdl_names)
         filtered, ro_instances = rewrite_ro_instances(filtered)
         if len(ro_instances) != args.expected_ro_instance_count:
@@ -418,6 +589,20 @@ def main() -> int:
             )
         if args.expected_ro_instance:
             instance_name_status = "PASS"
+        filtered, removed_fillers, removed_filler_instances = remove_exact_top_instances(
+            filtered, args.top, filler_names
+        )
+        if removed_fillers != Counter(
+            {name: original_masters[name] for name in filler_names if original_masters[name]}
+        ):
+            raise ValueError(
+                "physical-only filler removal did not preserve the exact per-master count contract"
+            )
+        if len(removed_filler_instances) != expected_filler_count:
+            raise ValueError(
+                "physical-only filler removal count mismatch: "
+                f"expected={expected_filler_count} removed={len(removed_filler_instances)}"
+            )
         filtered = normalize_blank_lines(filtered) + ro_wrapper()
 
         retained_modules = {block.name for block in module_blocks(filtered)}
@@ -425,11 +610,22 @@ def main() -> int:
         masters = instance_masters(top_block.text)
         unresolved = sorted(set(masters) - retained_modules - cdl_names)
         if unresolved:
-            raise ValueError(f"active instance masters lack Verilog or canonical CDL definitions: {unresolved}")
+            raise ValueError(
+                "active instance masters lack Verilog or canonical CDL definitions: "
+                f"{unresolved}"
+            )
 
-        original_top = find_top_block(source, args.top)
-        original_masters = instance_masters(original_top.text)
-        tie_master_names = sorted(name for name in original_masters if "TIE" in name.upper())
+        expected_retained_masters = original_masters.copy()
+        for name in filler_names:
+            expected_retained_masters.pop(name, None)
+        if masters != expected_retained_masters:
+            raise ValueError(
+                "non-filler physical instance preservation failed: "
+                f"expected={sorted(expected_retained_masters.items())} "
+                f"actual={sorted(masters.items())}"
+            )
+
+        tie_master_names = sorted(name for name in tie_candidates if original_masters[name])
         for name in tie_master_names:
             if masters[name] != original_masters[name]:
                 raise ValueError(f"physical tie instances were not preserved for {name}")
@@ -451,6 +647,17 @@ def main() -> int:
             f"HCELL={args.hcell}",
             f"TOP={args.top}",
             "MODULE_REMOVAL_POLICY=EXACT_CANONICAL_CDL_MEMBERSHIP",
+            "PHYSICAL_ONLY_INSTANCE_REMOVAL_POLICY=EXACT_TRACKED_FILLER_REPORT_MASTER_SET",
+            f"FILLER_REPORT={args.filler_report}",
+            f"FILLER_REPORT_SHA256={sha256(args.filler_report)}",
+            f"ROW_INFRA_REPORT={args.row_infra_report}",
+            f"ROW_INFRA_REPORT_SHA256={sha256(args.row_infra_report)}",
+            f"PHYSICAL_ONLY_FILLER_MASTER_COUNT={len(filler_names)}",
+            f"PHYSICAL_ONLY_FILLER_MASTER_SET={','.join(filler_names)}",
+            f"PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_EXPECTED={expected_filler_count}",
+            f"PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_INPUT={actual_filler_count}",
+            f"PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_REMOVED={len(removed_filler_instances)}",
+            "PHYSICAL_ONLY_FILLER_REMOVAL_STATUS=PASS",
             "RO6_PIN_NORMALIZATION=EXACT_SAME_INDEX_SCALAR_ANGLE_PORTS",
             f"CANONICAL_CDL_COUNT={len(args.cdl)}",
             f"CANONICAL_SUBCKT_COUNT={len(cdl_names)}",
@@ -460,17 +667,25 @@ def main() -> int:
             f"RO_TUNE6_INSTANCE_NAMES={','.join(ro_instances)}",
             f"RO_TUNE6_INSTANCE_NAME_STATUS={instance_name_status}",
             "RO_TUNE6_SCALAR_PIN_COUNT=19",
+            f"INPUT_TOP_INSTANCE_COUNT={sum(original_masters.values())}",
             f"TOP_INSTANCE_COUNT={sum(masters.values())}",
             f"TOP_INSTANCE_MASTER_COUNT={len(masters)}",
-            f"CDL_BACKED_TOP_INSTANCE_COUNT={sum(count for name, count in masters.items() if name in cdl_names)}",
+            "CDL_BACKED_TOP_INSTANCE_COUNT="
+            f"{sum(count for name, count in masters.items() if name in cdl_names)}",
+            f"PHYSICAL_TIE_CANDIDATE_COUNT={len(tie_candidates)}",
+            f"PHYSICAL_TIE_CANDIDATE_SET={','.join(tie_candidates)}",
             f"PHYSICAL_TIE_MASTER_COUNT={len(tie_master_names)}",
             f"PHYSICAL_TIE_INSTANCE_COUNT={sum(original_masters[name] for name in tie_master_names)}",
+            "PHYSICAL_TIE_PRESERVATION_STATUS=PASS",
             "UNRESOLVED_ACTIVE_MASTER_COUNT=0",
         ]
         report_lines.extend(f"CANONICAL_CDL={path}" for path in args.cdl)
         report_lines.extend(f"REMOVED_MODULE={name}" for name in removed)
         report_lines.extend(
             f"PHYSICAL_TIE_MASTER={name}:{original_masters[name]}" for name in tie_master_names
+        )
+        report_lines.extend(
+            f"PHYSICAL_ONLY_FILLER_MASTER={name}:{removed_fillers[name]}" for name in filler_names
         )
         write_lines(args.report, report_lines)
         return 0

@@ -183,8 +183,10 @@ classify the four PG opens before any further geometry edit.
    exact standalone PVS LVS MATCH, exact 19-pin CDL parity, no blackbox, equal
    copied hashes, and unchanged OA fingerprints.
 7. Regenerate the digital-top source from Innovus physical PG netlist output
-   using exact canonical-CDL module membership. Preserve all physical ties and
-   scalarize only the two named RO instances with same-index angle pins.
+   using exact canonical-CDL module membership. Remove only the exact tracked
+   filler-master set when its netlist count matches the immutable filler report,
+   preserve every other instance and every observed report-declared physical
+   tie, and scalarize only the two named RO instances with same-index angle pins.
 8. Run the diagnostic RO boundary LVS with the same RO GDS hash. Accept only a
    full boundary MATCH or the exact four-open `RO6_PG_OPEN_ONLY` class with
    zero RO pin, tie, net, or instance mismatch residue.
@@ -223,7 +225,7 @@ log tails are what make remote analysis possible.
 | Route geometry probe | exact published 3-DRC/1-short source signature, fresh single restore, no route-edit command, identical initial/final physical tuple, all three target nets and endpoint terms found, nearby PG shapes captured, command help/schema evidence present, exactly two tap0 pins | `innovus` |
 | Route geometry repair | retired diagnostic path; V4-V7 outputs are never downstream sources | `innovus` |
 | RO6 standalone LVS | fresh GDS/CDL, exact 19-pin CDL contract, OA fingerprints unchanged, no blackbox, explicit report-level MATCH, same GDS hash reserved for the boundary source | `pvs` |
-| Physical LVS source | physical PG source kind, exact canonical-CDL removal, all physical ties preserved, two exact same-index scalar RO instances, unresolved active masters 0 | `pvs` |
+| Physical LVS source | physical PG source kind, exact canonical-CDL removal, report-bound filler expected/input/removed counts equal, all observed physical ties preserved, two exact same-index scalar RO instances, unresolved active masters 0 | `pvs` |
 | RO6 boundary LVS | standalone MATCH bound by GDS hash, exact scalar source, blackbox applied, zero RO/tie namespace residue, and either MATCH or exact `RO6_PG_OPEN_ONLY` | `pvs` |
 | RO6 PG endpoint probe | exact PG-only boundary evidence, analyze mode only, 15 unchanged endpoints, zero edits, zero shorts and regular-connectivity failures | `innovus` |
 | PVS preparation | preparation PASS, strict attribution 1, physical source contract PASS, tap contract PASS, tap count 2, hash manifest present | `pvs` |
@@ -1560,6 +1562,8 @@ set +e
 
 SOURCE_CKPT=$PNR_DIR/checkpoints/04_route.enc.dat
 RO_GDS=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds
+FILLER_REPORT=MPTDC/docs/server_snapshots/innovus/$PNR_RUN/reports/filler_status.rpt
+ROW_INFRA_REPORT=MPTDC/docs/server_snapshots/innovus/$PNR_RUN/reports/row_infra_insertion.rpt
 PVS_RUN_ID=${PNR_RUN}_realro_pvs
 PVS_DIR=$MPTDC_INNOVUS_WORK/$PVS_RUN_ID
 
@@ -1572,6 +1576,8 @@ if [ "$PNR_DECISION" = "PASS_CONTINUE" ] && \
     --checkpoint "$SOURCE_CKPT" \
     --run-id "$PVS_RUN_ID" \
     --ro-gds "$RO_GDS" \
+    --filler-report "$FILLER_REPORT" \
+    --row-infra-report "$ROW_INFRA_REPORT" \
     --strict-attribution \
     --expected-head "$EXPECTED_HEAD"
   PREP_RC=$?
@@ -2511,6 +2517,11 @@ Use the exact same `RO_GDS` file that passed A. Replace
 `RO6_STANDALONE_RUN` with A's published run ID. This diagnostic run starts from
 the immutable failed-V6R one-marker checkpoint. It may return driver RC one at
 the unblackboxed LVS mismatch; that is not permission to continue by itself.
+For the current physical lineage, the source gate must prove that the exact
+eight report-declared `FEED*JIHD` masters account for 24,797 input instances and
+that exactly those 24,797 instances were removed. Every non-filler instance is
+preserved. An explicit zero physical-tie count is valid source evidence, but it
+does not waive the boundary requirement for zero `tie1` mismatch residue.
 
 ```bash
 set +e
@@ -2554,7 +2565,7 @@ echo "PVS_RUN=$PVS_RUN"
 echo "PVS_DRIVER_RC=$PVS_DRIVER_RC"
 grep -E '^(PVS_RECOVERY_STAGE|PVS_RUN_CLASS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -20
-grep -E '^(LVS_SOURCE_CONTRACT_STATUS|SOURCE_KIND|RO6_PIN_NORMALIZATION|RO_TUNE6_INSTANCE_NAME_STATUS|PHYSICAL_TIE_INSTANCE_COUNT|UNRESOLVED_ACTIVE_MASTER_COUNT)=' \
+grep -E '^(LVS_SOURCE_CONTRACT_STATUS|SOURCE_KIND|MODULE_REMOVAL_POLICY|PHYSICAL_ONLY_INSTANCE_REMOVAL_POLICY|PHYSICAL_ONLY_FILLER_(MASTER_COUNT|MASTER_SET|INSTANCE_COUNT_EXPECTED|INSTANCE_COUNT_INPUT|INSTANCE_COUNT_REMOVED|REMOVAL_STATUS)|RO6_PIN_NORMALIZATION|RO_TUNE6_INSTANCE_NAME_STATUS|PHYSICAL_TIE_(CANDIDATE_COUNT|CANDIDATE_SET|MASTER_COUNT|INSTANCE_COUNT|PRESERVATION_STATUS)|UNRESOLVED_ACTIVE_MASTER_COUNT)=' \
   "$PVS_DIR/reports/lvs_source_filter.rpt" 2>/dev/null
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```
@@ -2562,8 +2573,9 @@ echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 Stop and send the compact block. The next boundary driver independently
 requires one raw `.cls` `MISMATCH`, PVS tool RC zero, the unblackboxed RO
 signature, a published physical-source hash manifest, and the same RO GDS hash
-as A. The source contract must say physical `saveNetlist`, exact same-index
-scalar angle ports, preserved physical ties, and zero unresolved masters.
+as A. The source contract must say physical `saveNetlist`, exact report-bound
+filler removal, exact same-index scalar angle ports, preserved observed physical
+ties, and zero unresolved masters.
 
 #### C. Prove the Exact Digital-Top RO6 Boundary
 
@@ -2608,7 +2620,7 @@ fi
 echo "===== SEND BACK ====="
 echo "BOUNDARY_PVS_RUN=$BOUNDARY_PVS_RUN"
 echo "BOUNDARY_DRIVER_RC=$BOUNDARY_DRIVER_RC"
-grep -E '^(PVS_BOUNDARY_RECOVERY_STATUS|SOURCE_CONTRACT_STATUS|SOURCE_PHYSICAL_TIE_INSTANCE_COUNT|PVS_LVS|LVS_BLACKBOX_(RULE|APPLICATION)_STATUS|LVS_BUS_PIN_MAP_RULE_STATUS|RO6_BLACKBOX_CELL_MATCH_STATUS|RO6_(ANGLE|SQUARE)_BUS_MISSING_PIN_COUNT|TIE1_(UNMATCHED_PIN|MISMATCHED_NET|MISMATCHED_INSTANCE_CASCADE)_COUNT|LAYOUT_OPEN_NET_COUNT|MISMATCHED_(NET|INSTANCE)_RECORD_COUNT|BOUNDARY_REMAINDER_CLASS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+grep -E '^(PVS_BOUNDARY_RECOVERY_STATUS|SOURCE_CONTRACT_STATUS|SOURCE_FILLER_REMOVAL_STATUS|SOURCE_PHYSICAL_TIE_INSTANCE_COUNT|PVS_LVS|LVS_BLACKBOX_(RULE|APPLICATION)_STATUS|LVS_BUS_PIN_MAP_RULE_STATUS|RO6_BLACKBOX_CELL_MATCH_STATUS|RO6_(ANGLE|SQUARE)_BUS_MISSING_PIN_COUNT|TIE1_(UNMATCHED_PIN|MISMATCHED_NET|MISMATCHED_INSTANCE_CASCADE)_COUNT|LAYOUT_OPEN_NET_COUNT|MISMATCHED_(NET|INSTANCE)_RECORD_COUNT|BOUNDARY_REMAINDER_CLASS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -40
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```

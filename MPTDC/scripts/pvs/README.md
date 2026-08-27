@@ -122,8 +122,13 @@ Input preparation now builds LVS source only from Innovus
 
 - removes module definitions only for exact masters present in the selected
   canonical CDL set, plus the protected `RO_tune6` wrapper;
-- preserves top-level instances, including physical tie instances;
-- rejects unresolved active and tie masters;
+- removes top-level filler instances only for the exact master list and total
+  count jointly bound by the tracked `filler_status.rpt` and
+  `row_infra_insertion.rpt` from the checkpoint lineage;
+- preserves every non-filler top-level instance, including every observed
+  report-declared physical tie instance, and accepts an explicit zero tie count;
+- rejects filler-count drift, report-contract drift, unresolved active masters,
+  and any observed tie master missing from the canonical CDL;
 - scalarizes only `u_core_u_osc_fast_u_ro_tune4` and
   `u_core_u_osc_slow_u_ro_tune4` to exact same-index escaped pins `code<0>`
   through `code<7>` and `S<0>` through `S<7>`;
@@ -131,9 +136,10 @@ Input preparation now builds LVS source only from Innovus
   instances.
 
 The boundary replay does not use position-based bus mapping and does not hide
-`tie1`. A diagnostic continuation is valid only for either an explicit top
-`MATCH` or the exact four-open `RO6_PG_OPEN_ONLY` remainder with zero bus,
-tie, net, and instance mismatch residue.
+`tie1`. Zero physical tie instances is not a waiver: the boundary result must
+still have zero tie mismatch residue. A diagnostic continuation is valid only
+for either an explicit top `MATCH` or the exact four-open `RO6_PG_OPEN_ONLY`
+remainder with zero bus, tie, net, and instance mismatch residue.
 
 The only dirty-checkpoint exception is explicit diagnostic mode:
 
@@ -160,6 +166,8 @@ MPTDC/scripts/pvs/00_prepare_pvs_inputs_from_checkpoint.sh \
   --checkpoint "$SOURCE_CKPT" \
   --run-id "$PVS_RUN_ID" \
   --ro-gds "$RO_GDS" \
+  --filler-report "$FILLER_REPORT" \
+  --row-infra-report "$ROW_INFRA_REPORT" \
   --strict-attribution \
   --expected-head "$EXPECTED_HEAD"
 PREP_RC=$?

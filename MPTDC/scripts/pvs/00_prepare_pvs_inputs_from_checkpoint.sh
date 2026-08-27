@@ -28,6 +28,8 @@ STREAMOUT_TEMPLATE="${MPTDC_PVS_STREAMOUT_TEMPLATE:-$DEFAULT_OLD_BASE/work/strea
 DCELL_GDS="${MPTDC_PVS_DCELL_GDS:-$DEFAULT_DCELL_GDS}"
 DCELL_CDL="${MPTDC_PVS_DCELL_CDL:-$DEFAULT_DCELL_CDL}"
 RO_GDS="${MPTDC_PVS_RO_GDS:-$DEFAULT_OLD_BASE/merge_libs/RO_tune6_from_OA.gds}"
+FILLER_REPORT="${MPTDC_PVS_FILLER_REPORT:-}"
+ROW_INFRA_REPORT="${MPTDC_PVS_ROW_INFRA_REPORT:-}"
 ALLOW_GENERATED_STREAMOUT="${MPTDC_PVS_ALLOW_GENERATED_STREAMOUT:-0}"
 STREAM_MAP="${MPTDC_PVS_STREAM_MAP:-$DEFAULT_STREAM_MAP}"
 STRICT_ATTRIBUTION="${MPTDC_PVS_STRICT_ATTRIBUTION:-0}"
@@ -51,6 +53,8 @@ Options:
   --dcell-gds <path>           D_CELLS GDS merged into layout.
   --dcell-cdl <path>           D_CELLS CDL used by PVS LVS.
   --ro-gds <path>              RO_tune6 GDS merged into layout.
+  --filler-report <path>       Tracked filler_status.rpt for the checkpoint lineage.
+  --row-infra-report <path>    Tracked row_infra_insertion.rpt with filler/tie masters.
   --stream-map <path>          Official streamOut map. Defaults to XH018_1131.
   --strict-attribution         Require an explicitly supplied RO GDS and write
                                fail-closed pin/hash attribution evidence.
@@ -114,6 +118,14 @@ while [[ $# -gt 0 ]]; do
       RO_GDS_EXPLICIT=1
       shift 2
       ;;
+    --filler-report)
+      FILLER_REPORT="$(mptdc_pvs_abs_path "$REPO_ROOT" "${2:?missing --filler-report value}")"
+      shift 2
+      ;;
+    --row-infra-report)
+      ROW_INFRA_REPORT="$(mptdc_pvs_abs_path "$REPO_ROOT" "${2:?missing --row-infra-report value}")"
+      shift 2
+      ;;
     --stream-map)
       STREAM_MAP="$(mptdc_pvs_abs_path "$REPO_ROOT" "${2:?missing --stream-map value}")"
       shift 2
@@ -146,6 +158,8 @@ mptdc_pvs_require_file "$DCELL_GDS"
 mptdc_pvs_require_file "$DCELL_CDL"
 mptdc_pvs_require_file "$RO_GDS"
 mptdc_pvs_require_file "$STREAM_MAP"
+mptdc_pvs_require_file "$FILLER_REPORT"
+mptdc_pvs_require_file "$ROW_INFRA_REPORT"
 
 if [[ "$STRICT_ATTRIBUTION" == "1" && "$RO_GDS_EXPLICIT" != "1" ]]; then
   mptdc_pvs_die "--strict-attribution requires an explicit --ro-gds exported from the current RO_tune6 OA layout"
@@ -201,6 +215,8 @@ FINAL_DEF="$OUTPUT_DIR/${TOP_CELL}.def"
   echo "local_ro_gds: $RO_GDS"
   echo "stream_map: $STREAM_MAP"
   echo "strict_attribution: $STRICT_ATTRIBUTION"
+  echo "filler_report: $FILLER_REPORT"
+  echo "row_infra_report: $ROW_INFRA_REPORT"
   echo "top_only_gds: $TOP_ONLY_GDS"
   echo "merged_gds: $MERGED_GDS"
   echo "pg_verilog: $PG_V"
@@ -362,6 +378,8 @@ mptdc_pvs_require_file "$FINAL_DEF"
   --hcell "$HCELL" \
   --report "$FILTER_REPORT" \
   --cdl "$DCELL_CDL" \
+  --filler-report "$FILLER_REPORT" \
+  --row-infra-report "$ROW_INFRA_REPORT" \
   --top "$TOP_CELL" \
   --expected-ro-instance-count 2 \
   --expected-ro-instance u_core_u_osc_fast_u_ro_tune4 \
@@ -431,6 +449,8 @@ mptdc_pvs_append_hash "$HASH_MANIFEST" LVS_SOURCE_PHYSICAL_PG "$PHYS_PG_V"
 mptdc_pvs_append_hash "$HASH_MANIFEST" LVS_HCELL "$HCELL"
 mptdc_pvs_append_hash "$HASH_MANIFEST" DCELL_GDS "$DCELL_GDS"
 mptdc_pvs_append_hash "$HASH_MANIFEST" DCELL_CDL "$DCELL_CDL"
+mptdc_pvs_append_hash "$HASH_MANIFEST" FILLER_REPORT "$FILLER_REPORT"
+mptdc_pvs_append_hash "$HASH_MANIFEST" ROW_INFRA_REPORT "$ROW_INFRA_REPORT"
 mptdc_pvs_append_hash "$HASH_MANIFEST" ORIGINAL_RO_GDS "$ORIGINAL_RO_GDS"
 mptdc_pvs_append_hash "$HASH_MANIFEST" RO_GDS "$RO_GDS"
 mptdc_pvs_append_hash "$HASH_MANIFEST" STREAM_MAP "$STREAM_MAP"
@@ -458,6 +478,8 @@ mptdc_pvs_append_hash "$HASH_MANIFEST" TAP_PIN_REPORT "$TAP_PIN_REPORT"
   echo "ORIGINAL_RO_GDS=$ORIGINAL_RO_GDS"
   echo "RO_GDS=$RO_GDS"
   echo "FILTER_REPORT=$FILTER_REPORT"
+  echo "FILLER_REPORT=$FILLER_REPORT"
+  echo "ROW_INFRA_REPORT=$ROW_INFRA_REPORT"
   echo "STREAM_MAP_BINDING_REPORT=$STREAM_MAP_BINDING_REPORT"
   echo "STREAM_MAP_BINDING_MODE=$STREAM_MAP_BINDING_MODE"
   echo "TAP_PIN_REPORT=$TAP_PIN_REPORT"

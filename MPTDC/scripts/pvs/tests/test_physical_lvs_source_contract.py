@@ -22,8 +22,16 @@ module BUJIHDX1 (A, Y, VDD, VSS);
   inout VDD, VSS;
 endmodule
 
-module TIE1JIHDX1 (Y, VDD, VSS);
+module LOGIC1DJIHD (Y, VDD, VSS);
   output Y;
+  inout VDD, VSS;
+endmodule
+
+module FEED1JIHD (VDD, VSS);
+  inout VDD, VSS;
+endmodule
+
+module FEED2JIHD (VDD, VSS);
   inout VDD, VSS;
 endmodule
 
@@ -40,7 +48,10 @@ endmodule
 module mptdc_axis_core;
   wire VDD, VSS, rstb, tie1;
   wire [7:0] code_fast, code_slow, phase_fast, phase_slow;
-  TIE1JIHDX1 u_tie1 ( .Y(tie1), .VDD(VDD), .VSS(VSS) );
+  LOGIC1DJIHD u_tie1 ( .Y(tie1), .VDD(VDD), .VSS(VSS) );
+  FEED1JIHD MPTDC_FILL_0 ( .VDD(VDD), .VSS(VSS) );
+  FEED1JIHD MPTDC_FILL_1 ( .VDD(VDD), .VSS(VSS) );
+  FEED2JIHD MPTDC_FILL_2 ( .VDD(VDD), .VSS(VSS) );
   BUJIHDX1 u_buf ( .A(tie1), .Y(rstb), .VDD(VDD), .VSS(VSS) );
   helper u_helper ( .A(tie1), .Y() );
   RO_tune6 u_core_u_osc_fast_u_ro_tune4 (
@@ -58,7 +69,12 @@ endmodule
 
 
 class PhysicalLvsSourceContractTest(unittest.TestCase):
-    def run_contract(self, source: str = PHYSICAL_NETLIST) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path, tempfile.TemporaryDirectory[str]]:
+    def run_contract(
+        self,
+        source: str = PHYSICAL_NETLIST,
+        filler_count: int = 3,
+        row_fillers: str = "FEED1JIHD FEED2JIHD",
+    ) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path, tempfile.TemporaryDirectory[str]]:
         temp = tempfile.TemporaryDirectory(prefix="mptdc_lvs_source_contract.")
         root = Path(temp.name)
         input_path = root / "mptdc_axis_core_pnr_lvs_phys_with_pg.v"
@@ -66,10 +82,26 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
         hcell_path = root / "pvs_hcell_ro6.txt"
         report_path = root / "source_contract.rpt"
         cdl_path = root / "cells.cdl"
+        filler_report = root / "filler_status.rpt"
+        row_infra_report = root / "row_infra_insertion.rpt"
         input_path.write_text(source)
         cdl_path.write_text(
             ".SUBCKT BUJIHDX1 A Y VDD VSS\n.ENDS BUJIHDX1\n"
-            ".SUBCKT TIE1JIHDX1 Y VDD VSS\n.ENDS TIE1JIHDX1\n"
+            ".SUBCKT LOGIC1DJIHD Y VDD VSS\n.ENDS LOGIC1DJIHD\n"
+            ".SUBCKT FEED1JIHD VDD VSS\n.ENDS FEED1JIHD\n"
+            ".SUBCKT FEED2JIHD VDD VSS\n.ENDS FEED2JIHD\n"
+        )
+        filler_report.write_text(
+            "FILLER_CANDIDATES=FEED1JIHD FEED2JIHD\n"
+            f"FILLER_COUNT={filler_count}\n"
+            "FILLER_INSERTION_STATUS=PASS\n"
+            "POST_FILLER_ROUTE_COMMAND_PHASE=PRE_SROUTE\n"
+            "POST_FILLER_ROUTE_COMMAND_PHASE=POST_SROUTE\n"
+        )
+        row_infra_report.write_text(
+            f"FILLER_CANDIDATES={row_fillers}\n"
+            "TIE_HIGH_CANDIDATES=LOGIC1DJIHD\n"
+            "TIE_LOW_CANDIDATES=LOGIC0DJIHD\n"
         )
         result = subprocess.run(
             [
@@ -79,6 +111,8 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
                 "--hcell", str(hcell_path),
                 "--report", str(report_path),
                 "--cdl", str(cdl_path),
+                "--filler-report", str(filler_report),
+                "--row-infra-report", str(row_infra_report),
                 "--expected-ro-instance", "u_core_u_osc_fast_u_ro_tune4",
                 "--expected-ro-instance", "u_core_u_osc_slow_u_ro_tune4",
             ],
@@ -99,7 +133,10 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
         self.assertNotIn("module BUJIHDX1", output)
         self.assertNotIn("module TIE1JIHDX1", output)
         self.assertIn("module helper", output)
-        self.assertIn("TIE1JIHDX1 u_tie1", output)
+        self.assertIn("LOGIC1DJIHD u_tie1", output)
+        self.assertNotIn("MPTDC_FILL_0", output)
+        self.assertNotIn("MPTDC_FILL_1", output)
+        self.assertNotIn("MPTDC_FILL_2", output)
         self.assertEqual(output.count("RO_tune6 u_"), 2)
         self.assertIn(r".\code<0> (code_fast[0])", output)
         self.assertIn(r".\S<7> (phase_slow[7])", output)
@@ -108,8 +145,18 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
         self.assertEqual(hcell_path.read_text(), "RO_tune6 RO_tune6\n")
         self.assertIn("LVS_SOURCE_CONTRACT_STATUS=PASS", report)
         self.assertIn("MODULE_REMOVAL_POLICY=EXACT_CANONICAL_CDL_MEMBERSHIP", report)
+        self.assertIn(
+            "PHYSICAL_ONLY_INSTANCE_REMOVAL_POLICY=EXACT_TRACKED_FILLER_REPORT_MASTER_SET",
+            report,
+        )
+        self.assertIn("PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_EXPECTED=3", report)
+        self.assertIn("PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_INPUT=3", report)
+        self.assertIn("PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_REMOVED=3", report)
+        self.assertIn("PHYSICAL_ONLY_FILLER_REMOVAL_STATUS=PASS", report)
         self.assertIn("RO6_PIN_NORMALIZATION=EXACT_SAME_INDEX_SCALAR_ANGLE_PORTS", report)
         self.assertIn("PHYSICAL_TIE_INSTANCE_COUNT=1", report)
+        self.assertIn("PHYSICAL_TIE_MASTER=LOGIC1DJIHD:1", report)
+        self.assertIn("PHYSICAL_TIE_PRESERVATION_STATUS=PASS", report)
         self.assertIn("UNRESOLVED_ACTIVE_MASTER_COUNT=0", report)
 
     def test_unresolved_master_fails_closed(self) -> None:
@@ -144,6 +191,40 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(output_path.exists())
         self.assertIn("instance-name contract mismatch", report_path.read_text())
+
+    def test_tracked_filler_count_mismatch_fails_closed(self) -> None:
+        result, output_path, _hcell_path, report_path, temp = self.run_contract(
+            filler_count=4
+        )
+        self.addCleanup(temp.cleanup)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(output_path.exists())
+        self.assertIn("filler count does not match tracked report", report_path.read_text())
+
+    def test_row_and_filler_master_sets_must_match(self) -> None:
+        result, output_path, _hcell_path, report_path, temp = self.run_contract(
+            row_fillers="FEED2JIHD FEED1JIHD"
+        )
+        self.addCleanup(temp.cleanup)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(output_path.exists())
+        self.assertIn("candidate contract differs", report_path.read_text())
+
+    def test_zero_observed_tie_instances_is_an_explicit_valid_count(self) -> None:
+        source = PHYSICAL_NETLIST.replace(
+            "  LOGIC1DJIHD u_tie1 ( .Y(tie1), .VDD(VDD), .VSS(VSS) );\n",
+            "",
+        )
+        result, output_path, _hcell_path, report_path, temp = self.run_contract(
+            source=source
+        )
+        self.addCleanup(temp.cleanup)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertTrue(output_path.exists())
+        report = report_path.read_text()
+        self.assertIn("PHYSICAL_TIE_MASTER_COUNT=0", report)
+        self.assertIn("PHYSICAL_TIE_INSTANCE_COUNT=0", report)
+        self.assertIn("PHYSICAL_TIE_PRESERVATION_STATUS=PASS", report)
 
 
 if __name__ == "__main__":
