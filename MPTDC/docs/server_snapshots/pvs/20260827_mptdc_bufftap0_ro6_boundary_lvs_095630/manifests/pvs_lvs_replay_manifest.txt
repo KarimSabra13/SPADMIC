@@ -1,0 +1,16 @@
+# MPTDC PVS LVS Replay Manifest
+date: 2026-08-27T09:56:30+02:00
+old_lvs_run: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script
+new_lvs_run: /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_095630/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script
+old_base: /sim/ksabra/SPADMIC_work/innovus/20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334
+new_base: /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_095630
+new_gds: /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_095630/outputs/mptdc_axis_core_merged_stdcell_ro6.gds
+new_source: /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_095630/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v
+new_hcell: /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_lvs_095630/outputs/pvs_hcell_ro6.txt
+dcell_cdl: /data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/cdl/xh018_D_CELLS_JIHD.cdl
+diagnostic_allow_base_drc_debt: 0
+diagnostic_ro6_boundary_blackbox: 1
+blackbox_cell: RO_tune6
+ro6_bus_pin_normalization: LVS_VERILOG_BUS_MAP_BY_POSITION
+verilog_global_signal_port_policy: DO_NOT_PROMOTE
+dry_run: 0
