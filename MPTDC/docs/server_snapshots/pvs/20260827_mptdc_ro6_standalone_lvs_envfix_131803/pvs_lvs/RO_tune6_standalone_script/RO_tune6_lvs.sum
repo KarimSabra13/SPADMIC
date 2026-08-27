@@ -1,0 +1,39 @@
+			*****************************************************
+			**                                                 **
+			**                L V S  R E P O R T               **
+			**                                                 **
+			*****************************************************
+
+
+Report File Name         : RO_tune6_lvs.sum
+ERC Summary File         : result.sum
+LVS Comparison Report    : RO_tune6_lvs.sum.cls
+LVS Softchk Report       : RO_tune6.softchk
+LVS Find Shorts Report   : RO_tune6_lvs.sum.shorts
+Layout Name              : /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/inputs/RO_tune6.fresh.gds ("RO_tune6")
+User Name                : ksabra
+Creation Time            : Thu Aug 27 13:18:04 2026
+Current directory        : /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/pvs_lvs/RO_tune6_standalone_script
+PVS Version              : 22.22-s005 Thu Jun 29 17:49:16 PDT 2023
+
+
+			*****************************************************
+			**                                                 **
+			**            D E V E X T  R E P O R T             **
+			**                                                 **
+			*****************************************************
+
+
+    LVS_FIND_SHORTS  -cell primary
+    LVS_FIND_SHORTS result file "RO_tune6_lvs.sum.shorts"
+
+    LVS_SOFTCHK nwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK hvnwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK ndftrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK hnw -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK catdiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK anodiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pwitrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pdf -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK bulk -TYPE CONTACT   Total Result        0 (       0)

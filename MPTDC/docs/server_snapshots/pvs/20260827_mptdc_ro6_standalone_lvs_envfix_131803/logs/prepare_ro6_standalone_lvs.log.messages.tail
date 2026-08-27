@@ -1,0 +1,5 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/logs/prepare_ro6_standalone_lvs.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+RO6_STANDALONE_PREP_STATUS=PASS
+RO6_CDL_PIN_CONTRACT_STATUS=PASS

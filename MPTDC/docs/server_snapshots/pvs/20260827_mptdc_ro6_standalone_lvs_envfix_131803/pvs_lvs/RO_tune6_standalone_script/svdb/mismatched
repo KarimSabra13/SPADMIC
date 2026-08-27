@@ -1,0 +1,44 @@
+##############################################################################################################
+#####  
+#####                                         PVS LVS COMPARISON
+#####  
+#####  Version                       :   22.22-s005
+#####  NVN Run Start                 :   Thu Aug 27 13:18:09 2026
+#####  ERC Summary File              :   result.sum
+#####  Extraction Report File        :   RO_tune6_lvs.sum
+#####  Comparison Report File        :   RO_tune6_lvs.sum.cls
+#####  Top Cell                      :   RO_tune6  <vs>  RO_tune6
+#####  
+#####                                :      @     @
+#####                                :       @   @ 
+#####                                :        @ @  
+#####  Run Result                    :     MISMATCH
+#####                                :        @ @  
+#####                                :       @   @ 
+#####                                :      @     @
+#####  
+#####  Run Summary                   :   [ERROR] Connectivity Mismatches
+#####                                :   [ERROR] Pin Mismatches
+#####                                :   [INFO]  ERC Results: Empty
+#####                                :   [INFO]  Extraction Clean
+#####  
+#####  Layout Design                 :   /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/inputs/RO_tune6.fresh.gds (gdsii)
+#####  Layout File                   :   /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/pvs_lvs/RO_tune6_standalone_script/RO_tune6.spi (cdl)
+#####  Schematic File                :   /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/inputs/RO_tune6.fresh.cdl (cdl)
+#####  Rules File                    :   /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/pvs_lvs/RO_tune6_standalone_script/.config.rul
+#####                                :   /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_envfix_131803/pvs_lvs/RO_tune6_standalone_script/.technology.rul
+#####  Pin Swap File                 :   RO_tune6_lvs.sum.cps
+#####  
+#####  Extraction CPU Time           :   0h 0m 1s - (1s)
+#####  Extraction Exec Time          :   0h 0m 2s - (2s)
+#####  Extraction Peak Memory Usage  :   56.00MB
+#####  NVN CPU Time                  :   0h 0m 0s - (0s)                 
+#####  NVN Exec Time                 :   0h 0m 0s - (0s)                 
+#####  NVN Peak Memory Usage         :   327.44MB
+#####  LVS Total CPU Time            :   0h 0m 1s - (1s)                 
+#####  LVS Total Exec Time           :   0h 0m 2s - (2s)                 
+#####  LVS Total Peak Memory Usage   :   327.44MB
+#####  
+##############################################################################################################
+
+
