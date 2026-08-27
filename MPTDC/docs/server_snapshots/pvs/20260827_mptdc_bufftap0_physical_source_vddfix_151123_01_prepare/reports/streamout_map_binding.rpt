@@ -1,0 +1,6 @@
+# MPTDC streamout map binding
+STREAMOUT_TEMPLATE=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/work/streamout_mptdc_merged_ro6.tcl
+PATCHED_STREAMOUT=/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_physical_source_vddfix_151123/work/streamout_mptdc_merged_ro6.replayed.tcl
+SELECTED_STREAM_MAP=/data/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_1131/pnr_streamout.map
+STREAM_MAP_BINDING_MODE=ENV_SELECTED_MAP
+STREAM_MAP_BINDING_STATUS=PASS
