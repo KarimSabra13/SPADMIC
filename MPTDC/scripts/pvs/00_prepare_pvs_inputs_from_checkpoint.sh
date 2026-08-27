@@ -354,12 +354,18 @@ if [[ ! -s "$TOP_ONLY_GDS" ]]; then
 fi
 mptdc_pvs_require_file "$MERGED_GDS"
 mptdc_pvs_require_file "$PG_V"
+mptdc_pvs_require_file "$PHYS_PG_V"
 mptdc_pvs_require_file "$FINAL_DEF"
 "$SCRIPT_DIR/01_generate_lvs_source_pg_filtered.py" \
-  --input "$PG_V" \
+  --input "$PHYS_PG_V" \
   --output "$FILTERED_V" \
   --hcell "$HCELL" \
-  --report "$FILTER_REPORT"
+  --report "$FILTER_REPORT" \
+  --cdl "$DCELL_CDL" \
+  --top "$TOP_CELL" \
+  --expected-ro-instance-count 2 \
+  --expected-ro-instance u_core_u_osc_fast_u_ro_tune4 \
+  --expected-ro-instance u_core_u_osc_slow_u_ro_tune4
 
 TAP_PIN_REPORT="$REPORT_DIR/tap_pin_contract.rpt"
 {
@@ -421,6 +427,7 @@ if [[ -s "$TOP_ONLY_GDS" ]]; then
   mptdc_pvs_append_hash "$HASH_MANIFEST" TOP_ONLY_GDS "$TOP_ONLY_GDS"
 fi
 mptdc_pvs_append_hash "$HASH_MANIFEST" LVS_SOURCE_FILTERED "$FILTERED_V"
+mptdc_pvs_append_hash "$HASH_MANIFEST" LVS_SOURCE_PHYSICAL_PG "$PHYS_PG_V"
 mptdc_pvs_append_hash "$HASH_MANIFEST" LVS_HCELL "$HCELL"
 mptdc_pvs_append_hash "$HASH_MANIFEST" DCELL_GDS "$DCELL_GDS"
 mptdc_pvs_append_hash "$HASH_MANIFEST" DCELL_CDL "$DCELL_CDL"
@@ -443,6 +450,7 @@ mptdc_pvs_append_hash "$HASH_MANIFEST" TAP_PIN_REPORT "$TAP_PIN_REPORT"
   echo "TOP_ONLY_GDS=$TOP_ONLY_GDS"
   echo "MERGED_GDS=$MERGED_GDS"
   echo "LVS_SOURCE_PG=$PG_V"
+  echo "LVS_SOURCE_PHYSICAL_PG=$PHYS_PG_V"
   echo "LVS_SOURCE_FILTERED=$FILTERED_V"
   echo "PVS_HCELL=$HCELL"
   echo "DCELL_CDL=$DCELL_CDL"

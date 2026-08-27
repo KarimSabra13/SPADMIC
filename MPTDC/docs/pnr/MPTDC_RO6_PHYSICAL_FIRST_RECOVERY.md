@@ -156,21 +156,14 @@ landing-via object out of `net.vias` while preserving zero regular-connectivity
 failures and the exact one-marker state. This is a harness failure, not a
 failed endpoint-extension experiment. Do not reuse that run as proof lineage.
 
-The only active implementation remains the corrected V8R proof. The read-only
-wire schema proves that the canonical fixed wire exposes settable `beginExt`
-and `endExt` properties. V8
-identifies the sole fixed MET1 wire with width 0.23 um and length 0.385 um that
-overlaps the remaining marker, preserves the via-side extension, and increases
-only the free-side extension by 0.14 um. That adds 0.0322 um2, exceeding the
-remaining 0.0243 um2 deficit by about 0.0079 um2. The proof starts from the
-immutable failed V6R checkpoint and runs no router or timing command. A passing
-proof is published before another fresh process restores the original
-two-marker guarded-halo checkpoint, reproduces the two proven V1 stubs, applies
-the same endpoint-property edit, and runs extraction, TC timing, DRV, and
-power. V8R fingerprints every remaining target-net via before and after the
-wire-property edit instead of requiring the consumed landing-via object. If
-this corrected proof reaches the property edit and fails, stop for manual
-OA/GUI review.
+The published corrected V8R run reached the property mutation, but legacy
+`dbSet` returned success without changing the stored extension and emitted
+`IMPDBTCL-617`. That run is rejected. The helper now tries the Common UI
+`begin_extension`/`end_extension` property first, formats the value explicitly,
+and accepts either API only after legacy-property readback proves persistence.
+Do not rerun V8R yet. The active next action is the fresh standalone RO LVS and
+physical-source sequence in `Current RO6 LVS and PG Recovery Order`; it must
+classify the four PG opens before any further geometry edit.
 
 ## Acceptance Order
 
@@ -186,27 +179,25 @@ OA/GUI review.
 5. Require two created guarded blockages, 21.2 um X / 14.48 um Y placement
    clearance, zero post-place 10 um audit-halo intrusions, valid instance boxes,
    phase-buffer clearance at least 10 um, and exactly two RO macros.
-6. In a fresh V8 proof process, restore only the published failed V6R
-   checkpoint. Require the exact `0.1777/0.202` source marker, the canonical
-   fixed MET1 wire profile, a persisted 0.14 um free-end extension, unchanged
-   target/PG/reserved-fill object sets, an unchanged full target-via
-   fingerprint and landing-via representation, zero geometry DRC, zero shorts,
-   zero regular and non-RO special failures, zero unrouted nets, and the exact
-   unchanged 15-endpoint PG fingerprint.
-7. Replay V8 from the original two-marker failed-route checkpoint in another
-   fresh process. Require the one-marker intermediate signature, the identical
-   endpoint-property edit and physical result, TC setup PASS, TC hold PASS, DRV
-   PASS, and successful power-report capture.
-8. Require ordinary signal top MET3, router command top METTP, the temporary
-   METTP blockage created and removed, and exactly the two south MET3 tap0 pins.
-9. Prefer raw-clean special connectivity. Otherwise allow only the exact 15
-   audited `HALO10_PNRLEF_15` `IMPVFC-94` VDD/VSS point endpoints, with no
-   coordinate, count, net, or problem-class difference, as
-   `PVS_CANDIDATE_EXACT_PG_WIRE_ENDS`.
-10. Merge the explicitly supplied real-OA `RO_tune6` GDS under strict hashed
-   attribution.
-11. Require zero base PVS DRC, zero density-enabled PVS DRC, then explicit LVS
-    MATCH on the same prepared inputs.
+6. Export fresh run-local `RO_tune6` GDS and CDL without modifying OA. Require
+   exact standalone PVS LVS MATCH, exact 19-pin CDL parity, no blackbox, equal
+   copied hashes, and unchanged OA fingerprints.
+7. Regenerate the digital-top source from Innovus physical PG netlist output
+   using exact canonical-CDL module membership. Preserve all physical ties and
+   scalarize only the two named RO instances with same-index angle pins.
+8. Run the diagnostic RO boundary LVS with the same RO GDS hash. Accept only a
+   full boundary MATCH or the exact four-open `RO6_PG_OPEN_ONLY` class with
+   zero RO pin, tie, net, or instance mismatch residue.
+9. For `RO6_PG_OPEN_ONLY`, publish the read-only 15-endpoint-to-sWire probe,
+   then implement one evidence-derived PG patch in a fresh process. A boundary
+   MATCH skips the PG patch.
+10. Run corrected V8 endpoint-extension proof, then canonical replay from the
+    original two-marker source. Require persisted readback, zero geometry/short/
+    regular/non-RO/unrouted debt, unchanged route-object fingerprints, TC setup
+    and hold PASS, DRV PASS, and successful power capture.
+11. Rebuild the final exact input tuple, require zero base PVS DRC, zero
+    density-enabled PVS DRC, then full LVS MATCH, and only then permit GDS
+    export.
 12. The resulting label is `MPTDC_TC_PVS_CLOSED_NOT_MMMC_SIGNOFF`. Full MMMC,
     characterized RO timing, PEX, IR/EM, and final tapeout remain outside scope.
 
@@ -231,7 +222,11 @@ log tails are what make remote analysis possible.
 | Route minimum-area canonical replay | tracked passing V8 endpoint-extension trial with matching V6R ancestor and original source, second fresh restore of the original checkpoint, exact one-marker intermediate proof, identical endpoint-property repair, extraction/setup/hold/DRV/power PASS, exact 15-endpoint PG fingerprint, two tap0 pins, `DECISION=PVS_CANDIDATE_CONTINUE` | `innovus` |
 | Route geometry probe | exact published 3-DRC/1-short source signature, fresh single restore, no route-edit command, identical initial/final physical tuple, all three target nets and endpoint terms found, nearby PG shapes captured, command help/schema evidence present, exactly two tap0 pins | `innovus` |
 | Route geometry repair | retired diagnostic path; V4-V7 outputs are never downstream sources | `innovus` |
-| PVS preparation | preparation PASS, strict attribution 1, tap contract PASS, tap count 2, hash manifest present | `pvs` |
+| RO6 standalone LVS | fresh GDS/CDL, exact 19-pin CDL contract, OA fingerprints unchanged, no blackbox, explicit report-level MATCH, same GDS hash reserved for the boundary source | `pvs` |
+| Physical LVS source | physical PG source kind, exact canonical-CDL removal, all physical ties preserved, two exact same-index scalar RO instances, unresolved active masters 0 | `pvs` |
+| RO6 boundary LVS | standalone MATCH bound by GDS hash, exact scalar source, blackbox applied, zero RO/tie namespace residue, and either MATCH or exact `RO6_PG_OPEN_ONLY` | `pvs` |
+| RO6 PG endpoint probe | exact PG-only boundary evidence, analyze mode only, 15 unchanged endpoints, zero edits, zero shorts and regular-connectivity failures | `innovus` |
+| PVS preparation | preparation PASS, strict attribution 1, physical source contract PASS, tap contract PASS, tap count 2, hash manifest present | `pvs` |
 | Template audit | audit RC 0 and `PVS_TEMPLATE_AUDIT_STATUS=PASS` | `pvs` |
 | Base DRC | gate PASS, variant BASE, both report totals 0 | `pvs` |
 | Density DRC | gate PASS, variant DENSITY, both report totals 0 | `pvs` |
@@ -309,7 +304,11 @@ special-connectivity debt, and unrouted nets. Raw special connectivity must
 either be clean or match the exact `HALO10_PNRLEF_15` PVS-candidate
 fingerprint.
 
-### 2. Current Commands: Corrected V8R Endpoint-Extension Proof and Canonical Replay
+### 2. Deferred Commands: V8R Endpoint-Extension Proof and Canonical Replay
+
+Do not run this section until the later `Current RO6 LVS and PG Recovery Order`
+has either proved a full boundary MATCH or completed the evidence-derived PG
+repair. These commands remain here as the already implemented geometry stage.
 
 V6R is now immutable failed evidence. Innovus normalized the requested longer
 route back to one fixed MET1 wire with width 0.23 um, length 0.385 um, and the
@@ -2018,113 +2017,258 @@ only. Stop on any other result. The next engineering decision comes from the
 published mismatch classes; do not alter HCell, source filtering, the RO macro,
 or routed geometry before that review.
 
-### Prove the digital top across the RO6 blackbox boundary
+### Current RO6 LVS and PG Recovery Order
 
-The first boundary replay proved that `lvs_black_box RO_tune6` is loaded and
-applied once. It also reduced the top comparison to equal device counts, then
-exposed two independent source-namespace differences: the OA macro pins use
-`S<0>`/`code<0>` while Verilog uses `S[0]`/`code[0]`, and Verilog's generated
-`tie1` global was promoted to an extra compare port. This command reuses the
-exact immutable GDS, source, CDL, and HCell inputs and launches only one new LVS
-comparison with three audited boundary-only controls:
+The previous boundary run is diagnostic evidence, not a repair baseline. It
+proved that the blackbox rule was active, but its source was non-physical,
+position-based bus mapping hid a real namespace mismatch, and `tie1` generated
+a large mismatch cascade. Do not rerun that command.
 
-- `lvs_black_box RO_tune6;`
-- `lvs_verilog_bus_map_by_position yes;`
-- `lvs_global_sigs_are_ports no;`
+The current flow has four ordered, independently published stages:
 
-The replay remains diagnostic and position-based bus mapping is not accepted as
-standalone macro or block signoff. It does not run Innovus, streamout, or PVS
-DRC. An existing zero-byte `.config.rul` is valid template evidence; PVS loads
-it together with the nonempty `.technology.rul`, and the result gate now checks
-existence rather than inventing content for that file.
+1. prove a fresh `RO_tune6` layout/schematic pair standalone;
+2. regenerate the digital-top physical LVS source with the same RO GDS;
+3. classify the exact scalar RO boundary with no position mapping and no tie
+   removal;
+4. if and only if the remainder is exactly `RO6_PG_OPEN_ONLY`, publish a
+   read-only endpoint-to-sWire probe before designing any PG edit.
 
-The source preflight reads the raw `PVS_LVS_RC=0` tool report and the sole
-comparison report's explicit `Run Result: MISMATCH`. The older fail-closed gate
-may remain `NOT_PROVEN`; that classification is retained as audit metadata and
-is not substituted for the raw PVS result.
+Every stage runs in a fresh process and stops after publishing. Do not launch
+the next stage until the listed result fields pass.
 
-This is a diagnostic digital-top boundary proof. A match does not prove the
-internal RO layout and cannot close the block without separate attributable
-`RO_tune6` LVS evidence and a later zero-DRC canonical replay.
+#### A. Fresh OA Exports and Standalone RO6 LVS
+
+Export `RO_tune6/layout` to GDS and `RO_tune6/schematic` to CDL into one new
+directory under `/sim`, outside both OA view directories. Use the project
+Virtuoso export flow; do not modify or copy files into the OA library. Set the
+two paths below to those new exports. The driver rejects empty or older-than-24h
+files and fingerprints the OA views before and after PVS.
 
 ```bash
-###############################################################################
-# MPTDC LVS-only digital-top proof across the RO_tune6 blackbox boundary
-###############################################################################
-
 set +e
 
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
-cd "$REPO"
+RO_EXPORT_ROOT=REPLACE_WITH_FRESH_RUN_LOCAL_EXPORT_DIRECTORY
+RO_GDS=$RO_EXPORT_ROOT/RO_tune6.gds
+RO_CDL=$RO_EXPORT_ROOT/RO_tune6.cdl
+SOURCE_PVS_RUN=20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334
+RO6_STANDALONE_RUN="$(date +%Y%m%d)_mptdc_ro6_standalone_lvs_$(date +%H%M%S)"
+DRIVER_LOG=/tmp/${RO6_STANDALONE_RUN}.driver.log
+SYNC_RC=99
+RO6_STANDALONE_DRIVER_RC=99
 
+cd "$REPO"
 git checkout SPADMIC_test
 git pull --ff-only origin SPADMIC_test
 SYNC_RC=$?
-
 EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
 TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
 
 export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
 
-SOURCE_PVS_RUN=20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334
-BOUNDARY_PVS_RUN="$(date +%Y%m%d)_mptdc_bufftap0_ro6_boundary_lvs_$(date +%H%M%S)"
-BOUNDARY_PVS_DIR=$MPTDC_INNOVUS_WORK/$BOUNDARY_PVS_RUN
-DRIVER_LOG=/tmp/${BOUNDARY_PVS_RUN}.driver.log
+if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ] && \
+   [ "$RO_EXPORT_ROOT" != REPLACE_WITH_FRESH_RUN_LOCAL_EXPORT_DIRECTORY ] && \
+   [ -s "$RO_GDS" ] && [ -s "$RO_CDL" ]; then
+  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_standalone_lvs.sh \
+    --source-pvs-run-id "$SOURCE_PVS_RUN" \
+    --run-id "$RO6_STANDALONE_RUN" \
+    --ro-gds "$RO_GDS" \
+    --ro-cdl "$RO_CDL" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  RO6_STANDALONE_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, or fresh RO GDS/CDL preflight failed"
+fi
 
-if [ "$SYNC_RC" -eq 0 ] && \
-   [ -z "$TRACKED_STATUS" ] && \
-   [ -d "$MPTDC_INNOVUS_WORK/$SOURCE_PVS_RUN" ]; then
+echo "===== SEND BACK ====="
+echo "RO6_STANDALONE_RUN=$RO6_STANDALONE_RUN"
+echo "RO6_STANDALONE_DRIVER_RC=$RO6_STANDALONE_DRIVER_RC"
+grep -E '^(PVS_RO6_STANDALONE_RECOVERY_STATUS|PVS_LVS|OA_READ_ONLY_STATUS|RO6_CDL_PIN_CONTRACT_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -20
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Continue only with driver RC zero, recovery status `PASS`, explicit
+`PVS_LVS=MATCH`, both read-only/CDL contract statuses `PASS`,
+`DECISION=PASS_CONTINUE`, `PUBLISH_RC=0`, and next stage
+`DIAGNOSTIC_PHYSICAL_PVS_WITH_FRESH_RO_GDS`. `SIGNOFF_ELIGIBLE=NO` is expected.
+
+#### B. Regenerate the Physical Digital-Top Source
+
+Use the exact same `RO_GDS` file that passed A. Replace
+`RO6_STANDALONE_RUN` with A's published run ID. This diagnostic run starts from
+the immutable failed-V6R one-marker checkpoint. It may return driver RC one at
+the unblackboxed LVS mismatch; that is not permission to continue by itself.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+PNR_RUN=20260826_mptdc_bufftap0_route_minarea_patch_trial_v6r_180659
+RO6_STANDALONE_RUN=REPLACE_WITH_PASSING_STANDALONE_RUN_ID
+RO_GDS=REPLACE_WITH_THE_EXACT_GDS_USED_BY_THE_STANDALONE_RUN
+PVS_RUN="$(date +%Y%m%d)_mptdc_bufftap0_physical_source_$(date +%H%M%S)"
+PVS_DIR=/sim/ksabra/SPADMIC_work/innovus/$PVS_RUN
+DRIVER_LOG=/tmp/${PVS_RUN}.driver.log
+PVS_DRIVER_RC=99
+
+cd "$REPO"
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$RO6_STANDALONE_RUN" ] && [ -s "$RO_GDS" ]; then
+  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_recovery_pvs.sh \
+    --pnr-run-id "$PNR_RUN" \
+    --run-id "$PVS_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    --ro-gds "$RO_GDS" \
+    --diagnostic-deferred-minarea \
+    2>&1 | tee "$DRIVER_LOG"
+  PVS_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: source run, GDS, sync, or tracked-tree preflight failed"
+fi
+
+echo "===== SEND BACK ====="
+echo "RO6_STANDALONE_RUN=$RO6_STANDALONE_RUN"
+echo "PVS_RUN=$PVS_RUN"
+echo "PVS_DRIVER_RC=$PVS_DRIVER_RC"
+grep -E '^(PVS_RECOVERY_STAGE|PVS_RUN_CLASS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -20
+grep -E '^(LVS_SOURCE_CONTRACT_STATUS|SOURCE_KIND|RO6_PIN_NORMALIZATION|RO_TUNE6_INSTANCE_NAME_STATUS|PHYSICAL_TIE_INSTANCE_COUNT|UNRESOLVED_ACTIVE_MASTER_COUNT)=' \
+  "$PVS_DIR/reports/lvs_source_filter.rpt" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Stop and send the compact block. The next boundary driver independently
+requires one raw `.cls` `MISMATCH`, PVS tool RC zero, the unblackboxed RO
+signature, a published physical-source hash manifest, and the same RO GDS hash
+as A. The source contract must say physical `saveNetlist`, exact same-index
+scalar angle ports, preserved physical ties, and zero unresolved masters.
+
+#### C. Prove the Exact Digital-Top RO6 Boundary
+
+Run only after A passed and B published. Replace both run IDs with the exact
+published IDs. This replay uses a physical source, preserves tie instances,
+uses exact `code<k>`/`S<k>` scalar pins, and does not use position-based bus
+mapping.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+SOURCE_PVS_RUN=REPLACE_WITH_STAGE_B_PVS_RUN_ID
+RO6_STANDALONE_RUN=REPLACE_WITH_STAGE_A_STANDALONE_RUN_ID
+BOUNDARY_PVS_RUN="$(date +%Y%m%d)_mptdc_bufftap0_ro6_boundary_lvs_$(date +%H%M%S)"
+BOUNDARY_PVS_DIR=/sim/ksabra/SPADMIC_work/innovus/$BOUNDARY_PVS_RUN
+DRIVER_LOG=/tmp/${BOUNDARY_PVS_RUN}.driver.log
+BOUNDARY_DRIVER_RC=99
+
+cd "$REPO"
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+export MPTDC_INNOVUS_WORK=/sim/ksabra/SPADMIC_work/innovus
+
+if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$SOURCE_PVS_RUN" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$RO6_STANDALONE_RUN" ]; then
   bash MPTDC/scripts/pvs/server_run_mptdc_ro6_boundary_lvs.sh \
     --source-pvs-run-id "$SOURCE_PVS_RUN" \
+    --standalone-pvs-run-id "$RO6_STANDALONE_RUN" \
     --run-id "$BOUNDARY_PVS_RUN" \
     --expected-head "$EXPECTED_HEAD" \
     2>&1 | tee "$DRIVER_LOG"
   BOUNDARY_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: sync, tracked-tree, or source-PVS-run preflight failed"
-  BOUNDARY_DRIVER_RC=99
+  echo "STOP: source, standalone, sync, or tracked-tree preflight failed"
 fi
 
 echo "===== SEND BACK ====="
-echo "SYNC_RC=$SYNC_RC"
-echo "SOURCE_PVS_RUN=$SOURCE_PVS_RUN"
 echo "BOUNDARY_PVS_RUN=$BOUNDARY_PVS_RUN"
 echo "BOUNDARY_DRIVER_RC=$BOUNDARY_DRIVER_RC"
-grep -E '^(PVS_BOUNDARY_RECOVERY_STATUS|PVS_LVS|LVS_BLACKBOX_RULE_STATUS|LVS_BLACKBOX_APPLICATION_STATUS|LVS_BLACKBOXED_CELL_COUNT|LVS_BUS_PIN_MAP_RULE_STATUS|LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS|RO6_BLACKBOX_CELL_MATCH_STATUS|RO6_ANGLE_BUS_MISSING_PIN_COUNT|RO6_SQUARE_BUS_MISSING_PIN_COUNT|TIE1_UNMATCHED_PIN_COUNT|LAYOUT_OPEN_NET_COUNT|SHORTS_OPENS_RECORD_COUNT|MISMATCHED_NET_RECORD_COUNT|MISMATCHED_INSTANCE_RECORD_COUNT|BOUNDARY_REMAINDER_CLASS|RO6_STANDALONE_LVS_REQUIRED|DRC_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+grep -E '^(PVS_BOUNDARY_RECOVERY_STATUS|SOURCE_CONTRACT_STATUS|SOURCE_PHYSICAL_TIE_INSTANCE_COUNT|PVS_LVS|LVS_BLACKBOX_(RULE|APPLICATION)_STATUS|LVS_BUS_PIN_MAP_RULE_STATUS|RO6_BLACKBOX_CELL_MATCH_STATUS|RO6_(ANGLE|SQUARE)_BUS_MISSING_PIN_COUNT|TIE1_(UNMATCHED_PIN|MISMATCHED_NET|MISMATCHED_INSTANCE_CASCADE)_COUNT|LAYOUT_OPEN_NET_COUNT|MISMATCHED_(NET|INSTANCE)_RECORD_COUNT|BOUNDARY_REMAINDER_CLASS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -40
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
-
-echo "===== BOUNDARY GATE ====="
-cat "$BOUNDARY_PVS_DIR/reports/operator_gate_pvs_ro6_boundary_lvs.rpt" 2>/dev/null
 ```
 
-Interpret the result before doing anything else:
+Two results may continue:
 
-- Continue only when `BOUNDARY_DRIVER_RC=0`,
-  `PVS_BOUNDARY_RECOVERY_STATUS=PASS`, `PVS_LVS=MATCH`, both blackbox statuses
-  are `PASS`, both namespace-rule statuses are `PASS`,
-  `RO6_BLACKBOX_CELL_MATCH_STATUS=PASS`, `LVS_BLACKBOXED_CELL_COUNT` is at
-  least one,
-  `DECISION=PASS_BOUNDARY_CONTINUE`, and `PUBLISH_RC=0`.
-- The expected next stage is
-  `RO6_STANDALONE_LVS_EVIDENCE_AND_MINAREA_REPAIR`. Send the compact `SEND BACK`
-  block and stop so the two independent debts can be ordered from evidence.
-- `RO6_STANDALONE_LVS_REQUIRED=YES`, `DRC_STATUS=NOT_RUN_BY_SCOPE`, and
-  `SIGNOFF_ELIGIBLE=NO` are mandatory even on a match. Never report this run as
-  block LVS signoff.
-- `BOUNDARY_REMAINDER_CLASS=RO6_PG_OPEN_ONLY` is a bounded diagnostic result,
-  not a match. It requires zero RO bus-pin misses, zero `tie1` pin misses, zero
-  mismatched-net and mismatched-instance records, and exactly the four expected
-  VDD/VSS layout opens. Stop there; the next stage is the manual RO PG patch,
-  followed by another immutable boundary LVS replay.
-- On any mismatch, ineffective blackbox rule, nonzero driver RC, or publish
-  failure, stop. The wrapper publishes the bounded controls and comparison
-  report; do not rerun PnR or edit the remaining minimum-area geometry first.
+- exact top `MATCH`: `DECISION=PASS_BOUNDARY_CONTINUE`, class `NONE_MATCH`,
+  publish zero, next `ROUTE_MINAREA_ENDEXT_TRIAL`;
+- exact four-open PG remainder: `DECISION=PASS_PG_REPAIR_REQUIRED`, class
+  `RO6_PG_OPEN_ONLY`, zero RO/tie/net/instance mismatch residue, publish zero,
+  next `RO6_PG_ENDPOINT_PROBE`.
 
-For boundary review, send only the compact `SEND BACK` block above. The driver
-publishes the bounded control, scope manifest, gate reports, and comparison
-evidence automatically.
+Anything else is `FAIL_STOP`. A boundary result is diagnostic and always
+`SIGNOFF_ELIGIBLE=NO`.
+
+#### D. Publish the Read-Only PG Endpoint Probe
+
+Run only for C's exact `RO6_PG_OPEN_ONLY` result. This command analyzes a safe
+checkpoint copy. It does not delete wires, edit PG, move cells, or claim LVS.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+SOURCE_PNR_RUN=20260826_mptdc_bufftap0_route_minarea_patch_trial_v6r_180659
+BOUNDARY_PVS_RUN=REPLACE_WITH_STAGE_C_BOUNDARY_RUN_ID
+PROBE_RUN="$(date +%Y%m%d)_mptdc_ro6_pg_endpoint_probe_$(date +%H%M%S)"
+DRIVER_LOG=/tmp/${PROBE_RUN}.driver.log
+PROBE_DRIVER_RC=99
+
+cd "$REPO"
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+export MPTDC_INNOVUS_WORK=/sim/ksabra/SPADMIC_work/innovus
+
+if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_ro6_pg_endpoint_probe.sh \
+    --source-pnr-run-id "$SOURCE_PNR_RUN" \
+    --boundary-pvs-run-id "$BOUNDARY_PVS_RUN" \
+    --run-id "$PROBE_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  PROBE_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync or tracked-tree preflight failed"
+fi
+
+echo "===== SEND BACK ====="
+echo "PROBE_RUN=$PROBE_RUN"
+echo "PROBE_DRIVER_RC=$PROBE_DRIVER_RC"
+grep -E '^(RO6_PG_ENDPOINT_PROBE_STATUS|PROBE_RC|MARKER_COUNT|AMBIGUOUS_COUNT|MISSING_EXACT_COUNT|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -20
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Pass requires driver/probe RC zero, 15 uniquely classified unchanged endpoints,
+zero ambiguous or missing mappings, no delete attempts, the unchanged one-marker
+DRC state, zero shorts, zero regular connectivity failures, `DECISION=PASS_REVIEW_ENDPOINTS`,
+`PUBLISH_RC=0`, and next stage
+`DESIGN_EXACT_RO6_PG_PATCH_FROM_PUBLISHED_PROBE`. Stop after this step. The
+published endpoint-to-sWire table is the required input for one bounded PG
+patch; do not use `delete_all`, a global reroute, or a connectivity waiver.
+
+After the endpoint review, the remaining order is: exact PG patch, corrected
+V8 endpoint-extension proof, canonical replay with TC timing, base PVS DRC,
+density PVS DRC, final full LVS, and GDS export. A wrapper return code alone is
+never a closure result.
 
 ## What to Send for Review
 
@@ -2145,11 +2289,11 @@ text evidence is on `origin/SPADMIC_test` and can be pulled for detailed review.
 The snapshot contains the operator gate, status reports, manifests, small PVS
 controls, and diagnostic log tails.
 
-- Continue only when the current short driver prints either
-  `DECISION=PASS_CONTINUE` or `DECISION=PVS_CANDIDATE_CONTINUE`, together with
-  `PUBLISH_RC=0` and the explicit next stage. The diagnostic exception uses
-  `DECISION=DIAGNOSTIC_COMPLETE` only under the stricter conditions listed in
-  the preceding diagnostic section.
+- Continue only on the exact stage-specific passing decision documented above,
+  with `PUBLISH_RC=0` and the explicit expected next stage. Current passing
+  decisions include `PASS_CONTINUE`, `PASS_BOUNDARY_CONTINUE`,
+  `PASS_PG_REPAIR_REQUIRED`, `PASS_REVIEW_ENDPOINTS`, `PASS_REPLAY`, and
+  `PVS_CANDIDATE_CONTINUE`; they are not interchangeable.
 - On `DECISION=FAIL_STOP`, let the failed snapshot push complete, send the five
   lines above, and do not launch the next command.
 - On a nonzero publish RC, stop and paste the final `EVIDENCE_*` lines because

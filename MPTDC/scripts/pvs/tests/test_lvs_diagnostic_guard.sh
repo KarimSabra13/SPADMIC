@@ -49,13 +49,40 @@ HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
 printf 'new gds\n' > "$NEW_GDS"
 cat > "$NEW_SOURCE" <<'EOF'
-module mptdc_axis_core; endmodule
-module RO_tune6 (VDD, VSS, rstb, code, S);
+module mptdc_axis_core;
+  RO_tune6 u_fast (
+    .VDD(VDD), .VSS(VSS), .rstb(rstb),
+    .\code<0> (c0), .\code<1> (c1), .\code<2> (c2), .\code<3> (c3),
+    .\code<4> (c4), .\code<5> (c5), .\code<6> (c6), .\code<7> (c7),
+    .\S<0> (s0), .\S<1> (s1), .\S<2> (s2), .\S<3> (s3),
+    .\S<4> (s4), .\S<5> (s5), .\S<6> (s6), .\S<7> (s7));
+  RO_tune6 u_slow (
+    .VDD(VDD), .VSS(VSS), .rstb(rstb),
+    .\code<0> (c0), .\code<1> (c1), .\code<2> (c2), .\code<3> (c3),
+    .\code<4> (c4), .\code<5> (c5), .\code<6> (c6), .\code<7> (c7),
+    .\S<0> (s0), .\S<1> (s1), .\S<2> (s2), .\S<3> (s3),
+    .\S<4> (s4), .\S<5> (s5), .\S<6> (s6), .\S<7> (s7));
+endmodule
+module RO_tune6 (VDD, VSS, rstb, \code<0> , \code<1> , \code<2> , \code<3> , \code<4> , \code<5> , \code<6> , \code<7> , \S<0> , \S<1> , \S<2> , \S<3> , \S<4> , \S<5> , \S<6> , \S<7> );
   inout VDD;
   inout VSS;
   inout rstb;
-  inout [7:0] code;
-  inout [7:0] S;
+  inout \code<0> ;
+  inout \code<1> ;
+  inout \code<2> ;
+  inout \code<3> ;
+  inout \code<4> ;
+  inout \code<5> ;
+  inout \code<6> ;
+  inout \code<7> ;
+  inout \S<0> ;
+  inout \S<1> ;
+  inout \S<2> ;
+  inout \S<3> ;
+  inout \S<4> ;
+  inout \S<5> ;
+  inout \S<6> ;
+  inout \S<7> ;
 endmodule
 EOF
 printf 'RO_tune6 RO_tune6\n' > "$NEW_HCELL"
@@ -87,7 +114,7 @@ cat > "$BOUNDARY_SCOPE" <<'EOF'
 PVS_RUN_CLASS=DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX
 DIAGNOSTIC_SCOPE=LVS_ONLY_RO6_BOUNDARY
 BLACKBOX_CELL=RO_tune6
-RO6_BUS_PIN_NORMALIZATION=LVS_VERILOG_BUS_MAP_BY_POSITION
+RO6_BUS_PIN_NORMALIZATION=EXACT_SAME_INDEX_SCALAR_ANGLE_PORTS
 VERILOG_GLOBAL_SIGNAL_PORT_POLICY=DO_NOT_PROMOTE
 RO6_STANDALONE_LVS_REQUIRED=YES
 SIGNOFF_ELIGIBLE=NO
@@ -185,11 +212,11 @@ grep -Fq 'rule inventory hash mismatch' "$TMP_ROOT/bad_hash.stdout"
 run_boundary_dry "$TMP_ROOT/lvs_boundary_valid" > "$TMP_ROOT/boundary_valid.stdout"
 grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
 grep -qx 'lvs_black_box RO_tune6;' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
-grep -qx 'lvs_verilog_bus_map_by_position yes;' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
+! grep -q 'lvs_verilog_bus_map_by_position' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
 grep -qx 'lvs_global_sigs_are_ports no;' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
 grep -qx 'diagnostic_ro6_boundary_blackbox: 1' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
 grep -qx 'blackbox_cell: RO_tune6' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
-grep -qx 'ro6_bus_pin_normalization: LVS_VERILOG_BUS_MAP_BY_POSITION' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
+grep -qx 'ro6_bus_pin_normalization: EXACT_SAME_INDEX_SCALAR_ANGLE_PORTS' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
 grep -qx 'verilog_global_signal_port_policy: DO_NOT_PROMOTE' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
 
 mv "$BOUNDARY_SCOPE" "${BOUNDARY_SCOPE}.saved"
@@ -220,7 +247,6 @@ fi
 cat > boundary_lvs.sum.cls <<CLS
 LVS Rules Given in the Rules File
     lvs_black_box RO_tune6
-    lvs_verilog_bus_map_by_position yes
     lvs_global_sigs_are_ports no
 Cells that have been blackboxed              |         $blackboxed
 RO_tune6 | 19 : 19 | 19 : 19 | match | black box
@@ -232,7 +258,7 @@ EOF
 MPTDC_TEST_BLACKBOX_EFFECTIVE=1 \
 run_boundary "$TMP_ROOT/lvs_boundary_effective" > "$TMP_ROOT/boundary_effective.stdout"
 grep -qx 'LVS_BLACKBOX_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
-grep -qx 'LVS_BUS_PIN_MAP_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BUS_PIN_MAP_RULE_STATUS=NOT_USED_EXACT_SCALAR_SOURCE' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_BLACKBOXED_CELL_COUNT=1' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_BLACKBOX_APPLICATION_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"

@@ -1557,17 +1557,46 @@ proc mptdc_ckpt_manual_extend_canonical_stub_v8 {
     puts $fh "${label}_FREE_END_EXTENSION_DELTA_UM=$extension_delta"
     puts $fh "${label}_FREE_END_EXTENSION_TARGET_UM=$free_target"
 
+    # Prefer the Common UI property. The legacy dbSet command can return
+    # success while rejecting a Tcl double internally (IMPDBTCL-617), so every
+    # candidate is accepted only after a readback proves persistence.
     set edit_method UNKNOWN
-    if {![catch {dbSet ${handle}.${free_attribute} $free_target} dbset_error]} {
-        set edit_method dbSet
-    } else {
-        set stylus_attribute [expr {
-            $free_attribute eq "beginExt" ? ".begin_ext" : ".end_ext"
-        }]
-        if {[catch {set_db $handle $stylus_attribute $free_target} setdb_error]} {
-            error "$label could not set $free_attribute: dbSet={$dbset_error}; set_db={$setdb_error}"
+    set edit_attempts {}
+    set target_text [format "%.3f" $free_target]
+    set stylus_suffix [expr {
+        $free_attribute eq "beginExt" ? "begin" : "end"
+    }]
+    foreach stylus_attribute [list \
+            ".${stylus_suffix}_extension" ".${stylus_suffix}_ext"] {
+        if {[catch {
+            set_db $handle $stylus_attribute $target_text
+        } setdb_error]} {
+            lappend edit_attempts "set_db:${stylus_attribute}:ERROR={$setdb_error}"
+            continue
         }
-        set edit_method set_db
+        set readback [lindex [dbGet ${handle}.${free_attribute}] 0]
+        lappend edit_attempts "set_db:${stylus_attribute}:READBACK=$readback"
+        if {[mptdc_ckpt_manual_close $readback $free_target]} {
+            set edit_method set_db
+            break
+        }
+    }
+    if {$edit_method eq "UNKNOWN"} {
+        if {[catch {
+            dbSet ${handle}.${free_attribute} $target_text
+        } dbset_error]} {
+            lappend edit_attempts "dbSet:ERROR={$dbset_error}"
+        } else {
+            set readback [lindex [dbGet ${handle}.${free_attribute}] 0]
+            lappend edit_attempts "dbSet:READBACK=$readback"
+            if {[mptdc_ckpt_manual_close $readback $free_target]} {
+                set edit_method dbSet
+            }
+        }
+    }
+    puts $fh "${label}_EDIT_ATTEMPTS=[mptdc_signoff_report_value $edit_attempts]"
+    if {$edit_method eq "UNKNOWN"} {
+        error "$label could not persist $free_attribute=$target_text: $edit_attempts"
     }
 
     set near_post [lindex [dbGet ${handle}.${near_attribute}] 0]

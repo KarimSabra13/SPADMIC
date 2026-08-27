@@ -220,7 +220,9 @@ fi
   echo "set ::env(MPTDC_PG_DANGLING_ALLOW_LONG_DELETE) {$ALLOW_LONG_DELETE}"
   echo "set ::env(MPTDC_PG_DANGLING_DELETE_METHOD) {$DELETE_METHOD}"
   echo "mptdc_ckpt_source_tcl {$SCRIPT_DIR/innovus_mptdc_pg_dangling_checkpoint_tools.tcl}"
-  echo "mptdc_ckpt_assert_geometry_regular_clean"
+  if [[ "$MODE" != analyze && "$MODE" != analysis ]]; then
+    echo "mptdc_ckpt_assert_geometry_regular_clean"
+  fi
 } > "$COMMANDS_FILE"
 
 repair_args=(

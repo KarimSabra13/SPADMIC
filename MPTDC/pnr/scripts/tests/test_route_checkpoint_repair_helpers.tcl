@@ -101,6 +101,15 @@ proc set_db {objects attribute value} {
     if {[lsearch -exact $::mptdc_test_fail_db_attributes $attribute] >= 0} {
         error "fixture rejects $attribute"
     }
+    if {$::mptdc_test_manual_mode &&
+        [regexp {^mwire:([0-9]+)$} $objects -> idx] &&
+        [regexp {^\.(begin|end)_(extension|ext)$} $attribute -> endpoint]} {
+        set legacy_attribute [expr {$endpoint eq "begin" ? "beginExt" : "endExt"}]
+        set row [lindex $::mptdc_test_manual_wires $idx]
+        dict set row $legacy_attribute $value
+        set ::mptdc_test_manual_wires [lreplace \
+            $::mptdc_test_manual_wires $idx $idx $row]
+    }
     lappend ::mptdc_test_set_db_calls [list $objects $attribute $value]
 }
 
@@ -1154,7 +1163,7 @@ if {[dict get $minarea_v8_trial status] ne "PASS" ||
 if {$::mptdc_test_manual_verify_count != 2} {
     error "minimum-area V8 trial expected two verification tuples, found $::mptdc_test_manual_verify_count"
 }
-if {$::mptdc_test_set_db_calls ne {{mwire:0.endExt 0.255}}} {
+if {$::mptdc_test_set_db_calls ne {{mwire:0 .end_extension 0.255}}} {
     error "minimum-area V8 trial changed an unexpected DB attribute: $::mptdc_test_set_db_calls"
 }
 set fh [open [dict get $minarea_v8_trial report] r]
@@ -1233,7 +1242,8 @@ if {$::mptdc_test_manual_verify_count != 3} {
     error "minimum-area V8 replay expected three verification tuples, found $::mptdc_test_manual_verify_count"
 }
 if {[llength $::mptdc_test_set_db_calls] != 1 ||
-    [lindex [lindex $::mptdc_test_set_db_calls 0] 0] ne "mwire:1.endExt"} {
+    [lindex [lindex $::mptdc_test_set_db_calls 0] 0] ne "mwire:1" ||
+    [lindex [lindex $::mptdc_test_set_db_calls 0] 1] ne ".end_extension"} {
     error "minimum-area V8 replay changed an unexpected DB attribute: $::mptdc_test_set_db_calls"
 }
 set fh [open [dict get $minarea_v8_replay report] r]

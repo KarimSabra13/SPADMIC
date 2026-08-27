@@ -27,6 +27,50 @@ The preparation step also requires an explicitly selected GDS export of the
 real `RO_tune6` OA layout. A proxy, LEF-generated shell, or no-RO streamout is
 not an acceptable substitute.
 
+For RO6 recovery, export both views afresh into a run-local directory outside
+the OA library:
+
+- `RO_tune6/layout` to GDS
+- `RO_tune6/schematic` to CDL
+
+The standalone driver rejects artifacts older than 24 hours by default,
+fingerprints both OA view directories before and after the run, copies the GDS
+and CDL into an immutable result directory, and accepts only an explicit PVS
+`Run Result: MATCH` with no blackboxed cells:
+
+```bash
+MPTDC/scripts/pvs/server_run_mptdc_ro6_standalone_lvs.sh \
+  --source-pvs-run-id "$SOURCE_PVS_RUN" \
+  --run-id "$RO6_STANDALONE_RUN" \
+  --ro-gds "$RO_GDS" \
+  --ro-cdl "$RO_CDL" \
+  --expected-head "$EXPECTED_HEAD"
+```
+
+This is a macro proof and is deliberately `SIGNOFF_ELIGIBLE=NO`. It authorizes
+regenerating the digital physical source with the exact same GDS hash; it does
+not authorize a GDS release.
+
+## Physical LVS Source Contract
+
+Input preparation now builds LVS source only from Innovus
+`saveNetlist -phys -includePowerGround` output. The contract:
+
+- removes module definitions only for exact masters present in the selected
+  canonical CDL set, plus the protected `RO_tune6` wrapper;
+- preserves top-level instances, including physical tie instances;
+- rejects unresolved active and tie masters;
+- scalarizes only `u_core_u_osc_fast_u_ro_tune4` and
+  `u_core_u_osc_slow_u_ro_tune4` to exact same-index escaped pins `code<0>`
+  through `code<7>` and `S<0>` through `S<7>`;
+- emits a matching 19-pin scalar `RO_tune6` wrapper and rejects positional RO
+  instances.
+
+The boundary replay does not use position-based bus mapping and does not hide
+`tie1`. A diagnostic continuation is valid only for either an explicit top
+`MATCH` or the exact four-open `RO6_PG_OPEN_ONLY` remainder with zero bus,
+tie, net, and instance mismatch residue.
+
 The only dirty-checkpoint exception is explicit diagnostic mode:
 
 ```bash
