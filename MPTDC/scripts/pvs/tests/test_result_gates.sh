@@ -212,7 +212,7 @@ layout_path "$GDS";
 schematic_path "$SOURCE" verilog -keep_backslash;
 schematic_path "$CDL" cdl;
 EOF
-printf 'fixture config\n' > "$LVS_RUN/.config.rul"
+: > "$LVS_RUN/.config.rul"
 printf 'fixture technology\n' > "$LVS_RUN/.technology.rul"
 printf 'The net-lists match.\n' > "$LVS_RUN/final_lvs.sum"
 

@@ -2020,12 +2020,23 @@ or routed geometry before that review.
 
 ### Prove the digital top across the RO6 blackbox boundary
 
-The published mismatch is fully accounted for by two schematic `RO_tune6`
-wrappers versus the 380 devices extracted from the two layout macros. The HCell
-mapping was loaded, but PVS reported zero blackboxed cells. This command reuses
-the exact immutable GDS, source, CDL, and HCell inputs and launches only one new
-LVS comparison with an explicit `lvs_black_box RO_tune6` rule. It does not run
-Innovus, streamout, or PVS DRC.
+The first boundary replay proved that `lvs_black_box RO_tune6` is loaded and
+applied once. It also reduced the top comparison to equal device counts, then
+exposed two independent source-namespace differences: the OA macro pins use
+`S<0>`/`code<0>` while Verilog uses `S[0]`/`code[0]`, and Verilog's generated
+`tie1` global was promoted to an extra compare port. This command reuses the
+exact immutable GDS, source, CDL, and HCell inputs and launches only one new LVS
+comparison with three audited boundary-only controls:
+
+- `lvs_black_box RO_tune6;`
+- `lvs_verilog_bus_map_by_position yes;`
+- `lvs_global_sigs_are_ports no;`
+
+The replay remains diagnostic and position-based bus mapping is not accepted as
+standalone macro or block signoff. It does not run Innovus, streamout, or PVS
+DRC. An existing zero-byte `.config.rul` is valid template evidence; PVS loads
+it together with the nonempty `.technology.rul`, and the result gate now checks
+existence rather than inventing content for that file.
 
 The source preflight reads the raw `PVS_LVS_RC=0` tool report and the sole
 comparison report's explicit `Run Result: MISMATCH`. The older fail-closed gate
@@ -2080,8 +2091,8 @@ echo "SYNC_RC=$SYNC_RC"
 echo "SOURCE_PVS_RUN=$SOURCE_PVS_RUN"
 echo "BOUNDARY_PVS_RUN=$BOUNDARY_PVS_RUN"
 echo "BOUNDARY_DRIVER_RC=$BOUNDARY_DRIVER_RC"
-grep -E '^(PVS_BOUNDARY_RECOVERY_STATUS|PVS_LVS|LVS_BLACKBOX_RULE_STATUS|LVS_BLACKBOX_APPLICATION_STATUS|LVS_BLACKBOXED_CELL_COUNT|RO6_STANDALONE_LVS_REQUIRED|DRC_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
-  "$DRIVER_LOG" 2>/dev/null | tail -20
+grep -E '^(PVS_BOUNDARY_RECOVERY_STATUS|PVS_LVS|LVS_BLACKBOX_RULE_STATUS|LVS_BLACKBOX_APPLICATION_STATUS|LVS_BLACKBOXED_CELL_COUNT|LVS_BUS_PIN_MAP_RULE_STATUS|LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS|RO6_BLACKBOX_CELL_MATCH_STATUS|RO6_ANGLE_BUS_MISSING_PIN_COUNT|RO6_SQUARE_BUS_MISSING_PIN_COUNT|TIE1_UNMATCHED_PIN_COUNT|LAYOUT_OPEN_NET_COUNT|SHORTS_OPENS_RECORD_COUNT|MISMATCHED_NET_RECORD_COUNT|MISMATCHED_INSTANCE_RECORD_COUNT|BOUNDARY_REMAINDER_CLASS|RO6_STANDALONE_LVS_REQUIRED|DRC_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -40
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 
 echo "===== BOUNDARY GATE ====="
@@ -2092,7 +2103,9 @@ Interpret the result before doing anything else:
 
 - Continue only when `BOUNDARY_DRIVER_RC=0`,
   `PVS_BOUNDARY_RECOVERY_STATUS=PASS`, `PVS_LVS=MATCH`, both blackbox statuses
-  are `PASS`, `LVS_BLACKBOXED_CELL_COUNT` is at least one,
+  are `PASS`, both namespace-rule statuses are `PASS`,
+  `RO6_BLACKBOX_CELL_MATCH_STATUS=PASS`, `LVS_BLACKBOXED_CELL_COUNT` is at
+  least one,
   `DECISION=PASS_BOUNDARY_CONTINUE`, and `PUBLISH_RC=0`.
 - The expected next stage is
   `RO6_STANDALONE_LVS_EVIDENCE_AND_MINAREA_REPAIR`. Send the compact `SEND BACK`
@@ -2100,6 +2113,11 @@ Interpret the result before doing anything else:
 - `RO6_STANDALONE_LVS_REQUIRED=YES`, `DRC_STATUS=NOT_RUN_BY_SCOPE`, and
   `SIGNOFF_ELIGIBLE=NO` are mandatory even on a match. Never report this run as
   block LVS signoff.
+- `BOUNDARY_REMAINDER_CLASS=RO6_PG_OPEN_ONLY` is a bounded diagnostic result,
+  not a match. It requires zero RO bus-pin misses, zero `tie1` pin misses, zero
+  mismatched-net and mismatched-instance records, and exactly the four expected
+  VDD/VSS layout opens. Stop there; the next stage is the manual RO PG patch,
+  followed by another immutable boundary LVS replay.
 - On any mismatch, ineffective blackbox rule, nonzero driver RC, or publish
   failure, stop. The wrapper publishes the bounded controls and comparison
   report; do not rerun PnR or edit the remaining minimum-area geometry first.

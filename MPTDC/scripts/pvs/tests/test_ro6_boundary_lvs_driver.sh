@@ -72,18 +72,41 @@ done
 [[ "$boundary" == 1 && -n "$prepared" && -n "$new_run" ]]
 mkdir -p "$new_run" "$prepared/reports"
 printf 'run\n' > "$new_run/run.pvs"
-cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
+if [[ "${MPTDC_TEST_BOUNDARY_RESULT:-match}" == pg_open ]]; then
+  cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
+STATUS=FAIL
+PVS_LVS_STATUS=MISMATCH
+PVS_RC=0
+RPT
+  replay_rc=8
+else
+  cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
 STATUS=PASS
 PVS_LVS_STATUS=MATCH
 PVS_RC=0
 RPT
+  replay_rc=0
+fi
 cat > "$prepared/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt" <<'RPT'
 LVS_BLACKBOX_RULE_STATUS=PASS
 LVS_BLACKBOX_APPLICATION_STATUS=PASS
 LVS_BLACKBOXED_CELL_COUNT=1
+LVS_BUS_PIN_MAP_RULE_STATUS=PASS
+LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=PASS
+RO6_BLACKBOX_CELL_MATCH_STATUS=PASS
+RO6_ANGLE_BUS_MISSING_PIN_COUNT=0
+RO6_SQUARE_BUS_MISSING_PIN_COUNT=0
+TIE1_UNMATCHED_PIN_COUNT=0
+LAYOUT_OPEN_NET_COUNT=4
+SHORTS_OPENS_RECORD_COUNT=2
+MISMATCHED_NET_RECORD_COUNT=0
+MISMATCHED_INSTANCE_RECORD_COUNT=0
+VDD_OPEN_SECTION_COUNT=1
+VSS_OPEN_SECTION_COUNT=1
 RO6_STANDALONE_LVS_REQUIRED=YES
 SIGNOFF_ELIGIBLE=NO
 RPT
+exit "$replay_rc"
 EOF
 
 cat > "$PUBLISHER" <<'EOF'
@@ -116,12 +139,35 @@ grep -qx 'SOURCE_GATE_LVS_STATUS=NOT_PROVEN' "$TMP_ROOT/pass.stdout"
 grep -qx 'SOURCE_CLS_RUN_RESULT=MISMATCH' "$TMP_ROOT/pass.stdout"
 grep -qx 'SOURCE_PVS_RC=0' "$TMP_ROOT/pass.stdout"
 grep -qx 'PVS_LVS=MATCH' "$TMP_ROOT/pass.stdout"
+grep -qx 'LVS_BUS_PIN_MAP_RULE_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'RO6_BLACKBOX_CELL_MATCH_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'BOUNDARY_REMAINDER_CLASS=NONE_MATCH' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_BOUNDARY_CONTINUE' "$TMP_ROOT/pass.stdout"
 grep -qx 'PUBLISH_RC=0' "$TMP_ROOT/pass.stdout"
 grep -qx 'NEXT_STAGE=RO6_STANDALONE_LVS_EVIDENCE_AND_MINAREA_REPAIR' "$TMP_ROOT/pass.stdout"
 grep -q "pvs $RUN_ID $WORK/$RUN_ID PVS_RO6_BOUNDARY_LVS" "$TMP_ROOT/publish.args"
 test -L "$WORK/$RUN_ID/outputs"
 grep -qx 'SIGNOFF_ELIGIBLE=NO' "$WORK/$RUN_ID/reports/operator_gate_pvs_ro6_boundary_lvs.rpt"
+
+set +e
+MPTDC_TEST_BOUNDARY_RESULT=pg_open \
+MPTDC_BOUNDARY_LVS_REPO_ROOT="$REPO" \
+MPTDC_BOUNDARY_LVS_REPLAY="$REPLAY" \
+MPTDC_BOUNDARY_LVS_PUBLISHER="$PUBLISHER" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/publish_pg_open.args" \
+bash "$DRIVER" \
+  --source-pvs-run-id "$SOURCE_ID" \
+  --run-id boundary_lvs_pg_open \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/pg_open.stdout" 2>&1
+PG_OPEN_RC=$?
+set -e
+test "$PG_OPEN_RC" -ne 0
+grep -qx 'PVS_LVS=MISMATCH' "$TMP_ROOT/pg_open.stdout"
+grep -qx 'BOUNDARY_REMAINDER_CLASS=RO6_PG_OPEN_ONLY' "$TMP_ROOT/pg_open.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/pg_open.stdout"
+grep -qx 'NEXT_STAGE=RO6_MANUAL_PG_PATCH_BEFORE_BOUNDARY_LVS' "$TMP_ROOT/pg_open.stdout"
 
 cat > "$SOURCE_LVS/source.cls" <<'EOF'
 #####  Run Result                    :     MISMATCH

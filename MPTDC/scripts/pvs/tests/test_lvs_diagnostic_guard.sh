@@ -87,6 +87,8 @@ cat > "$BOUNDARY_SCOPE" <<'EOF'
 PVS_RUN_CLASS=DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX
 DIAGNOSTIC_SCOPE=LVS_ONLY_RO6_BOUNDARY
 BLACKBOX_CELL=RO_tune6
+RO6_BUS_PIN_NORMALIZATION=LVS_VERILOG_BUS_MAP_BY_POSITION
+VERILOG_GLOBAL_SIGNAL_PORT_POLICY=DO_NOT_PROMOTE
 RO6_STANDALONE_LVS_REQUIRED=YES
 SIGNOFF_ELIGIBLE=NO
 EOF
@@ -183,8 +185,12 @@ grep -Fq 'rule inventory hash mismatch' "$TMP_ROOT/bad_hash.stdout"
 run_boundary_dry "$TMP_ROOT/lvs_boundary_valid" > "$TMP_ROOT/boundary_valid.stdout"
 grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
 grep -qx 'lvs_black_box RO_tune6;' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
+grep -qx 'lvs_verilog_bus_map_by_position yes;' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
+grep -qx 'lvs_global_sigs_are_ports no;' "$TMP_ROOT/lvs_boundary_valid/pvslvsctl"
 grep -qx 'diagnostic_ro6_boundary_blackbox: 1' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
 grep -qx 'blackbox_cell: RO_tune6' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
+grep -qx 'ro6_bus_pin_normalization: LVS_VERILOG_BUS_MAP_BY_POSITION' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
+grep -qx 'verilog_global_signal_port_policy: DO_NOT_PROMOTE' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
 
 mv "$BOUNDARY_SCOPE" "${BOUNDARY_SCOPE}.saved"
 set +e
@@ -214,7 +220,10 @@ fi
 cat > boundary_lvs.sum.cls <<CLS
 LVS Rules Given in the Rules File
     lvs_black_box RO_tune6
+    lvs_verilog_bus_map_by_position yes
+    lvs_global_sigs_are_ports no
 Cells that have been blackboxed              |         $blackboxed
+RO_tune6 | 19 : 19 | 19 : 19 | match | black box
 #####  Run Result                    :     MATCH
 CLS
 exit 0
@@ -223,8 +232,11 @@ EOF
 MPTDC_TEST_BLACKBOX_EFFECTIVE=1 \
 run_boundary "$TMP_ROOT/lvs_boundary_effective" > "$TMP_ROOT/boundary_effective.stdout"
 grep -qx 'LVS_BLACKBOX_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BUS_PIN_MAP_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_BLACKBOXED_CELL_COUNT=1' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_BLACKBOX_APPLICATION_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'RO6_BLACKBOX_CELL_MATCH_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 
 set +e
 MPTDC_TEST_BLACKBOX_EFFECTIVE=0 \

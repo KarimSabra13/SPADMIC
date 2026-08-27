@@ -213,6 +213,10 @@ require_ro6_boundary_blackbox_scope() {
     mptdc_pvs_die "RO6 boundary scope is not LVS_ONLY_RO6_BOUNDARY: $scope"
   grep -qx 'BLACKBOX_CELL=RO_tune6' "$scope" || \
     mptdc_pvs_die "RO6 boundary scope has an unexpected blackbox cell: $scope"
+  grep -qx 'RO6_BUS_PIN_NORMALIZATION=LVS_VERILOG_BUS_MAP_BY_POSITION' "$scope" || \
+    mptdc_pvs_die "RO6 boundary scope has an unexpected bus-pin policy: $scope"
+  grep -qx 'VERILOG_GLOBAL_SIGNAL_PORT_POLICY=DO_NOT_PROMOTE' "$scope" || \
+    mptdc_pvs_die "RO6 boundary scope has an unexpected global-signal policy: $scope"
   grep -qx 'RO6_STANDALONE_LVS_REQUIRED=YES' "$scope" || \
     mptdc_pvs_die "RO6 boundary scope does not require standalone macro LVS: $scope"
   grep -qx 'SIGNOFF_ELIGIBLE=NO' "$scope" || \
@@ -239,6 +243,14 @@ require_ro6_boundary_blackbox_scope() {
 write_ro6_boundary_blackbox_gate() {
   local report="$NEW_BASE/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
   local cls_file_count=0 cls_file="" blackboxed_count=MISSING rule_count=0
+  local bus_rule_count=0 bus_rule_status=FAIL
+  local global_rule_count=0 global_rule_status=FAIL
+  local ro6_initial_pins=MISSING ro6_compare_pins=MISSING ro6_cell_status=MISSING
+  local ro6_cell_match_status=FAIL angle_bus_missing_count=MISSING
+  local square_bus_missing_count=MISSING tie1_missing_count=MISSING
+  local layout_open_net_count=MISSING shorts_opens_count=MISSING
+  local mismatched_net_count=MISSING mismatched_instance_count=MISSING
+  local vdd_open_section_count=MISSING vss_open_section_count=MISSING
   local rule_status=FAIL application_status=FAIL gate_rc=1
 
   if [[ -d "$NEW_LVS_RUN" ]]; then
@@ -249,6 +261,23 @@ write_ro6_boundary_blackbox_gate() {
     blackboxed_count="$(awk -F '|' '/Cells that have been blackboxed/ {value=$2; gsub(/[[:space:]]/, "", value); print value; exit}' "$cls_file")"
     [[ -n "$blackboxed_count" ]] || blackboxed_count=MISSING
     rule_count="$(grep -Eic '^[[:space:]]*lvs_black_box[[:space:]].*RO_tune6' "$cls_file" 2>/dev/null || true)"
+    bus_rule_count="$(grep -Eic '^[[:space:]]*lvs_verilog_bus_map_by_position[[:space:]]+yes([[:space:]]|$)' "$cls_file" 2>/dev/null || true)"
+    global_rule_count="$(grep -Eic '^[[:space:]]*lvs_global_sigs_are_ports[[:space:]]+no([[:space:]]|$)' "$cls_file" 2>/dev/null || true)"
+    ro6_initial_pins="$(awk -F '|' '$1 ~ /^RO_tune6[[:space:]]*$/ {value=$2; gsub(/[[:space:]]/, "", value); print value; exit}' "$cls_file")"
+    ro6_compare_pins="$(awk -F '|' '$1 ~ /^RO_tune6[[:space:]]*$/ {value=$3; gsub(/[[:space:]]/, "", value); print value; exit}' "$cls_file")"
+    ro6_cell_status="$(awk -F '|' '$1 ~ /^RO_tune6[[:space:]]*$/ {value=$4; gsub(/[[:space:]]/, "", value); print tolower(value); exit}' "$cls_file")"
+    [[ -n "$ro6_initial_pins" ]] || ro6_initial_pins=MISSING
+    [[ -n "$ro6_compare_pins" ]] || ro6_compare_pins=MISSING
+    [[ -n "$ro6_cell_status" ]] || ro6_cell_status=MISSING
+    angle_bus_missing_count="$(grep -Ec 'Layout Pin: (S|code)<[0-7]>[[:space:]]*\| Schematic Pin: \*\* missing pin \*\*' "$cls_file" 2>/dev/null || true)"
+    square_bus_missing_count="$(grep -Ec 'Layout Pin: \*\* missing pin \*\*[[:space:]]*\| Schematic Pin: (S|code)\[[0-7]\]' "$cls_file" 2>/dev/null || true)"
+    tie1_missing_count="$(grep -Ec '^tie1[[:space:]]*\|[[:space:]]*\*\* missing pin \*\*' "$cls_file" 2>/dev/null || true)"
+    layout_open_net_count="$(grep -Ec '\|[[:space:]]+OPEN[[:space:]]*$' "$cls_file" 2>/dev/null || true)"
+    shorts_opens_count="$(grep -Ec '\(sao[[:space:]]+[0-9]+\)' "$cls_file" 2>/dev/null || true)"
+    mismatched_net_count="$(grep -Ec '\(mn[[:space:]]+[0-9]+\)' "$cls_file" 2>/dev/null || true)"
+    mismatched_instance_count="$(grep -Ec '\(mi[[:space:]]+[0-9]+\)' "$cls_file" 2>/dev/null || true)"
+    vdd_open_section_count="$(grep -Ec 'Layout Pin: VDD[[:space:]]*\| Schematic Pin: VDD' "$cls_file" 2>/dev/null || true)"
+    vss_open_section_count="$(grep -Ec 'Layout Pin: VSS[[:space:]]*\| Schematic Pin: VSS' "$cls_file" 2>/dev/null || true)"
   fi
 
   if [[ "$rule_count" -ge 1 ]]; then
@@ -257,7 +286,19 @@ write_ro6_boundary_blackbox_gate() {
   if [[ "$blackboxed_count" =~ ^[0-9]+$ && "$blackboxed_count" -ge 1 ]]; then
     application_status=PASS
   fi
-  if [[ "$rule_status" == PASS && "$application_status" == PASS ]]; then
+  if [[ "$bus_rule_count" -ge 1 ]]; then
+    bus_rule_status=PASS
+  fi
+  if [[ "$global_rule_count" -ge 1 ]]; then
+    global_rule_status=PASS
+  fi
+  if [[ "$ro6_initial_pins" == 19:19 && "$ro6_compare_pins" == 19:19 && \
+        "$ro6_cell_status" == match ]]; then
+    ro6_cell_match_status=PASS
+  fi
+  if [[ "$rule_status" == PASS && "$application_status" == PASS && \
+        "$bus_rule_status" == PASS && "$global_rule_status" == PASS && \
+        "$ro6_cell_match_status" == PASS ]]; then
     gate_rc=0
   fi
 
@@ -268,8 +309,25 @@ write_ro6_boundary_blackbox_gate() {
     echo "LVS_BLACKBOX_CLS_FILE=${cls_file:-MISSING}"
     echo "LVS_BLACKBOX_RULE_COUNT=$rule_count"
     echo "LVS_BLACKBOX_RULE_STATUS=$rule_status"
+    echo "LVS_BUS_PIN_MAP_RULE_COUNT=$bus_rule_count"
+    echo "LVS_BUS_PIN_MAP_RULE_STATUS=$bus_rule_status"
+    echo "LVS_GLOBAL_SIGNAL_PORT_RULE_COUNT=$global_rule_count"
+    echo "LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=$global_rule_status"
     echo "LVS_BLACKBOXED_CELL_COUNT=$blackboxed_count"
     echo "LVS_BLACKBOX_APPLICATION_STATUS=$application_status"
+    echo "RO6_BLACKBOX_INITIAL_PINS=$ro6_initial_pins"
+    echo "RO6_BLACKBOX_COMPARE_PINS=$ro6_compare_pins"
+    echo "RO6_BLACKBOX_CELL_STATUS=$ro6_cell_status"
+    echo "RO6_BLACKBOX_CELL_MATCH_STATUS=$ro6_cell_match_status"
+    echo "RO6_ANGLE_BUS_MISSING_PIN_COUNT=$angle_bus_missing_count"
+    echo "RO6_SQUARE_BUS_MISSING_PIN_COUNT=$square_bus_missing_count"
+    echo "TIE1_UNMATCHED_PIN_COUNT=$tie1_missing_count"
+    echo "LAYOUT_OPEN_NET_COUNT=$layout_open_net_count"
+    echo "SHORTS_OPENS_RECORD_COUNT=$shorts_opens_count"
+    echo "MISMATCHED_NET_RECORD_COUNT=$mismatched_net_count"
+    echo "MISMATCHED_INSTANCE_RECORD_COUNT=$mismatched_instance_count"
+    echo "VDD_OPEN_SECTION_COUNT=$vdd_open_section_count"
+    echo "VSS_OPEN_SECTION_COUNT=$vss_open_section_count"
     echo "RO6_STANDALONE_LVS_REQUIRED=YES"
     echo "SIGNOFF_ELIGIBLE=NO"
   } | tee "$report"
@@ -337,13 +395,17 @@ for f in "${PATCH_FILES[@]}"; do
 done
 
 if [[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
-  if grep -Eq '^[[:space:]]*lvs_black_box([[:space:]]|$)' "$NEW_LVS_RUN/pvslvsctl"; then
-    mptdc_pvs_die "template already contains an lvs_black_box rule; refusing ambiguous boundary control"
-  fi
+  for rule in lvs_black_box lvs_verilog_bus_map_by_position lvs_global_sigs_are_ports; do
+    if grep -Eq "^[[:space:]]*${rule}([[:space:]]|$)" "$NEW_LVS_RUN/pvslvsctl"; then
+      mptdc_pvs_die "template already contains $rule; refusing ambiguous boundary control"
+    fi
+  done
   {
     echo
     echo "// MPTDC diagnostic digital-top boundary comparison; not standalone RO LVS."
     echo "lvs_black_box $BLACKBOX_CELL;"
+    echo "lvs_verilog_bus_map_by_position yes;"
+    echo "lvs_global_sigs_are_ports no;"
   } >> "$NEW_LVS_RUN/pvslvsctl"
 fi
 
@@ -368,6 +430,8 @@ chmod +x "$NEW_LVS_RUN/run.pvs"
   echo "diagnostic_allow_base_drc_debt: $DIAGNOSTIC_ALLOW_BASE_DRC_DEBT"
   echo "diagnostic_ro6_boundary_blackbox: $DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX"
   echo "blackbox_cell: ${BLACKBOX_CELL:-NONE}"
+  echo "ro6_bus_pin_normalization: $([[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]] && echo LVS_VERILOG_BUS_MAP_BY_POSITION || echo NONE)"
+  echo "verilog_global_signal_port_policy: $([[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]] && echo DO_NOT_PROMOTE || echo DEFAULT)"
   echo "dry_run: $DRY_RUN"
 } | tee "$NEW_BASE/manifests/pvs_lvs_replay_manifest.txt"
 
@@ -376,7 +440,7 @@ chmod +x "$NEW_LVS_RUN/run.pvs"
   sed -n '1,180p' "$NEW_LVS_RUN/run.pvs"
   echo
   echo "===== Patched LVS config scan ====="
-  grep -RniE 'mptdc_axis_core_merged_stdcell_ro6|NO_DCELL|RO6|RO_tune6|xh018_D_CELLS|LVS_FIND_SHORTS|VDD|VSS|hcell|HCell|black_box|BLACK_BOX|SOURCE|source|verilog|cdl|CDL' \
+  grep -RniE 'mptdc_axis_core_merged_stdcell_ro6|NO_DCELL|RO6|RO_tune6|xh018_D_CELLS|LVS_FIND_SHORTS|VDD|VSS|hcell|HCell|black_box|BLACK_BOX|bus_map|global_sigs|SOURCE|source|verilog|cdl|CDL' \
     "$NEW_LVS_RUN/run.pvs" "$NEW_LVS_RUN/pvslvsctl" "$NEW_LVS_RUN/.config.rul" "$NEW_LVS_RUN/.technology.rul" | sed -n '1,420p' || true
 } | tee "$NEW_BASE/reports/pvs_lvs_replay_preflight.rpt"
 

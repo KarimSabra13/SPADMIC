@@ -69,6 +69,13 @@ def require_file(path: Path, label: str) -> Path:
     return resolved
 
 
+def require_existing_file(path: Path, label: str) -> Path:
+    resolved = path.expanduser().resolve()
+    if not resolved.is_file():
+        raise GateError(f"{label} missing: {resolved}")
+    return resolved
+
+
 def manifest_values(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     for line in path.read_text(errors="replace").splitlines():
@@ -187,7 +194,7 @@ def verify_controls(
     control_files = [
         run_control,
         lvs_control,
-        require_file(run_dir / ".config.rul", ".config.rul"),
+        require_existing_file(run_dir / ".config.rul", ".config.rul"),
         require_file(run_dir / ".technology.rul", ".technology.rul"),
     ]
     hcell_references = sum(
