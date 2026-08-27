@@ -1,0 +1,20 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_ro6_boundary_fillernorm_155552/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script/pvs_lvs_replay.stdout
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT|match|MATCH|mismatch|MISMATCH)\b)
+# Last 500 matching lines
+[WARN]: TEXT_DEPTH at line 76 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul is skipped. It is set in control file.
+[WARN]: LAYOUT_FORMAT at line 78 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul is skipped. It is set in control file.
+[WARN]: LVS_REPORT_FILE at line 94 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul is skipped. It is set in control file.
+[WARN]: LVS_REPORT_OPT at line 95 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul is skipped. It is set in control file.
+[WARN]: LVS_IGNORE_PORTS at line 104 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul is skipped. It is set in control file.
+[WARN]: LVS_REPORT_MAX at line 165 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul is skipped. It is set in control file.
+[WARN]: LVS_BREAK_AMBIG_MAX at line 166 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul is skipped. It is set in control file.
+[WARN] SCHEMATIC_FORMAT: rule is ignored due to one specified before in SCHEMATIC_PATH.
+[WARN] Offgrid Vertex on layer met1_dg at location (48.335,-34.573) in cell isource_n3.
+[WARN] Offgrid Vertex on layer met1_dg at location (49.335,-34.573) in cell isource_n3.
+[WARN] Offgrid Vertex on layer met1_dg at location (49.335,-32.178) in cell isource_n3.
+[WARN] Offgrid Vertex on layer met1_dg at location (48.335,-32.178) in cell isource_n3.
+ [WARN] Reach the TEXT_PRINT_MAXIMUM: 1000, the rest of texts will not print out
+   0 insts vs 0 insts . . . . . . . . . . . . . . . . . . . . . . . . (0s)-match
+   213412 insts vs 213412 insts . . . . . . . . . . . . . . . . .  (8s)-mismatch
+    # Run Result             : MISMATCH                            #
+    # Run Summary            : [ERROR] Connectivity Mismatches     #
