@@ -1,0 +1,5 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_oa_vdd_pin_label_repair_pycompat_145429/logs/virtuoso_ro6_oa_vdd_repair.console.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+          RESTRICTED RIGHTS NOTICE (SHORT FORM)
+MPTDC_RO6_OA_VDD_REPAIR_COMPLETION_STATUS=PASS
