@@ -1,0 +1,13 @@
+#!/bin/sh -f
+# MPTDC attributable standalone RO_tune6 LVS
+cd "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/pvs_lvs/RO_tune6_standalone_script" || exit 3
+/eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs \
+  -lvs \
+  -top_cell RO_tune6 \
+  -source_top_cell RO_tune6 \
+  -spice "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/pvs_lvs/RO_tune6_standalone_script/RO_tune6.spi" \
+  -control "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/pvs_lvs/RO_tune6_standalone_script/pvslvsctl" \
+  -ui_data \
+  -gdb_data \
+  "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/pvs_lvs/RO_tune6_standalone_script/.config.rul" \
+  "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/pvs_lvs/RO_tune6_standalone_script/.technology.rul"
