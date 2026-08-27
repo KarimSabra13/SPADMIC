@@ -191,9 +191,9 @@ def main() -> int:
         if not passed:
             errors.append(f"CHECK_FAILED:{name}")
 
-    exact_terminal_names = terminal_names == EXPECTED_TERMINALS
     terminal_contract_pass = (
-        exact_terminal_names
+        EXPECTED_TERMINALS <= terminal_names
+        and empty_global_aliases_safe
         and vdd_pin_count > 0
         and bool(vdd_fig_rows)
         and vss_pin_count > 0
@@ -203,6 +203,9 @@ def main() -> int:
     if errors:
         diagnosis = "PROBE_INCOMPLETE_OR_OA_TERMINAL_CONTRACT_INVALID"
         next_action = "STOP_AND_REVIEW_OA_PROBE_EVIDENCE"
+    elif terminal_contract_pass and vdd_label_rows:
+        diagnosis = "VDD_PIN_LABEL_CONTRACT_PRESENT"
+        next_action = "EXPORT_FRESH_RO6_GDS_AND_RERUN_STANDALONE_LVS"
     elif not vdd_fig_rows and not vdd_label_rows and vdd_candidate_shape_rows:
         diagnosis = "VDD_PIN_AND_LABEL_MISSING_ON_PROVEN_VDD_GEOMETRY"
         next_action = "REVIEW_ONE_HASH_GUARDED_VDD_PIN_LABEL_REPAIR"

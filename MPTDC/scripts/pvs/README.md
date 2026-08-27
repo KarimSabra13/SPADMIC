@@ -78,6 +78,43 @@ record. The separate `strmout completed.` wrapper message is captured when
 present but is optional because GUI/CIW output is not always copied into the
 XStream log.
 
+The published V2 probe identified one unique live repair target: the existing
+`VDD` `METTP:pin` rectangle at
+`(-68.700,-31.950)-(-66.670,-30.115)`. Its coincident MET1/MET2/MET3 drawing
+stack is present, but the existing `VDD` terminal owns no pin figure and no
+`VDD` text label exists. The historical golden-LEF VDD box does not overlap
+this OA revision's `VDD` shapes and must not be used for an OA edit.
+
+`server_apply_mptdc_ro6_oa_vdd_pin_label_repair.sh` is the only supported
+write transaction for this defect. Before opening OA for append, it requires
+the exact published probe, current OA content hashes, a clean repository, no
+OA lock files, and the explicit authorization token. It then copies and
+verifies the complete `RO_tune6` OA cell under
+`$MPTDC_WORK_ROOT/handoff/oa_backups/RO_tune6`. The SKILL action attaches the
+existing pin-purpose rectangle to the existing terminal and creates one
+`MET3:TEXT` label on the coincident exported MET3 drawing shape. The pin-purpose
+METTP shape itself is ignored by XStream, so labeling METTP would not bind a
+streamed polygon. The transaction cannot create or delete metal,
+rename nets or terminals, edit `vdd!`/`gnd!`, or edit the schematic.
+
+```bash
+# MUTATES Prj_xh018_ksabra/RO_tune6/layout. Run only after explicit review.
+MPTDC/scripts/pvs/server_apply_mptdc_ro6_oa_vdd_pin_label_repair.sh \
+  --source-probe-run-id 20260827_mptdc_ro6_oa_vdd_export_probe_v2_141033 \
+  --run-id "$RO6_OA_VDD_REPAIR_RUN" \
+  --authorization EXACT_RO6_VDD_METTP_PIN_LABEL_REPAIR \
+  --expected-head "$EXPECTED_HEAD"
+```
+
+A successful transaction requires the immutable backup, exact action report,
+post-write read-only probe, effective terminal contract, and mutation-scope
+gate all to pass. The two empty global aliases are preserved and accepted;
+the required 19 terminals must all be present, `VDD` and `VSS` must both own
+pin figures, and one exact `VDD` label must exist. Success advances only to
+`EXPORT_FRESH_RO6_GDS_AND_RERUN_STANDALONE_LVS`; it is not an LVS or signoff
+pass. If any post-write check fails, stop and use the named immutable backup
+for reviewed recovery rather than attempting another mutation.
+
 ## Physical LVS Source Contract
 
 Input preparation now builds LVS source only from Innovus

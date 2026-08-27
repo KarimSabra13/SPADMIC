@@ -2347,6 +2347,85 @@ current VDD-associated top-level geometry and overlap with the committed
 golden-LEF VDD box before any repair is designed. Do not delete the empty
 aliases or create a VDD label until that geometry report has been reviewed.
 
+The reviewed V2 probe
+`20260827_mptdc_ro6_oa_vdd_export_probe_v2_141033` completed that geometry
+decision. It found seven `VDD`-associated shapes and one unique existing
+`METTP:pin` rectangle at
+`(-68.700,-31.950)-(-66.670,-30.115)`, coincident with VDD MET1/MET2/MET3
+drawing shapes. The `VDD` terminal owns zero pin figures and no `VDD` label
+exists. The old golden-LEF box overlaps only the placement boundary, so it is
+stale for this OA revision and is not a repair coordinate. The empty `vdd!`
+and `gnd!` aliases remain untouched.
+
+The next transaction is one exact OA metadata/export-contract repair. It does
+not create metal: it attaches the existing METTP pin-purpose rectangle to the
+existing `VDD` terminal with `dbCreatePin` and adds one `MET3:TEXT` `VDD`
+label on the coincident exported MET3 rectangle. `METTP:pin` is ignored by
+XStream and therefore is not a valid label-bearing streamed polygon. Before
+opening OA for append, the driver
+requires the published probe and current OA hashes, rejects OA lock files,
+copies the complete `RO_tune6` OA cell to an immutable `/sim` backup, and
+verifies the backup manifest. This is an OA mutation and must not be run until
+the operator explicitly authorizes exactly this scope and closes all Virtuoso
+windows using `RO_tune6/layout`.
+
+```bash
+###############################################################################
+# MUTATING STEP: run only after explicit authorization of the exact scope above
+###############################################################################
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+SOURCE_PROBE_RUN=20260827_mptdc_ro6_oa_vdd_export_probe_v2_141033
+REPAIR_RUN="$(date +%Y%m%d)_mptdc_ro6_oa_vdd_pin_label_repair_$(date +%H%M%S)"
+REPAIR_DIR=/sim/ksabra/SPADMIC_work/innovus/$REPAIR_RUN
+DRIVER_LOG=/tmp/${REPAIR_RUN}.driver.log
+REPAIR_DRIVER_RC=99
+
+cd "$REPO"
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$SOURCE_PROBE_RUN" ]; then
+  bash MPTDC/scripts/pvs/server_apply_mptdc_ro6_oa_vdd_pin_label_repair.sh \
+    --source-probe-run-id "$SOURCE_PROBE_RUN" \
+    --run-id "$REPAIR_RUN" \
+    --authorization EXACT_RO6_VDD_METTP_PIN_LABEL_REPAIR \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  REPAIR_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked tree, or exact source probe preflight failed"
+fi
+
+echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "SOURCE_PROBE_RUN=$SOURCE_PROBE_RUN"
+echo "REPAIR_RUN=$REPAIR_RUN"
+echo "REPAIR_DRIVER_RC=$REPAIR_DRIVER_RC"
+grep -E '^(RO6_OA_VDD_PIN_LABEL_REPAIR_STATUS|BACKUP_ROOT|BACKUP_STATUS|OA_REPAIR_STATUS|OA_REPAIR_ACTION_CONTRACT_STATUS|READBACK_TERMINAL_CONTRACT_STATUS|READBACK_VDD_EXPORT_DIAGNOSIS|OA_MUTATION_SCOPE_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -30
+cat "$REPAIR_DIR/reports/operator_gate_ro6_oa_vdd_pin_label_repair.rpt" 2>/dev/null
+cat "$REPAIR_DIR/reports/oa_ro6_vdd_pin_label_repair_action.rpt" 2>/dev/null
+cat "$REPAIR_DIR/reports/oa_ro6_vdd_pin_label_readback_classification.rpt" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Success requires driver RC zero, backup and action-contract status `PASS`,
+`READBACK_TERMINAL_CONTRACT_STATUS=PASS`, diagnosis
+`VDD_PIN_LABEL_CONTRACT_PRESENT`, mutation-scope status `PASS`, and next stage
+`EXPORT_FRESH_RO6_GDS_AND_RERUN_STANDALONE_LVS`. `SIGNOFF_ELIGIBLE=NO` remains
+mandatory. Stop after this transaction. Do not reuse the old GDS and do not
+claim LVS closure until a fresh export produces an explicit standalone
+`Run Result: MATCH`.
+
 The incomplete run `20260827_mptdc_ro6_standalone_lvs_130419` is classified as
 a wrapper abort before PVS launch: preflight and the 19-pin contract passed,
 but no PVS console log, `.cls`, `matched`, or `mismatched` artifact existed.
