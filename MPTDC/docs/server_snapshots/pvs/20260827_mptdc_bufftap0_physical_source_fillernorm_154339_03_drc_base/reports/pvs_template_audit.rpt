@@ -1,0 +1,135 @@
+# MPTDC PVS Template Audit
+date: 2026-08-27T15:45:05+02:00
+OLD_BASE=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608
+DRC_TEMPLATE=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged
+LVS_TEMPLATE=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts
+
+## Tool Paths
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /usr/sbin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pvs=/eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+2026/08/27 15:45:05 WARNING This OS does not appear to be a Cadence supported Linux configuration.
+2026/08/27 15:45:05 For more info, please run CheckSysConf in <cdsRoot/tools.lnx86/bin/checkSysConf <productId>
+2026/08/27 15:45:06 WARNING This OS does not appear to be a Cadence supported Linux configuration.
+2026/08/27 15:45:06 For more info, please run CheckSysConf in <cdsRoot/tools.lnx86/bin/checkSysConf <productId>
+Pegasus 23.11-s009 FbGK7KjMGPhkNci2o09sLg 2026-08-27 15:45:06 4162076 lyoelectrosrv01.in2p3.fr
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+
+-----------------------------------------------------------------
+Name          : Pegasus (64-bit)
+Description   : Pegasus Verification System
+Version       : 23.11-s009
+-----------------------------------------------------------------
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+pegasus=/eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+2026/08/27 15:45:06 WARNING This OS does not appear to be a Cadence supported Linux configuration.
+2026/08/27 15:45:06 For more info, please run CheckSysConf in <cdsRoot/tools.lnx86/bin/checkSysConf <productId>
+Pegasus 23.11-s009 FbGK7KjMGPhkNci2o09sLg 2026-08-27 15:45:06 4162130 lyoelectrosrv01.in2p3.fr
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+
+-----------------------------------------------------------------
+Name          : Pegasus (64-bit)
+Description   : Pegasus Verification System
+Version       : 23.11-s009
+-----------------------------------------------------------------
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+
+## Required Template Files
+PASS /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs
+PASS /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl
+PASS_EMPTY /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/.config.rul
+PASS /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/.technology.rul
+PASS /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs
+PASS_EMPTY /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/.config.rul
+PASS /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/.technology.rul
+PASS /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl
+
+## DRC Template Path Scan
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs:7:cd /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged ;\
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs:9:	-drc \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs:10:	-top_cell mptdc_axis_core \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs:12:	-control /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs:13:	-cell_tree /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/cell_tree.txt \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs:14:	/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/.config.rul \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/run.pvs:15:	/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/.technology.rul
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl:7:report_summary -drc "mptdc_axis_core_drc.sum" -replace;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl:8:max_results -drc 1000;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl:9:max_vertex -drc 4096;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl:10:results_db -drc "/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/mptdc_axis_core_drc.err" -ascii;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl:13:layout_format gdsii;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl:14:layout_path "/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/outputs/mptdc_axis_core_merged_stdcell_ro6.gds";
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/pvsdrcctl:16://   DRC CONFIGURATION  
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_drc/mptdc_axis_core_merged/.technology.rul:1:technology "XH018_1131" -ruleSet "default" -techLib "/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/pvtech.lib";
+
+## LVS Template Path Scan
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:7:cd /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts ;\
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:10:	-top_cell mptdc_axis_core \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:11:	-source_top_cell mptdc_axis_core \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:12:	-spice /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/mptdc_axis_core.spi \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:13:	-control /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:16:	-hcell /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/outputs/pvs_hcell_ro6.txt \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:17:	/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/.config.rul \
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/run.pvs:18:	/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/.technology.rul
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:13:lvs_power_name "VDD" "VDD_LEFT" "VDD_RIGHT" "VDD!" "vdd" "vdd!" "vddi" "vddi!";
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:14:lvs_ground_name "VSS" "VSS_LEFT" "VSS_RIGHT" "VSS!" "vss" "vss!" "gndi" "gndi!";
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:15:lvs_find_shorts yes;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:17:lvs_report_file "mptdc_axis_core_lvs.sum";
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:22:schematic_path "/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR.v" verilog -keep_backslash;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:23:schematic_path "/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/cdl/xh018_D_CELLS_JIHD.cdl" cdl;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:25:layout_format gdsii;
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts/pvslvsctl:26:layout_path "/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/outputs/mptdc_axis_core_merged_stdcell_ro6.gds";
