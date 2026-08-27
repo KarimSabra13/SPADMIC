@@ -2250,6 +2250,77 @@ Continue only with driver RC zero, recovery status `PASS`, explicit
 `DECISION=PASS_CONTINUE`, `PUBLISH_RC=0`, and next stage
 `DIAGNOSTIC_PHYSICAL_PVS_WITH_FRESH_RO_GDS`. `SIGNOFF_ELIGIBLE=NO` is expected.
 
+If preflight and the CDL contract pass but the driver returns before creating
+`operator_gate_pvs_ro6_standalone_lvs.rpt`, do not rerun PVS. Publish the
+existing incomplete run once with this block. It captures a bounded driver
+transcript and complete text-file inventory; the normal snapshot collector
+also includes available PVS reports, controls, result summaries, and log
+message tails.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+RO6_STANDALONE_RUN=REPLACE_WITH_INCOMPLETE_STANDALONE_RUN_ID
+RUN_DIR=/sim/ksabra/SPADMIC_work/innovus/$RO6_STANDALONE_RUN
+DRIVER_LOG=/tmp/${RO6_STANDALONE_RUN}.driver.log
+CAPTURE_TS=$(date +%Y%m%d_%H%M%S)
+EVIDENCE_ID=${RO6_STANDALONE_RUN}_incomplete_${CAPTURE_TS}
+CAPTURE_RC=99
+PUBLISH_RC=99
+
+cd "$REPO"
+
+if [ -d "$RUN_DIR" ] && [ -s "$DRIVER_LOG" ]; then
+  mkdir -p "$RUN_DIR/reports" "$RUN_DIR/logs"
+  cp -p "$DRIVER_LOG" \
+    "$RUN_DIR/logs/standalone_driver_incomplete_${CAPTURE_TS}.log"
+
+  {
+    echo "STEP=PVS_RO6_STANDALONE_INCOMPLETE_CAPTURE"
+    echo "RUN_ID=$RO6_STANDALONE_RUN"
+    echo "RUN_DIR=$RUN_DIR"
+    echo "DRIVER_LOG=$DRIVER_LOG"
+    echo "DRIVER_LOG_SHA256=$(sha256sum "$DRIVER_LOG" | awk '{print $1}')"
+    echo "OPERATOR_GATE_PRESENT=$([ -s "$RUN_DIR/reports/operator_gate_pvs_ro6_standalone_lvs.rpt" ] && echo YES || echo NO)"
+    echo "PVS_CONTROL_COUNT=$(find "$RUN_DIR/pvs_lvs" -type f -name pvslvsctl 2>/dev/null | wc -l | tr -d ' ')"
+    echo "PVS_CLS_COUNT=$(find "$RUN_DIR/pvs_lvs" -type f -name '*.cls' 2>/dev/null | wc -l | tr -d ' ')"
+    echo "MATCHED_MARKER_COUNT=$(find "$RUN_DIR/pvs_lvs" -type f -name matched 2>/dev/null | wc -l | tr -d ' ')"
+    echo "MISMATCHED_MARKER_COUNT=$(find "$RUN_DIR/pvs_lvs" -type f -name mismatched 2>/dev/null | wc -l | tr -d ' ')"
+  } > "$RUN_DIR/reports/operator_incomplete_capture.rpt"
+
+  {
+    echo "# First 240 lines from $DRIVER_LOG"
+    sed -n '1,240p' "$DRIVER_LOG"
+    echo
+    echo "# Last 600 lines from $DRIVER_LOG"
+    tail -600 "$DRIVER_LOG"
+  } > "$RUN_DIR/reports/standalone_driver_incomplete_excerpt.rpt"
+
+  find "$RUN_DIR" -type f -printf '%P\t%s bytes\n' 2>/dev/null \
+    | LC_ALL=C sort > "$RUN_DIR/reports/incomplete_run_file_inventory.rpt"
+  CAPTURE_RC=$?
+
+  MPTDC_SNAPSHOT_MAX_TEXT_BYTES=8388608 \
+  bash MPTDC/ci/publish_mptdc_server_snapshot.sh \
+    pvs "$EVIDENCE_ID" "$RUN_DIR" PVS_RO6_STANDALONE_INCOMPLETE
+  PUBLISH_RC=$?
+else
+  echo "STOP: incomplete run directory or driver log is missing"
+fi
+
+echo "===== SEND BACK ====="
+echo "RO6_STANDALONE_RUN=$RO6_STANDALONE_RUN"
+echo "EVIDENCE_ID=$EVIDENCE_ID"
+echo "CAPTURE_RC=$CAPTURE_RC"
+echo "PUBLISH_RC=$PUBLISH_RC"
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+This is an evidence operation only. `PUBLISH_RC=0` means the incomplete run is
+available for review; it does not mean LVS passed and does not authorize Stage
+B.
+
 #### B. Regenerate the Physical Digital-Top Source
 
 Use the exact same `RO_GDS` file that passed A. Replace
