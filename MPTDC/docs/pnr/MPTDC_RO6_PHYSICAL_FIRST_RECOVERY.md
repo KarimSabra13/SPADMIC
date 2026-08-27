@@ -2099,6 +2099,74 @@ result must contain one `.SUBCKT RO_tune6` with the 19-pin contract `VDD`,
 `VSS`, `rstb`, `code<0:7>`, and `S<0:7>`. Do not continue if either translator
 reports an error.
 
+auCdl may finish successfully but write its default file as `netlist` instead
+of the requested `RO_tune6.cdl`. Run this shell gate after both translators
+finish. It adopts the default file only when it is the single nonempty
+candidate and contains exactly one `RO_tune6` top definition; the source and
+canonical copy must remain byte-identical.
+
+```bash
+set +e
+
+RO_EXPORT_ROOT="$(sed -n '1p' /tmp/mptdc_ro6_export_root.txt 2>/dev/null)"
+RO_GDS="$RO_EXPORT_ROOT/RO_tune6.gds"
+RO_CDL="$RO_EXPORT_ROOT/RO_tune6.cdl"
+
+CDL_SOURCE_COUNT="$(
+  find "$RO_EXPORT_ROOT" -maxdepth 4 -type f -name netlist -size +0c \
+    -print 2>/dev/null | wc -l | tr -d ' '
+)"
+CDL_SOURCE="$(
+  find "$RO_EXPORT_ROOT" -maxdepth 4 -type f -name netlist -size +0c \
+    -print 2>/dev/null | sed -n '1p'
+)"
+CDL_ADOPTION_STATUS=NOT_NEEDED
+
+if [ ! -s "$RO_CDL" ]; then
+  CDL_ADOPTION_STATUS=FAIL
+  if [ "$CDL_SOURCE_COUNT" = "1" ]; then
+    SOURCE_TOP_COUNT="$(
+      awk 'toupper($1)==".SUBCKT" && $2=="RO_tune6" {n++}
+           END {print n+0}' "$CDL_SOURCE" 2>/dev/null
+    )"
+    if [ "$SOURCE_TOP_COUNT" = "1" ]; then
+      cp -p "$CDL_SOURCE" "$RO_CDL"
+      COPY_RC=$?
+      if [ "$COPY_RC" -eq 0 ] && cmp -s "$CDL_SOURCE" "$RO_CDL"; then
+        CDL_ADOPTION_STATUS=PASS
+        {
+          echo "CDL_SOURCE=$CDL_SOURCE"
+          echo "CDL_TARGET=$RO_CDL"
+          sha256sum "$CDL_SOURCE" "$RO_CDL"
+        } > "$RO_EXPORT_ROOT/RO_tune6_cdl_adoption.rpt"
+      fi
+    fi
+  fi
+fi
+
+CDL_SUBCKT_COUNT=0
+[ -s "$RO_CDL" ] && CDL_SUBCKT_COUNT="$(
+  awk 'toupper($1)==".SUBCKT" && $2=="RO_tune6" {n++}
+       END {print n+0}' "$RO_CDL"
+)"
+
+echo "===== FINAL EXPORT GATE ====="
+echo "CDL_SOURCE_COUNT=$CDL_SOURCE_COUNT"
+echo "CDL_SOURCE=$CDL_SOURCE"
+echo "CDL_ADOPTION_STATUS=$CDL_ADOPTION_STATUS"
+echo "RO_GDS_STATUS=$([ -s "$RO_GDS" ] && echo PASS || echo FAIL)"
+echo "RO_CDL_STATUS=$([ -s "$RO_CDL" ] && echo PASS || echo FAIL)"
+echo "CDL_SUBCKT_COUNT=$CDL_SUBCKT_COUNT"
+ls -lh "$RO_GDS" "$RO_CDL" 2>/dev/null
+file "$RO_GDS" "$RO_CDL" 2>/dev/null
+sha256sum "$RO_GDS" "$RO_CDL" 2>/dev/null
+```
+
+Continue only with `RO_GDS_STATUS=PASS`, `RO_CDL_STATUS=PASS`, and
+`CDL_SUBCKT_COUNT=1`. `CDL_ADOPTION_STATUS=PASS` is expected when auCdl used
+its default `netlist` filename; `NOT_NEEDED` is expected when it wrote the
+canonical target directly.
+
 The OA views remain read-only; do not copy, touch, or edit files in either OA
 view. Do not reuse the historical July GDS. The next block reads the saved
 destination instead of relying on a placeholder, rejects missing inputs before
