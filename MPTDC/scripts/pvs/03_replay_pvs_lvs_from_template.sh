@@ -254,7 +254,7 @@ require_ro6_boundary_blackbox_scope() {
 write_ro6_boundary_blackbox_gate() {
   local report="$NEW_BASE/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
   local cls_file_count=0 cls_file="" blackboxed_count=MISSING rule_count=0
-  local bus_rule_count=0 bus_rule_status=FAIL
+  local bus_rule_count=0 bus_rule_effective_value=ABSENT bus_rule_status=FAIL
   local global_rule_count=0 global_rule_status=FAIL
   local ro6_initial_pins=MISSING ro6_compare_pins=MISSING ro6_cell_status=MISSING
   local ro6_cell_match_status=FAIL angle_bus_missing_count=MISSING
@@ -273,7 +273,11 @@ write_ro6_boundary_blackbox_gate() {
     blackboxed_count="$(awk -F '|' '/Cells that have been blackboxed/ {value=$2; gsub(/[[:space:]]/, "", value); print value; exit}' "$cls_file")"
     [[ -n "$blackboxed_count" ]] || blackboxed_count=MISSING
     rule_count="$(grep -Eic '^[[:space:]]*lvs_black_box[[:space:]].*RO_tune6' "$cls_file" 2>/dev/null || true)"
-    bus_rule_count="$(grep -Eic '^[[:space:]]*lvs_verilog_bus_map_by_position([[:space:]]|$)' "$cls_file" 2>/dev/null || true)"
+    bus_rule_count="$(awk 'tolower($1) == "lvs_verilog_bus_map_by_position" {count++} END {print count+0}' "$cls_file")"
+    if [[ "$bus_rule_count" -gt 0 ]]; then
+      bus_rule_effective_value="$(awk 'tolower($1) == "lvs_verilog_bus_map_by_position" {print toupper($2); exit}' "$cls_file")"
+      [[ -n "$bus_rule_effective_value" ]] || bus_rule_effective_value=MISSING
+    fi
     global_rule_count="$(grep -Eic '^[[:space:]]*lvs_global_sigs_are_ports[[:space:]]+no([[:space:]]|$)' "$cls_file" 2>/dev/null || true)"
     ro6_initial_pins="$(awk -F '|' '$1 ~ /^RO_tune6[[:space:]]*$/ {value=$2; gsub(/[[:space:]]/, "", value); print value; exit}' "$cls_file")"
     ro6_compare_pins="$(awk -F '|' '$1 ~ /^RO_tune6[[:space:]]*$/ {value=$3; gsub(/[[:space:]]/, "", value); print value; exit}' "$cls_file")"
@@ -300,7 +304,8 @@ write_ro6_boundary_blackbox_gate() {
   if [[ "$blackboxed_count" =~ ^[0-9]+$ && "$blackboxed_count" -ge 1 ]]; then
     application_status=PASS
   fi
-  if [[ "$bus_rule_count" == 0 ]]; then
+  if [[ "$bus_rule_count" == 0 || \
+        ("$bus_rule_count" == 1 && "$bus_rule_effective_value" == NO) ]]; then
     bus_rule_status=NOT_USED_EXACT_SCALAR_SOURCE
   fi
   if [[ "$global_rule_count" -ge 1 ]]; then
@@ -324,6 +329,7 @@ write_ro6_boundary_blackbox_gate() {
     echo "LVS_BLACKBOX_RULE_COUNT=$rule_count"
     echo "LVS_BLACKBOX_RULE_STATUS=$rule_status"
     echo "LVS_BUS_PIN_MAP_RULE_COUNT=$bus_rule_count"
+    echo "LVS_BUS_PIN_MAP_EFFECTIVE_VALUE=$bus_rule_effective_value"
     echo "LVS_BUS_PIN_MAP_RULE_STATUS=$bus_rule_status"
     echo "LVS_GLOBAL_SIGNAL_PORT_RULE_COUNT=$global_rule_count"
     echo "LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=$global_rule_status"

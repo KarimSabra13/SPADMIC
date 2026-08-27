@@ -234,6 +234,33 @@ python3 "$PVS_DIR/06_gate_pvs_lvs.py" \
   --inventory "$TMP_ROOT/lvs_pass_inventory.tsv"
 grep -qx 'PVS_LVS_STATUS=MATCH' "$TMP_ROOT/lvs_pass.rpt"
 
+ln -s "$TMP_ROOT" "$LVS_RUN/outputs"
+HCELL_ALIAS="$LVS_RUN/outputs/pvs_hcell_ro6.txt"
+cat > "$LVS_RUN/run.pvs" <<EOF
+#!/bin/sh
+cd $LVS_RUN
+pvs -lvs -top_cell mptdc_axis_core -source_top_cell mptdc_axis_core -control $LVS_RUN/pvslvsctl -hcell $HCELL_ALIAS
+EOF
+python3 "$PVS_DIR/06_gate_pvs_lvs.py" \
+  --run-dir "$LVS_RUN" \
+  --tool-rc 0 \
+  --gds "$GDS" \
+  --source "$SOURCE" \
+  --cdl "$CDL" \
+  --hcell "$HCELL_ALIAS" \
+  --hash-manifest "$HASH_MANIFEST" \
+  --layout-top mptdc_axis_core \
+  --source-top mptdc_axis_core \
+  --out "$TMP_ROOT/lvs_hcell_symlink_pass.rpt" \
+  --inventory "$TMP_ROOT/lvs_hcell_symlink_pass_inventory.tsv"
+grep -qx 'PVS_LVS_STATUS=MATCH' "$TMP_ROOT/lvs_hcell_symlink_pass.rpt"
+
+cat > "$LVS_RUN/run.pvs" <<EOF
+#!/bin/sh
+cd $LVS_RUN
+pvs -lvs -top_cell mptdc_axis_core -source_top_cell mptdc_axis_core -control $LVS_RUN/pvslvsctl -hcell $HCELL
+EOF
+
 sed -i 's/verilog -keep_backslash;/verilog -keep_backslash -unsupported;/' \
   "$LVS_RUN/pvslvsctl"
 if python3 "$PVS_DIR/06_gate_pvs_lvs.py" \

@@ -244,9 +244,11 @@ if [ "${MPTDC_TEST_BLACKBOX_EFFECTIVE:-1}" = 1 ]; then
 else
   blackboxed=0
 fi
+bus_map="${MPTDC_TEST_BUS_MAP_EFFECTIVE:-no}"
 cat > boundary_lvs.sum.cls <<CLS
 LVS Rules Given in the Rules File
     lvs_black_box RO_tune6
+    lvs_verilog_bus_map_by_position $bus_map
     lvs_global_sigs_are_ports no
 Cells that have been blackboxed              |         $blackboxed
 RO_tune6 | 19 : 19 | 19 : 19 | match | black box
@@ -258,11 +260,23 @@ EOF
 MPTDC_TEST_BLACKBOX_EFFECTIVE=1 \
 run_boundary "$TMP_ROOT/lvs_boundary_effective" > "$TMP_ROOT/boundary_effective.stdout"
 grep -qx 'LVS_BLACKBOX_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BUS_PIN_MAP_RULE_COUNT=1' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BUS_PIN_MAP_EFFECTIVE_VALUE=NO' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_BUS_PIN_MAP_RULE_STATUS=NOT_USED_EXACT_SCALAR_SOURCE' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_BLACKBOXED_CELL_COUNT=1' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'LVS_BLACKBOX_APPLICATION_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 grep -qx 'RO6_BLACKBOX_CELL_MATCH_STATUS=PASS' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+
+set +e
+MPTDC_TEST_BUS_MAP_EFFECTIVE=yes \
+run_boundary "$TMP_ROOT/lvs_boundary_bus_map_enabled" > "$TMP_ROOT/boundary_bus_map_enabled.stdout" 2>&1
+BOUNDARY_BUS_MAP_ENABLED_RC=$?
+set -e
+test "$BOUNDARY_BUS_MAP_ENABLED_RC" -ne 0
+grep -qx 'LVS_BUS_PIN_MAP_RULE_COUNT=1' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BUS_PIN_MAP_EFFECTIVE_VALUE=YES' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
+grep -qx 'LVS_BUS_PIN_MAP_RULE_STATUS=FAIL' "$PREPARED/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt"
 
 set +e
 MPTDC_TEST_BLACKBOX_EFFECTIVE=0 \

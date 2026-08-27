@@ -191,17 +191,15 @@ def verify_controls(
     controls = option_paths(run_text, "-control")
     if controls != [lvs_control]:
         raise GateError(f"run.pvs does not reference the run-local LVS control exactly once: {controls}")
-    control_files = [
-        run_control,
-        lvs_control,
-        require_existing_file(run_dir / ".config.rul", ".config.rul"),
-        require_file(run_dir / ".technology.rul", ".technology.rul"),
-    ]
-    hcell_references = sum(
-        path.read_text(errors="replace").count(str(hcell)) for path in control_files
-    )
-    if hcell_references < 1:
-        raise GateError("PVS controls do not reference the immutable HCell file")
+    require_existing_file(run_dir / ".config.rul", ".config.rul")
+    require_file(run_dir / ".technology.rul", ".technology.rul")
+
+    hcell_paths = option_paths(run_text, "-hcell")
+    if hcell_paths != [hcell]:
+        raise GateError(
+            "run.pvs does not reference the immutable HCell exactly once: "
+            f"{hcell_paths}"
+        )
     return run_control, lvs_control
 
 

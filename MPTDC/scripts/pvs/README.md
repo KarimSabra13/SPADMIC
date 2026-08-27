@@ -136,7 +136,10 @@ Input preparation now builds LVS source only from Innovus
   instances.
 
 The boundary replay does not use position-based bus mapping and does not hide
-`tie1`. Zero physical tie instances is not a waiver: the boundary result must
+`tie1`. PVS may still list its effective default as
+`lvs_verilog_bus_map_by_position no`; the gate accepts only an absent setting
+or exactly one explicit `no`, and rejects `yes` or duplicate settings. Zero
+physical tie instances is not a waiver: the boundary result must
 still have zero tie mismatch residue. A diagnostic continuation is valid only
 for either an explicit top `MATCH` or the exact four-open `RO6_PG_OPEN_ONLY`
 remainder with zero bus, tie, net, and instance mismatch residue.
