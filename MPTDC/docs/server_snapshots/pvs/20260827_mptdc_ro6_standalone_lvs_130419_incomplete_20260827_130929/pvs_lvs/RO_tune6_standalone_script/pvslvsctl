@@ -1,0 +1,37 @@
+text_depth -primary;
+virtual_connect -colon no;
+virtual_connect -semicolon_as_colon yes;
+virtual_connect -noname;
+virtual_connect -report no;
+virtual_connect -depth -primary;
+lvs_ignore_ports no;
+lvs_expand_cell_on_error no;
+lvs_break_ambig_max 32;
+lvs_abort -softchk no;
+lvs_abort -supply_error no;
+lvs_abort -check_device_for_property_rule no;
+lvs_power_name "VDD" "VDD_LEFT" "VDD_RIGHT" "VDD!" "vdd" "vdd!" "vddi" "vddi!";
+lvs_ground_name "VSS" "VSS_LEFT" "VSS_RIGHT" "VSS!" "vss" "vss!" "gndi" "gndi!";
+lvs_find_shorts yes;
+sconnect_upper_shape_count no;
+lvs_report_file "RO_tune6_lvs.sum";
+lvs_report_max 1000 -mismatched_net_limit 100;
+lvs_run_erc_checks no;
+lvs_report_opt -none;
+keep_layers -none;
+abort_on_layout_error yes;
+layout_format gdsii;
+//=== Configurator controls ===
+//   LVS CONFIGURATION  
+//   #Select Floating Checks#  
+#UNDEFINE FloatingGate
+#UNDEFINE FloatingWell
+//   #Special Diode Extraction#  
+#UNDEFINE ParaDioAsDevDio
+//   #Select DUMMY Pattern Generation#   
+#UNDEFINE DUMMY_FILL
+//=== End of configurator controls ===
+
+// MPTDC standalone RO_tune6 LVS; no HCell and no blackbox.
+schematic_path "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_130419/inputs/RO_tune6.fresh.cdl" cdl;
+layout_path "/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_130419/inputs/RO_tune6.fresh.gds";

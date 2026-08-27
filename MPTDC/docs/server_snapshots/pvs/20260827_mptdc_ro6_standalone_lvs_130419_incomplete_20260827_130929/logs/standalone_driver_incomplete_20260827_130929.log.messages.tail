@@ -1,0 +1,6 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_130419/logs/standalone_driver_incomplete_20260827_130929.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+PVS_RO6_STANDALONE_PREFLIGHT=PASS
+RO6_STANDALONE_PREP_STATUS=PASS
+RO6_CDL_PIN_CONTRACT_STATUS=PASS
