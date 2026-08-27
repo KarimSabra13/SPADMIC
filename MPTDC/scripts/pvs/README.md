@@ -51,6 +51,25 @@ This is a macro proof and is deliberately `SIGNOFF_ELIGIBLE=NO`. It authorizes
 regenerating the digital physical source with the exact same GDS hash; it does
 not authorize a GDS release.
 
+If the standalone comparison reduces to the exact published VDD-only mismatch
+(18 layout pins versus 19 source pins, all 190 reduced devices matched, no
+blackboxes, and only source `VDD` missing while bound to layout net 12), do not
+rerun PVS or edit routing. Run the read-only OA/export-contract probe:
+
+```bash
+MPTDC/scripts/pvs/server_probe_mptdc_ro6_oa_vdd_export_contract.sh \
+  --source-standalone-run-id "$RO6_STANDALONE_RUN" \
+  --run-id "$RO6_OA_VDD_PROBE_RUN" \
+  --expected-head "$EXPECTED_HEAD"
+```
+
+The probe independently locks the exact `.cls` signature, opens the OA layout
+with mode `r`, inventories top terminal pin figures and labels, correlates their
+layer-purpose pairs against the exact zero-error XStream log and XH018/1131
+maps, and requires identical OA content and metadata fingerprints before and
+after. `PASS_REVIEW_EXPORT_CONTRACT` is diagnostic evidence only. It selects a
+review action; it is not an LVS pass and does not authorize an OA write.
+
 ## Physical LVS Source Contract
 
 Input preparation now builds LVS source only from Innovus

@@ -2252,6 +2252,86 @@ statuses `PASS`,
 `DECISION=PASS_CONTINUE`, `PUBLISH_RC=0`, and next stage
 `DIAGNOSTIC_PHYSICAL_PVS_WITH_FRESH_RO_GDS`. `SIGNOFF_ELIGIBLE=NO` is expected.
 
+The fresh standalone run
+`20260827_mptdc_ro6_standalone_lvs_envfix_131803` completed PVS but did not
+match. Its published `.cls` is narrowly attributable:
+
+- `Run Result: MISMATCH`, no blackboxed cells, and extraction clean;
+- 190 reduced layout devices versus 190 source devices, with zero unmatched
+  devices on either side;
+- all 18 non-VDD top pins are initial correspondences;
+- layout pins 18 versus source pins 19;
+- the only unmatched source pin is `VDD`, reported as a missing layout pin on
+  existing layout net 12.
+
+This is not evidence of a device, signal-route, or PG-geometry mismatch. Do not
+rerun standalone LVS, change devices, reroute the macro, waive the pin, or edit
+OA from this result. The next and only active command is the read-only
+OA/XStream contract probe below. It distinguishes an absent/misattached OA VDD
+label from an ignored layer-purpose/object-map export without changing the OA
+database or launching PVS.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+SOURCE_STANDALONE_RUN=20260827_mptdc_ro6_standalone_lvs_envfix_131803
+PROBE_RUN="$(date +%Y%m%d)_mptdc_ro6_oa_vdd_export_probe_$(date +%H%M%S)"
+PROBE_DIR=/sim/ksabra/SPADMIC_work/innovus/$PROBE_RUN
+DRIVER_LOG=/tmp/${PROBE_RUN}.driver.log
+XSTREAM_LOG=/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/xstreamOut.log
+LAYER_MAP=/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmInOut.layertable
+OBJECT_MAP=/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map
+PROBE_DRIVER_RC=99
+
+cd "$REPO"
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$SOURCE_STANDALONE_RUN" ] && \
+   [ -s "$XSTREAM_LOG" ] && [ -s "$LAYER_MAP" ] && [ -s "$OBJECT_MAP" ]; then
+  bash MPTDC/scripts/pvs/server_probe_mptdc_ro6_oa_vdd_export_contract.sh \
+    --source-standalone-run-id "$SOURCE_STANDALONE_RUN" \
+    --run-id "$PROBE_RUN" \
+    --xstream-log "$XSTREAM_LOG" \
+    --stream-layer-map "$LAYER_MAP" \
+    --stream-object-map "$OBJECT_MAP" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  PROBE_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked tree, source standalone run, or exact XStream collateral preflight failed"
+fi
+
+echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "SOURCE_STANDALONE_RUN=$SOURCE_STANDALONE_RUN"
+echo "PROBE_RUN=$PROBE_RUN"
+echo "PROBE_DRIVER_RC=$PROBE_DRIVER_RC"
+grep -E '^(RO6_OA_VDD_EXPORT_PROBE_STATUS|SOURCE_MISMATCH_CLASSIFICATION|SOURCE_GDS_HASH_STATUS|SOURCE_CDL_HASH_STATUS|SOURCE_LINEAGE_STATUS|SOURCE_EXPORT_READ_ONLY_STATUS|STREAM_COLLATERAL_READ_ONLY_STATUS|XSTREAM_LOG_BINDING_STATUS|XSTREAM_LOG_COMPLETION_STATUS|OA_PROBE_CLASSIFICATION_STATUS|OA_READ_ONLY_STATUS|OA_VDD_EXPORT_DIAGNOSIS|OA_VDD_PIN_IGNORED_LPP_COUNT|OA_VDD_LABEL_IGNORED_LPP_COUNT|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -30
+grep -E '^(OA_(SUMMARY_TERMINAL_COUNT|EXPECTED_TERMINAL_SET_STATUS|VDD_(TERMINAL_COUNT|PIN_COUNT|PIN_FIG_COUNT|NET_SET|PIN_LPP_SET|PIN_BOX_SET|EXPLICIT_LABEL_COUNT|GLOBAL_LABEL_SHAPE_COUNT|PIN_FIG_TEXT_COUNT|LABEL_LPP_SET|LABEL_BOX_SET|LIKE_LABEL_COUNT|LIKE_LABEL_TEXT_SET|LIKE_LABEL_LPP_SET)|VSS_(TERMINAL_COUNT|PIN_COUNT|PIN_FIG_COUNT|NET_SET|PIN_LPP_SET|PIN_BOX_SET|EXPLICIT_LABEL_COUNT|GLOBAL_LABEL_SHAPE_COUNT|PIN_FIG_TEXT_COUNT|LABEL_LPP_SET|LABEL_BOX_SET|LIKE_LABEL_COUNT|LIKE_LABEL_TEXT_SET)|VDD_EXPORT_DIAGNOSIS|VDD_EXPORT_REVIEW_ACTION)|OA_PROBE_CLASSIFICATION_STATUS)=' \
+  "$PROBE_DIR/reports/oa_ro6_vdd_export_classification.rpt" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+A complete probe normally returns driver RC zero,
+`RO6_OA_VDD_EXPORT_PROBE_STATUS=PASS`, both source hashes and lineage `PASS`,
+both XStream statuses `PASS`, `OA_PROBE_CLASSIFICATION_STATUS=PASS`,
+`OA_READ_ONLY_STATUS=PASS`, both source-export and stream-collateral read-only
+statuses `PASS`, `DECISION=PASS_REVIEW_EXPORT_CONTRACT`, and
+`PUBLISH_RC=0`. `SIGNOFF_ELIGIBLE=NO` is mandatory. The exact `NEXT_STAGE`
+depends on the observed VDD/VSS label and LPP comparison. Stop after this
+command and review the published evidence before designing one repair. Do not
+run Stage B or make an OA edit yet.
+
 The incomplete run `20260827_mptdc_ro6_standalone_lvs_130419` is classified as
 a wrapper abort before PVS launch: preflight and the 19-pin contract passed,
 but no PVS console log, `.cls`, `matched`, or `mismatched` artifact existed.
