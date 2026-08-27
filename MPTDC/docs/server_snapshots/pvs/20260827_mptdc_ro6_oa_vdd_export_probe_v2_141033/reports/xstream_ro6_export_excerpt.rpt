@@ -1,0 +1,17 @@
+SOURCE=/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/xstreamOut.log
+SOURCE_SHA256=0cc19d7cb28039d6bbb1b52db9442749bf8bbb4df6802171bd6ce8a9c969ff7c
+EXPECTED_GDS=/sim/ksabra/SPADMIC_work/ro6_oa_exports/20260827_114848/RO_tune6.gds
+XSTREAM_LOG_BINDING_STATUS=PASS
+XSTREAM_LOG_COMPLETION_STATUS=PASS
+XSTREAM_TRANSLATION_ZERO_ERROR_STATUS=PASS
+XSTREAM_WRAPPER_COMPLETION_STATUS=MISSING_OPTIONAL
+20:strmFile                                /sim/ksabra/SPADMIC_work/ro6_oa_exports/20260827_114848/RO_tune6.gds
+21:topCell                                 RO_tune6
+27:layerMap                                ./.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmInOut.layertable
+28:objectMap                                ./.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map
+34:WARNING (XSTRM-35): The objects in the layer-purpose pair 'MET3:pin' are ignored. This is because the layer-purpose pair used in the design is not specified in the layer map file. Specify the layer-purpose pair in the layer map file and try again.
+35:WARNING (XSTRM-35): The objects in the layer-purpose pair 'MET2:pin' are ignored. This is because the layer-purpose pair used in the design is not specified in the layer map file. Specify the layer-purpose pair in the layer map file and try again.
+36:WARNING (XSTRM-35): The objects in the layer-purpose pair 'MET1:pin' are ignored. This is because the layer-purpose pair used in the design is not specified in the layer map file. Specify the layer-purpose pair in the layer map file and try again.
+37:WARNING (XSTRM-35): The objects in the layer-purpose pair 'prBoundary:boundary' are ignored. This is because the layer-purpose pair used in the design is not specified in the layer map file. Specify the layer-purpose pair in the layer map file and try again.
+38:WARNING (XSTRM-35): The objects in the layer-purpose pair 'METTP:pin' are ignored. This is because the layer-purpose pair used in the design is not specified in the layer map file. Specify the layer-purpose pair in the layer map file and try again.
+202:INFO (XSTRM-234): Translation completed. '0' error(s) and '8' warning(s) found.

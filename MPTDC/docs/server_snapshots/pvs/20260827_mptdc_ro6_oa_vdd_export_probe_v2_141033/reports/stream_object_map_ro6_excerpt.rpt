@@ -1,0 +1,7 @@
+SOURCE=/data/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_1131/strmOutObjects.map
+SOURCE_SHA256=151695165c1679190e1f95aa0ccb854de233c7a7e3f589a5ac83c93c0c487c7c
+FILTER=XH018_1131_RO6_RELEVANT_OBJECTS
+13:layerBlockage    routing          MET1             16      10     
+14:layerBlockage    routing          MET2             18      10     
+15:layerBlockage    routing          MET3             28      10     
+16:layerBlockage    routing          METTP            33      10     

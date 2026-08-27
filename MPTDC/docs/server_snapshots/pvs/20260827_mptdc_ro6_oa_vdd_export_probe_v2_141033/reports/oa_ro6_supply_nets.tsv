@@ -1,0 +1,5 @@
+net	top_terminal_count	instance_terminal_count
+vdd!	10	10
+gnd!	9	9
+VDD	1	1
+VSS	1	1
