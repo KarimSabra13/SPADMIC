@@ -73,6 +73,7 @@ SOURCE_VERILOG="$SOURCE_PVS_DIR/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL
 SOURCE_HCELL="$SOURCE_PVS_DIR/outputs/pvs_hcell_ro6.txt"
 SOURCE_HASH_MANIFEST="$SOURCE_PVS_DIR/manifests/pvs_input_hashes.rpt"
 SOURCE_LVS_STATUS_REPORT="$SOURCE_PVS_DIR/reports/pvs_lvs_status.rpt"
+SOURCE_LVS_TOOL_STATUS_REPORT="$SOURCE_PVS_DIR/reports/pvs_lvs_tool_status.rpt"
 
 cd "$REPO_ROOT" || exit 3
 ACTUAL_HEAD="$(git rev-parse HEAD 2>/dev/null)"
@@ -85,6 +86,9 @@ SOURCE_LVS_RUN=""
 SOURCE_LVS_RUN_COUNT=0
 SOURCE_CLS=""
 SOURCE_CLS_COUNT=0
+SOURCE_CLS_RUN_RESULT=MISSING
+SOURCE_MISMATCHED_MARKER_COUNT=0
+SOURCE_MATCHED_MARKER_COUNT=0
 if [[ -d "$SOURCE_PVS_DIR/pvs_lvs" ]]; then
   SOURCE_LVS_RUN_COUNT="$(find "$SOURCE_PVS_DIR/pvs_lvs" -mindepth 1 -maxdepth 1 -type d -exec test -s '{}/run.pvs' ';' -print 2>/dev/null | wc -l | tr -d ' ')"
   if [[ "$SOURCE_LVS_RUN_COUNT" == 1 ]]; then
@@ -92,12 +96,16 @@ if [[ -d "$SOURCE_PVS_DIR/pvs_lvs" ]]; then
     SOURCE_CLS_COUNT="$(find "$SOURCE_LVS_RUN" -type f -name '*.cls' 2>/dev/null | wc -l | tr -d ' ')"
     if [[ "$SOURCE_CLS_COUNT" == 1 ]]; then
       SOURCE_CLS="$(find "$SOURCE_LVS_RUN" -type f -name '*.cls' -print -quit)"
+      SOURCE_CLS_RUN_RESULT="$(awk -F ':' '/Run Result/ {value=$2; gsub(/[^[:alnum:]_]/, "", value); print toupper(value); exit}' "$SOURCE_CLS")"
+      [[ -n "$SOURCE_CLS_RUN_RESULT" ]] || SOURCE_CLS_RUN_RESULT=MISSING
     fi
+    SOURCE_MISMATCHED_MARKER_COUNT="$(find "$SOURCE_LVS_RUN" -type f -name mismatched 2>/dev/null | wc -l | tr -d ' ')"
+    SOURCE_MATCHED_MARKER_COUNT="$(find "$SOURCE_LVS_RUN" -type f -name matched 2>/dev/null | wc -l | tr -d ' ')"
   fi
 fi
 
-SOURCE_LVS_STATUS="$(report_value "$SOURCE_LVS_STATUS_REPORT" PVS_LVS_STATUS)"
-SOURCE_PVS_RC="$(report_value "$SOURCE_LVS_STATUS_REPORT" PVS_RC)"
+SOURCE_GATE_LVS_STATUS="$(report_value "$SOURCE_LVS_STATUS_REPORT" PVS_LVS_STATUS)"
+SOURCE_PVS_RC="$(report_value "$SOURCE_LVS_TOOL_STATUS_REPORT" PVS_LVS_RC)"
 SOURCE_BLACKBOXED_CELL_COUNT=MISSING
 SOURCE_RO6_WRAPPER_MISMATCH_COUNT=0
 if [[ -s "$SOURCE_CLS" ]]; then
@@ -109,8 +117,11 @@ fi
 echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
 echo "SOURCE_PVS_DIR=$SOURCE_PVS_DIR"
 echo "SOURCE_LVS_RUN=$SOURCE_LVS_RUN"
-echo "SOURCE_LVS_STATUS=$SOURCE_LVS_STATUS"
+echo "SOURCE_GATE_LVS_STATUS=$SOURCE_GATE_LVS_STATUS"
+echo "SOURCE_CLS_RUN_RESULT=$SOURCE_CLS_RUN_RESULT"
 echo "SOURCE_PVS_RC=$SOURCE_PVS_RC"
+echo "SOURCE_MISMATCHED_MARKER_COUNT=$SOURCE_MISMATCHED_MARKER_COUNT"
+echo "SOURCE_MATCHED_MARKER_COUNT=$SOURCE_MATCHED_MARKER_COUNT"
 echo "SOURCE_BLACKBOXED_CELL_COUNT=$SOURCE_BLACKBOXED_CELL_COUNT"
 echo "SOURCE_RO6_WRAPPER_MISMATCH_COUNT=$SOURCE_RO6_WRAPPER_MISMATCH_COUNT"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
@@ -126,8 +137,16 @@ PREFLIGHT=PASS
 [[ -z "$TRACKED_STATUS" ]] || { echo "$TRACKED_STATUS"; echo "STOP: tracked working tree is dirty"; PREFLIGHT=FAIL; }
 [[ "$SOURCE_LVS_RUN_COUNT" == 1 ]] || { echo "STOP: expected exactly one source LVS run, found $SOURCE_LVS_RUN_COUNT"; PREFLIGHT=FAIL; }
 [[ "$SOURCE_CLS_COUNT" == 1 ]] || { echo "STOP: expected exactly one source .cls report, found $SOURCE_CLS_COUNT"; PREFLIGHT=FAIL; }
-[[ "$SOURCE_LVS_STATUS" == MISMATCH && "$SOURCE_PVS_RC" == 0 ]] || {
-  echo "STOP: source must be the attributable RC-zero LVS mismatch"
+[[ "$SOURCE_GATE_LVS_STATUS" == MISMATCH || "$SOURCE_GATE_LVS_STATUS" == NOT_PROVEN ]] || {
+  echo "STOP: source gate status conflicts with an LVS mismatch candidate"
+  PREFLIGHT=FAIL
+}
+[[ "$SOURCE_CLS_RUN_RESULT" == MISMATCH && "$SOURCE_PVS_RC" == 0 ]] || {
+  echo "STOP: source must have raw CLS MISMATCH and tool RC zero"
+  PREFLIGHT=FAIL
+}
+[[ "$SOURCE_MISMATCHED_MARKER_COUNT" -ge 1 && "$SOURCE_MATCHED_MARKER_COUNT" == 0 ]] || {
+  echo "STOP: source SVDB does not contain the unique mismatch state"
   PREFLIGHT=FAIL
 }
 [[ "$SOURCE_BLACKBOXED_CELL_COUNT" == 0 && "$SOURCE_RO6_WRAPPER_MISMATCH_COUNT" -ge 1 ]] || {
@@ -160,10 +179,13 @@ SOURCE_HCELL_SHA256="$(sha256sum "$SOURCE_HCELL" | awk '{print $1}')"
   echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
   echo "SOURCE_PVS_DIR=$SOURCE_PVS_DIR"
   echo "SOURCE_LVS_RUN=$SOURCE_LVS_RUN"
-  echo "SOURCE_LVS_STATUS=$SOURCE_LVS_STATUS"
+  echo "SOURCE_GATE_LVS_STATUS=$SOURCE_GATE_LVS_STATUS"
+  echo "SOURCE_CLS_RUN_RESULT=$SOURCE_CLS_RUN_RESULT"
   echo "SOURCE_PVS_RC=$SOURCE_PVS_RC"
   echo "SOURCE_CLS=$SOURCE_CLS"
   echo "SOURCE_CLS_SHA256=$SOURCE_CLS_SHA256"
+  echo "SOURCE_MISMATCHED_MARKER_COUNT=$SOURCE_MISMATCHED_MARKER_COUNT"
+  echo "SOURCE_MATCHED_MARKER_COUNT=$SOURCE_MATCHED_MARKER_COUNT"
   echo "SOURCE_BLACKBOXED_CELL_COUNT=$SOURCE_BLACKBOXED_CELL_COUNT"
   echo "SOURCE_RO6_WRAPPER_MISMATCH_COUNT=$SOURCE_RO6_WRAPPER_MISMATCH_COUNT"
   echo "MERGED_GDS_SHA256=$SOURCE_GDS_SHA256"

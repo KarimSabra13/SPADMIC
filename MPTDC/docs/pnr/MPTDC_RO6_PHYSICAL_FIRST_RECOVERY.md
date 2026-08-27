@@ -2027,6 +2027,11 @@ the exact immutable GDS, source, CDL, and HCell inputs and launches only one new
 LVS comparison with an explicit `lvs_black_box RO_tune6` rule. It does not run
 Innovus, streamout, or PVS DRC.
 
+The source preflight reads the raw `PVS_LVS_RC=0` tool report and the sole
+comparison report's explicit `Run Result: MISMATCH`. The older fail-closed gate
+may remain `NOT_PROVEN`; that classification is retained as audit metadata and
+is not substituted for the raw PVS result.
+
 This is a diagnostic digital-top boundary proof. A match does not prove the
 internal RO layout and cannot close the block without separate attributable
 `RO_tune6` LVS evidence and a later zero-DRC canonical replay.

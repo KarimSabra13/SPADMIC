@@ -15,7 +15,7 @@ DRIVER="$REPO/MPTDC/scripts/pvs/server_run_mptdc_ro6_boundary_lvs.sh"
 REPLAY="$TMP_ROOT/replay_stub.sh"
 PUBLISHER="$TMP_ROOT/publisher_stub.sh"
 
-mkdir -p "$REPO/MPTDC/scripts/pvs" "$SOURCE_LVS" "$SOURCE_BASE/outputs" \
+mkdir -p "$REPO/MPTDC/scripts/pvs" "$SOURCE_LVS/svdb" "$SOURCE_BASE/outputs" \
   "$SOURCE_BASE/manifests" "$SOURCE_BASE/reports"
 cp -p "$PVS_DIR/server_run_mptdc_ro6_boundary_lvs.sh" "$DRIVER"
 
@@ -42,14 +42,17 @@ LVS_HCELL_SHA256=$(sha256sum "$SOURCE_BASE/outputs/pvs_hcell_ro6.txt" | awk '{pr
 EOF
 cat > "$SOURCE_BASE/reports/pvs_lvs_status.rpt" <<'EOF'
 STATUS=FAIL
-PVS_LVS_STATUS=MISMATCH
-PVS_RC=0
+PVS_LVS_STATUS=NOT_PROVEN
+ERROR=pvslvsctl Verilog schematic_path is not exactly the immutable source
 EOF
+printf 'PVS_LVS_RC=0\n' > "$SOURCE_BASE/reports/pvs_lvs_tool_status.rpt"
 printf '#!/bin/sh\n' > "$SOURCE_LVS/run.pvs"
 cat > "$SOURCE_LVS/source.cls" <<'EOF'
+#####  Run Result                    :     MISMATCH
 Cells that have been blackboxed              |         0
  (-, RO_tune6())         |        *0 :        2 |        *0 :        2
 EOF
+printf 'mismatch\n' > "$SOURCE_LVS/svdb/mismatched"
 
 cat > "$REPLAY" <<'EOF'
 #!/usr/bin/env bash
@@ -109,6 +112,9 @@ bash "$DRIVER" \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/pass.stdout"
 
 grep -qx 'PVS_BOUNDARY_RECOVERY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'SOURCE_GATE_LVS_STATUS=NOT_PROVEN' "$TMP_ROOT/pass.stdout"
+grep -qx 'SOURCE_CLS_RUN_RESULT=MISMATCH' "$TMP_ROOT/pass.stdout"
+grep -qx 'SOURCE_PVS_RC=0' "$TMP_ROOT/pass.stdout"
 grep -qx 'PVS_LVS=MATCH' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_BOUNDARY_CONTINUE' "$TMP_ROOT/pass.stdout"
 grep -qx 'PUBLISH_RC=0' "$TMP_ROOT/pass.stdout"
@@ -118,6 +124,7 @@ test -L "$WORK/$RUN_ID/outputs"
 grep -qx 'SIGNOFF_ELIGIBLE=NO' "$WORK/$RUN_ID/reports/operator_gate_pvs_ro6_boundary_lvs.rpt"
 
 cat > "$SOURCE_LVS/source.cls" <<'EOF'
+#####  Run Result                    :     MISMATCH
 Cells that have been blackboxed              |         1
  (-, RO_tune6())         |        *0 :        2 |        *0 :        2
 EOF
@@ -136,5 +143,27 @@ set -e
 test "$BAD_SOURCE_RC" -ne 0
 grep -Fq 'source mismatch is not the expected un-blackboxed RO_tune6 boundary signature' "$TMP_ROOT/bad_source.stdout"
 grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/bad_source.stdout"
+
+cat > "$SOURCE_LVS/source.cls" <<'EOF'
+#####  Run Result                    :     MISMATCH
+Cells that have been blackboxed              |         0
+ (-, RO_tune6())         |        *0 :        2 |        *0 :        2
+EOF
+printf 'PVS_LVS_RC=1\n' > "$SOURCE_BASE/reports/pvs_lvs_tool_status.rpt"
+set +e
+MPTDC_BOUNDARY_LVS_REPO_ROOT="$REPO" \
+MPTDC_BOUNDARY_LVS_REPLAY="$REPLAY" \
+MPTDC_BOUNDARY_LVS_PUBLISHER="$PUBLISHER" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/publish_bad_rc.args" \
+bash "$DRIVER" \
+  --source-pvs-run-id "$SOURCE_ID" \
+  --run-id boundary_lvs_bad_tool_rc \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/bad_tool_rc.stdout" 2>&1
+BAD_TOOL_RC=$?
+set -e
+test "$BAD_TOOL_RC" -ne 0
+grep -Fq 'source must have raw CLS MISMATCH and tool RC zero' "$TMP_ROOT/bad_tool_rc.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/bad_tool_rc.stdout"
 
 echo "MPTDC_RO6_BOUNDARY_LVS_DRIVER_TEST=PASS"
