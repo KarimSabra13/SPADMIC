@@ -77,7 +77,7 @@ def same_box(
 ) -> bool:
     return box is not None and all(
         abs(actual - wanted) <= tolerance
-        for actual, wanted in zip(box, expected, strict=True)
+        for actual, wanted in zip(box, expected)
     )
 
 

@@ -9,6 +9,7 @@ TMP_ROOT="$(mktemp -d /tmp/mptdc_ro6_oa_vdd_repair.XXXXXX)"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 SKILL="$PVS_DIR/repair_ro6_oa_vdd_pin_label.il"
+CLASSIFIER="$PVS_DIR/11_classify_ro6_oa_vdd_pin_label_repair.py"
 grep -Fq 'dbOpenCellViewByType(libName cellName viewName "" "a")' "$SKILL"
 grep -Fq 'dbCreatePin(vddNet targetFig nil vddTerm)' "$SKILL"
 grep -Fq 'cv list("MET3" "TEXT") list(-67.685 -31.0325)' "$SKILL"
@@ -17,8 +18,12 @@ if grep -Eq 'db(CreateRect|CreatePolygon|CreatePath|DeleteObject|MoveFig)' "$SKI
   echo "ERROR: RO6 VDD repair contains a forbidden geometry mutation" >&2
   exit 1
 fi
+if grep -Fq 'zip(box, expected, strict=True)' "$CLASSIFIER"; then
+  echo "ERROR: repair classifier requires Python 3.10 zip(strict=)" >&2
+  exit 1
+fi
 
-python3 "$PVS_DIR/11_classify_ro6_oa_vdd_pin_label_repair.py" \
+python3 "$CLASSIFIER" \
   --operator-gate "$REAL_PROBE/reports/operator_gate_ro6_oa_vdd_export_probe.rpt" \
   --classification "$REAL_PROBE/reports/oa_ro6_vdd_export_classification.rpt" \
   --cell-summary "$REAL_PROBE/reports/oa_ro6_cell_summary.rpt" \
