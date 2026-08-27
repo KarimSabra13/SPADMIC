@@ -2068,12 +2068,41 @@ echo "RO_GDS_TARGET=$RO_EXPORT_ROOT/RO_tune6.gds"
 echo "RO_CDL_TARGET=$RO_EXPORT_ROOT/RO_tune6.cdl"
 ```
 
-In the project Virtuoso flow, export the exact layout above as GDSII to
-`RO_GDS_TARGET` and the exact schematic above as CDL to `RO_CDL_TARGET`. The OA
-views remain read-only; do not copy, touch, or edit files in either OA view.
-Do not reuse the historical July GDS. The next block reads the saved destination
-instead of relying on a placeholder, rejects missing inputs before launch, and
-the driver independently rejects exports older than 24 hours.
+Launch the matching XH018/1131 project environment from a graphical server
+session. Reuse an already-open matching Virtuoso session; do not launch a
+second one unnecessarily.
+
+```bash
+set +e
+
+cd /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0
+source /eda/cadence/eda_2023-2024
+xfab -p Prj_xh018 -t xh018 -m 1131 -y 2023
+```
+
+Expected environment evidence includes `Chosen technology xh018`, final module
+code `1131`, and the `Prj_xh018` project and user libraries. The informational
+`xkit -u` suggestions are not permission to update the PDK during this proof.
+
+In Virtuoso, use `Prj_xh018_ksabra/RO_tune6/layout` as the GDSII Stream Out top
+and write exactly `RO_GDS_TARGET`. Keep hierarchy enabled and use the project
+XH018/1131 stream settings, including:
+
+```text
+layer map:  /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmInOut.layertable
+object map: /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map
+```
+
+Then use the project CDL export flow on
+`Prj_xh018_ksabra/RO_tune6/schematic` and write exactly `RO_CDL_TARGET`. The
+result must contain one `.SUBCKT RO_tune6` with the 19-pin contract `VDD`,
+`VSS`, `rstb`, `code<0:7>`, and `S<0:7>`. Do not continue if either translator
+reports an error.
+
+The OA views remain read-only; do not copy, touch, or edit files in either OA
+view. Do not reuse the historical July GDS. The next block reads the saved
+destination instead of relying on a placeholder, rejects missing inputs before
+launch, and the driver independently rejects exports older than 24 hours.
 
 ```bash
 set +e
