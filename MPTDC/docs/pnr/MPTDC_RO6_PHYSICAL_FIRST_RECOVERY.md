@@ -2038,24 +2038,61 @@ the next stage until the listed result fields pass.
 
 #### A. Fresh OA Exports and Standalone RO6 LVS
 
-Export `RO_tune6/layout` to GDS and `RO_tune6/schematic` to CDL into one new
-directory under `/sim`, outside both OA view directories. Use the project
-Virtuoso export flow; do not modify or copy files into the OA library. Set the
-two paths below to those new exports. The driver rejects empty or older-than-24h
-files and fingerprints the OA views before and after PVS.
+This proof is bound to the current editable OA pair used by the RO handoff:
+
+```text
+library:   Prj_xh018_ksabra
+cell:      RO_tune6
+layout:    /group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/RO_tune6/layout
+schematic: /group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/RO_tune6/schematic
+```
+
+Do not export one view from this pair and the other from the analog-owner
+`SPADMIC` tree. If a different OA pair is intended, stop and review the source
+lineage first. Prepare one new run-local destination with this shell block:
+
+```bash
+set +e
+
+RO_EXPORT_ROOT=/sim/ksabra/SPADMIC_work/ro6_oa_exports/$(date +%Y%m%d_%H%M%S)
+mkdir -p "$RO_EXPORT_ROOT"
+RO_EXPORT_PREP_RC=$?
+
+if [ "$RO_EXPORT_PREP_RC" -eq 0 ]; then
+  printf '%s\n' "$RO_EXPORT_ROOT" > /tmp/mptdc_ro6_export_root.txt
+fi
+
+echo "RO_EXPORT_PREP_RC=$RO_EXPORT_PREP_RC"
+echo "RO_EXPORT_ROOT=$RO_EXPORT_ROOT"
+echo "RO_GDS_TARGET=$RO_EXPORT_ROOT/RO_tune6.gds"
+echo "RO_CDL_TARGET=$RO_EXPORT_ROOT/RO_tune6.cdl"
+```
+
+In the project Virtuoso flow, export the exact layout above as GDSII to
+`RO_GDS_TARGET` and the exact schematic above as CDL to `RO_CDL_TARGET`. The OA
+views remain read-only; do not copy, touch, or edit files in either OA view.
+Do not reuse the historical July GDS. The next block reads the saved destination
+instead of relying on a placeholder, rejects missing inputs before launch, and
+the driver independently rejects exports older than 24 hours.
 
 ```bash
 set +e
 
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
-RO_EXPORT_ROOT=REPLACE_WITH_FRESH_RUN_LOCAL_EXPORT_DIRECTORY
+RO_EXPORT_ROOT="$(sed -n '1p' /tmp/mptdc_ro6_export_root.txt 2>/dev/null)"
 RO_GDS=$RO_EXPORT_ROOT/RO_tune6.gds
 RO_CDL=$RO_EXPORT_ROOT/RO_tune6.cdl
+RO_OA_ROOT=/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/RO_tune6
 SOURCE_PVS_RUN=20260826_mptdc_bufftap0_v6r_diagnostic_base_lvs_212334
 RO6_STANDALONE_RUN="$(date +%Y%m%d)_mptdc_ro6_standalone_lvs_$(date +%H%M%S)"
 DRIVER_LOG=/tmp/${RO6_STANDALONE_RUN}.driver.log
 SYNC_RC=99
 RO6_STANDALONE_DRIVER_RC=99
+RO_EXPORT_ROOT_STATUS=FAIL
+RO_GDS_STATUS=MISSING_OR_EMPTY
+RO_CDL_STATUS=MISSING_OR_EMPTY
+RO_OA_PAIR_STATUS=MISSING
+RO_EXPORT_PREFLIGHT=FAIL
 
 cd "$REPO"
 git checkout SPADMIC_test
@@ -2067,22 +2104,43 @@ TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
 export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
 
+case "$RO_EXPORT_ROOT" in
+  /sim/ksabra/SPADMIC_work/ro6_oa_exports/*) RO_EXPORT_ROOT_STATUS=PASS ;;
+esac
+[ -s "$RO_GDS" ] && RO_GDS_STATUS=PASS
+[ -s "$RO_CDL" ] && RO_CDL_STATUS=PASS
+if [ -d "$RO_OA_ROOT/layout" ] && [ -d "$RO_OA_ROOT/schematic" ]; then
+  RO_OA_PAIR_STATUS=PASS
+fi
+
 if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ] && \
-   [ "$RO_EXPORT_ROOT" != REPLACE_WITH_FRESH_RUN_LOCAL_EXPORT_DIRECTORY ] && \
-   [ -s "$RO_GDS" ] && [ -s "$RO_CDL" ]; then
+   [ "$RO_EXPORT_ROOT_STATUS" = PASS ] && \
+   [ "$RO_GDS_STATUS" = PASS ] && [ "$RO_CDL_STATUS" = PASS ] && \
+   [ "$RO_OA_PAIR_STATUS" = PASS ]; then
+  RO_EXPORT_PREFLIGHT=PASS
   bash MPTDC/scripts/pvs/server_run_mptdc_ro6_standalone_lvs.sh \
     --source-pvs-run-id "$SOURCE_PVS_RUN" \
     --run-id "$RO6_STANDALONE_RUN" \
     --ro-gds "$RO_GDS" \
     --ro-cdl "$RO_CDL" \
+    --oa-layout-dir "$RO_OA_ROOT/layout" \
+    --oa-schematic-dir "$RO_OA_ROOT/schematic" \
     --expected-head "$EXPECTED_HEAD" \
     2>&1 | tee "$DRIVER_LOG"
   RO6_STANDALONE_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP: sync, tracked-tree, or fresh RO GDS/CDL preflight failed"
+  echo "STOP: standalone RO6 export preflight failed; inspect the named statuses"
 fi
 
 echo "===== SEND BACK ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
+echo "RO_EXPORT_ROOT=$RO_EXPORT_ROOT"
+echo "RO_EXPORT_ROOT_STATUS=$RO_EXPORT_ROOT_STATUS"
+echo "RO_GDS_STATUS=$RO_GDS_STATUS"
+echo "RO_CDL_STATUS=$RO_CDL_STATUS"
+echo "RO_OA_PAIR_STATUS=$RO_OA_PAIR_STATUS"
+echo "RO_EXPORT_PREFLIGHT=$RO_EXPORT_PREFLIGHT"
 echo "RO6_STANDALONE_RUN=$RO6_STANDALONE_RUN"
 echo "RO6_STANDALONE_DRIVER_RC=$RO6_STANDALONE_DRIVER_RC"
 grep -E '^(PVS_RO6_STANDALONE_RECOVERY_STATUS|PVS_LVS|OA_READ_ONLY_STATUS|RO6_CDL_PIN_CONTRACT_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
