@@ -154,6 +154,20 @@ cat > "$root/oa_ro6_label_shapes.tsv" <<'TSV'
 obj_type	text	net	layer	purpose	llx	lly	urx	ury
 label	VSS	VSS	METTP	label	-68.695	-47.32	-67.015	-45.65
 TSV
+cat > "$root/oa_ro6_supply_nets.tsv" <<'TSV'
+net	top_terminal_count	instance_terminal_count
+VDD	1	0
+VSS	1	0
+TSV
+cat > "$root/oa_ro6_supply_top_shapes.tsv" <<'TSV'
+obj_type	net	layer	purpose	llx	lly	urx	ury	text
+rect	VDD	MET1	drawing	-66.67	-71.56	-61.525	-68.325	ABSENT
+rect	VSS	MET1	drawing	-68.695	-53.315	-67.015	-45.65	ABSENT
+TSV
+cat > "$root/oa_ro6_vdd_candidate_shapes.tsv" <<'TSV'
+obj_type	net	layer	purpose	llx	lly	urx	ury	text
+rect	VDD	MET1	drawing	-66.67	-71.56	-61.525	-68.325	ABSENT
+TSV
 cat > "$root/oa_ro6_probe_status.rpt" <<'RPT'
 STEP=RO6_OA_VDD_EXPORT_PROBE
 OA_OPEN_MODE=READ_ONLY
@@ -221,6 +235,8 @@ grep -q "pvs $RUN_ID $WORK/$RUN_ID RO6_OA_VDD_EXPORT_PROBE" \
   "$TMP_ROOT/pass.publish.args"
 grep -qx 'OA_EXPECTED_TERMINAL_SET_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/oa_ro6_vdd_export_classification.rpt"
+grep -qx 'OA_TERMINAL_CONTRACT_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/oa_ro6_vdd_export_classification.rpt"
 grep -qx 'SIGNOFF_ELIGIBLE=NO' \
   "$WORK/$RUN_ID/reports/operator_gate_ro6_oa_vdd_export_probe.rpt"
 
@@ -252,6 +268,42 @@ grep -qx 'XSTREAM_LOG_BINDING_STATUS=PASS' "$TMP_ROOT/xstream_fail.stdout"
 grep -qx 'XSTREAM_TRANSLATION_ZERO_ERROR_STATUS=FAIL' "$TMP_ROOT/xstream_fail.stdout"
 grep -qx 'XSTREAM_LOG_COMPLETION_STATUS=FAIL' "$TMP_ROOT/xstream_fail.stdout"
 grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/xstream_fail.stdout"
+
+OBSERVED_REPORT_DIR="$REAL_REPO/MPTDC/docs/server_snapshots/pvs/20260827_mptdc_ro6_oa_vdd_export_probe_135213/reports"
+cat > "$TMP_ROOT/observed_supply_nets.tsv" <<'TSV'
+net	top_terminal_count	instance_terminal_count
+VDD	1	0
+VSS	1	0
+gnd!	1	0
+vdd!	1	0
+TSV
+cat > "$TMP_ROOT/observed_supply_shapes.tsv" <<'TSV'
+obj_type	net	layer	purpose	llx	lly	urx	ury	text
+rect	VDD	MET1	drawing	-66.67	-71.56	-61.525	-68.325	ABSENT
+rect	VSS	MET1	drawing	-68.695	-53.315	-67.015	-45.65	ABSENT
+TSV
+cat > "$TMP_ROOT/observed_candidate_shapes.tsv" <<'TSV'
+obj_type	net	layer	purpose	llx	lly	urx	ury	text
+rect	VDD	MET1	drawing	-66.67	-71.56	-61.525	-68.325	ABSENT
+TSV
+python3 "$PVS_DIR/10_classify_ro6_oa_vdd_export_probe.py" \
+  --cell-summary "$OBSERVED_REPORT_DIR/oa_ro6_cell_summary.rpt" \
+  --terminal-figs "$OBSERVED_REPORT_DIR/oa_ro6_terminal_pin_figs.tsv" \
+  --label-shapes "$OBSERVED_REPORT_DIR/oa_ro6_label_shapes.tsv" \
+  --supply-nets "$TMP_ROOT/observed_supply_nets.tsv" \
+  --supply-shapes "$TMP_ROOT/observed_supply_shapes.tsv" \
+  --candidate-shapes "$TMP_ROOT/observed_candidate_shapes.tsv" \
+  --out "$TMP_ROOT/observed_classification.rpt"
+grep -qx 'OA_EXPECTED_TERMINAL_SUBSET_STATUS=PASS' \
+  "$TMP_ROOT/observed_classification.rpt"
+grep -qx 'OA_EMPTY_GLOBAL_ALIAS_STATUS=PASS' \
+  "$TMP_ROOT/observed_classification.rpt"
+grep -qx 'OA_TERMINAL_CONTRACT_STATUS=FAIL' \
+  "$TMP_ROOT/observed_classification.rpt"
+grep -qx 'OA_VDD_EXPORT_DIAGNOSIS=VDD_PIN_AND_LABEL_MISSING_ON_PROVEN_VDD_GEOMETRY' \
+  "$TMP_ROOT/observed_classification.rpt"
+grep -qx 'OA_PROBE_CLASSIFICATION_STATUS=PASS' \
+  "$TMP_ROOT/observed_classification.rpt"
 
 BAD_SOURCE_ID=ro6_standalone_wrong_mismatch
 cp -a "$SOURCE_DIR" "$WORK/$BAD_SOURCE_ID"

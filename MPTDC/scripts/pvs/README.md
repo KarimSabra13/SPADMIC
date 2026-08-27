@@ -64,11 +64,15 @@ MPTDC/scripts/pvs/server_probe_mptdc_ro6_oa_vdd_export_contract.sh \
 ```
 
 The probe independently locks the exact `.cls` signature, opens the OA layout
-with mode `r`, inventories top terminal pin figures and labels, correlates their
+with mode `r`, inventories top terminal pin figures, labels, supply-net shapes,
+and shapes overlapping the golden-LEF VDD pin box, correlates their
 layer-purpose pairs against the exact zero-error XStream log and XH018/1131
 maps, and requires identical OA content and metadata fingerprints before and
-after. `PASS_REVIEW_EXPORT_CONTRACT` is diagnostic evidence only. It selects a
-review action; it is not an LVS pass and does not authorize an OA write.
+after. Classification success is separate from
+`OA_TERMINAL_CONTRACT_STATUS`: a complete diagnosis may pass while the observed
+OA terminal contract correctly remains `FAIL`. `PASS_REVIEW_EXPORT_CONTRACT`
+is diagnostic evidence only. It selects a review action; it is not an LVS pass
+and does not authorize an OA write.
 Cadence `XSTRM-234` with zero errors is the authoritative translation-complete
 record. The separate `strmout completed.` wrapper message is captured when
 present but is optional because GUI/CIW output is not always copied into the

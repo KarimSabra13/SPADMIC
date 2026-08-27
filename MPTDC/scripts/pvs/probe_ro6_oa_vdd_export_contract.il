@@ -65,6 +65,18 @@ procedure(mptdcRo6ProbeShapeText(object)
   )
 )
 
+procedure(mptdcRo6ProbeMatchesSupply(value)
+  value && member(value list("VDD" "VSS" "vdd!" "gnd!"))
+)
+
+procedure(mptdcRo6ProbeBoxOverlaps(box target)
+  box && target &&
+    car(car(box)) < car(cadr(target)) &&
+    car(car(target)) < car(cadr(box)) &&
+    cadr(car(box)) < cadr(cadr(target)) &&
+    cadr(car(target)) < cadr(cadr(box))
+)
+
 procedure(mptdcRo6WriteCellSummary(cv path libName cellName viewName)
   let((fp term box)
     fp = outfile(path "w")
@@ -152,6 +164,66 @@ procedure(mptdcRo6WriteLabelShapes(cv path)
   )
 )
 
+procedure(mptdcRo6WriteSupplyNets(cv path)
+  let((fp net)
+    fp = outfile(path "w")
+    unless(fp error("MPTDC_RO6_OA_PROBE_REPORT_OPEN_FAILED %s\n" path))
+    fprintf(fp "net\ttop_terminal_count\tinstance_terminal_count\n")
+    foreach(net cv~>nets
+      when(mptdcRo6ProbeMatchesSupply(net~>name)
+        fprintf(fp "%s\t%d\t%d\n"
+          mptdcRo6ProbeText(net~>name)
+          length(net~>terminals)
+          length(net~>instTerms))
+      )
+    )
+    close(fp)
+  )
+)
+
+procedure(mptdcRo6WriteSupplyTopShapes(cv path)
+  let((fp shape netName)
+    fp = outfile(path "w")
+    unless(fp error("MPTDC_RO6_OA_PROBE_REPORT_OPEN_FAILED %s\n" path))
+    fprintf(fp "obj_type\tnet\tlayer\tpurpose\tllx\tlly\turx\tury\ttext\n")
+    foreach(shape cv~>shapes
+      netName = if(shape~>net then shape~>net~>name else nil)
+      when(mptdcRo6ProbeMatchesSupply(netName)
+        fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\n"
+          mptdcRo6ProbeText(shape~>objType)
+          mptdcRo6ProbeNetName(shape)
+          mptdcRo6ProbeLayer(shape)
+          mptdcRo6ProbePurpose(shape)
+          mptdcRo6ProbeBox(shape~>bBox)
+          mptdcRo6ProbeShapeText(shape))
+      )
+    )
+    close(fp)
+  )
+)
+
+procedure(mptdcRo6WriteVddCandidateShapes(cv path)
+  let((fp shape goldenVddBox)
+    ; MPTDC/docs/pnr/generated/20260630_mptdc_ro_lef_access_patch_nofiller_v1_evidence/lef/GOLDEN_RO_tune6.lef
+    goldenVddBox = list(list(-66.670 -71.560) list(-61.525 -68.325))
+    fp = outfile(path "w")
+    unless(fp error("MPTDC_RO6_OA_PROBE_REPORT_OPEN_FAILED %s\n" path))
+    fprintf(fp "obj_type\tnet\tlayer\tpurpose\tllx\tlly\turx\tury\ttext\n")
+    foreach(shape cv~>shapes
+      when(mptdcRo6ProbeBoxOverlaps(shape~>bBox goldenVddBox)
+        fprintf(fp "%s\t%s\t%s\t%s\t%s\t%s\n"
+          mptdcRo6ProbeText(shape~>objType)
+          mptdcRo6ProbeNetName(shape)
+          mptdcRo6ProbeLayer(shape)
+          mptdcRo6ProbePurpose(shape)
+          mptdcRo6ProbeBox(shape~>bBox)
+          mptdcRo6ProbeShapeText(shape))
+      )
+    )
+    close(fp)
+  )
+)
+
 procedure(mptdcRo6OaVddProbeMain()
   let((outRoot libName cellName viewName cv)
     outRoot = getShellEnvVar("MPTDC_RO6_OA_PROBE_ROOT")
@@ -175,6 +247,12 @@ procedure(mptdcRo6OaVddProbeMain()
       cv strcat(outRoot "/oa_ro6_terminal_pin_figs.tsv"))
     mptdcRo6WriteLabelShapes(
       cv strcat(outRoot "/oa_ro6_label_shapes.tsv"))
+    mptdcRo6WriteSupplyNets(
+      cv strcat(outRoot "/oa_ro6_supply_nets.tsv"))
+    mptdcRo6WriteSupplyTopShapes(
+      cv strcat(outRoot "/oa_ro6_supply_top_shapes.tsv"))
+    mptdcRo6WriteVddCandidateShapes(
+      cv strcat(outRoot "/oa_ro6_vdd_candidate_shapes.tsv"))
     dbClose(cv)
     printf("MPTDC_RO6_OA_PROBE_PROGRESS=COMPLETE\n")
     t
