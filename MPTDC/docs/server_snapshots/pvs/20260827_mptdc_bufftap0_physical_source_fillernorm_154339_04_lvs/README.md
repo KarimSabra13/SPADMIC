@@ -1,0 +1,81 @@
+# MPTDC Server Snapshot
+
+- Kind: `pvs`
+- Run ID: `20260827_mptdc_bufftap0_physical_source_fillernorm_154339_04_lvs`
+- Source directory: `/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_physical_source_fillernorm_154339`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/docs/server_snapshots/pvs/20260827_mptdc_bufftap0_physical_source_fillernorm_154339_04_lvs`
+- Collection branch: `SPADMIC_test`
+- Collection commit: `545c3d3a9ce7748385d7188c32286de5287589c3`
+- Created UTC: `2026-08-27T13:48:18Z`
+
+## Included Files
+- `README.md`
+- `logs/innovus_prepare_pvs_inputs.log.messages.tail`
+- `logs/operator_drc_base.log.messages.tail`
+- `logs/operator_lvs.log.messages.tail`
+- `logs/operator_template_audit.log.messages.tail`
+- `logs/prepare_pvs_inputs.log.messages.tail`
+- `manifests/pvs_diagnostic_scope.rpt`
+- `manifests/pvs_drc_base_replay_manifest.txt`
+- `manifests/pvs_input_hashes.rpt`
+- `manifests/pvs_input_manifest.txt`
+- `manifests/pvs_lvs_replay_manifest.txt`
+- `outputs/pvs_hcell_ro6.txt`
+- `pvs_drc/mptdc_axis_core_merged_base_script/.config.rul`
+- `pvs_drc/mptdc_axis_core_merged_base_script/.technology.rul`
+- `pvs_drc/mptdc_axis_core_merged_base_script/cell_tree.txt`
+- `pvs_drc/mptdc_axis_core_merged_base_script/mptdc_axis_core_drc.err`
+- `pvs_drc/mptdc_axis_core_merged_base_script/mptdc_axis_core_drc.err.messages.tail`
+- `pvs_drc/mptdc_axis_core_merged_base_script/mptdc_axis_core_drc.sum`
+- `pvs_drc/mptdc_axis_core_merged_base_script/pvs_drc_replay.stdout.messages.tail`
+- `pvs_drc/mptdc_axis_core_merged_base_script/pvsdrcctl`
+- `pvs_drc/mptdc_axis_core_merged_base_script/run.pvs`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.config.rul`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.technology.rul`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/edbToEcdb.log.messages.tail`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum.cls`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum.shorts`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/pvs_lvs_replay.stdout.messages.tail`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/pvslvsctl`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/result.sum`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/run.pvs`
+- `pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/svdb/mismatched`
+- `reports/check_place_before_streamout.rpt`
+- `reports/connectivity_regular_before_streamout.rpt`
+- `reports/connectivity_special_before_streamout.rpt`
+- `reports/lvs_source_filter.rpt`
+- `reports/operator_gate_pvs_diagnostic_summary.rpt`
+- `reports/operator_gate_pvs_drc_base.rpt`
+- `reports/operator_gate_pvs_drc_density.rpt`
+- `reports/operator_gate_pvs_lvs.rpt`
+- `reports/operator_gate_pvs_prepare.rpt`
+- `reports/operator_gate_pvs_template_audit.rpt`
+- `reports/pvs_drc_base_control_rewrite.rpt`
+- `reports/pvs_drc_base_nonzero_rules.tsv`
+- `reports/pvs_drc_base_replay_preflight.rpt`
+- `reports/pvs_drc_base_result_scan.txt`
+- `reports/pvs_drc_base_status.rpt`
+- `reports/pvs_drc_base_tool_status.rpt`
+- `reports/pvs_drc_status.rpt`
+- `reports/pvs_lvs_SHORTSDB_rule_id.txt`
+- `reports/pvs_lvs_evidence_inventory.tsv`
+- `reports/pvs_lvs_replay_preflight.rpt`
+- `reports/pvs_lvs_result_scan.txt`
+- `reports/pvs_lvs_status.rpt`
+- `reports/pvs_lvs_tool_status.rpt`
+- `reports/pvs_prepared_inputs.rpt`
+- `reports/pvs_template_audit.rpt`
+- `reports/streamout_map_binding.rpt`
+- `reports/streamout_merged_ro6_manifest.txt`
+- `reports/tap_pin_contract.rpt`
+- `reports/verify_drc_before_streamout.rpt`
+
+## Excluded By Policy
+
+- Innovus checkpoints and databases;
+- raw GDS/OAS files;
+- full raw logs unless converted to message tails;
+- text files larger than 2097152 bytes;
+- large binary artifacts;
+- server work directories outside this snapshot.

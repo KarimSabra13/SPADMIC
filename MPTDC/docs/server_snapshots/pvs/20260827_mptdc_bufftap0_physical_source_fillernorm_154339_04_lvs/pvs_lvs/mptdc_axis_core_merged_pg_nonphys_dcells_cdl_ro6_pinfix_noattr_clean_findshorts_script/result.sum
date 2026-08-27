@@ -1,0 +1,135 @@
+********************************************************************************
+*** PVS HERC SUMMARY
+***
+Execute on Date/Time    : Thu Aug 27 15:47:38 2026
+PVS HERC VERSION        : 22.22-s005 Thu Jun 29 17:49:16 PDT 2023
+Rule Deck Path          : /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_physical_source_fillernorm_154339/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.config.rul
+Rule Deck Title         : " XH018 PVS DRC/LVS File v10.1.1 : MET3 / METMID "
+Layout System           : GDSII
+Layout Path             : /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_physical_source_fillernorm_154339/outputs/mptdc_axis_core_merged_stdcell_ro6.gds
+Current Directory       : /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_physical_source_fillernorm_154339/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script
+User Name:              : ksabra
+Maximum Results         : 1000
+Maximum Result Vertices : 4096
+Layout Depth            : ALL
+Text Depth              : 0
+Summary File            : result.sum
+Geometry Flagging       : ACUTE = YES  ANGLED = NO  SKEW = YES  OFFGRID = YES
+                          NONSIMPLE POLYGON = YES  NONSIMPLE PATH = YES
+Keep Empty Checks       : YES
+Excluded Cells          : 
+Layout Primary Cell     : mptdc_axis_core
+LVS Softchk Report      : mptdc_axis_core.softchk
+ASCII ERC Error Report  :
+ERC Results Database    :
+--------------------------------------------------------------------------------
+--- RUNNING TIME WARNINGS
+---
+--------------------------------------------------------------------------------
+--- ORIGINAL LAYER STATISTICS
+---
+LAYER met1_dg .................... Total Original Geometry:    34827 (  270106)
+LAYER met2_dg .................... Total Original Geometry:   100922 (  202435)
+LAYER met3_dg .................... Total Original Geometry:    56750 (  102393)
+LAYER mettp_dg ................... Total Original Geometry:      113 (    3325)
+LAYER nwell ...................... Total Original Geometry:      237 (   39499)
+LAYER nwrdef ..................... Total Original Geometry:        0 (       0)
+LAYER diff_dg .................... Total Original Geometry:     1206 (   88081)
+LAYER diff_dyi ................... Total Original Geometry:        0 (       0)
+LAYER resdiff .................... Total Original Geometry:        0 (       0)
+LAYER mvdg ....................... Total Original Geometry:        0 (       0)
+LAYER pimp ....................... Total Original Geometry:      421 (   78856)
+LAYER nimp ....................... Total Original Geometry:      439 (   78862)
+LAYER pwblk ...................... Total Original Geometry:        0 (       0)
+LAYER poly_dg .................... Total Original Geometry:     2369 (  141826)
+LAYER poly_dyi ................... Total Original Geometry:        0 (       0)
+LAYER POLY1_TEXT ................. Total Original Geometry:        0 (       0)
+LAYER id_txt ..................... Total Original Geometry:        0 (       0)
+LAYER cont ....................... Total Original Geometry:     9423 ( 1121388)
+LAYER met1_dyi ................... Total Original Geometry:        0 (       0)
+LAYER m1hole ..................... Total Original Geometry:        0 (       0)
+LAYER MET1_TEXT .................. Total Original Geometry:        0 (       0)
+LAYER m1rdef ..................... Total Original Geometry:        0 (       0)
+LAYER via1 ....................... Total Original Geometry:     1112 (  145889)
+LAYER met2_dyi ................... Total Original Geometry:        0 (       0)
+LAYER m2hole ..................... Total Original Geometry:        0 (       0)
+LAYER MET2_TEXT .................. Total Original Geometry:        0 (       0)
+LAYER m2rdef ..................... Total Original Geometry:        0 (       0)
+LAYER pad ........................ Total Original Geometry:        0 (       0)
+LAYER via2 ....................... Total Original Geometry:      412 (  115179)
+LAYER met3_dyi ................... Total Original Geometry:        0 (       0)
+LAYER m3hole ..................... Total Original Geometry:        0 (       0)
+LAYER MET3_TEXT .................. Total Original Geometry:        0 (       0)
+LAYER m3rdef ..................... Total Original Geometry:        0 (       0)
+LAYER mettp_dyi .................. Total Original Geometry:        0 (       0)
+LAYER mthole ..................... Total Original Geometry:        0 (       0)
+LAYER METTP_TEXT ................. Total Original Geometry:        0 (       0)
+LAYER mtrdef ..................... Total Original Geometry:        0 (       0)
+LAYER sblk ....................... Total Original Geometry:        1 (       2)
+LAYER capm2 ...................... Total Original Geometry:        0 (       0)
+LAYER capm3 ...................... Total Original Geometry:        0 (       0)
+LAYER lvt ........................ Total Original Geometry:       66 (     546)
+LAYER mres ....................... Total Original Geometry:        0 (       0)
+LAYER lndev ...................... Total Original Geometry:        0 (       0)
+LAYER aml ........................ Total Original Geometry:        0 (       0)
+LAYER capm ....................... Total Original Geometry:        0 (       0)
+LAYER viatp ...................... Total Original Geometry:      212 (   12184)
+LAYER diodef ..................... Total Original Geometry:        0 (       0)
+LAYER hres ....................... Total Original Geometry:        0 (       0)
+LAYER dnwell ..................... Total Original Geometry:        0 (       0)
+LAYER capdef ..................... Total Original Geometry:        1 (      96)
+LAYER hvgox ...................... Total Original Geometry:        0 (       0)
+LAYER hvpwell .................... Total Original Geometry:        0 (       0)
+LAYER hvnwell .................... Total Original Geometry:        0 (       0)
+LAYER pdd ........................ Total Original Geometry:        0 (       0)
+LAYER sci ........................ Total Original Geometry:        0 (       0)
+LAYER depl ....................... Total Original Geometry:        0 (       0)
+LAYER pwiso ...................... Total Original Geometry:      200 (   39323)
+LAYER dnw_mv ..................... Total Original Geometry:      217 (   39481)
+LAYER dnmrdef .................... Total Original Geometry:        0 (       0)
+LAYER idftxt ..................... Total Original Geometry:        0 (       0)
+LAYER devmark .................... Total Original Geometry:        0 (       0)
+LAYER PHODEF_TEXT ................ Total Original Geometry:        0 (       0)
+LAYER phodef ..................... Total Original Geometry:        0 (       0)
+LAYER ip1txt ..................... Total Original Geometry:        0 (       0)
+LAYER id1txt ..................... Total Original Geometry:        0 (       0)
+LAYER hvdepl ..................... Total Original Geometry:        0 (       0)
+LAYER id2txt ..................... Total Original Geometry:        0 (       0)
+LAYER capm23f .................... Total Original Geometry:        0 (       0)
+LAYER capmh23f ................... Total Original Geometry:        0 (       0)
+LAYER id3txt ..................... Total Original Geometry:        0 (       0)
+LAYER uvwin ...................... Total Original Geometry:        0 (       0)
+LAYER anodop ..................... Total Original Geometry:        0 (       0)
+LAYER catdop ..................... Total Original Geometry:        0 (       0)
+LAYER idttxt ..................... Total Original Geometry:        0 (       0)
+LAYER dnc ........................ Total Original Geometry:        0 (       0)
+LAYER hnw ........................ Total Original Geometry:        0 (       0)
+LAYER ndf ........................ Total Original Geometry:        0 (       0)
+LAYER pdf ........................ Total Original Geometry:        0 (       0)
+LAYER capmh ...................... Total Original Geometry:        0 (       0)
+LAYER capmh2 ..................... Total Original Geometry:        0 (       0)
+LAYER capmh3 ..................... Total Original Geometry:        0 (       0)
+LAYER subcut ..................... Total Original Geometry:        0 (       0)
+LAYER bnimp ...................... Total Original Geometry:        0 (       0)
+LAYER uln ........................ Total Original Geometry:        0 (       0)
+LAYER svt ........................ Total Original Geometry:        0 (       0)
+LAYER dnwella .................... Total Original Geometry:        0 (       0)
+--------------------------------------------------------------------------------
+--- WARNINGS FROM FLAG STATEMENT
+---
+Offgrid Vertex on layer met1_dg at location (48.335,-34.573) in cell isource_n3.
+Offgrid Vertex on layer met1_dg at location (49.335,-34.573) in cell isource_n3.
+Offgrid Vertex on layer met1_dg at location (49.335,-32.178) in cell isource_n3.
+Offgrid Vertex on layer met1_dg at location (48.335,-32.178) in cell isource_n3.
+--------------------------------------------------------------------------------
+--- RULECHECK RESULTS STATISTICS
+---
+--------------------------------------------------------------------------------
+--- SUMMARY
+---
+Total CPU Time                    : 17(s)
+Total Real Time                   : 18(s)
+Peak Memory Used                  : 85(M)
+Total Original Geometry           : 208928 (2479471)
+Total ERC RuleChecks              : 0
+Total ERC Results                 : 0 (0)

@@ -1,0 +1,13 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_bufftap0_physical_source_fillernorm_154339/logs/operator_drc_base.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+PVS_DRC_CONTROL_REWRITE_STATUS=PASS
+PVS_DRC_CONTROL_REWRITE_STATUS=PASS
+[WARN]: LAYOUT_FORMAT at line 78 in file /group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_DRC.rul is skipped. It is set in control file.
+[WARN] Offgrid Vertex on layer met1_dg at location (48.335,-34.573) in cell isource_n3.
+[WARN] Offgrid Vertex on layer met1_dg at location (49.335,-34.573) in cell isource_n3.
+[WARN] Offgrid Vertex on layer met1_dg at location (49.335,-32.178) in cell isource_n3.
+[WARN] Offgrid Vertex on layer met1_dg at location (48.335,-32.178) in cell isource_n3.
+ [WARN] Reach the TEXT_PRINT_MAXIMUM: 1000, the rest of texts will not print out
+STATUS=FAIL
+PVS_DRC_STATUS=FAIL
