@@ -1,0 +1,13 @@
+STAGE=macro_aware_placement
+STATUS=FAIL
+ERROR=MPTDC_FREE_MACRO_AWARE_PLACEMENT_UNAVAILABLE: {place_design -concurrent_macros: 1} {place_design -concurrent_macros true:   } {placeDesign -concurrent_macros: 1} {placeDesign -concurrent_macros true:   }
+
+MPTDC_FREE_MACRO_AWARE_PLACEMENT_UNAVAILABLE: {place_design -concurrent_macros: 1} {place_design -concurrent_macros true:   } {placeDesign -concurrent_macros: 1} {placeDesign -concurrent_macros true:   }
+    while executing
+"error "MPTDC_FREE_MACRO_AWARE_PLACEMENT_UNAVAILABLE: $errors""
+    (procedure "mptdc_free_macro_aware_place_and_freeze" line 18)
+    invoked from within
+"mptdc_free_macro_aware_place_and_freeze"
+    ("uplevel" body line 2)
+    invoked from within
+"uplevel 1 $body"

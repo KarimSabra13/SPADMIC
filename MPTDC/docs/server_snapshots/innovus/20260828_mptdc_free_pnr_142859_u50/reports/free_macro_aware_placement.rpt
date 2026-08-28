@@ -1,0 +1,3 @@
+MACRO_AWARE_COMMAND=
+MACRO_AWARE_COMMAND_ERRORS={place_design -concurrent_macros: 1} {place_design -concurrent_macros true:   } {placeDesign -concurrent_macros: 1} {placeDesign -concurrent_macros true:   }
+MACRO_AWARE_PLACEMENT_STATUS=FAIL
