@@ -1,0 +1,82 @@
+*** Begin SPECIAL ROUTE on Fri Aug 28 14:51:59 2026 ***
+SPECIAL ROUTE ran on directory: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+SPECIAL ROUTE ran on machine: lyoelectrosrv01.in2p3.fr (Linux 4.18.0-553.120.1.el8_10.x86_64 Xeon 2.10Ghz)
+
+Begin option processing ...
+srouteConnectPowerBump set to false
+routeSelectNet set to "VDD VSS"
+routeSpecial set to true
+srouteConnectBlockPin set to false
+srouteConnectConverterPin set to false
+srouteConnectPadPin set to false
+srouteConnectStripe set to false
+srouteCorePinTarget set to "ring stripe"
+srouteFollowPadPin set to false
+srouteJogControl set to "preferWithChanges differentLayer"
+sroutePadPinAllPorts set to true
+sroutePreserveExistingRoutes set to true
+srouteRoutePowerBarPortOnBothDir set to true
+End option processing: cpu: 0:00:00, real: 0:00:00, peak: 4056.00 megs.
+
+Reading DB technology information...
+Finished reading DB technology information.
+Reading floorplan and netlist information...
+Finished reading floorplan and netlist information.
+Read in 8 layers, 4 routing layers, 1 overlap layer
+Read in 852 macros, 164 used
+Read in 14363 components
+  14361 core components: 0 unplaced, 14293 placed, 68 fixed
+  2 block/ring components: 0 unplaced, 0 placed, 2 fixed
+Read in 61 physical pins
+  61 physical pins: 0 unplaced, 0 placed, 61 fixed
+Read in 1 blockages
+Read in 57 nets
+Read in 2 special nets, 2 routed
+Read in 28787 terminals
+2 nets selected.
+
+Begin power routing ...
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (760.16, 727.60) (762.02, 727.86).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (840.16, 682.80) (842.16, 683.06).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (360.16, 611.66) (362.16, 611.92).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (280.16, 602.16) (282.16, 602.42).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (760.16, 602.16) (760.90, 602.42).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (520.16, 486.22) (522.16, 486.48).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (360.78, 369.74) (362.16, 370.00).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (520.16, 289.10) (522.16, 289.36).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (840.16, 217.42) (842.16, 217.68).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (680.16, 198.96) (682.16, 199.22).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (841.26, 198.96) (842.16, 199.22).
+CPU time for VDD FollowPin 0 seconds
+CPU time for VSS FollowPin 0 seconds
+  Number of Core ports routed: 396  open: 26
+  Number of Followpin connections: 211
+End power routing: cpu: 0:00:01, real: 0:00:02, peak: 4059.00 megs.
+
+
+
+ Begin updating DB with routing results ...
+ Updating DB with 61 io pins ...
+ Updating DB with 5 via definition ...
+
+sroute post-processing starts at Fri Aug 28 14:52:01 2026
+The viaGen is rebuilding shadow vias for net VSS.
+sroute post-processing ends at Fri Aug 28 14:52:01 2026
+
+sroute post-processing starts at Fri Aug 28 14:52:01 2026
+The viaGen is rebuilding shadow vias for net VDD.
+sroute post-processing ends at Fri Aug 28 14:52:01 2026
+sroute created 732 wires.
+ViaGen created 8279 vias, deleted 94 vias to avoid violation.
++--------+----------------+----------------+
+|  Layer |     Created    |     Deleted    |
++--------+----------------+----------------+
+|  MET1  |       578      |       NA       |
+|  VIA1  |      2796      |        0       |
+|  MET2  |       53       |       NA       |
+|  VIA2  |      2770      |        0       |
+|  MET3  |       78       |       NA       |
+|  VIATP |      2713      |       94       |
+|  METTP |       23       |       NA       |
++--------+----------------+----------------+
+innovus 1> 
