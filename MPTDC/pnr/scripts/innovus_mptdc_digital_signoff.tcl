@@ -232,6 +232,40 @@ proc mptdc_signoff_source_xh018_cells {} {
     source [file join $repo MPTDC/pnr/config/xh018_cells.tcl]
 }
 
+proc mptdc_signoff_ensure_xh018_cells {} {
+    global mptdc_xh018_cells
+    set required_keys {stdcell_pg_power stdcell_pg_ground}
+    set source_required [expr {![array exists mptdc_xh018_cells]}]
+    if {!$source_required} {
+        foreach key $required_keys {
+            if {![info exists mptdc_xh018_cells($key)] ||
+                [llength $mptdc_xh018_cells($key)] == 0} {
+                set source_required 1
+                break
+            }
+        }
+    }
+
+    set status ALREADY_LOADED
+    if {$source_required} {
+        if {[catch {mptdc_signoff_source_xh018_cells} err]} {
+            error "MPTDC_XH018_CELL_CONFIG_LOAD_FAILED: $err"
+        }
+        set status LOADED
+    }
+
+    if {![array exists mptdc_xh018_cells]} {
+        error "MPTDC_XH018_CELL_CONFIG_INVALID: mptdc_xh018_cells is not an array"
+    }
+    foreach key $required_keys {
+        if {![info exists mptdc_xh018_cells($key)] ||
+            [llength $mptdc_xh018_cells($key)] == 0} {
+            error "MPTDC_XH018_CELL_CONFIG_INVALID: required key $key is missing or empty"
+        }
+    }
+    return $status
+}
+
 proc mptdc_signoff_default_ro_lef {} {
     return "/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef"
 }
@@ -2324,12 +2358,28 @@ proc mptdc_signoff_apply_pg_connectivity {} {
     set path [file join [mptdc_signoff_report_dir] pg_connectivity_commands.rpt]
     set fh [open $path w]
     set failures [list]
+    set command_count 0
+    set config_status FAIL
+    if {[catch {set config_status [mptdc_signoff_ensure_xh018_cells]} config_error]} {
+        puts $fh "PG_CONFIG_SOURCE_STATUS=FAIL"
+        puts $fh "PG_CONFIG_SOURCE_ERROR=$config_error"
+        puts $fh "PG_CONNECTIVITY_COMMAND_COUNT=0"
+        puts $fh "PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=0"
+        puts $fh "PG_CONNECTIVITY_COMMAND_STATUS=FAIL"
+        close $fh
+        mptdc_signoff_set_status PG_CONNECTIVITY_STATUS FAIL $path
+        error "MPTDC_DIGITAL_SIGNOFF_PG_CONFIG_FAILED: $config_error"
+    }
+    puts $fh "PG_CONFIG_SOURCE_STATUS=$config_status"
     set ro_instances [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]
     puts $fh "RO_TUNE6_INSTANCE_COUNT=[llength $ro_instances]"
     foreach ro $ro_instances {
         puts $fh "RO_TUNE6_INSTANCE=$ro"
     }
     if {[llength $ro_instances] != 2} {
+        puts $fh "PG_CONNECTIVITY_COMMAND_COUNT=0"
+        puts $fh "PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=0"
+        puts $fh "PG_CONNECTIVITY_COMMAND_STATUS=FAIL"
         puts $fh "STATUS=FAIL ERROR=expected_exactly_two_ro_tune6_instances"
         close $fh
         mptdc_signoff_set_status PG_CONNECTIVITY_STATUS FAIL $path
@@ -2337,6 +2387,7 @@ proc mptdc_signoff_apply_pg_connectivity {} {
     }
     foreach pin $mptdc_xh018_cells(stdcell_pg_power) {
         set cmd [list globalNetConnect VDD -type pgpin -pin $pin -inst *]
+        incr command_count
         puts $fh "COMMAND=$cmd"
         if {[catch {{*}$cmd} err]} {
             puts $fh "STATUS=FAIL ERROR=$err"
@@ -2347,6 +2398,7 @@ proc mptdc_signoff_apply_pg_connectivity {} {
     }
     foreach pin $mptdc_xh018_cells(stdcell_pg_ground) {
         set cmd [list globalNetConnect VSS -type pgpin -pin $pin -inst *]
+        incr command_count
         puts $fh "COMMAND=$cmd"
         if {[catch {{*}$cmd} err]} {
             puts $fh "STATUS=FAIL ERROR=$err"
@@ -2360,6 +2412,7 @@ proc mptdc_signoff_apply_pg_connectivity {} {
             set pin [lindex $item 0]
             set net [lindex $item 1]
             set cmd [list globalNetConnect $net -type pgpin -pin $pin -inst $ro]
+            incr command_count
             puts $fh "COMMAND=$cmd"
             if {[catch {{*}$cmd} err]} {
                 puts $fh "STATUS=FAIL ERROR=$err"
@@ -2369,6 +2422,10 @@ proc mptdc_signoff_apply_pg_connectivity {} {
             }
         }
     }
+    set command_status [expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]
+    puts $fh "PG_CONNECTIVITY_COMMAND_COUNT=$command_count"
+    puts $fh "PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=[llength $failures]"
+    puts $fh "PG_CONNECTIVITY_COMMAND_STATUS=$command_status"
     puts $fh "IMPDB-1221=0"
     puts $fh "PG_CONNECTIVITY_STAGE=PRE_PLACEMENT_GLOBAL_NET_CONNECT"
     puts $fh "UNCONNECTED_STDCELL_PG_PINS=DEFER_TO_POSTROUTE_CONNECTIVITY_GATE"

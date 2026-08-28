@@ -2832,10 +2832,14 @@ but that `addTieHiLo` cannot place a cell while the restored checkpoint reports
 `Placement Density: 100.00%(907533/907533)`. Run one fresh private-copy
 candidate that deletes the exact tracked FEED filler population, inserts and
 routes only the reviewed tie-high nets, refills the legal sites, and reapplies
-PG connectivity once. The candidate is rejected unless the post-delete route
-signature is unchanged, every pre-existing non-filler object keeps the same
-master, placement status, orientation, and box, final site occupancy returns
-to `907533/907533`, and the existing physical-debt signature is unchanged.
+PG connectivity once. After refill, run `ecoRoute -target`; run one
+`ecoRoute -fix_drc` only when the target-route snapshot still contains
+candidate-induced physical debt. The candidate is rejected unless the
+post-delete route signature is unchanged, every pre-existing non-filler object
+keeps the same master, placement status, orientation, and box, final site
+occupancy returns to `907533/907533`, and the original one-marker physical-debt
+signature is restored exactly. An unexpected zero-DRC result is scope drift and
+is rejected; this trial does not recreate or repair the deferred marker.
 
 The first D3 execution,
 `20260828_mptdc_tie1_filler_recycle_trial_120411`, is rejected evidence and
@@ -2861,13 +2865,25 @@ candidate checkpoint. The corrected trial retains the original 91 baseline
 instTerm pointers, verifies their exact names and connectivity after insertion
 and after refill, and treats `isTieHi`/`isTieLo` only as residual flags.
 
+The third D3 execution,
+`20260828_mptdc_tie1_filler_targetreadback_trial_122734`, is rejected and must
+not be continued. It proved the intended logical conversion: all 91 reviewed
+sinks were connected through 85 `LOGIC1DJIHD` instances and 85 routed tie nets,
+with maximum fanout 3 and full site occupancy after refill. Its PG rebind then
+failed because the library-only trial had not initialized the
+`mptdc_xh018_cells` array. The incomplete post-route state ended with 123 DRC
+markers and 99 shorts. The corrected trial lazily loads and validates the XH018
+PG configuration, requires exactly six successful `globalNetConnect` commands,
+and applies the bounded post-refill ECO cleanup described above before any
+checkpoint can be saved.
+
 ```bash
 set +e
 
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 PROBE_RUN=20260828_mptdc_tie1_checkpoint_probe_envfix_093807
 FAILED_TRIAL_RUN=20260828_mptdc_tie1_insertion_trial_instancepin_104318
-TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_filler_targetreadback_trial_$(date +%H%M%S)"
+TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_filler_ecoroute_trial_$(date +%H%M%S)"
 TRIAL_DIR=/sim/ksabra/SPADMIC_work/innovus/$TRIAL_RUN
 DRIVER_LOG=/tmp/${TRIAL_RUN}.driver.log
 TRIAL_DRIVER_RC=99
@@ -2895,7 +2911,7 @@ if [ "$CD_RC" -eq 0 ] && [ "$CHECKOUT_RC" -eq 0 ] && \
     --probe-run-id "$PROBE_RUN" \
     --source-failed-trial-run-id "$FAILED_TRIAL_RUN" \
     --run-id "$TRIAL_RUN" \
-    --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+    --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
     --expected-head "$EXPECTED_HEAD" \
     2>&1 | tee "$DRIVER_LOG"
   TRIAL_DRIVER_RC=${PIPESTATUS[0]}
@@ -2903,7 +2919,7 @@ else
   echo "STOP: sync, tracked-tree, origin, Step 6R, or Step 7I preflight failed"
 fi
 
-echo "===== SEND BACK STEP 8V ====="
+echo "===== SEND BACK STEP 8E ====="
 echo "CD_RC=$CD_RC"
 echo "CHECKOUT_RC=$CHECKOUT_RC"
 echo "SYNC_RC=$SYNC_RC"
@@ -2915,8 +2931,8 @@ echo "FAILED_TRIAL_RUN=$FAILED_TRIAL_RUN"
 echo "TRIAL_RUN=$TRIAL_RUN"
 echo "TRIAL_DIR=$TRIAL_DIR"
 echo "TRIAL_DRIVER_RC=$TRIAL_DRIVER_RC"
-grep -E '^(EVIDENCE_|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|DELETE_FILLER_(COMMAND|MASTER_OPTION)_COUNT|TARGET_(READBACK_MODE|POINTER_SOURCE|READBACK_CALL_COUNT|POINTER_LINEAGE_COUNT)|SET_FILLER_MODE_COMMAND_COUNT|ADD_FILLER_COMMAND_COUNT|PG_REBIND_CALL_COUNT|INNOVUS_RC|FILLER_RECYCLE_MODE|FILLER_DELETE_(SELECTION_MODE|MASTER_COUNT|MASTER_SET|STATUS|EFFECT_STATUS)|FILLER_COUNT_POST_DELETE|POST_DELETE_(NONFILLER_FINGERPRINT|ROUTE_SIGNATURE)_STATUS|ADD_TIE_(STATUS|EFFECT_STATUS|EFFECT_REASON)|POST_ADD_(TARGET_(POINTER_COUNT|RESOLVED_COUNT|MISSING_COUNT|DUPLICATE_COUNT|UNEXPECTED_COUNT|SET_STATUS)|CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|REMAINING_FLAGGED_(HIGH|LOW)_TERM_COUNT)|SELECTED_ROUTE_STATUS|FILLER_MODE_STATUS|FILLER_REFILL_(COMMAND_STATUS|STATUS)|PG_CONNECTIVITY_REBIND_STATUS|FINAL_(TARGET_(POINTER_COUNT|RESOLVED_COUNT|MISSING_COUNT|DUPLICATE_COUNT|UNEXPECTED_COUNT|SET_STATUS)|FLAGGED_(HIGH|LOW)_TERM_COUNT|CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|TIE_NET_COUNT|FILLER_MASTER_SET_STATUS|SITE_OCCUPANCY_STATUS|PLACEMENT_SITE_OCCUPIED|PLACEMENT_SITE_CAPACITY|DRC|SHORTS|UNROUTED_NETS)|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|NONFILLER_FINGERPRINT_STATUS|DRC_MARKER_SIGNATURE_MATCH_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SOURCE_FAILED_TRIAL_EVIDENCE_READ_ONLY_STATUS|CANDIDATE_CHECKPOINT_STATUS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
-  "$DRIVER_LOG" 2>/dev/null | tail -140
+grep -E '^(EVIDENCE_|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|ECO_(TARGET|FIX_DRC|ROUTE)_|MUTATION_ORDER_STATUS|INNOVUS_RC|FILLER_DELETE_(SELECTION_MODE|MASTER_COUNT|MASTER_SET|STATUS|EFFECT_STATUS)|FILLER_COUNT_POST_DELETE|POST_DELETE_(NONFILLER_FINGERPRINT|ROUTE_SIGNATURE)_STATUS|ADD_TIE_(STATUS|EFFECT_STATUS|EFFECT_REASON)|POST_ADD_(TARGET_(POINTER_COUNT|RESOLVED_COUNT|MISSING_COUNT|DUPLICATE_COUNT|UNEXPECTED_COUNT|SET_STATUS)|CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|REMAINING_FLAGGED_(HIGH|LOW)_TERM_COUNT)|SELECTED_ROUTE_STATUS|POST_SELECTED_ROUTE_SNAPSHOT_STATUS|FILLER_REFILL_(COMMAND_STATUS|STATUS)|PG_(CONFIG_SOURCE_STATUS|CONNECTIVITY_(REBIND_STATUS|COMMAND_COUNT|COMMAND_FAILURE_COUNT|COMMAND_STATUS|CONTRACT_STATUS|GATE_STATUS))|POST_REFILL_SNAPSHOT_STATUS|POST_FILLER_(ECOROUTE_POLICY|TARGET_(COMMAND_STATUS|SNAPSHOT_STATUS|DECISION)|FIX_DRC_(STATUS|SNAPSHOT_STATUS)|CLEANUP_(STATUS|REASON)|ECOROUTE_GATE_STATUS)|FINAL_(TARGET_(SET_STATUS|RESOLVED_COUNT|MISSING_COUNT)|CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|TIE_NET_COUNT|SITE_OCCUPANCY_STATUS|PLACEMENT_SITE_OCCUPIED|PLACEMENT_SITE_CAPACITY|DRC|SHORTS|UNROUTED_NETS)|TIE_HIGH_INSTANCE_DELTA|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|DRC_MARKER_SIGNATURE_MATCH_STATUS|CANDIDATE_CHECKPOINT_STATUS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -180
 echo "===== OPERATOR GATE ====="
 cat "$TRIAL_DIR/reports/operator_gate_tie1_insertion_trial.rpt" 2>/dev/null
 echo "===== FILLER ACTION ====="
@@ -2924,6 +2940,9 @@ cat "$TRIAL_DIR/reports/filler_status.rpt" 2>/dev/null
 cat "$TRIAL_DIR/reports/deleteFiller_command.rpt" 2>/dev/null
 cat "$TRIAL_DIR/reports/addTieHiLo_command.rpt" 2>/dev/null
 cat "$TRIAL_DIR/reports/addFiller_command.rpt" 2>/dev/null
+cat "$TRIAL_DIR/reports/pg_connectivity_commands.rpt" 2>/dev/null
+cat "$TRIAL_DIR/reports/post_filler_ecoRoute_target.rpt" 2>/dev/null
+cat "$TRIAL_DIR/reports/post_filler_ecoRoute_fix_drc.rpt" 2>/dev/null
 echo "===== EXACT TARGET READBACK ====="
 cat "$TRIAL_DIR/reports/tie1_target_readback_post_add.tsv" 2>/dev/null
 cat "$TRIAL_DIR/reports/tie1_target_readback_final.tsv" 2>/dev/null
@@ -2945,10 +2964,11 @@ master count 8 and tracked master set, `FILLER_DELETE_EFFECT_STATUS=PASS`,
 exactly zero tracked fillers after deletion, passing post-delete non-filler and
 route signatures, 91 connected and zero disconnected reviewed sinks, a
 passing exact baseline-pointer lineage with zero missing, duplicate,
-unexpected, or residual flagged targets, a positive normal-Vt tie delta with
-no alternate or low tie cell, passing
-selected routing and refill/PG gates, passing final non-filler fingerprint,
-exact full final site occupancy, unchanged one-marker DRC identity, a
+unexpected, or residual flagged targets, exactly 85 normal-Vt tie cells and 85
+tie nets with no alternate or low tie cell, passing selected routing, refill,
+and exact six-command PG gates, a passing target/conditional-fix ECO cleanup
+gate, passing final non-filler fingerprint, exact full final site occupancy,
+unchanged one-marker DRC identity, a
 hash-proven saved candidate, `DECISION=PASS_TIE1_TRIAL_CONTINUE`, and
 `PUBLISH_RC=0`. The final filler count is expected to be dynamic and may be
 lower than 24797; it is valid only when the full-site and master-set gates pass.

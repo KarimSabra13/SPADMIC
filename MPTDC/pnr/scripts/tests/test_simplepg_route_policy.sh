@@ -59,5 +59,6 @@ tclsh "$SCRIPT_DIR/test_block_pg_pin_geometry.tcl"
 tclsh "$SCRIPT_DIR/test_signal_top_route_blockage_lifecycle.tcl"
 tclsh "$SCRIPT_DIR/test_ro_halo_occupancy.tcl"
 tclsh "$SCRIPT_DIR/test_route_pg_pvs_candidate.tcl"
+tclsh "$SCRIPT_DIR/test_pg_connectivity_lazy_config.tcl"
 
 echo "MPTDC_SIMPLEPG_ROUTE_POLICY_TEST=PASS"

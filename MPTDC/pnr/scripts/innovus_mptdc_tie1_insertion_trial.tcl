@@ -28,6 +28,21 @@ proc mptdc_tie1_trial_report_value {value} {
     return $clean
 }
 
+proc mptdc_tie1_trial_file_value {path key} {
+    if {![file exists $path] || ![file readable $path]} {
+        return MISSING
+    }
+    set value MISSING
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        if {[string match "${key}=*" $line]} {
+            set value [string range $line [expr {[string length $key] + 1}] end]
+        }
+    }
+    close $fh
+    return $value
+}
+
 proc mptdc_tie1_trial_objects {value} {
     if {$value eq "" || $value eq "0x0" || $value eq "NULL"} {
         return {}
@@ -555,6 +570,49 @@ proc mptdc_tie1_trial_snapshot_equal_debt {baseline final} {
         [dict get $final special_bad_lines]}]
 }
 
+proc mptdc_tie1_trial_capture_snapshot {phase} {
+    set snapshot [mptdc_ckpt_verify_snapshot $phase]
+    set snapshot [mptdc_tie1_trial_normalize_snapshot_unrouted $snapshot]
+    dict set snapshot marker_signature \
+        [mptdc_tie1_trial_marker_signature [dict get $snapshot marker_rpt]]
+    return $snapshot
+}
+
+proc mptdc_tie1_trial_cleanup_decision {baseline candidate} {
+    if {[mptdc_tie1_trial_snapshot_equal_debt $baseline $candidate]} {
+        return BASELINE_PRESERVED
+    }
+    set total [dict get $candidate total_violations]
+    if {![string is integer -strict $total]} {
+        return REJECT_INVALID_SNAPSHOT
+    }
+    if {$total == 0} {
+        return REJECT_ZERO_DRC_SCOPE_CHANGE
+    }
+    if {$total == [dict get $baseline total_violations] &&
+        [dict get $candidate marker_signature] ne
+            [dict get $baseline marker_signature]} {
+        return REJECT_MARKER_SCOPE_CHANGE
+    }
+    return FIX_DRC_REQUIRED
+}
+
+proc mptdc_tie1_trial_write_stage_snapshot {
+        fh prefix status error_value snapshot} {
+    puts $fh "${prefix}_SNAPSHOT_STATUS=$status"
+    puts $fh "${prefix}_SNAPSHOT_ERROR=$error_value"
+    if {$status ne "PASS"} {
+        return
+    }
+    mptdc_ckpt_write_snapshot_status $fh $prefix $snapshot
+    set route_zero_status [expr {
+        [dict get $snapshot report_route_zero] ? "PASS" : "FAIL"
+    }]
+    puts $fh "${prefix}_REPORT_ROUTE_ZERO_STATUS=$route_zero_status"
+    puts $fh "${prefix}_DRC_MARKER_SIGNATURE_COUNT=[llength [dict get $snapshot marker_signature]]"
+    puts $fh "${prefix}_DRC_MARKER_SIGNATURE=[dict get $snapshot marker_signature]"
+}
+
 set checkpoint [file normalize \
     [mptdc_tie1_trial_required_env MPTDC_TIE1_TRIAL_CKPT]]
 set outdir [file normalize \
@@ -568,6 +626,7 @@ set max_fanout [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_MAX_FANOUT 8]
 set max_distance [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_MAX_DISTANCE 20]
 set expected_hi [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_HIGH_TERMS 91]
 set expected_lo [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_LOW_TERMS 0]
+set expected_tie_nets [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_TIE_NETS 85]
 set expected_filler [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_FILLERS 24797]
 set expected_drc [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_DRC 1]
 set expected_sites [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_PLACEMENT_SITES 907533]
@@ -600,6 +659,11 @@ set post_delete_nonfiller_report [file join $outdir reports tie1_nonfiller_finge
 set final_nonfiller_report [file join $outdir reports tie1_nonfiller_fingerprint_final.tsv]
 set baseline_check_place_report [file join $outdir reports tie1_trial_baseline_check_place.rpt]
 set final_check_place_report [file join $outdir reports tie1_trial_final_check_place.rpt]
+set pg_connectivity_report [file join $outdir reports pg_connectivity_commands.rpt]
+set post_filler_target_command_report \
+    [file join $outdir reports post_filler_ecoRoute_target.rpt]
+set post_filler_fix_drc_command_report \
+    [file join $outdir reports post_filler_ecoRoute_fix_drc.rpt]
 set final_checkpoint [file join $outdir checkpoints repaired_route.enc]
 set final_checkpoint_dat "${final_checkpoint}.dat"
 set add_command_report [file join $outdir reports addTieHiLo_command.rpt]
@@ -749,6 +813,7 @@ if {[llength [info commands addTieHiLo]] != 1} { lappend command_precheck_reason
 if {[llength [info commands deleteFiller]] != 1} { lappend command_precheck_reasons deleteFiller_unavailable }
 if {[llength [info commands setFillerMode]] != 1} { lappend command_precheck_reasons setFillerMode_unavailable }
 if {[llength [info commands addFiller]] != 1} { lappend command_precheck_reasons addFiller_unavailable }
+if {[llength [info commands ecoRoute]] != 1} { lappend command_precheck_reasons ecoRoute_unavailable }
 if {[llength $command_precheck_reasons] > 0} { set command_precheck FAIL }
 
 lassign [mptdc_tie1_trial_capture_help setTieHiLoMode \
@@ -907,13 +972,33 @@ if {$add_effect_status eq "PASS" &&
     }
 }
 
+set post_selected_snapshot_status NOT_RUN
+set post_selected_snapshot_error NONE
+set post_selected_snapshot ""
+if {$route_status eq "PASS"} {
+    if {[catch {
+        set post_selected_snapshot \
+            [mptdc_tie1_trial_capture_snapshot tie1_trial_post_selected_route]
+    } err]} {
+        set post_selected_snapshot_status FAIL
+        set post_selected_snapshot_error [mptdc_tie1_trial_report_value $err]
+    } else {
+        set post_selected_snapshot_status PASS
+    }
+}
+
 set filler_mode_status NOT_RUN
 set filler_mode_error NONE
 set refill_status NOT_RUN
 set refill_error NONE
 set pg_connectivity_status NOT_RUN
 set pg_connectivity_error NONE
-if {$route_status eq "PASS"} {
+set pg_config_source_status NOT_RUN
+set pg_connectivity_command_count 0
+set pg_connectivity_command_failure_count 0
+set pg_connectivity_command_status NOT_RUN
+set pg_connectivity_contract_status NOT_RUN
+if {$route_status eq "PASS" && $post_selected_snapshot_status eq "PASS"} {
     if {[catch {
         setFillerMode -add_fillers_with_drc false
     } err]} {
@@ -941,6 +1026,130 @@ if {$refill_status eq "PASS"} {
         set pg_connectivity_error [mptdc_tie1_trial_report_value $err]
     } else {
         set pg_connectivity_status PASS
+    }
+    set pg_config_source_status \
+        [mptdc_tie1_trial_file_value $pg_connectivity_report PG_CONFIG_SOURCE_STATUS]
+    set pg_connectivity_command_count \
+        [mptdc_tie1_trial_file_value $pg_connectivity_report PG_CONNECTIVITY_COMMAND_COUNT]
+    set pg_connectivity_command_failure_count \
+        [mptdc_tie1_trial_file_value $pg_connectivity_report PG_CONNECTIVITY_COMMAND_FAILURE_COUNT]
+    set pg_connectivity_command_status \
+        [mptdc_tie1_trial_file_value $pg_connectivity_report PG_CONNECTIVITY_COMMAND_STATUS]
+    set pg_connectivity_contract_status FAIL
+    if {$pg_connectivity_status eq "PASS" &&
+        $pg_config_source_status in {LOADED ALREADY_LOADED} &&
+        $pg_connectivity_command_count eq "6" &&
+        $pg_connectivity_command_failure_count eq "0" &&
+        $pg_connectivity_command_status eq "PASS"} {
+        set pg_connectivity_contract_status PASS
+    }
+}
+
+set post_refill_snapshot_status NOT_RUN
+set post_refill_snapshot_error NONE
+set post_refill_snapshot ""
+if {$pg_connectivity_contract_status eq "PASS"} {
+    if {[catch {
+        set post_refill_snapshot \
+            [mptdc_tie1_trial_capture_snapshot tie1_trial_post_refill_pre_cleanup]
+    } err]} {
+        set post_refill_snapshot_status FAIL
+        set post_refill_snapshot_error [mptdc_tie1_trial_report_value $err]
+    } else {
+        set post_refill_snapshot_status PASS
+    }
+}
+
+set post_filler_ecoroute_policy TARGET_THEN_CONDITIONAL_FIX_DRC
+set post_filler_target_command {ecoRoute -target}
+set post_filler_fix_drc_command {ecoRoute -fix_drc}
+set post_filler_target_command_status NOT_RUN
+set post_filler_target_command_error NONE
+set post_filler_target_snapshot_status NOT_RUN
+set post_filler_target_snapshot_error NONE
+set post_filler_target_snapshot ""
+set post_filler_target_decision NOT_RUN
+set post_filler_fix_drc_status NOT_RUN
+set post_filler_fix_drc_error NONE
+set post_filler_fix_drc_snapshot_status NOT_RUN
+set post_filler_fix_drc_snapshot_error NONE
+set post_filler_fix_drc_snapshot ""
+set post_filler_cleanup_status FAIL
+set post_filler_cleanup_reason PREREQUISITE_FAILED
+
+if {$post_refill_snapshot_status eq "PASS"} {
+    lassign [mptdc_signoff_capture_route_command \
+        $post_filler_target_command $post_filler_target_command_report] \
+        target_command_ok target_command_error
+    if {$target_command_ok} {
+        set post_filler_target_command_status PASS
+        if {[catch {
+            set post_filler_target_snapshot \
+                [mptdc_tie1_trial_capture_snapshot tie1_trial_post_filler_target]
+        } err]} {
+            set post_filler_target_snapshot_status FAIL
+            set post_filler_target_snapshot_error \
+                [mptdc_tie1_trial_report_value $err]
+            set post_filler_cleanup_reason TARGET_SNAPSHOT_FAILED
+        } else {
+            set post_filler_target_snapshot_status PASS
+            set post_filler_target_decision \
+                [mptdc_tie1_trial_cleanup_decision \
+                    $baseline $post_filler_target_snapshot]
+        }
+    } else {
+        set post_filler_target_command_status FAIL
+        set post_filler_target_command_error \
+            [mptdc_tie1_trial_report_value $target_command_error]
+        set post_filler_cleanup_reason TARGET_COMMAND_FAILED
+    }
+}
+
+switch -- $post_filler_target_decision {
+    BASELINE_PRESERVED {
+        set post_filler_fix_drc_status NOT_NEEDED
+        set post_filler_cleanup_status PASS
+        set post_filler_cleanup_reason NONE
+    }
+    FIX_DRC_REQUIRED {
+        lassign [mptdc_signoff_capture_route_command \
+            $post_filler_fix_drc_command $post_filler_fix_drc_command_report] \
+            fix_drc_ok fix_drc_error
+        if {$fix_drc_ok} {
+            if {[catch {
+                set post_filler_fix_drc_snapshot \
+                    [mptdc_tie1_trial_capture_snapshot tie1_trial_post_filler_fix_drc]
+            } err]} {
+                set post_filler_fix_drc_status FAIL
+                set post_filler_fix_drc_snapshot_status FAIL
+                set post_filler_fix_drc_snapshot_error \
+                    [mptdc_tie1_trial_report_value $err]
+                set post_filler_cleanup_reason FIX_DRC_SNAPSHOT_FAILED
+            } else {
+                set post_filler_fix_drc_snapshot_status PASS
+                set fix_drc_decision [mptdc_tie1_trial_cleanup_decision \
+                    $baseline $post_filler_fix_drc_snapshot]
+                if {$fix_drc_decision eq "BASELINE_PRESERVED"} {
+                    set post_filler_fix_drc_status PASS
+                    set post_filler_cleanup_status PASS
+                    set post_filler_cleanup_reason NONE
+                } else {
+                    set post_filler_fix_drc_status FAIL
+                    set post_filler_cleanup_reason $fix_drc_decision
+                }
+            }
+        } else {
+            set post_filler_fix_drc_status FAIL
+            set post_filler_fix_drc_error \
+                [mptdc_tie1_trial_report_value $fix_drc_error]
+            set post_filler_cleanup_reason FIX_DRC_COMMAND_FAILED
+        }
+    }
+    REJECT_ZERO_DRC_SCOPE_CHANGE -
+    REJECT_MARKER_SCOPE_CHANGE -
+    REJECT_INVALID_SNAPSHOT {
+        set post_filler_fix_drc_status NOT_RUN
+        set post_filler_cleanup_reason $post_filler_target_decision
     }
 }
 
@@ -1003,7 +1212,7 @@ set final_filler_master_set_status [expr {
 }]
 set filler_refill_status [expr {
     $filler_mode_status eq "PASS" && $refill_status eq "PASS" &&
-    $pg_connectivity_status eq "PASS" &&
+    $pg_connectivity_contract_status eq "PASS" &&
     $final_filler_master_set_status eq "PASS" ? "PASS" : "FAIL"
 }]
 array set tie_count_after {}
@@ -1047,9 +1256,15 @@ if {$mode_status ne "PASS"} { lappend trial_reasons set_tie_mode_failed }
 if {$add_status ne "PASS"} { lappend trial_reasons add_tie_failed }
 if {$add_effect_status ne "PASS"} { lappend trial_reasons add_tie_no_effect }
 if {$route_status ne "PASS"} { lappend trial_reasons selected_net_route_failed }
+if {$post_selected_snapshot_status ne "PASS"} { lappend trial_reasons post_selected_route_snapshot_failed }
 if {$filler_mode_status ne "PASS"} { lappend trial_reasons filler_mode_failed }
 if {$refill_status ne "PASS"} { lappend trial_reasons filler_refill_command_failed }
 if {$pg_connectivity_status ne "PASS"} { lappend trial_reasons pg_connectivity_rebind_failed }
+if {$pg_connectivity_contract_status ne "PASS"} { lappend trial_reasons pg_connectivity_contract_failed }
+if {$post_refill_snapshot_status ne "PASS"} { lappend trial_reasons post_refill_snapshot_failed }
+if {$post_filler_target_command_status ne "PASS"} { lappend trial_reasons post_filler_target_failed }
+if {$post_filler_target_snapshot_status ne "PASS"} { lappend trial_reasons post_filler_target_snapshot_failed }
+if {$post_filler_cleanup_status ne "PASS"} { lappend trial_reasons post_filler_cleanup_failed }
 if {$filler_refill_status ne "PASS"} { lappend trial_reasons filler_refill_contract_failed }
 if {[dict get $final_target_state target_set_status] ne "PASS" ||
     [dict get $final_target_state pointer_count] != $expected_hi ||
@@ -1065,7 +1280,7 @@ if {[dict get $final_target_state connected] != $expected_hi ||
     [dict get $final_target_state disconnected] != 0} {
     lappend trial_reasons final_high_terms_not_all_connected
 }
-if {$target_high_delta <= 0 || $target_high_delta > $expected_hi} { lappend trial_reasons target_high_instance_delta_invalid }
+if {$target_high_delta != $expected_tie_nets} { lappend trial_reasons target_high_instance_delta_invalid }
 if {$tie_high_delta != $target_high_delta} { lappend trial_reasons non_target_high_instance_created }
 if {$target_high_delta != [dict get $net_inventory net_count]} { lappend trial_reasons target_high_instance_net_count_mismatch }
 if {$alternate_tie_master_delta != 0} { lappend trial_reasons alternate_tie_master_delta_nonzero }
@@ -1111,6 +1326,7 @@ puts $action_fh "TARGET_HIGH_MASTER=$high_master"
 puts $action_fh "TARGET_LOW_MASTER=$low_master"
 puts $action_fh "MAX_FANOUT=$max_fanout"
 puts $action_fh "MAX_DISTANCE_UM=$max_distance"
+puts $action_fh "EXPECTED_TIE_NET_COUNT=$expected_tie_nets"
 puts $action_fh "FILLER_RECYCLE_MODE=DELETE_INSERT_ROUTE_REFILL"
 puts $action_fh "FILLER_DELETE_SELECTION_MODE=$filler_delete_selection_mode"
 puts $action_fh "FILLER_DELETE_MASTER_COUNT=$filler_delete_master_count"
@@ -1165,7 +1381,35 @@ puts $action_fh "FILLER_REFILL_COMMAND_STATUS=$refill_status"
 puts $action_fh "FILLER_REFILL_COMMAND_ERROR=$refill_error"
 puts $action_fh "PG_CONNECTIVITY_REBIND_STATUS=$pg_connectivity_status"
 puts $action_fh "PG_CONNECTIVITY_REBIND_ERROR=$pg_connectivity_error"
+puts $action_fh "PG_CONNECTIVITY_REPORT=$pg_connectivity_report"
+puts $action_fh "PG_CONFIG_SOURCE_STATUS=$pg_config_source_status"
+puts $action_fh "PG_CONNECTIVITY_COMMAND_COUNT=$pg_connectivity_command_count"
+puts $action_fh "PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=$pg_connectivity_command_failure_count"
+puts $action_fh "PG_CONNECTIVITY_COMMAND_STATUS=$pg_connectivity_command_status"
+puts $action_fh "PG_CONNECTIVITY_CONTRACT_STATUS=$pg_connectivity_contract_status"
 puts $action_fh "FILLER_REFILL_STATUS=$filler_refill_status"
+puts $action_fh "POST_FILLER_ECOROUTE_POLICY=$post_filler_ecoroute_policy"
+puts $action_fh "POST_FILLER_TARGET_COMMAND=$post_filler_target_command"
+puts $action_fh "POST_FILLER_TARGET_COMMAND_STATUS=$post_filler_target_command_status"
+puts $action_fh "POST_FILLER_TARGET_COMMAND_ERROR=$post_filler_target_command_error"
+puts $action_fh "POST_FILLER_TARGET_DECISION=$post_filler_target_decision"
+puts $action_fh "POST_FILLER_FIX_DRC_COMMAND=$post_filler_fix_drc_command"
+puts $action_fh "POST_FILLER_FIX_DRC_STATUS=$post_filler_fix_drc_status"
+puts $action_fh "POST_FILLER_FIX_DRC_ERROR=$post_filler_fix_drc_error"
+puts $action_fh "POST_FILLER_CLEANUP_STATUS=$post_filler_cleanup_status"
+puts $action_fh "POST_FILLER_CLEANUP_REASON=$post_filler_cleanup_reason"
+mptdc_tie1_trial_write_stage_snapshot $action_fh POST_SELECTED_ROUTE \
+    $post_selected_snapshot_status $post_selected_snapshot_error \
+    $post_selected_snapshot
+mptdc_tie1_trial_write_stage_snapshot $action_fh POST_REFILL \
+    $post_refill_snapshot_status $post_refill_snapshot_error \
+    $post_refill_snapshot
+mptdc_tie1_trial_write_stage_snapshot $action_fh POST_FILLER_TARGET \
+    $post_filler_target_snapshot_status $post_filler_target_snapshot_error \
+    $post_filler_target_snapshot
+mptdc_tie1_trial_write_stage_snapshot $action_fh POST_FILLER_FIX_DRC \
+    $post_filler_fix_drc_snapshot_status $post_filler_fix_drc_snapshot_error \
+    $post_filler_fix_drc_snapshot
 puts $action_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"
 puts $action_fh "FINAL_TARGET_POINTER_COUNT=[dict get $final_target_state pointer_count]"
 puts $action_fh "FINAL_TARGET_RESOLVED_COUNT=[dict get $final_target_state resolved_count]"
@@ -1219,6 +1463,10 @@ puts $filler_fh "FILLER_REFILL_COMMAND_STATUS=$refill_status"
 puts $filler_fh "FILLER_REFILL_STATUS=$filler_refill_status"
 puts $filler_fh "FILLER_INSERTION_STATUS=[expr {$filler_refill_status eq "PASS" ? "PASS" : "FAIL"}]"
 puts $filler_fh "FILLER_ADJUSTMENT_POLICY=EXACT_DELETE_INSERT_ROUTE_REFILL_PRIVATE_COPY"
+puts $filler_fh "POST_FILLER_ECOROUTE_POLICY=$post_filler_ecoroute_policy"
+puts $filler_fh "POST_FILLER_TARGET_COMMAND_STATUS=$post_filler_target_command_status"
+puts $filler_fh "POST_FILLER_FIX_DRC_STATUS=$post_filler_fix_drc_status"
+puts $filler_fh "POST_FILLER_CLEANUP_STATUS=$post_filler_cleanup_status"
 puts $filler_fh "FINAL_FILLER_MASTER_SET_STATUS=$final_filler_master_set_status"
 puts $filler_fh "NONFILLER_FINGERPRINT_STATUS=$nonfiller_fingerprint_status"
 puts $filler_fh "FINAL_SITE_OCCUPANCY_STATUS=$final_site_occupancy_status"
@@ -1231,6 +1479,7 @@ set status_fh [open $status_report w]
 puts $status_fh "STEP=TIE1_INSERTION_TRIAL"
 puts $status_fh "CHECKPOINT=$checkpoint"
 puts $status_fh "TOP_CELL=$top_cell"
+puts $status_fh "EXPECTED_TIE_NET_COUNT=$expected_tie_nets"
 puts $status_fh "RESTORE_STATUS=$restore_status"
 puts $status_fh "RESTORE_ERROR=$restore_error"
 puts $status_fh "COMMAND_PRECHECK=$command_precheck"
@@ -1284,7 +1533,35 @@ puts $status_fh "FILLER_REFILL_COMMAND_STATUS=$refill_status"
 puts $status_fh "FILLER_REFILL_COMMAND_ERROR=$refill_error"
 puts $status_fh "PG_CONNECTIVITY_REBIND_STATUS=$pg_connectivity_status"
 puts $status_fh "PG_CONNECTIVITY_REBIND_ERROR=$pg_connectivity_error"
+puts $status_fh "PG_CONNECTIVITY_REPORT=$pg_connectivity_report"
+puts $status_fh "PG_CONFIG_SOURCE_STATUS=$pg_config_source_status"
+puts $status_fh "PG_CONNECTIVITY_COMMAND_COUNT=$pg_connectivity_command_count"
+puts $status_fh "PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=$pg_connectivity_command_failure_count"
+puts $status_fh "PG_CONNECTIVITY_COMMAND_STATUS=$pg_connectivity_command_status"
+puts $status_fh "PG_CONNECTIVITY_CONTRACT_STATUS=$pg_connectivity_contract_status"
 puts $status_fh "FILLER_REFILL_STATUS=$filler_refill_status"
+puts $status_fh "POST_FILLER_ECOROUTE_POLICY=$post_filler_ecoroute_policy"
+puts $status_fh "POST_FILLER_TARGET_COMMAND=$post_filler_target_command"
+puts $status_fh "POST_FILLER_TARGET_COMMAND_STATUS=$post_filler_target_command_status"
+puts $status_fh "POST_FILLER_TARGET_COMMAND_ERROR=$post_filler_target_command_error"
+puts $status_fh "POST_FILLER_TARGET_DECISION=$post_filler_target_decision"
+puts $status_fh "POST_FILLER_FIX_DRC_COMMAND=$post_filler_fix_drc_command"
+puts $status_fh "POST_FILLER_FIX_DRC_STATUS=$post_filler_fix_drc_status"
+puts $status_fh "POST_FILLER_FIX_DRC_ERROR=$post_filler_fix_drc_error"
+puts $status_fh "POST_FILLER_CLEANUP_STATUS=$post_filler_cleanup_status"
+puts $status_fh "POST_FILLER_CLEANUP_REASON=$post_filler_cleanup_reason"
+mptdc_tie1_trial_write_stage_snapshot $status_fh POST_SELECTED_ROUTE \
+    $post_selected_snapshot_status $post_selected_snapshot_error \
+    $post_selected_snapshot
+mptdc_tie1_trial_write_stage_snapshot $status_fh POST_REFILL \
+    $post_refill_snapshot_status $post_refill_snapshot_error \
+    $post_refill_snapshot
+mptdc_tie1_trial_write_stage_snapshot $status_fh POST_FILLER_TARGET \
+    $post_filler_target_snapshot_status $post_filler_target_snapshot_error \
+    $post_filler_target_snapshot
+mptdc_tie1_trial_write_stage_snapshot $status_fh POST_FILLER_FIX_DRC \
+    $post_filler_fix_drc_snapshot_status $post_filler_fix_drc_snapshot_error \
+    $post_filler_fix_drc_snapshot
 puts $status_fh "EXPECTED_FLAGGED_HIGH_TERM_COUNT=$expected_hi"
 puts $status_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"
 puts $status_fh "FINAL_TARGET_POINTER_COUNT=[dict get $final_target_state pointer_count]"

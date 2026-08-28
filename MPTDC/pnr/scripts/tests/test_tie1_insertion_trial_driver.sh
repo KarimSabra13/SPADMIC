@@ -355,10 +355,25 @@ POST_ADD_DISCONNECTED_HIGH_TERM_COUNT=0
 POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=0
 POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT=0
 SELECTED_ROUTE_STATUS=PASS
+POST_SELECTED_ROUTE_SNAPSHOT_STATUS=PASS
 FILLER_MODE_STATUS=PASS
 FILLER_REFILL_COMMAND_STATUS=PASS
 PG_CONNECTIVITY_REBIND_STATUS=PASS
+PG_CONFIG_SOURCE_STATUS=LOADED
+PG_CONNECTIVITY_COMMAND_COUNT=6
+PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=0
+PG_CONNECTIVITY_COMMAND_STATUS=PASS
+PG_CONNECTIVITY_CONTRACT_STATUS=PASS
 FILLER_REFILL_STATUS=PASS
+POST_REFILL_SNAPSHOT_STATUS=PASS
+POST_FILLER_ECOROUTE_POLICY=TARGET_THEN_CONDITIONAL_FIX_DRC
+POST_FILLER_TARGET_COMMAND_STATUS=PASS
+POST_FILLER_TARGET_SNAPSHOT_STATUS=PASS
+POST_FILLER_TARGET_DECISION=FIX_DRC_REQUIRED
+POST_FILLER_FIX_DRC_STATUS=PASS
+POST_FILLER_FIX_DRC_SNAPSHOT_STATUS=PASS
+POST_FILLER_CLEANUP_STATUS=PASS
+POST_FILLER_CLEANUP_REASON=NONE
 BASELINE_PLACEMENT_STATUS=PASS
 FINAL_PLACEMENT_STATUS=PASS
 FINAL_TARGET_POINTER_COUNT=91
@@ -371,16 +386,16 @@ FINAL_FLAGGED_HIGH_TERM_COUNT=0
 FINAL_CONNECTED_HIGH_TERM_COUNT=91
 FINAL_DISCONNECTED_HIGH_TERM_COUNT=0
 FINAL_FLAGGED_LOW_TERM_COUNT=0
-FINAL_TIE_NET_COUNT=12
+FINAL_TIE_NET_COUNT=85
 TIE_NET_SOURCE_CONTRACT_STATUS=PASS
 TIE_NET_ROUTE_STATUS=PASS
 TIE_FANOUT_STATUS=PASS
 MAX_OBSERVED_TIE_FANOUT=8
-TIE_HIGH_INSTANCE_DELTA=12
-TARGET_HIGH_INSTANCE_DELTA=12
+TIE_HIGH_INSTANCE_DELTA=85
+TARGET_HIGH_INSTANCE_DELTA=85
 ALTERNATE_TIE_MASTER_DELTA=0
 TIE_LOW_INSTANCE_DELTA=0
-FILLER_COUNT_AFTER=24785
+FILLER_COUNT_AFTER=24856
 FINAL_FILLER_MASTER_SET_STATUS=PASS
 NONFILLER_FINGERPRINT_STATUS=PASS
 BASELINE_SITE_OCCUPANCY_STATUS=PASS
@@ -415,14 +430,14 @@ TIE1_INSERTION_TRIAL_STATUS=PASS
 RPT
 if [[ "${MPTDC_TEST_ALTERNATE_TIE:-0}" == 1 ]]; then
   sed -i \
-    -e 's/^TARGET_HIGH_INSTANCE_DELTA=12$/TARGET_HIGH_INSTANCE_DELTA=11/' \
+    -e 's/^TARGET_HIGH_INSTANCE_DELTA=85$/TARGET_HIGH_INSTANCE_DELTA=84/' \
     -e 's/^ALTERNATE_TIE_MASTER_DELTA=0$/ALTERNATE_TIE_MASTER_DELTA=1/' \
     "$outdir/reports/tie1_insertion_trial_status.rpt"
 fi
 if [[ "${MPTDC_TEST_UNUSED_TARGET_TIE:-0}" == 1 ]]; then
   sed -i \
-    -e 's/^TIE_HIGH_INSTANCE_DELTA=12$/TIE_HIGH_INSTANCE_DELTA=13/' \
-    -e 's/^TARGET_HIGH_INSTANCE_DELTA=12$/TARGET_HIGH_INSTANCE_DELTA=13/' \
+    -e 's/^TIE_HIGH_INSTANCE_DELTA=85$/TIE_HIGH_INSTANCE_DELTA=86/' \
+    -e 's/^TARGET_HIGH_INSTANCE_DELTA=85$/TARGET_HIGH_INSTANCE_DELTA=86/' \
     "$outdir/reports/tie1_insertion_trial_status.rpt"
 fi
 if [[ "${MPTDC_TEST_MARKER_MISMATCH:-0}" == 1 ]]; then
@@ -441,10 +456,10 @@ if [[ "${MPTDC_TEST_ZERO_EFFECT:-0}" == 1 ]]; then
     -e 's/^FINAL_FLAGGED_HIGH_TERM_COUNT=0$/FINAL_FLAGGED_HIGH_TERM_COUNT=91/' \
     -e 's/^FINAL_CONNECTED_HIGH_TERM_COUNT=91$/FINAL_CONNECTED_HIGH_TERM_COUNT=0/' \
     -e 's/^FINAL_DISCONNECTED_HIGH_TERM_COUNT=0$/FINAL_DISCONNECTED_HIGH_TERM_COUNT=91/' \
-    -e 's/^FINAL_TIE_NET_COUNT=12$/FINAL_TIE_NET_COUNT=0/' \
+    -e 's/^FINAL_TIE_NET_COUNT=85$/FINAL_TIE_NET_COUNT=0/' \
     -e 's/^MAX_OBSERVED_TIE_FANOUT=8$/MAX_OBSERVED_TIE_FANOUT=0/' \
-    -e 's/^TIE_HIGH_INSTANCE_DELTA=12$/TIE_HIGH_INSTANCE_DELTA=0/' \
-    -e 's/^TARGET_HIGH_INSTANCE_DELTA=12$/TARGET_HIGH_INSTANCE_DELTA=0/' \
+    -e 's/^TIE_HIGH_INSTANCE_DELTA=85$/TIE_HIGH_INSTANCE_DELTA=0/' \
+    -e 's/^TARGET_HIGH_INSTANCE_DELTA=85$/TARGET_HIGH_INSTANCE_DELTA=0/' \
     -e 's/^CHECKPOINT_SAVE_STATUS=PASS$/CHECKPOINT_SAVE_STATUS=NOT_RUN/' \
     -e 's/^TIE1_INSERTION_TRIAL_STATUS=PASS$/TIE1_INSERTION_TRIAL_STATUS=FAIL/' \
     "$outdir/reports/tie1_insertion_trial_status.rpt"
@@ -468,9 +483,43 @@ if [[ "${MPTDC_TEST_NONFILLER_CHANGE:-0}" == 1 ]]; then
     's/^NONFILLER_FINGERPRINT_STATUS=PASS$/NONFILLER_FINGERPRINT_STATUS=FAIL/' \
     "$outdir/reports/tie1_insertion_trial_status.rpt"
 fi
+if [[ "${MPTDC_TEST_TARGET_BASELINE:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^POST_FILLER_TARGET_DECISION=FIX_DRC_REQUIRED$/POST_FILLER_TARGET_DECISION=BASELINE_PRESERVED/' \
+    -e 's/^POST_FILLER_FIX_DRC_STATUS=PASS$/POST_FILLER_FIX_DRC_STATUS=NOT_NEEDED/' \
+    -e 's/^POST_FILLER_FIX_DRC_SNAPSHOT_STATUS=PASS$/POST_FILLER_FIX_DRC_SNAPSHOT_STATUS=NOT_RUN/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+if [[ "${MPTDC_TEST_PG_FAIL:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^PG_CONNECTIVITY_REBIND_STATUS=PASS$/PG_CONNECTIVITY_REBIND_STATUS=FAIL/' \
+    -e 's/^PG_CONFIG_SOURCE_STATUS=LOADED$/PG_CONFIG_SOURCE_STATUS=FAIL/' \
+    -e 's/^PG_CONNECTIVITY_COMMAND_COUNT=6$/PG_CONNECTIVITY_COMMAND_COUNT=0/' \
+    -e 's/^PG_CONNECTIVITY_COMMAND_STATUS=PASS$/PG_CONNECTIVITY_COMMAND_STATUS=FAIL/' \
+    -e 's/^PG_CONNECTIVITY_CONTRACT_STATUS=PASS$/PG_CONNECTIVITY_CONTRACT_STATUS=FAIL/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+if [[ "${MPTDC_TEST_ECO_CLEANUP_FAIL:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^POST_FILLER_FIX_DRC_STATUS=PASS$/POST_FILLER_FIX_DRC_STATUS=FAIL/' \
+    -e 's/^POST_FILLER_CLEANUP_STATUS=PASS$/POST_FILLER_CLEANUP_STATUS=FAIL/' \
+    -e 's/^POST_FILLER_CLEANUP_REASON=NONE$/POST_FILLER_CLEANUP_REASON=FIX_DRC_COMMAND_FAILED/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+if [[ "${MPTDC_TEST_ZERO_DRC_SCOPE_CHANGE:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^POST_FILLER_TARGET_DECISION=FIX_DRC_REQUIRED$/POST_FILLER_TARGET_DECISION=REJECT_ZERO_DRC_SCOPE_CHANGE/' \
+    -e 's/^POST_FILLER_FIX_DRC_STATUS=PASS$/POST_FILLER_FIX_DRC_STATUS=NOT_RUN/' \
+    -e 's/^POST_FILLER_FIX_DRC_SNAPSHOT_STATUS=PASS$/POST_FILLER_FIX_DRC_SNAPSHOT_STATUS=NOT_RUN/' \
+    -e 's/^POST_FILLER_CLEANUP_STATUS=PASS$/POST_FILLER_CLEANUP_STATUS=FAIL/' \
+    -e 's/^POST_FILLER_CLEANUP_REASON=NONE$/POST_FILLER_CLEANUP_REASON=REJECT_ZERO_DRC_SCOPE_CHANGE/' \
+    -e 's/^FINAL_DRC=1$/FINAL_DRC=0/' \
+    -e 's/^FINAL_DRC_MARKER_SIGNATURE_COUNT=1$/FINAL_DRC_MARKER_SIGNATURE_COUNT=0/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
 cat > "$outdir/reports/filler_status.rpt" <<'RPT'
 FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
-FILLER_COUNT=24785
+FILLER_COUNT=24856
 FILLER_DELETE_SELECTION_MODE=EXACT_TRACKED_MASTER_LIST
 FILLER_DELETE_MASTER_COUNT=8
 FILLER_DELETE_MASTER_SET=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
@@ -480,6 +529,10 @@ FILLER_REFILL_COMMAND_STATUS=PASS
 FILLER_REFILL_STATUS=PASS
 FILLER_INSERTION_STATUS=PASS
 FILLER_ADJUSTMENT_POLICY=EXACT_DELETE_INSERT_ROUTE_REFILL_PRIVATE_COPY
+POST_FILLER_ECOROUTE_POLICY=TARGET_THEN_CONDITIONAL_FIX_DRC
+POST_FILLER_TARGET_COMMAND_STATUS=PASS
+POST_FILLER_FIX_DRC_STATUS=PASS
+POST_FILLER_CLEANUP_STATUS=PASS
 FINAL_FILLER_MASTER_SET_STATUS=PASS
 NONFILLER_FINGERPRINT_STATUS=PASS
 FINAL_SITE_OCCUPANCY_STATUS=PASS
@@ -525,7 +578,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id "$RUN_ID" \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/pass.stdout"
 
 grep -qx 'TIE1_INSERTION_TRIAL_PREFLIGHT=PASS' "$TMP_ROOT/pass.stdout"
@@ -542,6 +595,14 @@ grep -qx 'SAVE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SELECTED_ROUTE_CALL_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'TARGET_READBACK_CALL_COUNT=2' "$TMP_ROOT/pass.stdout"
 grep -qx 'TARGET_POINTER_LINEAGE_COUNT=2' "$TMP_ROOT/pass.stdout"
+grep -qx 'ECO_TARGET_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'ECO_FIX_DRC_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'ECO_ROUTE_LITERAL_COUNT=2' "$TMP_ROOT/pass.stdout"
+grep -qx 'DIRECT_ECO_ROUTE_COMMAND_COUNT=0' "$TMP_ROOT/pass.stdout"
+grep -qx 'ECO_ROUTE_EXECUTOR_COUNT=2' "$TMP_ROOT/pass.stdout"
+grep -qx 'ECO_TARGET_EXECUTOR_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'ECO_FIX_DRC_EXECUTOR_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'MUTATION_ORDER_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'FORBIDDEN_MUTATION_COUNT=0' "$TMP_ROOT/pass.stdout"
 grep -qx 'TIE1_INSERTION_TRIAL_RECOVERY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_TIE1_TRIAL_CONTINUE' "$TMP_ROOT/pass.stdout"
@@ -578,6 +639,18 @@ grep -qx 'FILLER_DELETE_MASTER_SET=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FE
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'FILLER_REFILL_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'PG_CONNECTIVITY_GATE_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'EXPECTED_TIE_NET_COUNT=85' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'PG_CONNECTIVITY_COMMAND_COUNT=6' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_FILLER_ECOROUTE_POLICY=TARGET_THEN_CONDITIONAL_FIX_DRC' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_FILLER_TARGET_DECISION=FIX_DRC_REQUIRED' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_FILLER_ECOROUTE_GATE_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'FINAL_TARGET_SET_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'FINAL_TARGET_RESOLVED_COUNT=91' \
@@ -588,9 +661,11 @@ grep -qx 'NONFILLER_FINGERPRINT_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'FINAL_SITE_OCCUPANCY_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
-grep -qx 'FILLER_COUNT_AFTER=24785' \
+grep -qx 'FILLER_COUNT_AFTER=24856' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
-grep -qx 'TARGET_HIGH_INSTANCE_DELTA=12' \
+grep -qx 'FINAL_TIE_NET_COUNT=85' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'TARGET_HIGH_INSTANCE_DELTA=85' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'ALTERNATE_TIE_MASTER_DELTA=0' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
@@ -612,6 +687,27 @@ fi
 SOURCE_HASH_AFTER="$(tree_hash "$SOURCE_CHECKPOINT")"
 test "$SOURCE_HASH_BEFORE" = "$SOURCE_HASH_AFTER"
 
+TARGET_BASELINE_RUN=tie1_trial_target_baseline_pass
+MPTDC_TEST_TARGET_BASELINE=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/target-baseline.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id "$TARGET_BASELINE_RUN" \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/target-baseline.stdout"
+grep -qx 'POST_FILLER_TARGET_DECISION=BASELINE_PRESERVED' \
+  "$WORK/$TARGET_BASELINE_RUN/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_FILLER_FIX_DRC_STATUS=NOT_NEEDED' \
+  "$WORK/$TARGET_BASELINE_RUN/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_FILLER_ECOROUTE_GATE_STATUS=PASS' \
+  "$WORK/$TARGET_BASELINE_RUN/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=PASS_TIE1_TRIAL_CONTINUE' "$TMP_ROOT/target-baseline.stdout"
+
 set +e
 MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
 MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
@@ -627,7 +723,7 @@ bash "$DRIVER" \
 AUTH_RC=$?
 set -e
 test "$AUTH_RC" -eq 2
-grep -q 'exact private-copy filler-recycle authorization is required' "$TMP_ROOT/auth.stdout"
+grep -q 'exact private-copy filler-recycle ECO-route authorization is required' "$TMP_ROOT/auth.stdout"
 test ! -e "$WORK/tie1_trial_bad_auth"
 
 cp -p "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv" \
@@ -643,7 +739,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_stale_probe \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/stale.stdout" 2>&1
 STALE_RC=$?
 set -e
@@ -668,7 +764,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_stale_failed_trial \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/stale-failed-trial.stdout" 2>&1
 STALE_FAILED_TRIAL_RC=$?
 set -e
@@ -696,7 +792,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_duplicate_targets \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/duplicate.stdout" 2>&1
 DUPLICATE_RC=$?
 set -e
@@ -721,7 +817,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_mutated_copy \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/mutation.stdout" 2>&1
 MUTATION_RC=$?
 set -e
@@ -742,7 +838,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_zero_effect \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/zero-effect.stdout" 2>&1
 ZERO_EFFECT_RC=$?
 set -e
@@ -771,7 +867,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_bad_delete_effect \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/delete-effect.stdout" 2>&1
 DELETE_EFFECT_RC=$?
 set -e
@@ -794,7 +890,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_refill_fail \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/refill-fail.stdout" 2>&1
 REFILL_FAIL_RC=$?
 set -e
@@ -804,6 +900,73 @@ grep -qx 'FILLER_REFILL_STATUS=FAIL' \
 grep -qx 'FINAL_SITE_OCCUPANCY_STATUS=FAIL' \
   "$WORK/tie1_trial_refill_fail/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/refill-fail.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_PG_FAIL=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/pg-fail.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id tie1_trial_pg_fail \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/pg-fail.stdout" 2>&1
+PG_FAIL_RC=$?
+set -e
+test "$PG_FAIL_RC" -eq 1
+grep -qx 'PG_CONNECTIVITY_GATE_STATUS=FAIL' \
+  "$WORK/tie1_trial_pg_fail/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/pg-fail.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_ECO_CLEANUP_FAIL=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/eco-fail.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id tie1_trial_eco_cleanup_fail \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/eco-fail.stdout" 2>&1
+ECO_FAIL_RC=$?
+set -e
+test "$ECO_FAIL_RC" -eq 1
+grep -qx 'POST_FILLER_ECOROUTE_GATE_STATUS=FAIL' \
+  "$WORK/tie1_trial_eco_cleanup_fail/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_FILLER_CLEANUP_REASON=FIX_DRC_COMMAND_FAILED' \
+  "$WORK/tie1_trial_eco_cleanup_fail/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/eco-fail.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_ZERO_DRC_SCOPE_CHANGE=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/zero-drc.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id tie1_trial_zero_drc_scope_change \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/zero-drc.stdout" 2>&1
+ZERO_DRC_RC=$?
+set -e
+test "$ZERO_DRC_RC" -eq 1
+grep -qx 'POST_FILLER_TARGET_DECISION=REJECT_ZERO_DRC_SCOPE_CHANGE' \
+  "$WORK/tie1_trial_zero_drc_scope_change/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FINAL_DRC=0' \
+  "$WORK/tie1_trial_zero_drc_scope_change/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/zero-drc.stdout"
 test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
 
 set +e
@@ -817,7 +980,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_nonfiller_change \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/nonfiller-change.stdout" 2>&1
 NONFILLER_CHANGE_RC=$?
 set -e
@@ -838,12 +1001,12 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_alternate_master \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/alternate.stdout" 2>&1
 ALTERNATE_RC=$?
 set -e
 test "$ALTERNATE_RC" -eq 1
-grep -qx 'TARGET_HIGH_INSTANCE_DELTA=11' \
+grep -qx 'TARGET_HIGH_INSTANCE_DELTA=84' \
   "$WORK/tie1_trial_alternate_master/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'ALTERNATE_TIE_MASTER_DELTA=1' \
   "$WORK/tie1_trial_alternate_master/reports/operator_gate_tie1_insertion_trial.rpt"
@@ -861,14 +1024,14 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_unused_target_cell \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/unused-target.stdout" 2>&1
 UNUSED_TARGET_RC=$?
 set -e
 test "$UNUSED_TARGET_RC" -eq 1
-grep -qx 'FINAL_TIE_NET_COUNT=12' \
+grep -qx 'FINAL_TIE_NET_COUNT=85' \
   "$WORK/tie1_trial_unused_target_cell/reports/operator_gate_tie1_insertion_trial.rpt"
-grep -qx 'TARGET_HIGH_INSTANCE_DELTA=13' \
+grep -qx 'TARGET_HIGH_INSTANCE_DELTA=86' \
   "$WORK/tie1_trial_unused_target_cell/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/unused-target.stdout"
 test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
@@ -884,7 +1047,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_marker_mismatch \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/marker-mismatch.stdout" 2>&1
 MARKER_MISMATCH_RC=$?
 set -e
@@ -905,7 +1068,7 @@ bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
   --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_tool_fail \
-  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/fail.stdout" 2>&1
 FAIL_RC=$?
 set -e
@@ -1029,7 +1192,7 @@ set fh [open $::env(MPTDC_TEST_TRIAL_TCL) r]
 set data [read $fh]
 close $fh
 set start [string first "proc mptdc_tie1_trial_marker_signature" $data]
-set end [string first "\nproc mptdc_tie1_trial_snapshot_equal_debt" $data $start]
+set end [string first "\nset checkpoint" $data $start]
 eval [string range $data $start [expr {$end - 1}]]
 set a [mptdc_tie1_trial_marker_signature $::env(MPTDC_TEST_MARKER_A)]
 set b [mptdc_tie1_trial_marker_signature $::env(MPTDC_TEST_MARKER_B)]
@@ -1048,6 +1211,25 @@ dict set snapshot report_route_rpt $::env(MPTDC_TEST_REPORT_ROUTE_NONZERO)
 set rejected [mptdc_tie1_trial_normalize_snapshot_unrouted $snapshot]
 if {[dict get $rejected unrouted] ne "UNKNOWN" ||
     [dict get $rejected report_route_zero] != 0} { exit 1 }
+
+set baseline [dict create \
+    total_violations 1 shorts 0 regular_bad 0 special_bad 1 \
+    special_raw_bad 1 special_non_ro_failures 0 unrouted 0 \
+    report_route_zero 1 marker_signature $a special_bad_lines {RO_ONLY}]
+if {[mptdc_tie1_trial_cleanup_decision $baseline $baseline] ne
+    "BASELINE_PRESERVED"} { exit 1 }
+set zero_drc [dict replace $baseline total_violations 0 marker_signature {}]
+if {[mptdc_tie1_trial_cleanup_decision $baseline $zero_drc] ne
+    "REJECT_ZERO_DRC_SCOPE_CHANGE"} { exit 1 }
+set marker_drift [dict replace $baseline marker_signature {{changed marker}}]
+if {[mptdc_tie1_trial_cleanup_decision $baseline $marker_drift] ne
+    "REJECT_MARKER_SCOPE_CHANGE"} { exit 1 }
+set repairable [dict replace $baseline total_violations 123 shorts 99]
+if {[mptdc_tie1_trial_cleanup_decision $baseline $repairable] ne
+    "FIX_DRC_REQUIRED"} { exit 1 }
+set invalid [dict replace $baseline total_violations UNKNOWN]
+if {[mptdc_tie1_trial_cleanup_decision $baseline $invalid] ne
+    "REJECT_INVALID_SNAPSHOT"} { exit 1 }
 EOF
 
 echo "MPTDC_TIE1_INSERTION_TRIAL_DRIVER_TEST=PASS"

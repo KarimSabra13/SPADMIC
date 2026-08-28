@@ -606,7 +606,8 @@ tracked_tie1_filler_recycle_gate_passes() {
   local probe_run_id failed_trial_run_id source_checkpoint candidate_checkpoint
   local candidate_sha target_sha tie_net_count tie_delta target_delta fanout filler_count
   local reports_dir filler failed_gate expected_candidate
-  local expected_fillers
+  local expected_fillers pg_config_source_status
+  local target_decision fix_drc_status fix_drc_snapshot_status
 
   probe_run_id="$(report_value "$report" PROBE_RUN_ID)"
   failed_trial_run_id="$(report_value "$report" SOURCE_FAILED_TRIAL_RUN_ID)"
@@ -622,8 +623,9 @@ tracked_tie1_filler_recycle_gate_passes() {
   expected_fillers="FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD"
 
   tracked_report_passes "$report" \
-    STEP TIE1_INSERTION_TRIAL AUTHORIZATION EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+    STEP TIE1_INSERTION_TRIAL AUTHORIZATION EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL \
     HIGH_MASTER LOGIC1DJIHD LOW_MASTER LOGIC0DJIHD MAX_FANOUT 8 MAX_DISTANCE_UM 20 \
+    EXPECTED_TIE_NET_COUNT 85 \
     INNOVUS_RC 0 TIE1_INSERTION_TRIAL_STATUS PASS \
     FILLER_RECYCLE_MODE DELETE_INSERT_ROUTE_REFILL \
     FILLER_DELETE_SELECTION_MODE EXACT_TRACKED_MASTER_LIST \
@@ -645,15 +647,25 @@ tracked_tie1_filler_recycle_gate_passes() {
     POST_ADD_CONNECTED_HIGH_TERM_COUNT 91 POST_ADD_DISCONNECTED_HIGH_TERM_COUNT 0 \
     POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT 0 \
     POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT 0 SELECTED_ROUTE_STATUS PASS \
+    POST_SELECTED_ROUTE_SNAPSHOT_STATUS PASS \
     FILLER_MODE_STATUS PASS FILLER_REFILL_COMMAND_STATUS PASS \
-    PG_CONNECTIVITY_REBIND_STATUS PASS FILLER_REFILL_STATUS PASS \
+    PG_CONNECTIVITY_REBIND_STATUS PASS PG_CONNECTIVITY_COMMAND_COUNT 6 \
+    PG_CONNECTIVITY_COMMAND_FAILURE_COUNT 0 PG_CONNECTIVITY_COMMAND_STATUS PASS \
+    PG_CONNECTIVITY_CONTRACT_STATUS PASS PG_CONNECTIVITY_GATE_STATUS PASS \
+    FILLER_REFILL_STATUS PASS POST_REFILL_SNAPSHOT_STATUS PASS \
+    POST_FILLER_ECOROUTE_POLICY TARGET_THEN_CONDITIONAL_FIX_DRC \
+    POST_FILLER_TARGET_COMMAND_STATUS PASS POST_FILLER_TARGET_SNAPSHOT_STATUS PASS \
+    POST_FILLER_CLEANUP_STATUS PASS POST_FILLER_CLEANUP_REASON NONE \
+    POST_FILLER_ECOROUTE_GATE_STATUS PASS \
     BASELINE_PLACEMENT_STATUS PASS FINAL_PLACEMENT_STATUS PASS \
     FINAL_TARGET_POINTER_COUNT 91 FINAL_TARGET_RESOLVED_COUNT 91 \
     FINAL_TARGET_MISSING_COUNT 0 FINAL_TARGET_DUPLICATE_COUNT 0 \
     FINAL_TARGET_UNEXPECTED_COUNT 0 FINAL_TARGET_SET_STATUS PASS \
     FINAL_FLAGGED_HIGH_TERM_COUNT 0 \
     FINAL_CONNECTED_HIGH_TERM_COUNT 91 FINAL_DISCONNECTED_HIGH_TERM_COUNT 0 \
-    FINAL_FLAGGED_LOW_TERM_COUNT 0 TIE_NET_SOURCE_CONTRACT_STATUS PASS \
+    FINAL_FLAGGED_LOW_TERM_COUNT 0 FINAL_TIE_NET_COUNT 85 \
+    TIE_HIGH_INSTANCE_DELTA 85 TARGET_HIGH_INSTANCE_DELTA 85 \
+    TIE_NET_SOURCE_CONTRACT_STATUS PASS \
     TIE_NET_ROUTE_STATUS PASS TIE_FANOUT_STATUS PASS NUMERIC_GATE_STATUS PASS \
     ALTERNATE_TIE_MASTER_DELTA 0 TIE_LOW_INSTANCE_DELTA 0 \
     FINAL_FILLER_MASTER_SET_STATUS PASS NONFILLER_FINGERPRINT_STATUS PASS \
@@ -689,9 +701,25 @@ tracked_tie1_filler_recycle_gate_passes() {
   target_delta="$(report_value "$report" TARGET_HIGH_INSTANCE_DELTA)"
   fanout="$(report_value "$report" MAX_OBSERVED_TIE_FANOUT)"
   filler_count="$(report_value "$report" FILLER_COUNT_AFTER)"
-  [[ "$tie_net_count" =~ ^[1-9][0-9]*$ && "$tie_delta" == "$tie_net_count" && \
-     "$target_delta" == "$tie_net_count" && "$fanout" =~ ^[1-8]$ && \
+  [[ "$tie_net_count" == 85 && "$tie_delta" == 85 && \
+     "$target_delta" == 85 && "$fanout" =~ ^[1-8]$ && \
      "$filler_count" =~ ^[1-9][0-9]*$ ]] || return 1
+
+  pg_config_source_status="$(report_value "$report" PG_CONFIG_SOURCE_STATUS)"
+  [[ "$pg_config_source_status" =~ ^(LOADED|ALREADY_LOADED)$ ]] || return 1
+
+  target_decision="$(report_value "$report" POST_FILLER_TARGET_DECISION)"
+  fix_drc_status="$(report_value "$report" POST_FILLER_FIX_DRC_STATUS)"
+  fix_drc_snapshot_status="$(report_value "$report" POST_FILLER_FIX_DRC_SNAPSHOT_STATUS)"
+  if [[ "$target_decision" == BASELINE_PRESERVED ]]; then
+    [[ "$fix_drc_status" == NOT_NEEDED && \
+       "$fix_drc_snapshot_status" == NOT_RUN ]] || return 1
+  elif [[ "$target_decision" == FIX_DRC_REQUIRED ]]; then
+    [[ "$fix_drc_status" == PASS && \
+       "$fix_drc_snapshot_status" == PASS ]] || return 1
+  else
+    return 1
+  fi
 
   reports_dir="$(dirname "$report")"
   filler="$reports_dir/filler_status.rpt"
@@ -703,6 +731,8 @@ tracked_tie1_filler_recycle_gate_passes() {
     FILLER_REFILL_COMMAND_STATUS PASS FILLER_REFILL_STATUS PASS \
     FILLER_INSERTION_STATUS PASS \
     FILLER_ADJUSTMENT_POLICY EXACT_DELETE_INSERT_ROUTE_REFILL_PRIVATE_COPY \
+    POST_FILLER_ECOROUTE_POLICY TARGET_THEN_CONDITIONAL_FIX_DRC \
+    POST_FILLER_TARGET_COMMAND_STATUS PASS POST_FILLER_CLEANUP_STATUS PASS \
     FINAL_FILLER_MASTER_SET_STATUS PASS NONFILLER_FINGERPRINT_STATUS PASS \
     FINAL_SITE_OCCUPANCY_STATUS PASS FINAL_PLACEMENT_SITE_OCCUPIED 907533 \
     FINAL_PLACEMENT_SITE_CAPACITY 907533 || return 1
@@ -794,7 +824,7 @@ if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
   PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF
   if git -C "$REPO_ROOT" ls-files --error-unmatch "$TIE1_TRIAL_GATE_REL" >/dev/null 2>&1 && \
      [[ -s "$TIE1_TRIAL_GATE" ]]; then
-    PNR_CANDIDATE_KIND=TIE1_FILLER_RECYCLE_ONE_MINAREA_DIAGNOSTIC
+    PNR_CANDIDATE_KIND=TIE1_FILLER_RECYCLE_ECOROUTE_ONE_MINAREA_DIAGNOSTIC
     CANDIDATE_GATE_PATH="$TIE1_TRIAL_GATE"
     SOURCE_CKPT="$PNR_DIR/checkpoints/repaired_route.enc.dat"
     SOURCE_PNR_RUN_ID="$PNR_RUN_ID"

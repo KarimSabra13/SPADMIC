@@ -20,6 +20,7 @@ MAX_FANOUT=8
 MAX_DISTANCE=20
 EXPECTED_HIGH_TERMS=91
 EXPECTED_LOW_TERMS=0
+EXPECTED_TIE_NETS=85
 EXPECTED_FILLERS=24797
 EXPECTED_DRC=1
 EXPECTED_PLACEMENT_SITES=907533
@@ -35,13 +36,13 @@ usage() {
 Usage:
   server_run_mptdc_tie1_insertion_trial.sh --probe-run-id <id> \
     --source-failed-trial-run-id <id> \
-    --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL [options]
+    --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL [options]
 
 Options:
   --probe-run-id <id>       Published Step 6R read-only tie1 probe.
   --source-failed-trial-run-id <id>
                              Published Step 7I zero-effect trial.
-  --authorization <token>   Must be EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL.
+  --authorization <token>   Must be EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL.
   --run-id <id>             New disposable Innovus trial run id.
   --expected-head <sha>     Require repository HEAD to match this commit.
   --innovus-work <path>     Innovus/PVS result root.
@@ -49,10 +50,11 @@ Options:
 
 The trial restores a private copy of the immutable checkpoint, proves and
 deletes exactly 24797 tracked FEED fillers, inserts the exact 91 reviewed
-tie-high sinks, routes only the new tie nets, and refills all legal sites. It
-saves a candidate only when the non-filler fingerprint, full site occupancy,
-base DRC, shorts, regular connectivity, and existing special-connectivity debt
-are preserved. The result is diagnostic and never signoff eligible.
+tie-high sinks, routes only the new tie nets, refills all legal sites, rebinds
+PG connectivity, and runs one target ECO route plus at most one conditional
+fix-DRC ECO route. It saves a candidate only when exactly 85 tie cells/nets are
+present and the original one-marker physical-debt signature is preserved. The
+result is diagnostic and never signoff eligible.
 USAGE
 }
 
@@ -171,8 +173,8 @@ done
 [[ "$PROBE_RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "ERROR: unsafe probe run id" >&2; exit 2; }
 [[ -n "$SOURCE_FAILED_TRIAL_RUN_ID" ]] || { echo "ERROR: --source-failed-trial-run-id is required" >&2; usage >&2; exit 2; }
 [[ "$SOURCE_FAILED_TRIAL_RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "ERROR: unsafe failed trial run id" >&2; exit 2; }
-[[ "$AUTHORIZATION" == EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL ]] || {
-  echo "ERROR: exact private-copy filler-recycle authorization is required" >&2
+[[ "$AUTHORIZATION" == EXACT_MPTDC_TIE1_FILLER_RECYCLE_ECOROUTE_TRIAL ]] || {
+  echo "ERROR: exact private-copy filler-recycle ECO-route authorization is required" >&2
   exit 2
 }
 if [[ -z "$RUN_ID" ]]; then
@@ -446,7 +448,37 @@ SAVE_COMMAND_COUNT="$({ grep -Ec '(^|[[:space:]{}])saveDesign[[:space:]]+\$final
 SELECTED_ROUTE_CALL_COUNT="$({ grep -Ec '^[[:space:]]*mptdc_ckpt_route_selected_nets_route_design[[:space:]]' "$TRIAL_TCL" || true; } | tail -1)"
 TARGET_READBACK_CALL_COUNT="$({ grep -Ec '^[[:space:]]*set (post_add|final)_target_state \[mptdc_tie1_trial_target_state' "$TRIAL_TCL" || true; } | tail -1)"
 TARGET_POINTER_LINEAGE_COUNT="$({ grep -Fc '[dict get $baseline_state hi_pointer_name_pairs]' "$TRIAL_TCL" || true; } | tail -1)"
-FORBIDDEN_MUTATION_COUNT="$({ grep -Eiv '^[[:space:]]*#' "$TRIAL_TCL" | grep -Eic '(^|[[:space:]{}])(deleteInst|deleteNet|globalDetailRoute|ecoRoute|sroute|refinePlace|placeDesign|optDesign|editDelete|dbDeleteObj)([[:space:]{}]|$)' || true; } | tail -1)"
+ECO_TARGET_COMMAND_COUNT="$({ grep -Ec '^[[:space:]]*set post_filler_target_command \{ecoRoute -target\}[[:space:]]*$' "$TRIAL_TCL" || true; } | tail -1)"
+ECO_FIX_DRC_COMMAND_COUNT="$({ grep -Ec '^[[:space:]]*set post_filler_fix_drc_command \{ecoRoute -fix_drc\}[[:space:]]*$' "$TRIAL_TCL" || true; } | tail -1)"
+ECO_ROUTE_LITERAL_COUNT="$({ grep -Ec '\{ecoRoute[[:space:]]+-[^}]+\}' "$TRIAL_TCL" || true; } | tail -1)"
+DIRECT_ECO_ROUTE_COMMAND_COUNT="$({ grep -Ec '^[[:space:]]*ecoRoute([[:space:]>]|$)' "$TRIAL_TCL" || true; } | tail -1)"
+ECO_ROUTE_EXECUTOR_COUNT="$({ grep -Ec '^[[:space:]]*lassign \[mptdc_signoff_capture_route_command[[:space:]\\]*$' "$TRIAL_TCL" || true; } | tail -1)"
+ECO_TARGET_EXECUTOR_COUNT="$({ grep -Ec '^[[:space:]]*\$post_filler_target_command[[:space:]]+\$post_filler_target_command_report\][[:space:]\\]*$' "$TRIAL_TCL" || true; } | tail -1)"
+ECO_FIX_DRC_EXECUTOR_COUNT="$({ grep -Ec '^[[:space:]]*\$post_filler_fix_drc_command[[:space:]]+\$post_filler_fix_drc_command_report\][[:space:]\\]*$' "$TRIAL_TCL" || true; } | tail -1)"
+FORBIDDEN_MUTATION_COUNT="$({ grep -Eiv '^[[:space:]]*#' "$TRIAL_TCL" | grep -Eic '(^|[[:space:]{}])(deleteInst|deleteNet|globalDetailRoute|sroute|refinePlace|placeDesign|optDesign|editDelete|dbDeleteObj)([[:space:]{}]|$)' || true; } | tail -1)"
+
+DELETE_FILLER_LINE="$(grep -nE '^[[:space:]]*deleteFiller[[:space:]]+-cell[[:space:]]+\$filler_masters' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+ADD_TIE_LINE="$(grep -nE '^[[:space:]]*addTieHiLo[[:space:]]+-cell[[:space:]]' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+SELECTED_ROUTE_LINE="$(grep -nE '^[[:space:]]*mptdc_ckpt_route_selected_nets_route_design[[:space:]]' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+ADD_FILLER_LINE="$(grep -nE '^[[:space:]]*addFiller[[:space:]]+-cell[[:space:]]+\$filler_masters' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+PG_REBIND_LINE="$(grep -nE '^[[:space:]]*mptdc_signoff_apply_pg_connectivity[[:space:]]*$' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+ECO_TARGET_LINE="$(grep -nE '^[[:space:]]*\$post_filler_target_command[[:space:]]+\$post_filler_target_command_report\]' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+ECO_FIX_DRC_LINE="$(grep -nE '^[[:space:]]*\$post_filler_fix_drc_command[[:space:]]+\$post_filler_fix_drc_command_report\]' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+SAVE_LINE="$(grep -nE '(^|[[:space:]{}])saveDesign[[:space:]]+\$final_checkpoint([[:space:]{}]|$)' "$TRIAL_TCL" | sed -n '1s/:.*//p')"
+MUTATION_ORDER_STATUS=FAIL
+if [[ "$DELETE_FILLER_LINE" =~ ^[0-9]+$ && "$ADD_TIE_LINE" =~ ^[0-9]+$ && \
+      "$SELECTED_ROUTE_LINE" =~ ^[0-9]+$ && "$ADD_FILLER_LINE" =~ ^[0-9]+$ && \
+      "$PG_REBIND_LINE" =~ ^[0-9]+$ && "$ECO_TARGET_LINE" =~ ^[0-9]+$ && \
+      "$ECO_FIX_DRC_LINE" =~ ^[0-9]+$ && "$SAVE_LINE" =~ ^[0-9]+$ ]] && \
+   (( DELETE_FILLER_LINE < ADD_TIE_LINE && \
+      ADD_TIE_LINE < SELECTED_ROUTE_LINE && \
+      SELECTED_ROUTE_LINE < ADD_FILLER_LINE && \
+      ADD_FILLER_LINE < PG_REBIND_LINE && \
+      PG_REBIND_LINE < ECO_TARGET_LINE && \
+      ECO_TARGET_LINE < ECO_FIX_DRC_LINE && \
+      ECO_FIX_DRC_LINE < SAVE_LINE )); then
+  MUTATION_ORDER_STATUS=PASS
+fi
 [[ "$RESTORE_COMMAND_COUNT" == 1 ]] || { echo "STOP: trial must restore exactly once"; PREFLIGHT=FAIL; }
 [[ "$DELETE_FILLER_COMMAND_COUNT" == 1 ]] || { echo "STOP: trial must invoke deleteFiller exactly once"; PREFLIGHT=FAIL; }
 [[ "$DELETE_FILLER_MASTER_OPTION_COUNT" == 1 ]] || { echo "STOP: deleteFiller must select the exact tracked filler master list"; PREFLIGHT=FAIL; }
@@ -460,6 +492,14 @@ FORBIDDEN_MUTATION_COUNT="$({ grep -Eiv '^[[:space:]]*#' "$TRIAL_TCL" | grep -Ei
 [[ "$SELECTED_ROUTE_CALL_COUNT" == 1 ]] || { echo "STOP: trial must use one selected-net route helper"; PREFLIGHT=FAIL; }
 [[ "$TARGET_READBACK_CALL_COUNT" == 2 ]] || { echo "STOP: trial must perform exact post-add and final target readback"; PREFLIGHT=FAIL; }
 [[ "$TARGET_POINTER_LINEAGE_COUNT" == 2 ]] || { echo "STOP: both target readbacks must use baseline instTerm pointer lineage"; PREFLIGHT=FAIL; }
+[[ "$ECO_TARGET_COMMAND_COUNT" == 1 ]] || { echo "STOP: trial must declare exactly one ecoRoute -target command"; PREFLIGHT=FAIL; }
+[[ "$ECO_FIX_DRC_COMMAND_COUNT" == 1 ]] || { echo "STOP: trial must declare exactly one conditional ecoRoute -fix_drc command"; PREFLIGHT=FAIL; }
+[[ "$ECO_ROUTE_LITERAL_COUNT" == 2 ]] || { echo "STOP: trial must contain only the two approved ECO route literals"; PREFLIGHT=FAIL; }
+[[ "$DIRECT_ECO_ROUTE_COMMAND_COUNT" == 0 ]] || { echo "STOP: direct ECO route invocation bypasses the bounded executor"; PREFLIGHT=FAIL; }
+[[ "$ECO_ROUTE_EXECUTOR_COUNT" == 2 ]] || { echo "STOP: trial must contain exactly two bounded ECO route executors"; PREFLIGHT=FAIL; }
+[[ "$ECO_TARGET_EXECUTOR_COUNT" == 1 ]] || { echo "STOP: trial must execute the target ECO command exactly once"; PREFLIGHT=FAIL; }
+[[ "$ECO_FIX_DRC_EXECUTOR_COUNT" == 1 ]] || { echo "STOP: trial must contain one conditional fix-DRC executor"; PREFLIGHT=FAIL; }
+[[ "$MUTATION_ORDER_STATUS" == PASS ]] || { echo "STOP: tie/filler/PG/ECO/save mutation order is invalid"; PREFLIGHT=FAIL; }
 [[ "$FORBIDDEN_MUTATION_COUNT" == 0 ]] || { echo "STOP: broad or destructive mutation found in trial Tcl"; PREFLIGHT=FAIL; }
 
 CADENCE_ENV_RC=99
@@ -501,6 +541,14 @@ echo "SAVE_COMMAND_COUNT=$SAVE_COMMAND_COUNT"
 echo "SELECTED_ROUTE_CALL_COUNT=$SELECTED_ROUTE_CALL_COUNT"
 echo "TARGET_READBACK_CALL_COUNT=$TARGET_READBACK_CALL_COUNT"
 echo "TARGET_POINTER_LINEAGE_COUNT=$TARGET_POINTER_LINEAGE_COUNT"
+echo "ECO_TARGET_COMMAND_COUNT=$ECO_TARGET_COMMAND_COUNT"
+echo "ECO_FIX_DRC_COMMAND_COUNT=$ECO_FIX_DRC_COMMAND_COUNT"
+echo "ECO_ROUTE_LITERAL_COUNT=$ECO_ROUTE_LITERAL_COUNT"
+echo "DIRECT_ECO_ROUTE_COMMAND_COUNT=$DIRECT_ECO_ROUTE_COMMAND_COUNT"
+echo "ECO_ROUTE_EXECUTOR_COUNT=$ECO_ROUTE_EXECUTOR_COUNT"
+echo "ECO_TARGET_EXECUTOR_COUNT=$ECO_TARGET_EXECUTOR_COUNT"
+echo "ECO_FIX_DRC_EXECUTOR_COUNT=$ECO_FIX_DRC_EXECUTOR_COUNT"
+echo "MUTATION_ORDER_STATUS=$MUTATION_ORDER_STATUS"
 echo "FORBIDDEN_MUTATION_COUNT=$FORBIDDEN_MUTATION_COUNT"
 if [[ "$PREFLIGHT" != PASS ]]; then
   echo "DECISION=FAIL_STOP"
@@ -606,8 +654,10 @@ echo "INSTANCE_PIN_TARGET_SHA256=$INSTANCE_PIN_TARGET_SHA_PRE"
   echo "LOW_MASTER=$LOW_MASTER"
   echo "MAX_FANOUT=$MAX_FANOUT"
   echo "MAX_DISTANCE_UM=$MAX_DISTANCE"
+  echo "EXPECTED_TIE_NET_COUNT=$EXPECTED_TIE_NETS"
   echo "EXPECTED_HIGH_TERMS=$EXPECTED_HIGH_TERMS"
   echo "EXPECTED_LOW_TERMS=$EXPECTED_LOW_TERMS"
+  echo "EXPECTED_TIE_NETS=$EXPECTED_TIE_NETS"
   echo "EXPECTED_FILLERS=$EXPECTED_FILLERS"
   echo "EXPECTED_BASE_DRC=$EXPECTED_DRC"
   echo "EXPECTED_PLACEMENT_SITES=$EXPECTED_PLACEMENT_SITES"
@@ -623,6 +673,16 @@ echo "INSTANCE_PIN_TARGET_SHA256=$INSTANCE_PIN_TARGET_SHA_PRE"
   echo "PG_REBIND_CALL_COUNT=$PG_REBIND_CALL_COUNT"
   echo "SAVE_COMMAND_COUNT=$SAVE_COMMAND_COUNT"
   echo "SELECTED_ROUTE_CALL_COUNT=$SELECTED_ROUTE_CALL_COUNT"
+  echo "TARGET_READBACK_CALL_COUNT=$TARGET_READBACK_CALL_COUNT"
+  echo "TARGET_POINTER_LINEAGE_COUNT=$TARGET_POINTER_LINEAGE_COUNT"
+  echo "ECO_TARGET_COMMAND_COUNT=$ECO_TARGET_COMMAND_COUNT"
+  echo "ECO_FIX_DRC_COMMAND_COUNT=$ECO_FIX_DRC_COMMAND_COUNT"
+  echo "ECO_ROUTE_LITERAL_COUNT=$ECO_ROUTE_LITERAL_COUNT"
+  echo "DIRECT_ECO_ROUTE_COMMAND_COUNT=$DIRECT_ECO_ROUTE_COMMAND_COUNT"
+  echo "ECO_ROUTE_EXECUTOR_COUNT=$ECO_ROUTE_EXECUTOR_COUNT"
+  echo "ECO_TARGET_EXECUTOR_COUNT=$ECO_TARGET_EXECUTOR_COUNT"
+  echo "ECO_FIX_DRC_EXECUTOR_COUNT=$ECO_FIX_DRC_EXECUTOR_COUNT"
+  echo "MUTATION_ORDER_STATUS=$MUTATION_ORDER_STATUS"
   echo "FORBIDDEN_MUTATION_COUNT=$FORBIDDEN_MUTATION_COUNT"
   echo "SAFE_COPY_RC=$SAFE_COPY_RC"
   echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
@@ -647,6 +707,7 @@ export MPTDC_TIE1_TRIAL_MAX_FANOUT="$MAX_FANOUT"
 export MPTDC_TIE1_TRIAL_MAX_DISTANCE="$MAX_DISTANCE"
 export MPTDC_TIE1_TRIAL_EXPECTED_HIGH_TERMS="$EXPECTED_HIGH_TERMS"
 export MPTDC_TIE1_TRIAL_EXPECTED_LOW_TERMS="$EXPECTED_LOW_TERMS"
+export MPTDC_TIE1_TRIAL_EXPECTED_TIE_NETS="$EXPECTED_TIE_NETS"
 export MPTDC_TIE1_TRIAL_EXPECTED_FILLERS="$EXPECTED_FILLERS"
 export MPTDC_TIE1_TRIAL_EXPECTED_DRC="$EXPECTED_DRC"
 export MPTDC_TIE1_TRIAL_EXPECTED_PLACEMENT_SITES="$EXPECTED_PLACEMENT_SITES"
@@ -732,10 +793,25 @@ POST_ADD_DISCONNECTED_HIGH_TERM_COUNT="$(report_value "$TRIAL_REPORT" POST_ADD_D
 POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT="$(report_value "$TRIAL_REPORT" POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT)"
 POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT="$(report_value "$TRIAL_REPORT" POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT)"
 SELECTED_ROUTE_STATUS="$(report_value "$TRIAL_REPORT" SELECTED_ROUTE_STATUS)"
+POST_SELECTED_ROUTE_SNAPSHOT_STATUS="$(report_value "$TRIAL_REPORT" POST_SELECTED_ROUTE_SNAPSHOT_STATUS)"
 FILLER_MODE_STATUS="$(report_value "$TRIAL_REPORT" FILLER_MODE_STATUS)"
 FILLER_REFILL_COMMAND_STATUS="$(report_value "$TRIAL_REPORT" FILLER_REFILL_COMMAND_STATUS)"
 PG_CONNECTIVITY_REBIND_STATUS="$(report_value "$TRIAL_REPORT" PG_CONNECTIVITY_REBIND_STATUS)"
+PG_CONFIG_SOURCE_STATUS="$(report_value "$TRIAL_REPORT" PG_CONFIG_SOURCE_STATUS)"
+PG_CONNECTIVITY_COMMAND_COUNT="$(report_value "$TRIAL_REPORT" PG_CONNECTIVITY_COMMAND_COUNT)"
+PG_CONNECTIVITY_COMMAND_FAILURE_COUNT="$(report_value "$TRIAL_REPORT" PG_CONNECTIVITY_COMMAND_FAILURE_COUNT)"
+PG_CONNECTIVITY_COMMAND_STATUS="$(report_value "$TRIAL_REPORT" PG_CONNECTIVITY_COMMAND_STATUS)"
+PG_CONNECTIVITY_CONTRACT_STATUS="$(report_value "$TRIAL_REPORT" PG_CONNECTIVITY_CONTRACT_STATUS)"
 FILLER_REFILL_STATUS="$(report_value "$TRIAL_REPORT" FILLER_REFILL_STATUS)"
+POST_REFILL_SNAPSHOT_STATUS="$(report_value "$TRIAL_REPORT" POST_REFILL_SNAPSHOT_STATUS)"
+POST_FILLER_ECOROUTE_POLICY="$(report_value "$TRIAL_REPORT" POST_FILLER_ECOROUTE_POLICY)"
+POST_FILLER_TARGET_COMMAND_STATUS="$(report_value "$TRIAL_REPORT" POST_FILLER_TARGET_COMMAND_STATUS)"
+POST_FILLER_TARGET_SNAPSHOT_STATUS="$(report_value "$TRIAL_REPORT" POST_FILLER_TARGET_SNAPSHOT_STATUS)"
+POST_FILLER_TARGET_DECISION="$(report_value "$TRIAL_REPORT" POST_FILLER_TARGET_DECISION)"
+POST_FILLER_FIX_DRC_STATUS="$(report_value "$TRIAL_REPORT" POST_FILLER_FIX_DRC_STATUS)"
+POST_FILLER_FIX_DRC_SNAPSHOT_STATUS="$(report_value "$TRIAL_REPORT" POST_FILLER_FIX_DRC_SNAPSHOT_STATUS)"
+POST_FILLER_CLEANUP_STATUS="$(report_value "$TRIAL_REPORT" POST_FILLER_CLEANUP_STATUS)"
+POST_FILLER_CLEANUP_REASON="$(report_value "$TRIAL_REPORT" POST_FILLER_CLEANUP_REASON)"
 BASELINE_PLACEMENT_STATUS="$(report_value "$TRIAL_REPORT" BASELINE_PLACEMENT_STATUS)"
 FINAL_PLACEMENT_STATUS="$(report_value "$TRIAL_REPORT" FINAL_PLACEMENT_STATUS)"
 FINAL_TARGET_POINTER_COUNT="$(report_value "$TRIAL_REPORT" FINAL_TARGET_POINTER_COUNT)"
@@ -801,7 +877,35 @@ for value in \
 done
 if [[ "$NUMERIC_GATE_STATUS" == PASS ]]; then
   (( MAX_OBSERVED_TIE_FANOUT <= MAX_FANOUT )) || NUMERIC_GATE_STATUS=FAIL
-  (( TIE_HIGH_INSTANCE_DELTA <= EXPECTED_HIGH_TERMS )) || NUMERIC_GATE_STATUS=FAIL
+  [[ "$FINAL_TIE_NET_COUNT" == "$EXPECTED_TIE_NETS" ]] || NUMERIC_GATE_STATUS=FAIL
+  [[ "$TIE_HIGH_INSTANCE_DELTA" == "$EXPECTED_TIE_NETS" ]] || NUMERIC_GATE_STATUS=FAIL
+  [[ "$TARGET_HIGH_INSTANCE_DELTA" == "$EXPECTED_TIE_NETS" ]] || NUMERIC_GATE_STATUS=FAIL
+fi
+
+PG_CONNECTIVITY_GATE_STATUS=FAIL
+if [[ "$PG_CONNECTIVITY_REBIND_STATUS" == PASS && \
+      "$PG_CONFIG_SOURCE_STATUS" =~ ^(LOADED|ALREADY_LOADED)$ && \
+      "$PG_CONNECTIVITY_COMMAND_COUNT" == 6 && \
+      "$PG_CONNECTIVITY_COMMAND_FAILURE_COUNT" == 0 && \
+      "$PG_CONNECTIVITY_COMMAND_STATUS" == PASS && \
+      "$PG_CONNECTIVITY_CONTRACT_STATUS" == PASS ]]; then
+  PG_CONNECTIVITY_GATE_STATUS=PASS
+fi
+
+POST_FILLER_ECOROUTE_GATE_STATUS=FAIL
+if [[ "$POST_FILLER_ECOROUTE_POLICY" == TARGET_THEN_CONDITIONAL_FIX_DRC && \
+      "$POST_FILLER_TARGET_COMMAND_STATUS" == PASS && \
+      "$POST_FILLER_TARGET_SNAPSHOT_STATUS" == PASS && \
+      "$POST_FILLER_CLEANUP_STATUS" == PASS ]]; then
+  if [[ "$POST_FILLER_TARGET_DECISION" == BASELINE_PRESERVED && \
+        "$POST_FILLER_FIX_DRC_STATUS" == NOT_NEEDED && \
+        "$POST_FILLER_FIX_DRC_SNAPSHOT_STATUS" == NOT_RUN ]]; then
+    POST_FILLER_ECOROUTE_GATE_STATUS=PASS
+  elif [[ "$POST_FILLER_TARGET_DECISION" == FIX_DRC_REQUIRED && \
+          "$POST_FILLER_FIX_DRC_STATUS" == PASS && \
+          "$POST_FILLER_FIX_DRC_SNAPSHOT_STATUS" == PASS ]]; then
+    POST_FILLER_ECOROUTE_GATE_STATUS=PASS
+  fi
 fi
 DRC_MARKER_SIGNATURE_MATCH_STATUS=FAIL
 if [[ "$BASELINE_MARKER_SIGNATURE_COUNT" == 1 && \
@@ -847,8 +951,11 @@ if [[ "$INNOVUS_RC" -eq 0 && "$TRIAL_STATUS" == PASS && \
       "$POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT" == 0 && \
       "$POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT" == 0 && \
       "$SELECTED_ROUTE_STATUS" == PASS && \
+      "$POST_SELECTED_ROUTE_SNAPSHOT_STATUS" == PASS && \
       "$FILLER_MODE_STATUS" == PASS && "$FILLER_REFILL_COMMAND_STATUS" == PASS && \
-      "$PG_CONNECTIVITY_REBIND_STATUS" == PASS && "$FILLER_REFILL_STATUS" == PASS && \
+      "$PG_CONNECTIVITY_GATE_STATUS" == PASS && "$FILLER_REFILL_STATUS" == PASS && \
+      "$POST_REFILL_SNAPSHOT_STATUS" == PASS && \
+      "$POST_FILLER_ECOROUTE_GATE_STATUS" == PASS && \
       "$BASELINE_PLACEMENT_STATUS" == PASS && "$FINAL_PLACEMENT_STATUS" == PASS && \
       "$FINAL_FILLER_MASTER_SET_STATUS" == PASS && "$NONFILLER_FINGERPRINT_STATUS" == PASS && \
       "$BASELINE_SITE_OCCUPANCY_STATUS" == PASS && "$FINAL_SITE_OCCUPANCY_STATUS" == PASS && \
@@ -902,6 +1009,7 @@ fi
   echo "LOW_MASTER=$LOW_MASTER"
   echo "MAX_FANOUT=$MAX_FANOUT"
   echo "MAX_DISTANCE_UM=$MAX_DISTANCE"
+  echo "EXPECTED_TIE_NET_COUNT=$EXPECTED_TIE_NETS"
   echo "INNOVUS_RC=$INNOVUS_RC"
   echo "TIE1_INSERTION_TRIAL_STATUS=$TRIAL_STATUS"
   echo "FILLER_RECYCLE_MODE=$FILLER_RECYCLE_MODE"
@@ -938,10 +1046,27 @@ fi
   echo "POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=$POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT"
   echo "POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT=$POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT"
   echo "SELECTED_ROUTE_STATUS=$SELECTED_ROUTE_STATUS"
+  echo "POST_SELECTED_ROUTE_SNAPSHOT_STATUS=$POST_SELECTED_ROUTE_SNAPSHOT_STATUS"
   echo "FILLER_MODE_STATUS=$FILLER_MODE_STATUS"
   echo "FILLER_REFILL_COMMAND_STATUS=$FILLER_REFILL_COMMAND_STATUS"
   echo "PG_CONNECTIVITY_REBIND_STATUS=$PG_CONNECTIVITY_REBIND_STATUS"
+  echo "PG_CONFIG_SOURCE_STATUS=$PG_CONFIG_SOURCE_STATUS"
+  echo "PG_CONNECTIVITY_COMMAND_COUNT=$PG_CONNECTIVITY_COMMAND_COUNT"
+  echo "PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=$PG_CONNECTIVITY_COMMAND_FAILURE_COUNT"
+  echo "PG_CONNECTIVITY_COMMAND_STATUS=$PG_CONNECTIVITY_COMMAND_STATUS"
+  echo "PG_CONNECTIVITY_CONTRACT_STATUS=$PG_CONNECTIVITY_CONTRACT_STATUS"
+  echo "PG_CONNECTIVITY_GATE_STATUS=$PG_CONNECTIVITY_GATE_STATUS"
   echo "FILLER_REFILL_STATUS=$FILLER_REFILL_STATUS"
+  echo "POST_REFILL_SNAPSHOT_STATUS=$POST_REFILL_SNAPSHOT_STATUS"
+  echo "POST_FILLER_ECOROUTE_POLICY=$POST_FILLER_ECOROUTE_POLICY"
+  echo "POST_FILLER_TARGET_COMMAND_STATUS=$POST_FILLER_TARGET_COMMAND_STATUS"
+  echo "POST_FILLER_TARGET_SNAPSHOT_STATUS=$POST_FILLER_TARGET_SNAPSHOT_STATUS"
+  echo "POST_FILLER_TARGET_DECISION=$POST_FILLER_TARGET_DECISION"
+  echo "POST_FILLER_FIX_DRC_STATUS=$POST_FILLER_FIX_DRC_STATUS"
+  echo "POST_FILLER_FIX_DRC_SNAPSHOT_STATUS=$POST_FILLER_FIX_DRC_SNAPSHOT_STATUS"
+  echo "POST_FILLER_CLEANUP_STATUS=$POST_FILLER_CLEANUP_STATUS"
+  echo "POST_FILLER_CLEANUP_REASON=$POST_FILLER_CLEANUP_REASON"
+  echo "POST_FILLER_ECOROUTE_GATE_STATUS=$POST_FILLER_ECOROUTE_GATE_STATUS"
   echo "BASELINE_PLACEMENT_STATUS=$BASELINE_PLACEMENT_STATUS"
   echo "FINAL_PLACEMENT_STATUS=$FINAL_PLACEMENT_STATUS"
   echo "FINAL_TARGET_POINTER_COUNT=$FINAL_TARGET_POINTER_COUNT"
@@ -1054,10 +1179,27 @@ echo "POST_ADD_CONNECTED_HIGH_TERM_COUNT=$POST_ADD_CONNECTED_HIGH_TERM_COUNT"
 echo "POST_ADD_DISCONNECTED_HIGH_TERM_COUNT=$POST_ADD_DISCONNECTED_HIGH_TERM_COUNT"
 echo "POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=$POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT"
 echo "SELECTED_ROUTE_STATUS=$SELECTED_ROUTE_STATUS"
+echo "POST_SELECTED_ROUTE_SNAPSHOT_STATUS=$POST_SELECTED_ROUTE_SNAPSHOT_STATUS"
 echo "FILLER_MODE_STATUS=$FILLER_MODE_STATUS"
 echo "FILLER_REFILL_COMMAND_STATUS=$FILLER_REFILL_COMMAND_STATUS"
 echo "PG_CONNECTIVITY_REBIND_STATUS=$PG_CONNECTIVITY_REBIND_STATUS"
+echo "PG_CONFIG_SOURCE_STATUS=$PG_CONFIG_SOURCE_STATUS"
+echo "PG_CONNECTIVITY_COMMAND_COUNT=$PG_CONNECTIVITY_COMMAND_COUNT"
+echo "PG_CONNECTIVITY_COMMAND_FAILURE_COUNT=$PG_CONNECTIVITY_COMMAND_FAILURE_COUNT"
+echo "PG_CONNECTIVITY_COMMAND_STATUS=$PG_CONNECTIVITY_COMMAND_STATUS"
+echo "PG_CONNECTIVITY_CONTRACT_STATUS=$PG_CONNECTIVITY_CONTRACT_STATUS"
+echo "PG_CONNECTIVITY_GATE_STATUS=$PG_CONNECTIVITY_GATE_STATUS"
 echo "FILLER_REFILL_STATUS=$FILLER_REFILL_STATUS"
+echo "POST_REFILL_SNAPSHOT_STATUS=$POST_REFILL_SNAPSHOT_STATUS"
+echo "POST_FILLER_ECOROUTE_POLICY=$POST_FILLER_ECOROUTE_POLICY"
+echo "POST_FILLER_TARGET_COMMAND_STATUS=$POST_FILLER_TARGET_COMMAND_STATUS"
+echo "POST_FILLER_TARGET_SNAPSHOT_STATUS=$POST_FILLER_TARGET_SNAPSHOT_STATUS"
+echo "POST_FILLER_TARGET_DECISION=$POST_FILLER_TARGET_DECISION"
+echo "POST_FILLER_FIX_DRC_STATUS=$POST_FILLER_FIX_DRC_STATUS"
+echo "POST_FILLER_FIX_DRC_SNAPSHOT_STATUS=$POST_FILLER_FIX_DRC_SNAPSHOT_STATUS"
+echo "POST_FILLER_CLEANUP_STATUS=$POST_FILLER_CLEANUP_STATUS"
+echo "POST_FILLER_CLEANUP_REASON=$POST_FILLER_CLEANUP_REASON"
+echo "POST_FILLER_ECOROUTE_GATE_STATUS=$POST_FILLER_ECOROUTE_GATE_STATUS"
 echo "FINAL_TARGET_SET_STATUS=$FINAL_TARGET_SET_STATUS"
 echo "FINAL_TARGET_RESOLVED_COUNT=$FINAL_TARGET_RESOLVED_COUNT"
 echo "FINAL_TARGET_MISSING_COUNT=$FINAL_TARGET_MISSING_COUNT"
