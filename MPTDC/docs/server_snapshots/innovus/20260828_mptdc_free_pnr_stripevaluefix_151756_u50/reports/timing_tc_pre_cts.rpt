@@ -1,0 +1,39 @@
+*** timeDesign #2 [begin] : totSession cpu/real = 0:04:20.0/0:04:53.2 (0.9), mem = 2547.2M
+Start to check current routing status for nets...
+All nets are already routed correctly.
+End to check current routing status for nets (mem=2547.2M)
+
+------------------------------------------------------------------
+          timeDesign Summary
+------------------------------------------------------------------
+
+Setup views included:
+ TC_NOMINAL 
+
++--------------------+---------+---------+---------+
+|     Setup mode     |   all   | reg2reg | default |
++--------------------+---------+---------+---------+
+|           WNS (ns):| -0.063  | -0.063  |  0.177  |
+|           TNS (ns):| -0.389  | -0.389  |  0.000  |
+|    Violating Paths:|   11    |   11    |    0    |
+|          All Paths:|  4886   |  4862   |  2192   |
++--------------------+---------+---------+---------+
+
++----------------+-------------------------------+------------------+
+|                |              Real             |       Total      |
+|    DRVs        +------------------+------------+------------------|
+|                |  Nr nets(terms)  | Worst Vio  |  Nr nets(terms)  |
++----------------+------------------+------------+------------------+
+|   max_cap      |      0 (0)       |   0.000    |      0 (0)       |
+|   max_tran     |      0 (0)       |   0.000    |      0 (0)       |
+|   max_fanout   |      0 (0)       |     0      |      0 (0)       |
+|   max_length   |      0 (0)       |     0      |      0 (0)       |
++----------------+------------------+------------+------------------+
+
+Density: 47.922%
+Routing Overflow: 0.34% H and 0.01% V
+------------------------------------------------------------------
+Reported timing to dir ./timingReports
+Total CPU time: 2.01 sec
+Total Real time: 5.0 sec
+Total Memory Usage: 2547.332031 Mbytes

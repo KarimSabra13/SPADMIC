@@ -1,0 +1,60 @@
+#-check_same_via_cell true               # bool, default=false, user setting
+ *** Starting Verify DRC (MEM: 2777.3) ***
+
+  VERIFY DRC ...... Starting Verification
+  VERIFY DRC ...... Initializing
+  VERIFY DRC ...... Deleting Existing Violations
+  VERIFY DRC ...... Creating Sub-Areas
+  VERIFY DRC ...... Using new threading
+  VERIFY DRC ...... Sub-Area: {0.000 0.000 224.480 209.760} 1 of 20
+  VERIFY DRC ...... Sub-Area : 1 complete 2 Viols.
+  VERIFY DRC ...... Sub-Area: {224.480 0.000 448.960 209.760} 2 of 20
+  VERIFY DRC ...... Sub-Area : 2 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {448.960 0.000 673.440 209.760} 3 of 20
+  VERIFY DRC ...... Sub-Area : 3 complete 20 Viols.
+  VERIFY DRC ...... Sub-Area: {673.440 0.000 897.920 209.760} 4 of 20
+  VERIFY DRC ...... Sub-Area : 4 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {897.920 0.000 1112.720 209.760} 5 of 20
+  VERIFY DRC ...... Sub-Area : 5 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {0.000 209.760 224.480 419.520} 6 of 20
+  VERIFY DRC ...... Sub-Area : 6 complete 26 Viols.
+  VERIFY DRC ...... Sub-Area: {224.480 209.760 448.960 419.520} 7 of 20
+  VERIFY DRC ...... Sub-Area : 7 complete 29 Viols.
+  VERIFY DRC ...... Sub-Area: {448.960 209.760 673.440 419.520} 8 of 20
+  VERIFY DRC ...... Sub-Area : 8 complete 24 Viols.
+  VERIFY DRC ...... Sub-Area: {673.440 209.760 897.920 419.520} 9 of 20
+  VERIFY DRC ...... Sub-Area : 9 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {897.920 209.760 1112.720 419.520} 10 of 20
+  VERIFY DRC ...... Sub-Area : 10 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {0.000 419.520 224.480 629.280} 11 of 20
+  VERIFY DRC ...... Sub-Area : 11 complete 12 Viols.
+  VERIFY DRC ...... Sub-Area: {224.480 419.520 448.960 629.280} 12 of 20
+  VERIFY DRC ...... Sub-Area : 12 complete 39 Viols.
+  VERIFY DRC ...... Sub-Area: {448.960 419.520 673.440 629.280} 13 of 20
+  VERIFY DRC ...... Sub-Area : 13 complete 8 Viols.
+  VERIFY DRC ...... Sub-Area: {673.440 419.520 897.920 629.280} 14 of 20
+  VERIFY DRC ...... Sub-Area : 14 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {897.920 419.520 1112.720 629.280} 15 of 20
+  VERIFY DRC ...... Sub-Area : 15 complete 3 Viols.
+  VERIFY DRC ...... Sub-Area: {0.000 629.280 224.480 837.760} 16 of 20
+  VERIFY DRC ...... Sub-Area : 16 complete 2 Viols.
+  VERIFY DRC ...... Sub-Area: {224.480 629.280 448.960 837.760} 17 of 20
+  VERIFY DRC ...... Sub-Area : 17 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {448.960 629.280 673.440 837.760} 18 of 20
+  VERIFY DRC ...... Sub-Area : 18 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {673.440 629.280 897.920 837.760} 19 of 20
+  VERIFY DRC ...... Sub-Area : 19 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {897.920 629.280 1112.720 837.760} 20 of 20
+  VERIFY DRC ...... Sub-Area : 20 complete 0 Viols.
+
+  Verification Complete : 165 Viols.
+
+ Violation Summary By Layer and Type:
+
+	         MetSpc      Mar    Short   OffGrd   Totals
+	MET1         69       48       46        0      163
+	MET3          0        0        0        2        2
+	Totals       69       48       46        2      165
+
+ *** End Verify DRC (CPU TIME: 0:00:04.2  ELAPSED TIME: 0:00:04.0  MEM: 256.1M) ***
+
