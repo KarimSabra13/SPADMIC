@@ -1,0 +1,39 @@
+			*****************************************************
+			**                                                 **
+			**                L V S  R E P O R T               **
+			**                                                 **
+			*****************************************************
+
+
+Report File Name         : mptdc_axis_core_lvs.sum
+ERC Summary File         : result.sum
+LVS Comparison Report    : mptdc_axis_core_lvs.sum.cls
+LVS Softchk Report       : mptdc_axis_core.softchk
+LVS Find Shorts Report   : mptdc_axis_core_lvs.sum.shorts
+Layout Name              : /sim/ksabra/SPADMIC_work/innovus/20260828_mptdc_bufftap0_ro6_boundary_fillernorm_controlfix_090320/outputs/mptdc_axis_core_merged_stdcell_ro6.gds ("mptdc_axis_core")
+User Name                : ksabra
+Creation Time            : Fri Aug 28 09:03:26 2026
+Current directory        : /sim/ksabra/SPADMIC_work/innovus/20260828_mptdc_bufftap0_ro6_boundary_fillernorm_controlfix_090320/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script
+PVS Version              : 22.22-s005 Thu Jun 29 17:49:16 PDT 2023
+
+
+			*****************************************************
+			**                                                 **
+			**            D E V E X T  R E P O R T             **
+			**                                                 **
+			*****************************************************
+
+
+    LVS_FIND_SHORTS  -cell primary
+    LVS_FIND_SHORTS result file "mptdc_axis_core_lvs.sum.shorts"
+
+    LVS_SOFTCHK nwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK hvnwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK ndftrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK hnw -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK catdiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK anodiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pwitrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pdf -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK bulk -TYPE CONTACT   Total Result        0 (       0)
