@@ -1,0 +1,5 @@
+master	polarity	library_master_count	physical_instance_count	library_status	instance_query_status
+LOGIC1DJIHD	HIGH	1	0	PASS	PASS
+LOGIC1LVJIHD	HIGH	1	0	PASS	PASS
+LOGIC0DJIHD	LOW	1	0	PASS	PASS
+LOGIC0LVJIHD	LOW	1	0	PASS	PASS
