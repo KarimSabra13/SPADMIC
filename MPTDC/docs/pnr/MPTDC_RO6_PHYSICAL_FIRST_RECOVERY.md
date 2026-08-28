@@ -2030,13 +2030,16 @@ proved that the blackbox rule was active, but its source was non-physical,
 position-based bus mapping hid a real namespace mismatch, and `tie1` generated
 a large mismatch cascade. Do not rerun that command.
 
-The current flow has four ordered, independently published stages:
+The current flow has three common ordered stages followed by one of two
+independently published read-only diagnostics:
 
 1. prove a fresh `RO_tune6` layout/schematic pair standalone;
 2. regenerate the digital-top physical LVS source with the same RO GDS;
 3. classify the exact scalar RO boundary with no position mapping and no tie
    removal;
-4. if and only if the remainder is exactly `RO6_PG_OPEN_ONLY`, publish a
+4. for the exact published `TOP_CONNECTIVITY_MISMATCH` signature, publish a
+   read-only `tie1` checkpoint inventory before designing any tie-cell change;
+5. if and only if the remainder is exactly `RO6_PG_OPEN_ONLY`, publish a
    read-only endpoint-to-sWire probe before designing any PG edit.
 
 Every stage runs in a fresh process and stops after publishing. Do not launch
@@ -2633,10 +2636,81 @@ Two results may continue:
   `RO6_PG_OPEN_ONLY`, zero RO/tie/net/instance mismatch residue, publish zero,
   next `RO6_PG_ENDPOINT_PROBE`.
 
-Anything else is `FAIL_STOP`. A boundary result is diagnostic and always
-`SIGNOFF_ELIGIBLE=NO`.
+Anything else is `FAIL_STOP`. One exact stopped result may undergo the bounded
+read-only diagnostic in D after its evidence is published: RO6 blackbox match,
+zero angle/square bus omissions, bus map effective `NO`, one `tie1` mismatched
+net, a 334-instance `tie1` cascade, 91 mismatched-net records, 334
+mismatched-instance records, two layout open nets, one shorts/opens record,
+zero VDD-open sections, one VSS-open section, and class
+`TOP_CONNECTIVITY_MISMATCH`. This exception authorizes only evidence
+collection, not tie insertion or routing. A boundary result is diagnostic and
+always `SIGNOFF_ELIGIBLE=NO`.
 
-#### D. Publish the Read-Only PG Endpoint Probe
+#### D. Publish the Read-Only tie1 Checkpoint Probe
+
+Run only for C's exact published `TOP_CONNECTIVITY_MISMATCH` signature listed
+above. The driver derives the immutable failed-V6R checkpoint and physical LVS
+source from the boundary hash manifest. It compares the live reports with the
+tracked snapshots, copies the checkpoint, statically rejects mutation commands,
+and hashes all source evidence and the private copy before and after Innovus.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+BOUNDARY_PVS_RUN=REPLACE_WITH_EXACT_STEP5R_BOUNDARY_RUN_ID
+PROBE_RUN="$(date +%Y%m%d)_mptdc_tie1_checkpoint_probe_$(date +%H%M%S)"
+PROBE_DIR=/sim/ksabra/SPADMIC_work/innovus/$PROBE_RUN
+DRIVER_LOG=/tmp/${PROBE_RUN}.driver.log
+PROBE_DRIVER_RC=99
+
+cd "$REPO"
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+export MPTDC_INNOVUS_WORK=/sim/ksabra/SPADMIC_work/innovus
+
+if [ "$SYNC_RC" -eq 0 ] && [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$BOUNDARY_PVS_RUN" ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_tie1_checkpoint_probe.sh \
+    --boundary-pvs-run-id "$BOUNDARY_PVS_RUN" \
+    --run-id "$PROBE_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  PROBE_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, or boundary-run preflight failed"
+fi
+
+echo "===== SEND BACK TIE1 PROBE ====="
+echo "SYNC_RC=$SYNC_RC"
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+echo "BOUNDARY_PVS_RUN=$BOUNDARY_PVS_RUN"
+echo "PROBE_RUN=$PROBE_RUN"
+echo "PROBE_DIR=$PROBE_DIR"
+echo "PROBE_DRIVER_RC=$PROBE_DRIVER_RC"
+grep -E '^(TIE1_CHECKPOINT_PROBE_STATUS|CADENCE_ENV_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SAFE_COPY_MATCH_STATUS|SAFE_CHECKPOINT_HASH_STATUS|BOUNDARY_EVIDENCE_HASH_STATUS|PHYSICAL_SOURCE_HASH_STATUS|TIE1_(SOURCE_TOKEN|NET|INST_TERM|REGULAR_WIRE|SPECIAL_WIRE|VIA)_COUNT|TIE_AVAILABLE_MASTER_COUNT|PHYSICAL_TIE_(MASTER|INSTANCE)_COUNT|FLAGGED_TIE_(HIGH|LOW)_TERM_COUNT|READ_ONLY_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -50
+cat "$PROBE_DIR/reports/operator_gate_tie1_checkpoint_probe.rpt" 2>/dev/null
+cat "$PROBE_DIR/reports/tie1_candidate_master_inventory.tsv" 2>/dev/null
+sed -n '1,40p' "$PROBE_DIR/reports/tie1_inst_term_inventory.tsv" 2>/dev/null
+sed -n '1,40p' "$PROBE_DIR/reports/tie_flagged_term_inventory.tsv" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Pass requires Innovus and core-query RC/status zero, all source and safe-copy
+hash gates passing, exactly one restore command, zero mutation commands, stable
+design object counts, `DESIGN_MUTATION_COUNT=0`,
+`DECISION=PASS_REVIEW_TIE1_EVIDENCE`, and `PUBLISH_RC=0`. The observed `tie1`
+net, terminal, wire, via, and physical tie counts are evidence to review; they
+are deliberately not forced to a guessed value. Stop and send the compact
+block. Do not run `addTieHiLo`, `setTieHiLoMode`, placement, routing, or a
+checkpoint save until the published inventory supports one separately reviewed
+hash-guarded trial.
+
+#### E. Publish the Read-Only PG Endpoint Probe
 
 Run only for C's exact `RO6_PG_OPEN_ONLY` result. This command analyzes a safe
 checkpoint copy. It does not delete wires, edit PG, move cells, or claim LVS.
@@ -2687,10 +2761,12 @@ DRC state, zero shorts, zero regular connectivity failures, `DECISION=PASS_REVIE
 published endpoint-to-sWire table is the required input for one bounded PG
 patch; do not use `delete_all`, a global reroute, or a connectivity waiver.
 
-After the endpoint review, the remaining order is: exact PG patch, corrected
-V8 endpoint-extension proof, canonical replay with TC timing, base PVS DRC,
-density PVS DRC, final full LVS, and GDS export. A wrapper return code alone is
-never a closure result.
+After the tie1 review, the remaining tie branch begins with a separately
+reviewed hash-guarded tie-cell trial and a fresh full boundary LVS. After the
+endpoint review, the PG branch begins with the exact PG patch. Both branches
+must still reach corrected V8 endpoint-extension proof, canonical replay with
+TC timing, base PVS DRC, density PVS DRC, final full LVS, and GDS export. A
+wrapper return code alone is never a closure result.
 
 ## What to Send for Review
 

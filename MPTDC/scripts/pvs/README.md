@@ -144,6 +144,15 @@ still have zero tie mismatch residue. A diagnostic continuation is valid only
 for either an explicit top `MATCH` or the exact four-open `RO6_PG_OPEN_ONLY`
 remainder with zero bus, tie, net, and instance mismatch residue.
 
+The separately reviewed Step 5R `TOP_CONNECTIVITY_MISMATCH` signature has one
+allowed follow-up before any physical edit:
+`MPTDC/pnr/scripts/server_run_mptdc_tie1_checkpoint_probe.sh`. The probe binds
+the published boundary reports to their tracked copies, restores only a
+hash-checked checkpoint copy, inventories `tie1`, tie flags, and the four
+configured `LOGIC[01]*JIHD` candidates, and publishes with
+`SIGNOFF_ELIGIBLE=NO`. `PASS_REVIEW_TIE1_EVIDENCE` means the read-only evidence
+is complete; it is not an LVS pass and does not authorize tie insertion.
+
 The only dirty-checkpoint exception is explicit diagnostic mode:
 
 ```bash
