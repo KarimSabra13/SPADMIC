@@ -467,6 +467,9 @@ set instance_pin_file [file normalize \
     [mptdc_tie1_trial_required_env MPTDC_TIE1_TRIAL_INSTANCE_PIN_FILE]]
 set filler_masters [split [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_FILLER_MASTERS \
     "FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD"]]
+set filler_delete_selection_mode EXACT_TRACKED_MASTER_LIST
+set filler_delete_master_count [llength $filler_masters]
+set filler_delete_master_set [join $filler_masters { }]
 set all_tie_masters [list LOGIC1DJIHD LOGIC1LVJIHD LOGIC0DJIHD LOGIC0LVJIHD]
 
 file mkdir [file join $outdir reports]
@@ -666,13 +669,19 @@ set post_delete_route_status NOT_RUN
 
 if {$command_precheck eq "PASS"} {
     if {[catch {
-        deleteFiller > $delete_command_report
+        deleteFiller -cell $filler_masters > $delete_command_report
     } err]} {
         set delete_status FAIL
         set delete_error [mptdc_tie1_trial_report_value $err]
     } else {
         set delete_status PASS
     }
+    set delete_command_fh [open $delete_command_report a]
+    puts $delete_command_fh ""
+    puts $delete_command_fh "FILLER_DELETE_SELECTION_MODE=$filler_delete_selection_mode"
+    puts $delete_command_fh "FILLER_DELETE_MASTER_COUNT=$filler_delete_master_count"
+    puts $delete_command_fh "FILLER_DELETE_MASTER_SET=$filler_delete_master_set"
+    close $delete_command_fh
     set inst_count_post_delete [mptdc_tie1_trial_count \
         [mptdc_tie1_trial_dbget top_instances_post_delete 1 top.insts]]
     set post_delete_filler_inventory [mptdc_tie1_trial_filler_inventory \
@@ -961,6 +970,9 @@ puts $action_fh "TARGET_LOW_MASTER=$low_master"
 puts $action_fh "MAX_FANOUT=$max_fanout"
 puts $action_fh "MAX_DISTANCE_UM=$max_distance"
 puts $action_fh "FILLER_RECYCLE_MODE=DELETE_INSERT_ROUTE_REFILL"
+puts $action_fh "FILLER_DELETE_SELECTION_MODE=$filler_delete_selection_mode"
+puts $action_fh "FILLER_DELETE_MASTER_COUNT=$filler_delete_master_count"
+puts $action_fh "FILLER_DELETE_MASTER_SET=$filler_delete_master_set"
 puts $action_fh "DELETE_FILLER_HELP_STATUS=$delete_help_status"
 puts $action_fh "DELETE_FILLER_MAN_STATUS=$delete_man_status"
 puts $action_fh "FILLER_DELETE_STATUS=$delete_status"
@@ -1032,6 +1044,9 @@ set filler_fh [open $filler_report w]
 puts $filler_fh "# MPTDC Tie1 Trial Final Filler Status"
 puts $filler_fh "FILLER_CELL_FAMILY=FEED*JIHD"
 puts $filler_fh "FILLER_CANDIDATES=[join $filler_masters { }]"
+puts $filler_fh "FILLER_DELETE_SELECTION_MODE=$filler_delete_selection_mode"
+puts $filler_fh "FILLER_DELETE_MASTER_COUNT=$filler_delete_master_count"
+puts $filler_fh "FILLER_DELETE_MASTER_SET=$filler_delete_master_set"
 puts $filler_fh "FILLER_COUNT_BEFORE=$filler_count_before"
 puts $filler_fh "FILLER_COUNT_POST_DELETE=$filler_count_post_delete"
 puts $filler_fh "FILLER_COUNT=$filler_count_after"
@@ -1060,6 +1075,9 @@ puts $status_fh "RESTORE_ERROR=$restore_error"
 puts $status_fh "COMMAND_PRECHECK=$command_precheck"
 puts $status_fh "COMMAND_PRECHECK_REASONS=$command_precheck_reasons"
 puts $status_fh "FILLER_RECYCLE_MODE=DELETE_INSERT_ROUTE_REFILL"
+puts $status_fh "FILLER_DELETE_SELECTION_MODE=$filler_delete_selection_mode"
+puts $status_fh "FILLER_DELETE_MASTER_COUNT=$filler_delete_master_count"
+puts $status_fh "FILLER_DELETE_MASTER_SET=$filler_delete_master_set"
 puts $status_fh "FILLER_DELETE_STATUS=$delete_status"
 puts $status_fh "FILLER_DELETE_ERROR=$delete_error"
 puts $status_fh "FILLER_DELETE_EFFECT_STATUS=$delete_effect_status"
