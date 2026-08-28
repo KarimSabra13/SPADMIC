@@ -1,0 +1,118 @@
+===== innovus =====
+/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000/bin/innovus
+@(#)CDS: Innovus v22.33-s094_1 (64bit) 08/25/2023 16:48 (Linux 3.10.0-693.el7.x86_64)
+@(#)CDS: NanoRoute 22.33-s094_1 NR230808-0153/22_13-UB (database version 18.20.615_1) {superthreading v2.20}
+@(#)CDS: AAE 22.13-s029 (64bit) 08/25/2023 (Linux 3.10.0-693.el7.x86_64)
+@(#)CDS: CTE 22.13-s030_1 () Aug 22 2023 02:51:11 ( )
+@(#)CDS: SYNTECH 22.13-s015_1 () Aug 20 2023 22:21:55 ( )
+@(#)CDS: CPE v22.13-s082
+@(#)CDS: IQuantus/TQuantus 21.2.2-s211 (64bit) Tue Jun 20 22:12:10 PDT 2023 (Linux 3.10.0-693.el7.x86_64)
+@(#)CDS: OA 22.60-p088 Tue Mar 21 03:05:14 2023
+@(#)CDS: SGN 22.20-d001 (02-Jan-2023) (64 bit executable, TkQt5.9.1)
+@(#)CDS: RCDB 11.15.0
+@(#)CDS: STYLUS 22.11-s006_1 (04/03/2023 03:37 PDT)
+@(#)CDS: IntegrityPlanner-22.13-12028 (22.13) (2023-07-13 13:54:54+0800)
+
+===== genus =====
+/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000/bin/genus
+TMPDIR is being set to /tmp/genus_temp_157094_lyoelectrosrv01.in2p3.fr_ksabra_mMuM37
+Program Name: Genus(TM) Synthesis Solution, Version: 22.13-s093_1
+@(#)CDS: SYNTECH 22.13-e011_1 () Jul  5 2023 08:41:07 ( )
+@(#)CDS: SGN 21.20-d001 (11-Feb-2022) (64 bit executable, TkQt5.9.1)
+@(#)CDS: STYLUS 22.11-s006_1 (04/03/2023 03:37 PDT)
+@(#)CDS: AAE 22.13-e022
+@(#)CDS: Ext/IQuantus 21.22-s211
+@(#)CDS: humroute 22.13-s005
+@(#)CDS: preRoute 22.13-e003
+@(#)CDS: halo 22.10-d002
+@(#)CDS: ncprot 20.09-s025
+
+This build will expire on 12/7/2023. Contact Cadence Support for assistance.
+Normal exit.
+===== tempus =====
+MISSING
+===== quantus =====
+/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000/bin/quantus
+2026/08/28 15:10:10 WARNING This OS does not appear to be a Cadence supported Linux configuration.
+2026/08/28 15:10:10 For more info, please run CheckSysConf in <cdsRoot/tools.lnx86/bin/checkSysConf <productId>
+quantus:   ERROR: The OA2.2 library directory (/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000/share/oa/lib/unknown_64/opt) does not seem to exist.
+quantus:    INFO: Note that OpenAccess (OA) requires running the Configure phase.
+quantus:          See the "OpenAccess Installation and Configuration Guide" before
+quantus:          you complete the configuration step. This manual is included with
+quantus:          the Cadence product documentation.
+===== qrc =====
+/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000/bin/qrc
+2026/08/28 15:10:10 WARNING This OS does not appear to be a Cadence supported Linux configuration.
+2026/08/28 15:10:10 For more info, please run CheckSysConf in <cdsRoot/tools.lnx86/bin/checkSysConf <productId>
+qrc:   ERROR: The OA2.2 library directory (/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000/share/oa/lib/unknown_64/opt) does not seem to exist.
+qrc:    INFO: Note that OpenAccess (OA) requires running the Configure phase.
+qrc:          See the "OpenAccess Installation and Configuration Guide" before
+qrc:          you complete the configuration step. This manual is included with
+qrc:          the Cadence product documentation.
+===== voltus =====
+MISSING
+===== pvs =====
+NON_CADENCE_PVS_PATH=/usr/sbin/pvs
+CADENCE_PVS_STATUS=MISSING_OR_NOT_IN_PATH
+===== pegasus =====
+/eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+2026/08/28 15:10:10 WARNING This OS does not appear to be a Cadence supported Linux configuration.
+2026/08/28 15:10:10 For more info, please run CheckSysConf in <cdsRoot/tools.lnx86/bin/checkSysConf <productId>
+Pegasus 23.11-s009 FbGK7KjMGPhkNci2o09sLg 2026-08-28 15:10:11 157264 lyoelectrosrv01.in2p3.fr
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+
+-----------------------------------------------------------------
+Name          : Pegasus (64-bit)
+Description   : Pegasus Verification System
+Version       : 23.11-s009
+-----------------------------------------------------------------
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+===== calibre =====
+/eda/Siemens/2025-26/RHELx86/CALIBRE_2025.4/aok_cal_2025.4_18.11//bin/calibre
+//  Calibre v2025.4_18.11    Wed Oct 1 14:55:53 PDT 2025
+//  Calibre Utility Library   v0-10_13-2017-1    Fri Jul 11 11:10:28 PDT 2025
+//  Litho Libraries v2025.4_18.11  Wed Oct 1 14:55:53 PDT 2025
+//
+//                   Copyright Siemens 1996-2025
+//                       All Rights Reserved.
+//   THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+//          WHICH IS THE PROPERTY OF SIEMENS CORPORATION
+//        OR ITS LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+//
+//  The registered trademark Linux is used pursuant to a sublicense from LMI, the
+//  exclusive licensee of Linus Torvalds, owner of the mark on a world-wide basis.
+//
+//  Siemens software executing under x86-64 Linux
+//
+//  Running on Linux lyoelectrosrv01.in2p3.fr (134.158.140.27) 4.18.0-553.120.1.el8_10.x86_64 #1 SMP Thu Apr 23 10:43:43 UTC 2026 x86_64 glibc 2.28/NPTL 2.28
+//  OS: Rocky Linux release 8.10 (Green Obsidian)[4.18.0-553.120.1.el8_10.x86_64]
+//  Current active profile: throughput-performance
+//  net.netfilter.nf_conntrack_max: 262144
+//  vm.max_map_count: 65530
+//  vm.overcommit_memory: 0
+//  kernel.numa_balancing: 1
+//  kernel.pid_max: 4194304
+//
+WARNING: Please increase descriptors limit for best performance (16392)
+//
+//  Processor Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz [06857] (4th generation)
+//  64 bit virtual addressing enabled
+//  Running aok_cal_2025.4_18.11//pkgs/icv/pvt/calibre -version
+//  Process ID: 157279
+//
+//  Starting time: Fri Aug 28 15:10:11 2026
+//
+
+--- CALIBRE_* ENVIRONMENT VARIABLES:
+
+CALIBRE_ATOMIC_LVHEAP=0
+CALIBRE_CMD_LINE='/eda/Siemens/2025-26/RHELx86/CALIBRE_2025.4/aok_cal_2025.4_18.11//pkgs/icv/pvt/calibre  -version'
+CALIBRE_HOME=/eda/Siemens/2025-26/RHELx86/CALIBRE_2025.4/aok_cal_2025.4_18.11/
+CALIBRE_INITIAL_CMD_LINE='/eda/Siemens/2025-26/RHELx86/CALIBRE_2025.4/aok_cal_2025.4_18.11//bin/calibre -version'
+===== xrun =====
+/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/bin/xrun
+TOOL:	xrun(64)	23.03-s007
+===== verilator =====
+MISSING
