@@ -2848,13 +2848,26 @@ the downstream PVS ancestry gate now require
 the exact tracked master set. This changes only deletion selection; all target,
 routing, refill, physical-debt, and acceptance constraints remain unchanged.
 
+The second D3 execution,
+`20260828_mptdc_tie1_filler_master_recycle_trial_121319`, is also rejected and
+must not be continued. It proved exact deletion of all 24797 tracked fillers
+and real tie insertion: `addTieHiLo` rerouted 85 nets and created 85
+`LOGIC1DJIHD` instances. The old verifier then queried only the remaining
+`isTieHi` annotations. Innovus clears those annotations when conversion
+succeeds, so the empty residual set was incorrectly classified as zero effect
+and the run stopped before selected routing and filler refill. Its 701 DRC and
+222 shorts describe that deliberately incomplete post-delete state, not a
+candidate checkpoint. The corrected trial retains the original 91 baseline
+instTerm pointers, verifies their exact names and connectivity after insertion
+and after refill, and treats `isTieHi`/`isTieLo` only as residual flags.
+
 ```bash
 set +e
 
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 PROBE_RUN=20260828_mptdc_tie1_checkpoint_probe_envfix_093807
 FAILED_TRIAL_RUN=20260828_mptdc_tie1_insertion_trial_instancepin_104318
-TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_filler_master_recycle_trial_$(date +%H%M%S)"
+TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_filler_targetreadback_trial_$(date +%H%M%S)"
 TRIAL_DIR=/sim/ksabra/SPADMIC_work/innovus/$TRIAL_RUN
 DRIVER_LOG=/tmp/${TRIAL_RUN}.driver.log
 TRIAL_DRIVER_RC=99
@@ -2890,7 +2903,7 @@ else
   echo "STOP: sync, tracked-tree, origin, Step 6R, or Step 7I preflight failed"
 fi
 
-echo "===== SEND BACK STEP 8R ====="
+echo "===== SEND BACK STEP 8V ====="
 echo "CD_RC=$CD_RC"
 echo "CHECKOUT_RC=$CHECKOUT_RC"
 echo "SYNC_RC=$SYNC_RC"
@@ -2902,14 +2915,18 @@ echo "FAILED_TRIAL_RUN=$FAILED_TRIAL_RUN"
 echo "TRIAL_RUN=$TRIAL_RUN"
 echo "TRIAL_DIR=$TRIAL_DIR"
 echo "TRIAL_DRIVER_RC=$TRIAL_DRIVER_RC"
-grep -E '^(EVIDENCE_|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|DELETE_FILLER_(COMMAND|MASTER_OPTION)_COUNT|SET_FILLER_MODE_COMMAND_COUNT|ADD_FILLER_COMMAND_COUNT|PG_REBIND_CALL_COUNT|INNOVUS_RC|FILLER_RECYCLE_MODE|FILLER_DELETE_(SELECTION_MODE|MASTER_COUNT|MASTER_SET|STATUS|EFFECT_STATUS)|FILLER_COUNT_POST_DELETE|POST_DELETE_(NONFILLER_FINGERPRINT|ROUTE_SIGNATURE)_STATUS|ADD_TIE_(STATUS|EFFECT_STATUS|EFFECT_REASON)|SELECTED_ROUTE_STATUS|FILLER_MODE_STATUS|FILLER_REFILL_(COMMAND_STATUS|STATUS)|PG_CONNECTIVITY_REBIND_STATUS|FINAL_(CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|FLAGGED_LOW_TERM_COUNT|TIE_NET_COUNT|FILLER_MASTER_SET_STATUS|SITE_OCCUPANCY_STATUS|PLACEMENT_SITE_OCCUPIED|PLACEMENT_SITE_CAPACITY|DRC|SHORTS|UNROUTED_NETS)|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|NONFILLER_FINGERPRINT_STATUS|DRC_MARKER_SIGNATURE_MATCH_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SOURCE_FAILED_TRIAL_EVIDENCE_READ_ONLY_STATUS|CANDIDATE_CHECKPOINT_STATUS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+grep -E '^(EVIDENCE_|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|DELETE_FILLER_(COMMAND|MASTER_OPTION)_COUNT|TARGET_(READBACK_MODE|POINTER_SOURCE|READBACK_CALL_COUNT|POINTER_LINEAGE_COUNT)|SET_FILLER_MODE_COMMAND_COUNT|ADD_FILLER_COMMAND_COUNT|PG_REBIND_CALL_COUNT|INNOVUS_RC|FILLER_RECYCLE_MODE|FILLER_DELETE_(SELECTION_MODE|MASTER_COUNT|MASTER_SET|STATUS|EFFECT_STATUS)|FILLER_COUNT_POST_DELETE|POST_DELETE_(NONFILLER_FINGERPRINT|ROUTE_SIGNATURE)_STATUS|ADD_TIE_(STATUS|EFFECT_STATUS|EFFECT_REASON)|POST_ADD_(TARGET_(POINTER_COUNT|RESOLVED_COUNT|MISSING_COUNT|DUPLICATE_COUNT|UNEXPECTED_COUNT|SET_STATUS)|CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|REMAINING_FLAGGED_(HIGH|LOW)_TERM_COUNT)|SELECTED_ROUTE_STATUS|FILLER_MODE_STATUS|FILLER_REFILL_(COMMAND_STATUS|STATUS)|PG_CONNECTIVITY_REBIND_STATUS|FINAL_(TARGET_(POINTER_COUNT|RESOLVED_COUNT|MISSING_COUNT|DUPLICATE_COUNT|UNEXPECTED_COUNT|SET_STATUS)|FLAGGED_(HIGH|LOW)_TERM_COUNT|CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|TIE_NET_COUNT|FILLER_MASTER_SET_STATUS|SITE_OCCUPANCY_STATUS|PLACEMENT_SITE_OCCUPIED|PLACEMENT_SITE_CAPACITY|DRC|SHORTS|UNROUTED_NETS)|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|NONFILLER_FINGERPRINT_STATUS|DRC_MARKER_SIGNATURE_MATCH_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SOURCE_FAILED_TRIAL_EVIDENCE_READ_ONLY_STATUS|CANDIDATE_CHECKPOINT_STATUS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -140
 echo "===== OPERATOR GATE ====="
 cat "$TRIAL_DIR/reports/operator_gate_tie1_insertion_trial.rpt" 2>/dev/null
 echo "===== FILLER ACTION ====="
 cat "$TRIAL_DIR/reports/filler_status.rpt" 2>/dev/null
 cat "$TRIAL_DIR/reports/deleteFiller_command.rpt" 2>/dev/null
+cat "$TRIAL_DIR/reports/addTieHiLo_command.rpt" 2>/dev/null
 cat "$TRIAL_DIR/reports/addFiller_command.rpt" 2>/dev/null
+echo "===== EXACT TARGET READBACK ====="
+cat "$TRIAL_DIR/reports/tie1_target_readback_post_add.tsv" 2>/dev/null
+cat "$TRIAL_DIR/reports/tie1_target_readback_final.tsv" 2>/dev/null
 echo "===== FILLER INVENTORIES ====="
 cat "$TRIAL_DIR/reports/tie1_filler_inventory_baseline.tsv" 2>/dev/null
 cat "$TRIAL_DIR/reports/tie1_filler_inventory_post_delete.tsv" 2>/dev/null
@@ -2927,7 +2944,9 @@ Continue only for driver RC zero,
 master count 8 and tracked master set, `FILLER_DELETE_EFFECT_STATUS=PASS`,
 exactly zero tracked fillers after deletion, passing post-delete non-filler and
 route signatures, 91 connected and zero disconnected reviewed sinks, a
-positive normal-Vt tie delta with no alternate or low tie cell, passing
+passing exact baseline-pointer lineage with zero missing, duplicate,
+unexpected, or residual flagged targets, a positive normal-Vt tie delta with
+no alternate or low tie cell, passing
 selected routing and refill/PG gates, passing final non-filler fingerprint,
 exact full final site occupancy, unchanged one-marker DRC identity, a
 hash-proven saved candidate, `DECISION=PASS_TIE1_TRIAL_CONTINUE`, and

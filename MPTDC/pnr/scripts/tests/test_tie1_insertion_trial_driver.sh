@@ -338,10 +338,22 @@ INSTANCE_PIN_TARGET_COUNT=91
 INSTANCE_PIN_TARGET_UNIQUE_COUNT=91
 INSTANCE_PIN_TARGET_INVALID_COUNT=0
 INSTANCE_PIN_TARGET_MATCH_STATUS=PASS
+TARGET_READBACK_MODE=BASELINE_INSTTERM_POINTER_LINEAGE
+TARGET_POINTER_SOURCE=BASELINE_FLAGGED_HIGH_TERMS
 SET_TIE_MODE_STATUS=PASS
 ADD_TIE_STATUS=PASS
 ADD_TIE_EFFECT_STATUS=PASS
 ADD_TIE_EFFECT_REASON=NONE
+POST_ADD_TARGET_POINTER_COUNT=91
+POST_ADD_TARGET_RESOLVED_COUNT=91
+POST_ADD_TARGET_MISSING_COUNT=0
+POST_ADD_TARGET_DUPLICATE_COUNT=0
+POST_ADD_TARGET_UNEXPECTED_COUNT=0
+POST_ADD_TARGET_SET_STATUS=PASS
+POST_ADD_CONNECTED_HIGH_TERM_COUNT=91
+POST_ADD_DISCONNECTED_HIGH_TERM_COUNT=0
+POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=0
+POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT=0
 SELECTED_ROUTE_STATUS=PASS
 FILLER_MODE_STATUS=PASS
 FILLER_REFILL_COMMAND_STATUS=PASS
@@ -349,6 +361,13 @@ PG_CONNECTIVITY_REBIND_STATUS=PASS
 FILLER_REFILL_STATUS=PASS
 BASELINE_PLACEMENT_STATUS=PASS
 FINAL_PLACEMENT_STATUS=PASS
+FINAL_TARGET_POINTER_COUNT=91
+FINAL_TARGET_RESOLVED_COUNT=91
+FINAL_TARGET_MISSING_COUNT=0
+FINAL_TARGET_DUPLICATE_COUNT=0
+FINAL_TARGET_UNEXPECTED_COUNT=0
+FINAL_TARGET_SET_STATUS=PASS
+FINAL_FLAGGED_HIGH_TERM_COUNT=0
 FINAL_CONNECTED_HIGH_TERM_COUNT=91
 FINAL_DISCONNECTED_HIGH_TERM_COUNT=0
 FINAL_FLAGGED_LOW_TERM_COUNT=0
@@ -415,7 +434,11 @@ if [[ "${MPTDC_TEST_ZERO_EFFECT:-0}" == 1 ]]; then
   sed -i \
     -e 's/^ADD_TIE_EFFECT_STATUS=PASS$/ADD_TIE_EFFECT_STATUS=FAIL/' \
     -e 's/^ADD_TIE_EFFECT_REASON=NONE$/ADD_TIE_EFFECT_REASON=NO_ELIGIBLE_TARGET_WAS_CONNECTED/' \
+    -e 's/^POST_ADD_CONNECTED_HIGH_TERM_COUNT=91$/POST_ADD_CONNECTED_HIGH_TERM_COUNT=0/' \
+    -e 's/^POST_ADD_DISCONNECTED_HIGH_TERM_COUNT=0$/POST_ADD_DISCONNECTED_HIGH_TERM_COUNT=91/' \
+    -e 's/^POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=0$/POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=91/' \
     -e 's/^SELECTED_ROUTE_STATUS=PASS$/SELECTED_ROUTE_STATUS=NOT_RUN/' \
+    -e 's/^FINAL_FLAGGED_HIGH_TERM_COUNT=0$/FINAL_FLAGGED_HIGH_TERM_COUNT=91/' \
     -e 's/^FINAL_CONNECTED_HIGH_TERM_COUNT=91$/FINAL_CONNECTED_HIGH_TERM_COUNT=0/' \
     -e 's/^FINAL_DISCONNECTED_HIGH_TERM_COUNT=0$/FINAL_DISCONNECTED_HIGH_TERM_COUNT=91/' \
     -e 's/^FINAL_TIE_NET_COUNT=12$/FINAL_TIE_NET_COUNT=0/' \
@@ -517,6 +540,8 @@ grep -qx 'ADD_FILLER_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'PG_REBIND_CALL_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SAVE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SELECTED_ROUTE_CALL_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'TARGET_READBACK_CALL_COUNT=2' "$TMP_ROOT/pass.stdout"
+grep -qx 'TARGET_POINTER_LINEAGE_COUNT=2' "$TMP_ROOT/pass.stdout"
 grep -qx 'FORBIDDEN_MUTATION_COUNT=0' "$TMP_ROOT/pass.stdout"
 grep -qx 'TIE1_INSERTION_TRIAL_RECOVERY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_TIE1_TRIAL_CONTINUE' "$TMP_ROOT/pass.stdout"
@@ -528,6 +553,16 @@ grep -qx 'ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE' \
 grep -qx 'INSTANCE_PIN_INPUT_GENERATION_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'INSTANCE_PIN_TARGET_MATCH_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'TARGET_READBACK_MODE=BASELINE_INSTTERM_POINTER_LINEAGE' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'TARGET_POINTER_SOURCE=BASELINE_FLAGGED_HIGH_TERMS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_ADD_TARGET_SET_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_ADD_TARGET_RESOLVED_COUNT=91' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=0' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'INSTANCE_PIN_INPUT_READ_ONLY_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
@@ -542,6 +577,12 @@ grep -qx 'FILLER_DELETE_MASTER_COUNT=8' \
 grep -qx 'FILLER_DELETE_MASTER_SET=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'FILLER_REFILL_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FINAL_TARGET_SET_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FINAL_TARGET_RESOLVED_COUNT=91' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FINAL_FLAGGED_HIGH_TERM_COUNT=0' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'NONFILLER_FINGERPRINT_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
@@ -709,6 +750,12 @@ test "$ZERO_EFFECT_RC" -eq 1
 grep -qx 'ADD_TIE_STATUS=PASS' \
   "$WORK/tie1_trial_zero_effect/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'ADD_TIE_EFFECT_STATUS=FAIL' \
+  "$WORK/tie1_trial_zero_effect/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_ADD_TARGET_RESOLVED_COUNT=91' \
+  "$WORK/tie1_trial_zero_effect/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_ADD_CONNECTED_HIGH_TERM_COUNT=0' \
+  "$WORK/tie1_trial_zero_effect/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=91' \
   "$WORK/tie1_trial_zero_effect/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/zero-effect.stdout"
 test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
@@ -893,6 +940,65 @@ if {[dict get $targets status] ne "PASS" ||
     [dict get $targets count] != 91 ||
     [dict get $targets unique_count] != 91 ||
     [dict get $targets invalid_count] != 0} { exit 1 }
+EOF
+
+MPTDC_TEST_TRIAL_TCL="$TRIAL_TCL" \
+MPTDC_TEST_TARGET_READBACK="$TMP_ROOT/target_readback.tsv" \
+MPTDC_TEST_TARGET_READBACK_DRIFT="$TMP_ROOT/target_readback_drift.tsv" \
+tclsh <<'EOF'
+set fh [open $::env(MPTDC_TEST_TRIAL_TCL) r]
+set data [read $fh]
+close $fh
+set helper_start [string first "proc mptdc_tie1_trial_unique" $data]
+set helper_end [string first "\nproc mptdc_tie1_trial_master_instances" $data $helper_start]
+eval [string range $data $helper_start [expr {$helper_end - 1}]]
+set target_start [string first "proc mptdc_tie1_trial_target_state" $data]
+set target_end [string first "\nproc mptdc_tie1_trial_write_net_inventory" $data $target_start]
+eval [string range $data $target_start [expr {$target_end - 1}]]
+
+array set ::target_attr {}
+proc mptdc_tie1_trial_pointer_attr {pointer attribute {required 1}} {
+    set key "$pointer,$attribute"
+    if {[info exists ::target_attr($key)]} {
+        return $::target_attr($key)
+    }
+    return ""
+}
+
+set names [list {u_sink[001]/SN} {u_sink[002]/SN} {u_sink[003]/SN}]
+set pairs [list \
+    p1 {u_sink[001]/SN} \
+    p2 {u_sink[002]/SN} \
+    p3 {u_sink[003]/SN}]
+foreach {pointer name net} [list \
+        p1 {u_sink[001]/SN} MPTDC_TIE1_0 \
+        p2 {u_sink[002]/SN} MPTDC_TIE1_0 \
+        p3 {u_sink[003]/SN} MPTDC_TIE1_1] {
+    set ::target_attr($pointer,name) $name
+    set ::target_attr($pointer,inst.name) [file dirname $name]
+    set ::target_attr($pointer,inst.cell.name) DFRSJIHDX1
+    set ::target_attr($pointer,cellTerm.name) SN
+    set ::target_attr($pointer,net.name) $net
+}
+set state [mptdc_tie1_trial_target_state test $pairs $names \
+    $::env(MPTDC_TEST_TARGET_READBACK)]
+if {[dict get $state target_set_status] ne "PASS" ||
+    [dict get $state pointer_count] != 3 ||
+    [dict get $state resolved_count] != 3 ||
+    [dict get $state missing_count] != 0 ||
+    [dict get $state duplicate_count] != 0 ||
+    [dict get $state unexpected_count] != 0 ||
+    [dict get $state connected] != 3 ||
+    [dict get $state disconnected] != 0 ||
+    [llength [dict get $state nets]] != 2} { exit 1 }
+
+set ::target_attr(p3,name) {u_sink[003]/RN}
+set drift [mptdc_tie1_trial_target_state drift $pairs $names \
+    $::env(MPTDC_TEST_TARGET_READBACK_DRIFT)]
+if {[dict get $drift target_set_status] ne "FAIL" ||
+    [dict get $drift resolved_count] != 2 ||
+    [dict get $drift missing_count] != 1 ||
+    [dict get $drift unexpected_count] != 1} { exit 1 }
 EOF
 
 cat > "$TMP_ROOT/marker_a.tsv" <<'EOF'

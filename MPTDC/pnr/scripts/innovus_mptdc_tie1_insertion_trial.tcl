@@ -258,6 +258,7 @@ proc mptdc_tie1_trial_flagged_state {phase report_path} {
     set nets {}
     set hi_names {}
     set lo_names {}
+    set hi_pointer_name_pairs {}
     array set sink_count {}
     set fh [open $report_path w]
     puts $fh "polarity\tinst_term\tinstance\tmaster\tpin\tnet"
@@ -273,6 +274,7 @@ proc mptdc_tie1_trial_flagged_state {phase report_path} {
             set canonical_term_name [mptdc_tie1_trial_canonical_name $term_name]
             if {$polarity eq "HIGH"} {
                 lappend hi_names $canonical_term_name
+                lappend hi_pointer_name_pairs $term $canonical_term_name
             } else {
                 lappend lo_names $canonical_term_name
             }
@@ -305,8 +307,114 @@ proc mptdc_tie1_trial_flagged_state {phase report_path} {
         lo_terms $lo_terms \
         hi_names $hi_names \
         lo_names $lo_names \
+        hi_pointer_name_pairs $hi_pointer_name_pairs \
         hi_count [llength $hi_terms] \
         lo_count [llength $lo_terms] \
+        connected $connected \
+        disconnected $disconnected \
+        nets [lsort [mptdc_tie1_trial_unique $nets]] \
+        sink_pairs $sink_pairs]
+}
+
+proc mptdc_tie1_trial_target_state {
+        phase pointer_name_pairs expected_names report_path} {
+    set expected_names [lsort -unique $expected_names]
+    set expected_lookup [dict create]
+    foreach name $expected_names {
+        dict set expected_lookup $name 1
+    }
+
+    set seen_names [dict create]
+    set resolved_names {}
+    set unexpected_names {}
+    set duplicate_names {}
+    set connected 0
+    set disconnected 0
+    set pointer_count 0
+    set nets {}
+    array set sink_count {}
+
+    set fh [open $report_path w]
+    puts $fh "expected_inst_term\tcurrent_inst_term\tpointer\tinstance\tmaster\tpin\tnet\treadback_status"
+    foreach {term expected_name} $pointer_name_pairs {
+        incr pointer_count
+        set expected_name [mptdc_tie1_trial_canonical_name $expected_name]
+        set current_name [mptdc_tie1_trial_canonical_name \
+            [mptdc_tie1_trial_pointer_attr $term name]]
+        set inst_name 0x0
+        set master 0x0
+        set pin 0x0
+        set printable_net 0x0
+        set readback_status PASS
+
+        if {![dict exists $expected_lookup $expected_name]} {
+            set readback_status UNEXPECTED_BASELINE_TARGET
+            lappend unexpected_names $expected_name
+        } elseif {$current_name eq ""} {
+            set readback_status POINTER_NOT_RESOLVED
+        } elseif {$current_name ne $expected_name} {
+            set readback_status POINTER_NAME_CHANGED
+            lappend unexpected_names $current_name
+        } elseif {[dict exists $seen_names $current_name]} {
+            set readback_status DUPLICATE_TARGET
+            lappend duplicate_names $current_name
+        } else {
+            dict set seen_names $current_name 1
+            lappend resolved_names $current_name
+            set inst_name [mptdc_tie1_trial_pointer_attr $term inst.name]
+            set master [mptdc_tie1_trial_pointer_attr $term inst.cell.name]
+            set pin [mptdc_tie1_trial_pointer_attr $term cellTerm.name]
+            set net [mptdc_tie1_trial_canonical_name \
+                [mptdc_tie1_trial_pointer_attr $term net.name]]
+            if {$net eq ""} {
+                incr disconnected
+            } else {
+                set printable_net $net
+                incr connected
+                lappend nets $net
+                if {![info exists sink_count($net)]} {
+                    set sink_count($net) 0
+                }
+                incr sink_count($net)
+            }
+        }
+
+        set printable_current [expr {$current_name eq "" ? "0x0" : $current_name}]
+        puts $fh "$expected_name\t$printable_current\t$term\t$inst_name\t$master\t$pin\t$printable_net\t$readback_status"
+    }
+
+    set missing_names {}
+    foreach expected_name $expected_names {
+        if {![dict exists $seen_names $expected_name]} {
+            lappend missing_names $expected_name
+        }
+    }
+    close $fh
+
+    set sink_pairs {}
+    foreach net [lsort [array names sink_count]] {
+        lappend sink_pairs $net $sink_count($net)
+    }
+    set target_set_status [expr {
+        $pointer_count == [llength $expected_names] &&
+        [llength $resolved_names] == [llength $expected_names] &&
+        [llength $missing_names] == 0 &&
+        [llength $duplicate_names] == 0 &&
+        [llength $unexpected_names] == 0 ? "PASS" : "FAIL"
+    }]
+    return [dict create \
+        phase $phase \
+        pointer_count $pointer_count \
+        target_count [llength $expected_names] \
+        resolved_count [llength $resolved_names] \
+        resolved_names [lsort $resolved_names] \
+        missing_count [llength $missing_names] \
+        missing_names [lsort $missing_names] \
+        duplicate_count [llength $duplicate_names] \
+        duplicate_names [lsort -unique $duplicate_names] \
+        unexpected_count [llength $unexpected_names] \
+        unexpected_names [lsort -unique $unexpected_names] \
+        target_set_status $target_set_status \
         connected $connected \
         disconnected $disconnected \
         nets [lsort [mptdc_tie1_trial_unique $nets]] \
@@ -477,7 +585,10 @@ file mkdir [file join $outdir checkpoints]
 set status_report [file join $outdir reports tie1_insertion_trial_status.rpt]
 set action_report [file join $outdir reports tie1_insertion_trial_action.rpt]
 set baseline_terms_report [file join $outdir reports tie1_flagged_terms_baseline.tsv]
+set post_add_terms_report [file join $outdir reports tie1_flagged_terms_post_add.tsv]
 set final_terms_report [file join $outdir reports tie1_flagged_terms_final.tsv]
+set post_add_target_report [file join $outdir reports tie1_target_readback_post_add.tsv]
+set final_target_report [file join $outdir reports tie1_target_readback_final.tsv]
 set net_inventory_report [file join $outdir reports tie1_inserted_net_inventory.tsv]
 set master_inventory_report [file join $outdir reports tie1_trial_master_inventory.tsv]
 set filler_report [file join $outdir reports filler_status.rpt]
@@ -526,7 +637,8 @@ set baseline ""
 set baseline_placement ""
 set baseline_state [dict create \
     hi_terms {} lo_terms {} hi_names {} lo_names {} \
-    hi_count 0 lo_count 0 connected 0 disconnected 0 nets {} sink_pairs {}]
+    hi_pointer_name_pairs {} hi_count 0 lo_count 0 \
+    connected 0 disconnected 0 nets {} sink_pairs {}]
 set baseline_density [dict create \
     status FAIL percent UNKNOWN occupied UNKNOWN capacity UNKNOWN full 0]
 set baseline_filler_inventory [dict create phase baseline total 0 masters $filler_masters]
@@ -752,23 +864,41 @@ puts $add_command_fh "ADD_TIE_COMMAND_STATUS=$add_status"
 puts $add_command_fh "ADD_TIE_COMMAND_ERROR=$add_error"
 close $add_command_fh
 
-set post_add_state [mptdc_tie1_trial_flagged_state post_add \
-    [file join $outdir reports tie1_flagged_terms_post_add.tsv]]
+set post_add_flagged_state \
+    [mptdc_tie1_trial_flagged_state post_add $post_add_terms_report]
+set post_add_target_state [mptdc_tie1_trial_target_state post_add \
+    [dict get $baseline_state hi_pointer_name_pairs] \
+    [dict get $instance_pin_targets targets] $post_add_target_report]
 if {$add_status eq "PASS"} {
     set add_effect_status FAIL
-    set add_effect_reason NO_ELIGIBLE_TARGET_WAS_CONNECTED
-    if {[dict get $post_add_state hi_count] == $expected_hi &&
-        [dict get $post_add_state connected] == $expected_hi &&
-        [dict get $post_add_state disconnected] == 0 &&
-        [llength [dict get $post_add_state nets]] > 0} {
+    set add_effect_reason TARGET_POINTER_READBACK_CONTRACT_FAILED
+    if {[dict get $post_add_target_state target_set_status] eq "PASS" &&
+        [dict get $post_add_target_state pointer_count] == $expected_hi &&
+        [dict get $post_add_target_state resolved_count] == $expected_hi &&
+        [dict get $post_add_target_state missing_count] == 0 &&
+        [dict get $post_add_target_state duplicate_count] == 0 &&
+        [dict get $post_add_target_state unexpected_count] == 0 &&
+        [dict get $post_add_target_state connected] == $expected_hi &&
+        [dict get $post_add_target_state disconnected] == 0 &&
+        [dict get $post_add_flagged_state hi_count] == 0 &&
+        [dict get $post_add_flagged_state lo_count] == 0 &&
+        [llength [dict get $post_add_target_state nets]] > 0} {
         set add_effect_status PASS
         set add_effect_reason NONE
+    } elseif {[dict get $post_add_target_state resolved_count] == $expected_hi &&
+        [dict get $post_add_target_state connected] == 0} {
+        set add_effect_reason NO_ELIGIBLE_TARGET_WAS_CONNECTED
+    } elseif {[dict get $post_add_flagged_state hi_count] != 0 ||
+        [dict get $post_add_flagged_state lo_count] != 0} {
+        set add_effect_reason RESIDUAL_TIE_FLAGS_REMAIN
     }
 }
-if {$add_effect_status eq "PASS" && [dict get $post_add_state disconnected] == 0 &&
-    [llength [dict get $post_add_state nets]] > 0} {
+if {$add_effect_status eq "PASS" &&
+    [dict get $post_add_target_state disconnected] == 0 &&
+    [llength [dict get $post_add_target_state nets]] > 0} {
     if {[catch {
-        mptdc_ckpt_route_selected_nets_route_design [dict get $post_add_state nets]
+        mptdc_ckpt_route_selected_nets_route_design \
+            [dict get $post_add_target_state nets]
     } err]} {
         set route_status FAIL
         set route_error [mptdc_tie1_trial_report_value $err]
@@ -814,9 +944,12 @@ if {$refill_status eq "PASS"} {
     }
 }
 
-set final_state [mptdc_tie1_trial_flagged_state final $final_terms_report]
+set final_flagged_state [mptdc_tie1_trial_flagged_state final $final_terms_report]
+set final_target_state [mptdc_tie1_trial_target_state final \
+    [dict get $baseline_state hi_pointer_name_pairs] \
+    [dict get $instance_pin_targets targets] $final_target_report]
 set net_inventory [mptdc_tie1_trial_write_net_inventory \
-    $final_state $high_master $net_inventory_report]
+    $final_target_state $high_master $net_inventory_report]
 set final_snapshot_status FAIL
 set final_snapshot_error NONE
 set final_placement_status FAIL
@@ -918,9 +1051,18 @@ if {$filler_mode_status ne "PASS"} { lappend trial_reasons filler_mode_failed }
 if {$refill_status ne "PASS"} { lappend trial_reasons filler_refill_command_failed }
 if {$pg_connectivity_status ne "PASS"} { lappend trial_reasons pg_connectivity_rebind_failed }
 if {$filler_refill_status ne "PASS"} { lappend trial_reasons filler_refill_contract_failed }
-if {[dict get $final_state hi_count] != $expected_hi} { lappend trial_reasons final_high_term_count_mismatch }
-if {[dict get $final_state lo_count] != $expected_lo} { lappend trial_reasons final_low_term_count_mismatch }
-if {[dict get $final_state connected] != $expected_hi || [dict get $final_state disconnected] != 0} {
+if {[dict get $final_target_state target_set_status] ne "PASS" ||
+    [dict get $final_target_state pointer_count] != $expected_hi ||
+    [dict get $final_target_state resolved_count] != $expected_hi ||
+    [dict get $final_target_state missing_count] != 0 ||
+    [dict get $final_target_state duplicate_count] != 0 ||
+    [dict get $final_target_state unexpected_count] != 0} {
+    lappend trial_reasons final_target_pointer_lineage_mismatch
+}
+if {[dict get $final_flagged_state hi_count] != 0} { lappend trial_reasons final_residual_high_flags }
+if {[dict get $final_flagged_state lo_count] != $expected_lo} { lappend trial_reasons final_low_term_count_mismatch }
+if {[dict get $final_target_state connected] != $expected_hi ||
+    [dict get $final_target_state disconnected] != 0} {
     lappend trial_reasons final_high_terms_not_all_connected
 }
 if {$target_high_delta <= 0 || $target_high_delta > $expected_hi} { lappend trial_reasons target_high_instance_delta_invalid }
@@ -989,6 +1131,8 @@ puts $action_fh "INSTANCE_PIN_TARGET_COUNT=[dict get $instance_pin_targets count
 puts $action_fh "INSTANCE_PIN_TARGET_UNIQUE_COUNT=[dict get $instance_pin_targets unique_count]"
 puts $action_fh "INSTANCE_PIN_TARGET_INVALID_COUNT=[dict get $instance_pin_targets invalid_count]"
 puts $action_fh "INSTANCE_PIN_TARGET_MATCH_STATUS=$instance_pin_target_match_status"
+puts $action_fh "TARGET_READBACK_MODE=BASELINE_INSTTERM_POINTER_LINEAGE"
+puts $action_fh "TARGET_POINTER_SOURCE=BASELINE_FLAGGED_HIGH_TERMS"
 puts $action_fh "ROUTE_METHOD=SELECT_NET_SET_NANOROUTE_SELECTED_ONLY_ROUTE_DESIGN_SELECTED"
 puts $action_fh "SET_TIE_MODE_HELP_STATUS=$set_mode_help_status"
 puts $action_fh "ADD_TIE_HELP_STATUS=$add_help_status"
@@ -1001,6 +1145,16 @@ puts $action_fh "ADD_TIE_ERROR=$add_error"
 puts $action_fh "ADD_TIE_EFFECT_STATUS=$add_effect_status"
 puts $action_fh "ADD_TIE_EFFECT_REASON=$add_effect_reason"
 puts $action_fh "ADD_TIE_COMMAND_REPORT=$add_command_report"
+puts $action_fh "POST_ADD_TARGET_POINTER_COUNT=[dict get $post_add_target_state pointer_count]"
+puts $action_fh "POST_ADD_TARGET_RESOLVED_COUNT=[dict get $post_add_target_state resolved_count]"
+puts $action_fh "POST_ADD_TARGET_MISSING_COUNT=[dict get $post_add_target_state missing_count]"
+puts $action_fh "POST_ADD_TARGET_DUPLICATE_COUNT=[dict get $post_add_target_state duplicate_count]"
+puts $action_fh "POST_ADD_TARGET_UNEXPECTED_COUNT=[dict get $post_add_target_state unexpected_count]"
+puts $action_fh "POST_ADD_TARGET_SET_STATUS=[dict get $post_add_target_state target_set_status]"
+puts $action_fh "POST_ADD_CONNECTED_HIGH_TERM_COUNT=[dict get $post_add_target_state connected]"
+puts $action_fh "POST_ADD_DISCONNECTED_HIGH_TERM_COUNT=[dict get $post_add_target_state disconnected]"
+puts $action_fh "POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=[dict get $post_add_flagged_state hi_count]"
+puts $action_fh "POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT=[dict get $post_add_flagged_state lo_count]"
 puts $action_fh "SELECTED_ROUTE_STATUS=$route_status"
 puts $action_fh "SELECTED_ROUTE_ERROR=$route_error"
 puts $action_fh "FILLER_MODE_HELP_STATUS=$filler_mode_help_status"
@@ -1013,9 +1167,16 @@ puts $action_fh "PG_CONNECTIVITY_REBIND_STATUS=$pg_connectivity_status"
 puts $action_fh "PG_CONNECTIVITY_REBIND_ERROR=$pg_connectivity_error"
 puts $action_fh "FILLER_REFILL_STATUS=$filler_refill_status"
 puts $action_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"
-puts $action_fh "FINAL_FLAGGED_HIGH_TERM_COUNT=[dict get $final_state hi_count]"
-puts $action_fh "FINAL_CONNECTED_HIGH_TERM_COUNT=[dict get $final_state connected]"
-puts $action_fh "FINAL_DISCONNECTED_HIGH_TERM_COUNT=[dict get $final_state disconnected]"
+puts $action_fh "FINAL_TARGET_POINTER_COUNT=[dict get $final_target_state pointer_count]"
+puts $action_fh "FINAL_TARGET_RESOLVED_COUNT=[dict get $final_target_state resolved_count]"
+puts $action_fh "FINAL_TARGET_MISSING_COUNT=[dict get $final_target_state missing_count]"
+puts $action_fh "FINAL_TARGET_DUPLICATE_COUNT=[dict get $final_target_state duplicate_count]"
+puts $action_fh "FINAL_TARGET_UNEXPECTED_COUNT=[dict get $final_target_state unexpected_count]"
+puts $action_fh "FINAL_TARGET_SET_STATUS=[dict get $final_target_state target_set_status]"
+puts $action_fh "FINAL_FLAGGED_HIGH_TERM_COUNT=[dict get $final_flagged_state hi_count]"
+puts $action_fh "FINAL_CONNECTED_HIGH_TERM_COUNT=[dict get $final_target_state connected]"
+puts $action_fh "FINAL_DISCONNECTED_HIGH_TERM_COUNT=[dict get $final_target_state disconnected]"
+puts $action_fh "FINAL_FLAGGED_LOW_TERM_COUNT=[dict get $final_flagged_state lo_count]"
 puts $action_fh "FINAL_TIE_NET_COUNT=[dict get $net_inventory net_count]"
 puts $action_fh "MAX_OBSERVED_TIE_FANOUT=[dict get $net_inventory max_observed_fanout]"
 puts $action_fh "TIE_FANOUT_STATUS=$fanout_status"
@@ -1092,6 +1253,8 @@ puts $status_fh "INSTANCE_PIN_TARGET_COUNT=[dict get $instance_pin_targets count
 puts $status_fh "INSTANCE_PIN_TARGET_UNIQUE_COUNT=[dict get $instance_pin_targets unique_count]"
 puts $status_fh "INSTANCE_PIN_TARGET_INVALID_COUNT=[dict get $instance_pin_targets invalid_count]"
 puts $status_fh "INSTANCE_PIN_TARGET_MATCH_STATUS=$instance_pin_target_match_status"
+puts $status_fh "TARGET_READBACK_MODE=BASELINE_INSTTERM_POINTER_LINEAGE"
+puts $status_fh "TARGET_POINTER_SOURCE=BASELINE_FLAGGED_HIGH_TERMS"
 puts $status_fh "BASELINE_SNAPSHOT_STATUS=$baseline_snapshot_status"
 puts $status_fh "BASELINE_SNAPSHOT_ERROR=$baseline_snapshot_error"
 puts $status_fh "BASELINE_PLACEMENT_STATUS=$baseline_placement_status"
@@ -1104,6 +1267,16 @@ puts $status_fh "SET_TIE_MODE_STATUS=$mode_status"
 puts $status_fh "ADD_TIE_STATUS=$add_status"
 puts $status_fh "ADD_TIE_EFFECT_STATUS=$add_effect_status"
 puts $status_fh "ADD_TIE_EFFECT_REASON=$add_effect_reason"
+puts $status_fh "POST_ADD_TARGET_POINTER_COUNT=[dict get $post_add_target_state pointer_count]"
+puts $status_fh "POST_ADD_TARGET_RESOLVED_COUNT=[dict get $post_add_target_state resolved_count]"
+puts $status_fh "POST_ADD_TARGET_MISSING_COUNT=[dict get $post_add_target_state missing_count]"
+puts $status_fh "POST_ADD_TARGET_DUPLICATE_COUNT=[dict get $post_add_target_state duplicate_count]"
+puts $status_fh "POST_ADD_TARGET_UNEXPECTED_COUNT=[dict get $post_add_target_state unexpected_count]"
+puts $status_fh "POST_ADD_TARGET_SET_STATUS=[dict get $post_add_target_state target_set_status]"
+puts $status_fh "POST_ADD_CONNECTED_HIGH_TERM_COUNT=[dict get $post_add_target_state connected]"
+puts $status_fh "POST_ADD_DISCONNECTED_HIGH_TERM_COUNT=[dict get $post_add_target_state disconnected]"
+puts $status_fh "POST_ADD_REMAINING_FLAGGED_HIGH_TERM_COUNT=[dict get $post_add_flagged_state hi_count]"
+puts $status_fh "POST_ADD_REMAINING_FLAGGED_LOW_TERM_COUNT=[dict get $post_add_flagged_state lo_count]"
 puts $status_fh "SELECTED_ROUTE_STATUS=$route_status"
 puts $status_fh "FILLER_MODE_STATUS=$filler_mode_status"
 puts $status_fh "FILLER_MODE_ERROR=$filler_mode_error"
@@ -1114,10 +1287,16 @@ puts $status_fh "PG_CONNECTIVITY_REBIND_ERROR=$pg_connectivity_error"
 puts $status_fh "FILLER_REFILL_STATUS=$filler_refill_status"
 puts $status_fh "EXPECTED_FLAGGED_HIGH_TERM_COUNT=$expected_hi"
 puts $status_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"
-puts $status_fh "FINAL_FLAGGED_HIGH_TERM_COUNT=[dict get $final_state hi_count]"
-puts $status_fh "FINAL_CONNECTED_HIGH_TERM_COUNT=[dict get $final_state connected]"
-puts $status_fh "FINAL_DISCONNECTED_HIGH_TERM_COUNT=[dict get $final_state disconnected]"
-puts $status_fh "FINAL_FLAGGED_LOW_TERM_COUNT=[dict get $final_state lo_count]"
+puts $status_fh "FINAL_TARGET_POINTER_COUNT=[dict get $final_target_state pointer_count]"
+puts $status_fh "FINAL_TARGET_RESOLVED_COUNT=[dict get $final_target_state resolved_count]"
+puts $status_fh "FINAL_TARGET_MISSING_COUNT=[dict get $final_target_state missing_count]"
+puts $status_fh "FINAL_TARGET_DUPLICATE_COUNT=[dict get $final_target_state duplicate_count]"
+puts $status_fh "FINAL_TARGET_UNEXPECTED_COUNT=[dict get $final_target_state unexpected_count]"
+puts $status_fh "FINAL_TARGET_SET_STATUS=[dict get $final_target_state target_set_status]"
+puts $status_fh "FINAL_FLAGGED_HIGH_TERM_COUNT=[dict get $final_flagged_state hi_count]"
+puts $status_fh "FINAL_CONNECTED_HIGH_TERM_COUNT=[dict get $final_target_state connected]"
+puts $status_fh "FINAL_DISCONNECTED_HIGH_TERM_COUNT=[dict get $final_target_state disconnected]"
+puts $status_fh "FINAL_FLAGGED_LOW_TERM_COUNT=[dict get $final_flagged_state lo_count]"
 puts $status_fh "FINAL_TIE_NET_COUNT=[dict get $net_inventory net_count]"
 puts $status_fh "TIE_NET_SOURCE_CONTRACT_STATUS=[dict get $net_inventory contract_status]"
 puts $status_fh "TIE_NET_ROUTE_STATUS=[dict get $net_inventory route_status]"
@@ -1167,7 +1346,7 @@ close $status_fh
 puts "MPTDC_TIE1_INSERTION_TRIAL_STATUS=$trial_status"
 puts "MPTDC_TIE1_INSERTION_TRIAL_REPORT=$status_report"
 puts "MPTDC_TIE1_HIGH_INSTANCE_DELTA=$tie_high_delta"
-puts "MPTDC_TIE1_FINAL_CONNECTED_HIGH_TERM_COUNT=[dict get $final_state connected]"
+puts "MPTDC_TIE1_FINAL_CONNECTED_HIGH_TERM_COUNT=[dict get $final_target_state connected]"
 puts "MPTDC_TIE1_FINAL_TIE_NET_COUNT=[dict get $net_inventory net_count]"
 puts "MPTDC_TIE1_CHECKPOINT_SAVE_STATUS=$save_status"
 
