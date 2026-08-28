@@ -142,6 +142,80 @@ proc mptdc_tie1_trial_filler_count {masters} {
     return $count
 }
 
+proc mptdc_tie1_trial_filler_inventory {phase masters report_path} {
+    set total 0
+    set fh [open $report_path w]
+    puts $fh "master\tinstance_count"
+    foreach master $masters {
+        set count [mptdc_tie1_trial_master_count $master]
+        incr total $count
+        puts $fh "$master\t$count"
+    }
+    close $fh
+    return [dict create phase $phase total $total masters $masters]
+}
+
+proc mptdc_tie1_trial_nonfiller_fingerprint {phase excluded_masters report_path} {
+    set rows {}
+    set instances [mptdc_tie1_trial_objects \
+        [mptdc_tie1_trial_dbget "${phase}_fingerprint_instances" 1 top.insts]]
+    foreach inst $instances {
+        set master [mptdc_tie1_trial_pointer_attr $inst cell.name]
+        if {[lsearch -exact $excluded_masters $master] >= 0} {
+            continue
+        }
+        set name [mptdc_tie1_trial_pointer_attr $inst name]
+        set status [mptdc_tie1_trial_pointer_attr $inst pStatus]
+        set orient [mptdc_tie1_trial_pointer_attr $inst orient]
+        set box [mptdc_tie1_trial_pointer_attr $inst box]
+        lappend rows [list $name $master $status $orient $box]
+    }
+    set rows [lsort $rows]
+    set fh [open $report_path w]
+    puts $fh "instance\tmaster\tplacement_status\torientation\tbox"
+    foreach row $rows {
+        puts $fh [join $row "\t"]
+    }
+    close $fh
+    return [dict create phase $phase count [llength $rows] rows $rows]
+}
+
+proc mptdc_tie1_trial_route_signature {phase} {
+    set nets [mptdc_tie1_trial_count \
+        [mptdc_tie1_trial_dbget "${phase}_route_nets" 1 top.nets]]
+    set wires [mptdc_tie1_trial_count \
+        [mptdc_tie1_trial_dbget "${phase}_route_wires" 1 top.nets.wires]]
+    set special_wires [mptdc_tie1_trial_count \
+        [mptdc_tie1_trial_dbget "${phase}_route_special_wires" 1 top.nets.sWires]]
+    set vias [mptdc_tie1_trial_count \
+        [mptdc_tie1_trial_dbget "${phase}_route_vias" 1 top.nets.vias]]
+    return [dict create \
+        net_count $nets wire_count $wires \
+        special_wire_count $special_wires via_count $vias]
+}
+
+proc mptdc_tie1_trial_placement_density {path} {
+    set result [dict create \
+        status FAIL percent UNKNOWN occupied UNKNOWN capacity UNKNOWN full 0]
+    if {![file exists $path] || ![file readable $path]} {
+        return $result
+    }
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        if {[regexp {^Placement Density:[[:space:]]*([0-9.]+)%\(([0-9]+)/([0-9]+)\)} \
+                [string trim $line] -> percent occupied capacity]} {
+            dict set result status PASS
+            dict set result percent $percent
+            dict set result occupied $occupied
+            dict set result capacity $capacity
+            dict set result full [expr {$occupied == $capacity && $percent == 100.0}]
+            break
+        }
+    }
+    close $fh
+    return $result
+}
+
 proc mptdc_tie1_trial_capture_help {command path} {
     set status PASS
     set error NONE
@@ -388,6 +462,7 @@ set expected_hi [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_HIGH_TERMS 91]
 set expected_lo [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_LOW_TERMS 0]
 set expected_filler [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_FILLERS 24797]
 set expected_drc [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_DRC 1]
+set expected_sites [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_PLACEMENT_SITES 907533]
 set instance_pin_file [file normalize \
     [mptdc_tie1_trial_required_env MPTDC_TIE1_TRIAL_INSTANCE_PIN_FILE]]
 set filler_masters [split [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_FILLER_MASTERS \
@@ -403,9 +478,19 @@ set final_terms_report [file join $outdir reports tie1_flagged_terms_final.tsv]
 set net_inventory_report [file join $outdir reports tie1_inserted_net_inventory.tsv]
 set master_inventory_report [file join $outdir reports tie1_trial_master_inventory.tsv]
 set filler_report [file join $outdir reports filler_status.rpt]
+set baseline_filler_inventory_report [file join $outdir reports tie1_filler_inventory_baseline.tsv]
+set post_delete_filler_inventory_report [file join $outdir reports tie1_filler_inventory_post_delete.tsv]
+set final_filler_inventory_report [file join $outdir reports tie1_filler_inventory_final.tsv]
+set baseline_nonfiller_report [file join $outdir reports tie1_nonfiller_fingerprint_baseline.tsv]
+set post_delete_nonfiller_report [file join $outdir reports tie1_nonfiller_fingerprint_post_delete.tsv]
+set final_nonfiller_report [file join $outdir reports tie1_nonfiller_fingerprint_final.tsv]
+set baseline_check_place_report [file join $outdir reports tie1_trial_baseline_check_place.rpt]
+set final_check_place_report [file join $outdir reports tie1_trial_final_check_place.rpt]
 set final_checkpoint [file join $outdir checkpoints repaired_route.enc]
 set final_checkpoint_dat "${final_checkpoint}.dat"
 set add_command_report [file join $outdir reports addTieHiLo_command.rpt]
+set delete_command_report [file join $outdir reports deleteFiller_command.rpt]
+set refill_command_report [file join $outdir reports addFiller_command.rpt]
 
 array set ::mptdc_tie1_trial_query_status {}
 array set ::mptdc_tie1_trial_query_error {}
@@ -439,6 +524,12 @@ set baseline_placement ""
 set baseline_state [dict create \
     hi_terms {} lo_terms {} hi_names {} lo_names {} \
     hi_count 0 lo_count 0 connected 0 disconnected 0 nets {} sink_pairs {}]
+set baseline_density [dict create \
+    status FAIL percent UNKNOWN occupied UNKNOWN capacity UNKNOWN full 0]
+set baseline_filler_inventory [dict create phase baseline total 0 masters $filler_masters]
+set baseline_nonfiller [dict create phase baseline count 0 rows {}]
+set baseline_route_signature [dict create \
+    net_count 0 wire_count 0 special_wire_count 0 via_count 0]
 set inst_count_before 0
 set filler_count_before 0
 array set tie_count_before {}
@@ -458,7 +549,7 @@ if {$restore_status eq "PASS"} {
     if {[catch {
         set baseline_placement [mptdc_signoff_capture_placement_gate \
             tie1_trial_baseline \
-            [file join $outdir reports tie1_trial_baseline_check_place.rpt] \
+            $baseline_check_place_report \
             [file join $outdir reports tie1_trial_baseline_placement_status.rpt] 0]
     } err]} {
         set baseline_placement_error [mptdc_tie1_trial_report_value $err]
@@ -466,9 +557,17 @@ if {$restore_status eq "PASS"} {
         set baseline_placement_status [dict get $baseline_placement status]
     }
     set baseline_state [mptdc_tie1_trial_flagged_state baseline $baseline_terms_report]
+    set baseline_density \
+        [mptdc_tie1_trial_placement_density $baseline_check_place_report]
     set inst_count_before [mptdc_tie1_trial_count \
         [mptdc_tie1_trial_dbget top_instances_before 1 top.insts]]
-    set filler_count_before [mptdc_tie1_trial_filler_count $filler_masters]
+    set baseline_filler_inventory [mptdc_tie1_trial_filler_inventory \
+        baseline $filler_masters $baseline_filler_inventory_report]
+    set filler_count_before [dict get $baseline_filler_inventory total]
+    set baseline_nonfiller [mptdc_tie1_trial_nonfiller_fingerprint \
+        baseline [concat $filler_masters $all_tie_masters] \
+        $baseline_nonfiller_report]
+    set baseline_route_signature [mptdc_tie1_trial_route_signature baseline]
     foreach master $all_tie_masters {
         set tie_count_before($master) [mptdc_tie1_trial_master_count $master]
     }
@@ -496,6 +595,12 @@ if {[dict get $baseline_state connected] != 0 || [dict get $baseline_state disco
     lappend command_precheck_reasons baseline_tie_terms_not_all_disconnected
 }
 if {$filler_count_before != $expected_filler} { lappend command_precheck_reasons filler_count_mismatch }
+if {[dict get $baseline_density status] ne "PASS" ||
+    ![dict get $baseline_density full] ||
+    [dict get $baseline_density occupied] != $expected_sites ||
+    [dict get $baseline_density capacity] != $expected_sites} {
+    lappend command_precheck_reasons baseline_site_occupancy_mismatch
+}
 if {[dict get $instance_pin_targets status] ne "PASS"} {
     lappend command_precheck_reasons instance_pin_target_file_invalid
 }
@@ -526,6 +631,9 @@ if {$baseline_snapshot_status eq "PASS"} {
 }
 if {[llength [info commands setTieHiLoMode]] != 1} { lappend command_precheck_reasons setTieHiLoMode_unavailable }
 if {[llength [info commands addTieHiLo]] != 1} { lappend command_precheck_reasons addTieHiLo_unavailable }
+if {[llength [info commands deleteFiller]] != 1} { lappend command_precheck_reasons deleteFiller_unavailable }
+if {[llength [info commands setFillerMode]] != 1} { lappend command_precheck_reasons setFillerMode_unavailable }
+if {[llength [info commands addFiller]] != 1} { lappend command_precheck_reasons addFiller_unavailable }
 if {[llength $command_precheck_reasons] > 0} { set command_precheck FAIL }
 
 lassign [mptdc_tie1_trial_capture_help setTieHiLoMode \
@@ -534,6 +642,64 @@ lassign [mptdc_tie1_trial_capture_help addTieHiLo \
     [file join $outdir reports addTieHiLo_help.rpt]] add_help_status add_help_error
 lassign [mptdc_tie1_trial_capture_man addTieHiLo \
     [file join $outdir reports addTieHiLo_man.rpt]] add_man_status add_man_error
+lassign [mptdc_tie1_trial_capture_help deleteFiller \
+    [file join $outdir reports deleteFiller_help.rpt]] delete_help_status delete_help_error
+lassign [mptdc_tie1_trial_capture_man deleteFiller \
+    [file join $outdir reports deleteFiller_man.rpt]] delete_man_status delete_man_error
+lassign [mptdc_tie1_trial_capture_help setFillerMode \
+    [file join $outdir reports setFillerMode_help.rpt]] filler_mode_help_status filler_mode_help_error
+lassign [mptdc_tie1_trial_capture_help addFiller \
+    [file join $outdir reports addFiller_help.rpt]] refill_help_status refill_help_error
+
+set delete_status NOT_RUN
+set delete_error NONE
+set delete_effect_status NOT_RUN
+set delete_effect_reason COMMAND_NOT_RUN
+set filler_count_post_delete $filler_count_before
+set inst_count_post_delete $inst_count_before
+set post_delete_filler_inventory [dict create \
+    phase post_delete total $filler_count_before masters $filler_masters]
+set post_delete_nonfiller $baseline_nonfiller
+set post_delete_route_signature $baseline_route_signature
+set post_delete_nonfiller_status NOT_RUN
+set post_delete_route_status NOT_RUN
+
+if {$command_precheck eq "PASS"} {
+    if {[catch {
+        deleteFiller > $delete_command_report
+    } err]} {
+        set delete_status FAIL
+        set delete_error [mptdc_tie1_trial_report_value $err]
+    } else {
+        set delete_status PASS
+    }
+    set inst_count_post_delete [mptdc_tie1_trial_count \
+        [mptdc_tie1_trial_dbget top_instances_post_delete 1 top.insts]]
+    set post_delete_filler_inventory [mptdc_tie1_trial_filler_inventory \
+        post_delete $filler_masters $post_delete_filler_inventory_report]
+    set filler_count_post_delete [dict get $post_delete_filler_inventory total]
+    set post_delete_nonfiller [mptdc_tie1_trial_nonfiller_fingerprint \
+        post_delete [concat $filler_masters $all_tie_masters] \
+        $post_delete_nonfiller_report]
+    set post_delete_route_signature [mptdc_tie1_trial_route_signature post_delete]
+    set post_delete_nonfiller_status [expr {
+        [dict get $post_delete_nonfiller rows] eq
+            [dict get $baseline_nonfiller rows] ? "PASS" : "FAIL"
+    }]
+    set post_delete_route_status [expr {
+        $post_delete_route_signature eq $baseline_route_signature ? "PASS" : "FAIL"
+    }]
+    set delete_effect_status FAIL
+    set delete_effect_reason POST_DELETE_CONTRACT_MISMATCH
+    if {$delete_status eq "PASS" &&
+        $filler_count_post_delete == 0 &&
+        $inst_count_post_delete == ($inst_count_before - $expected_filler) &&
+        $post_delete_nonfiller_status eq "PASS" &&
+        $post_delete_route_status eq "PASS"} {
+        set delete_effect_status PASS
+        set delete_effect_reason NONE
+    }
+}
 
 set mode_status NOT_RUN
 set mode_error NONE
@@ -543,9 +709,11 @@ set add_effect_status NOT_RUN
 set add_effect_reason COMMAND_NOT_RUN
 set route_status NOT_RUN
 set route_error NONE
-if {$command_precheck eq "PASS"} {
+if {$delete_effect_status eq "PASS"} {
     if {[catch {
-        setTieHiLoMode -cell "$high_master $low_master" -maxFanout $max_fanout -maxDistance $max_distance
+        setTieHiLoMode -cell "$high_master $low_master" \
+            -maxFanout $max_fanout -maxDistance $max_distance \
+            -honorDontUse false -honorDontTouch false
     } err]} {
         set mode_status FAIL
         set mode_error [mptdc_tie1_trial_report_value $err]
@@ -600,6 +768,43 @@ if {$add_effect_status eq "PASS" && [dict get $post_add_state disconnected] == 0
     }
 }
 
+set filler_mode_status NOT_RUN
+set filler_mode_error NONE
+set refill_status NOT_RUN
+set refill_error NONE
+set pg_connectivity_status NOT_RUN
+set pg_connectivity_error NONE
+if {$route_status eq "PASS"} {
+    if {[catch {
+        setFillerMode -add_fillers_with_drc false
+    } err]} {
+        set filler_mode_status FAIL
+        set filler_mode_error [mptdc_tie1_trial_report_value $err]
+    } else {
+        set filler_mode_status PASS
+    }
+}
+if {$filler_mode_status eq "PASS"} {
+    if {[catch {
+        addFiller -cell $filler_masters -prefix MPTDC_FILL > $refill_command_report
+    } err]} {
+        set refill_status FAIL
+        set refill_error [mptdc_tie1_trial_report_value $err]
+    } else {
+        set refill_status PASS
+    }
+}
+if {$refill_status eq "PASS"} {
+    if {[catch {
+        mptdc_signoff_apply_pg_connectivity
+    } err]} {
+        set pg_connectivity_status FAIL
+        set pg_connectivity_error [mptdc_tie1_trial_report_value $err]
+    } else {
+        set pg_connectivity_status PASS
+    }
+}
+
 set final_state [mptdc_tie1_trial_flagged_state final $final_terms_report]
 set net_inventory [mptdc_tie1_trial_write_net_inventory \
     $final_state $high_master $net_inventory_report]
@@ -607,6 +812,8 @@ set final_snapshot_status FAIL
 set final_snapshot_error NONE
 set final_placement_status FAIL
 set final_placement_error NONE
+set final_density [dict create \
+    status FAIL percent UNKNOWN occupied UNKNOWN capacity UNKNOWN full 0]
 set final ""
 set final_placement ""
 if {$restore_status eq "PASS"} {
@@ -621,18 +828,42 @@ if {$restore_status eq "PASS"} {
     if {[catch {
         set final_placement [mptdc_signoff_capture_placement_gate \
             tie1_trial_final \
-            [file join $outdir reports tie1_trial_final_check_place.rpt] \
+            $final_check_place_report \
             [file join $outdir reports tie1_trial_final_placement_status.rpt] 0]
     } err]} {
         set final_placement_error [mptdc_tie1_trial_report_value $err]
     } else {
         set final_placement_status [dict get $final_placement status]
     }
+    set final_density \
+        [mptdc_tie1_trial_placement_density $final_check_place_report]
 }
 
 set inst_count_after [mptdc_tie1_trial_count \
     [mptdc_tie1_trial_dbget top_instances_after 1 top.insts]]
-set filler_count_after [mptdc_tie1_trial_filler_count $filler_masters]
+set final_filler_inventory [mptdc_tie1_trial_filler_inventory \
+    final $filler_masters $final_filler_inventory_report]
+set filler_count_after [dict get $final_filler_inventory total]
+set final_nonfiller [mptdc_tie1_trial_nonfiller_fingerprint \
+    final [concat $filler_masters $all_tie_masters] $final_nonfiller_report]
+set nonfiller_fingerprint_status [expr {
+    [dict get $final_nonfiller rows] eq [dict get $baseline_nonfiller rows] ?
+        "PASS" : "FAIL"
+}]
+set final_site_occupancy_status [expr {
+    [dict get $final_density status] eq "PASS" &&
+    [dict get $final_density full] &&
+    [dict get $final_density occupied] == $expected_sites &&
+    [dict get $final_density capacity] == $expected_sites ? "PASS" : "FAIL"
+}]
+set final_filler_master_set_status [expr {
+    $filler_count_after > 0 ? "PASS" : "FAIL"
+}]
+set filler_refill_status [expr {
+    $filler_mode_status eq "PASS" && $refill_status eq "PASS" &&
+    $pg_connectivity_status eq "PASS" &&
+    $final_filler_master_set_status eq "PASS" ? "PASS" : "FAIL"
+}]
 array set tie_count_after {}
 set master_fh [open $master_inventory_report w]
 puts $master_fh "master\tpolarity\tbefore_count\tafter_count\tdelta"
@@ -666,10 +897,18 @@ if {$baseline_snapshot_status eq "PASS" && $final_snapshot_status eq "PASS" &&
 
 set trial_reasons {}
 if {$command_precheck ne "PASS"} { lappend trial_reasons command_precheck_failed }
+if {$delete_status ne "PASS"} { lappend trial_reasons filler_delete_failed }
+if {$delete_effect_status ne "PASS"} { lappend trial_reasons filler_delete_contract_failed }
+if {$post_delete_nonfiller_status ne "PASS"} { lappend trial_reasons post_delete_nonfiller_changed }
+if {$post_delete_route_status ne "PASS"} { lappend trial_reasons post_delete_route_changed }
 if {$mode_status ne "PASS"} { lappend trial_reasons set_tie_mode_failed }
 if {$add_status ne "PASS"} { lappend trial_reasons add_tie_failed }
 if {$add_effect_status ne "PASS"} { lappend trial_reasons add_tie_no_effect }
 if {$route_status ne "PASS"} { lappend trial_reasons selected_net_route_failed }
+if {$filler_mode_status ne "PASS"} { lappend trial_reasons filler_mode_failed }
+if {$refill_status ne "PASS"} { lappend trial_reasons filler_refill_command_failed }
+if {$pg_connectivity_status ne "PASS"} { lappend trial_reasons pg_connectivity_rebind_failed }
+if {$filler_refill_status ne "PASS"} { lappend trial_reasons filler_refill_contract_failed }
 if {[dict get $final_state hi_count] != $expected_hi} { lappend trial_reasons final_high_term_count_mismatch }
 if {[dict get $final_state lo_count] != $expected_lo} { lappend trial_reasons final_low_term_count_mismatch }
 if {[dict get $final_state connected] != $expected_hi || [dict get $final_state disconnected] != 0} {
@@ -685,7 +924,10 @@ if {[dict get $net_inventory contract_status] ne "PASS"} { lappend trial_reasons
 if {[dict get $net_inventory route_status] ne "PASS"} { lappend trial_reasons tie_net_route_contract_failed }
 if {$fanout_status ne "PASS"} { lappend trial_reasons tie_net_fanout_exceeded }
 if {$final_placement_status ne "PASS"} { lappend trial_reasons final_placement_not_clean }
-if {$filler_count_after <= 0 || $filler_count_after > $filler_count_before} { lappend trial_reasons filler_count_invalid }
+if {$filler_count_after <= 0} { lappend trial_reasons filler_count_invalid }
+if {$final_filler_master_set_status ne "PASS"} { lappend trial_reasons final_filler_master_set_invalid }
+if {$final_site_occupancy_status ne "PASS"} { lappend trial_reasons final_site_occupancy_not_full }
+if {$nonfiller_fingerprint_status ne "PASS"} { lappend trial_reasons nonfiller_fingerprint_changed }
 if {$unexplained_instance_delta != 0} { lappend trial_reasons unexplained_instance_delta }
 if {$debt_status ne "PASS"} { lappend trial_reasons physical_debt_changed }
 if {$final_snapshot_status eq "PASS" && [llength [dict get $final marker_signature]] != $expected_drc} {
@@ -718,6 +960,16 @@ puts $action_fh "TARGET_HIGH_MASTER=$high_master"
 puts $action_fh "TARGET_LOW_MASTER=$low_master"
 puts $action_fh "MAX_FANOUT=$max_fanout"
 puts $action_fh "MAX_DISTANCE_UM=$max_distance"
+puts $action_fh "FILLER_RECYCLE_MODE=DELETE_INSERT_ROUTE_REFILL"
+puts $action_fh "DELETE_FILLER_HELP_STATUS=$delete_help_status"
+puts $action_fh "DELETE_FILLER_MAN_STATUS=$delete_man_status"
+puts $action_fh "FILLER_DELETE_STATUS=$delete_status"
+puts $action_fh "FILLER_DELETE_ERROR=$delete_error"
+puts $action_fh "FILLER_DELETE_EFFECT_STATUS=$delete_effect_status"
+puts $action_fh "FILLER_DELETE_EFFECT_REASON=$delete_effect_reason"
+puts $action_fh "FILLER_COUNT_POST_DELETE=$filler_count_post_delete"
+puts $action_fh "POST_DELETE_NONFILLER_FINGERPRINT_STATUS=$post_delete_nonfiller_status"
+puts $action_fh "POST_DELETE_ROUTE_SIGNATURE_STATUS=$post_delete_route_status"
 puts $action_fh "ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE"
 puts $action_fh "INSTANCE_PIN_TARGET_FILE=$instance_pin_file"
 puts $action_fh "INSTANCE_PIN_TARGET_FILE_STATUS=[dict get $instance_pin_targets status]"
@@ -739,6 +991,15 @@ puts $action_fh "ADD_TIE_EFFECT_REASON=$add_effect_reason"
 puts $action_fh "ADD_TIE_COMMAND_REPORT=$add_command_report"
 puts $action_fh "SELECTED_ROUTE_STATUS=$route_status"
 puts $action_fh "SELECTED_ROUTE_ERROR=$route_error"
+puts $action_fh "FILLER_MODE_HELP_STATUS=$filler_mode_help_status"
+puts $action_fh "FILLER_MODE_STATUS=$filler_mode_status"
+puts $action_fh "FILLER_MODE_ERROR=$filler_mode_error"
+puts $action_fh "ADD_FILLER_HELP_STATUS=$refill_help_status"
+puts $action_fh "FILLER_REFILL_COMMAND_STATUS=$refill_status"
+puts $action_fh "FILLER_REFILL_COMMAND_ERROR=$refill_error"
+puts $action_fh "PG_CONNECTIVITY_REBIND_STATUS=$pg_connectivity_status"
+puts $action_fh "PG_CONNECTIVITY_REBIND_ERROR=$pg_connectivity_error"
+puts $action_fh "FILLER_REFILL_STATUS=$filler_refill_status"
 puts $action_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"
 puts $action_fh "FINAL_FLAGGED_HIGH_TERM_COUNT=[dict get $final_state hi_count]"
 puts $action_fh "FINAL_CONNECTED_HIGH_TERM_COUNT=[dict get $final_state connected]"
@@ -755,6 +1016,11 @@ puts $action_fh "TIE_LOW_INSTANCE_DELTA=$tie_low_delta"
 puts $action_fh "FILLER_COUNT_BEFORE=$filler_count_before"
 puts $action_fh "FILLER_COUNT_AFTER=$filler_count_after"
 puts $action_fh "FILLER_DELTA=$filler_delta"
+puts $action_fh "FINAL_FILLER_MASTER_SET_STATUS=$final_filler_master_set_status"
+puts $action_fh "NONFILLER_FINGERPRINT_STATUS=$nonfiller_fingerprint_status"
+puts $action_fh "FINAL_SITE_OCCUPANCY_STATUS=$final_site_occupancy_status"
+puts $action_fh "FINAL_PLACEMENT_SITE_OCCUPIED=[dict get $final_density occupied]"
+puts $action_fh "FINAL_PLACEMENT_SITE_CAPACITY=[dict get $final_density capacity]"
 puts $action_fh "TOTAL_INSTANCE_DELTA=$total_instance_delta"
 puts $action_fh "UNEXPLAINED_INSTANCE_DELTA=$unexplained_instance_delta"
 puts $action_fh "CHECKPOINT_SAVE_STATUS=$save_status"
@@ -767,10 +1033,21 @@ puts $filler_fh "# MPTDC Tie1 Trial Final Filler Status"
 puts $filler_fh "FILLER_CELL_FAMILY=FEED*JIHD"
 puts $filler_fh "FILLER_CANDIDATES=[join $filler_masters { }]"
 puts $filler_fh "FILLER_COUNT_BEFORE=$filler_count_before"
+puts $filler_fh "FILLER_COUNT_POST_DELETE=$filler_count_post_delete"
 puts $filler_fh "FILLER_COUNT=$filler_count_after"
 puts $filler_fh "FILLER_DELTA=$filler_delta"
-puts $filler_fh "FILLER_INSERTION_STATUS=[expr {$trial_status eq "PASS" ? "PASS" : "FAIL"}]"
-puts $filler_fh "FILLER_ADJUSTMENT_POLICY=ONLY_TOOL_ATTRIBUTABLE_REPLACEMENT_DURING_ADDTIEHILO"
+puts $filler_fh "FILLER_DELETE_STATUS=$delete_status"
+puts $filler_fh "FILLER_DELETE_EFFECT_STATUS=$delete_effect_status"
+puts $filler_fh "FILLER_MODE_STATUS=$filler_mode_status"
+puts $filler_fh "FILLER_REFILL_COMMAND_STATUS=$refill_status"
+puts $filler_fh "FILLER_REFILL_STATUS=$filler_refill_status"
+puts $filler_fh "FILLER_INSERTION_STATUS=[expr {$filler_refill_status eq "PASS" ? "PASS" : "FAIL"}]"
+puts $filler_fh "FILLER_ADJUSTMENT_POLICY=EXACT_DELETE_INSERT_ROUTE_REFILL_PRIVATE_COPY"
+puts $filler_fh "FINAL_FILLER_MASTER_SET_STATUS=$final_filler_master_set_status"
+puts $filler_fh "NONFILLER_FINGERPRINT_STATUS=$nonfiller_fingerprint_status"
+puts $filler_fh "FINAL_SITE_OCCUPANCY_STATUS=$final_site_occupancy_status"
+puts $filler_fh "FINAL_PLACEMENT_SITE_OCCUPIED=[dict get $final_density occupied]"
+puts $filler_fh "FINAL_PLACEMENT_SITE_CAPACITY=[dict get $final_density capacity]"
 puts $filler_fh "FILLER_PLACEMENT_STATUS=$final_placement_status"
 close $filler_fh
 
@@ -782,6 +1059,14 @@ puts $status_fh "RESTORE_STATUS=$restore_status"
 puts $status_fh "RESTORE_ERROR=$restore_error"
 puts $status_fh "COMMAND_PRECHECK=$command_precheck"
 puts $status_fh "COMMAND_PRECHECK_REASONS=$command_precheck_reasons"
+puts $status_fh "FILLER_RECYCLE_MODE=DELETE_INSERT_ROUTE_REFILL"
+puts $status_fh "FILLER_DELETE_STATUS=$delete_status"
+puts $status_fh "FILLER_DELETE_ERROR=$delete_error"
+puts $status_fh "FILLER_DELETE_EFFECT_STATUS=$delete_effect_status"
+puts $status_fh "FILLER_DELETE_EFFECT_REASON=$delete_effect_reason"
+puts $status_fh "FILLER_COUNT_POST_DELETE=$filler_count_post_delete"
+puts $status_fh "POST_DELETE_NONFILLER_FINGERPRINT_STATUS=$post_delete_nonfiller_status"
+puts $status_fh "POST_DELETE_ROUTE_SIGNATURE_STATUS=$post_delete_route_status"
 puts $status_fh "ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE"
 puts $status_fh "INSTANCE_PIN_TARGET_FILE=$instance_pin_file"
 puts $status_fh "INSTANCE_PIN_TARGET_FILE_STATUS=[dict get $instance_pin_targets status]"
@@ -802,6 +1087,13 @@ puts $status_fh "ADD_TIE_STATUS=$add_status"
 puts $status_fh "ADD_TIE_EFFECT_STATUS=$add_effect_status"
 puts $status_fh "ADD_TIE_EFFECT_REASON=$add_effect_reason"
 puts $status_fh "SELECTED_ROUTE_STATUS=$route_status"
+puts $status_fh "FILLER_MODE_STATUS=$filler_mode_status"
+puts $status_fh "FILLER_MODE_ERROR=$filler_mode_error"
+puts $status_fh "FILLER_REFILL_COMMAND_STATUS=$refill_status"
+puts $status_fh "FILLER_REFILL_COMMAND_ERROR=$refill_error"
+puts $status_fh "PG_CONNECTIVITY_REBIND_STATUS=$pg_connectivity_status"
+puts $status_fh "PG_CONNECTIVITY_REBIND_ERROR=$pg_connectivity_error"
+puts $status_fh "FILLER_REFILL_STATUS=$filler_refill_status"
 puts $status_fh "EXPECTED_FLAGGED_HIGH_TERM_COUNT=$expected_hi"
 puts $status_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"
 puts $status_fh "FINAL_FLAGGED_HIGH_TERM_COUNT=[dict get $final_state hi_count]"
@@ -820,6 +1112,17 @@ puts $status_fh "TIE_LOW_INSTANCE_DELTA=$tie_low_delta"
 puts $status_fh "FILLER_COUNT_BEFORE=$filler_count_before"
 puts $status_fh "FILLER_COUNT_AFTER=$filler_count_after"
 puts $status_fh "FILLER_DELTA=$filler_delta"
+puts $status_fh "FINAL_FILLER_MASTER_SET_STATUS=$final_filler_master_set_status"
+puts $status_fh "NONFILLER_FINGERPRINT_STATUS=$nonfiller_fingerprint_status"
+puts $status_fh "BASELINE_SITE_OCCUPANCY_STATUS=[expr {
+    [dict get $baseline_density status] eq "PASS" && [dict get $baseline_density full] ?
+        "PASS" : "FAIL"
+}]"
+puts $status_fh "BASELINE_PLACEMENT_SITE_OCCUPIED=[dict get $baseline_density occupied]"
+puts $status_fh "BASELINE_PLACEMENT_SITE_CAPACITY=[dict get $baseline_density capacity]"
+puts $status_fh "FINAL_SITE_OCCUPANCY_STATUS=$final_site_occupancy_status"
+puts $status_fh "FINAL_PLACEMENT_SITE_OCCUPIED=[dict get $final_density occupied]"
+puts $status_fh "FINAL_PLACEMENT_SITE_CAPACITY=[dict get $final_density capacity]"
 puts $status_fh "TOTAL_INSTANCE_DELTA=$total_instance_delta"
 puts $status_fh "UNEXPLAINED_INSTANCE_DELTA=$unexplained_instance_delta"
 puts $status_fh "PHYSICAL_DEBT_PRESERVATION_STATUS=$debt_status"

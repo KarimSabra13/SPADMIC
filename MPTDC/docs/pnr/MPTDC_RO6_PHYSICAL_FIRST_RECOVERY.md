@@ -2710,12 +2710,12 @@ block. Do not run `addTieHiLo`, `setTieHiLoMode`, placement, routing, or a
 checkpoint save until the published inventory supports one separately reviewed
 hash-guarded trial.
 
-#### D2. Run One Hash-Guarded tie1 Insertion Trial
+#### D2. Published Step 7I Zero-Effect Trial (Do Not Rerun)
 
-Run only for the published Step 6R signature: 91 high-flagged terms, zero
+Step 7I was bound to the published Step 6R signature: 91 high-flagged terms, zero
 low-flagged terms, every high term disconnected on `0x0`, four available tie
 masters, no physical tie instance, and all read-only/hash gates passing. This
-is an explicitly authorized diagnostic mutation of a private checkpoint copy.
+was an explicitly authorized diagnostic mutation of a private checkpoint copy.
 It does not modify the failed-V6R source checkpoint.
 
 Step 7R established that automatic discovery is not sufficient for this
@@ -2729,9 +2729,9 @@ exact set equality against the restored database, and passes that file through
 separate gates; a second zero-effect return is a published failure, not a
 candidate.
 
-The candidate uses the exact Step 6R instance-pin set, the normal-Vt
+The attempted candidate used the exact Step 6R instance-pin set, the normal-Vt
 `LOGIC1DJIHD`/`LOGIC0DJIHD` pair, fanout 8, distance 20 um, and selected-net
-routing only. It saves a candidate only when
+routing only. It was allowed to save a candidate only when
 all 91 high sinks are connected, no low tie is inserted, each created net has
 exactly its flagged sinks plus one `LOGIC1DJIHD` source and routed wire, every
 inserted target tie cell owns one created tie net, placement remains clean, and
@@ -2745,7 +2745,11 @@ explicit unrouted count, zero is accepted only from its two exact zero-route
 fingerprints together with clean regular connectivity and zero non-RO special
 failures.
 
-```bash
+The command transcript below is retained only to explain the published Step 7I
+evidence. Its authorization token is retired by the current driver. Do not run
+it; continue with D3.
+
+```text
 set +e
 
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
@@ -2813,18 +2817,197 @@ cat "$TRIAL_DIR/reports/tie1_inserted_net_inventory.tsv" 2>/dev/null
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```
 
-Continue only for driver RC zero,
-`DECISION=PASS_TIE1_TRIAL_CONTINUE`, `PUBLISH_RC=0`, 91 connected and zero
-disconnected high terms, zero low terms, exact 91/91 unique instance-pin input
-with database set match and read-only hash preservation, command and effect
-statuses both passing, a positive normal-Vt target-master
-delta, zero alternate-master delta, bounded fanout, clean placement, exact
-physical-debt and marker-identity preservation, zero unrouted nets, unchanged
-source/probe hashes, and a saved private candidate. This result is still
-`SIGNOFF_ELIGIBLE=NO`; timing, foundry DRC, and
-LVS are not run by this trial. On any other result, stop after the failed
-evidence publishes. Do not rerun with looser fanout, distance, placement,
-routing, or DRC/connectivity acceptance.
+The published result is `ADD_TIE_STATUS=PASS` but
+`ADD_TIE_EFFECT_STATUS=FAIL`, zero connected sinks, zero tie cells/nets, no
+saved checkpoint, and `DECISION=FAIL_STOP`. The baseline checkPlace report
+proves `100.00%(907533/907533)` legal-site occupancy. Do not continue from this
+failed run and do not loosen fanout, distance, routing, or acceptance. D3 binds
+the next attempt to this exact zero-effect evidence and addresses only the
+proven filler-occupancy cause.
+
+#### D3. Run the Hash-Guarded Filler-Recycle Tie1 Trial
+
+Step 7I proved that all 91 exact instance pins are eligible tie-high targets
+but that `addTieHiLo` cannot place a cell while the restored checkpoint reports
+`Placement Density: 100.00%(907533/907533)`. Run one fresh private-copy
+candidate that deletes the exact tracked FEED filler population, inserts and
+routes only the reviewed tie-high nets, refills the legal sites, and reapplies
+PG connectivity once. The candidate is rejected unless the post-delete route
+signature is unchanged, every pre-existing non-filler object keeps the same
+master, placement status, orientation, and box, final site occupancy returns
+to `907533/907533`, and the existing physical-debt signature is unchanged.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+PROBE_RUN=20260828_mptdc_tie1_checkpoint_probe_envfix_093807
+FAILED_TRIAL_RUN=20260828_mptdc_tie1_insertion_trial_instancepin_104318
+TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_filler_recycle_trial_$(date +%H%M%S)"
+TRIAL_DIR=/sim/ksabra/SPADMIC_work/innovus/$TRIAL_RUN
+DRIVER_LOG=/tmp/${TRIAL_RUN}.driver.log
+TRIAL_DRIVER_RC=99
+
+cd "$REPO"
+CD_RC=$?
+git checkout SPADMIC_test
+CHECKOUT_RC=$?
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+ORIGIN_HEAD="$(git rev-parse --verify refs/remotes/origin/SPADMIC_test 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+if [ "$CD_RC" -eq 0 ] && [ "$CHECKOUT_RC" -eq 0 ] && \
+   [ "$SYNC_RC" -eq 0 ] && [ "$EXPECTED_HEAD" = "$ORIGIN_HEAD" ] && \
+   [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$PROBE_RUN" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$FAILED_TRIAL_RUN" ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_tie1_insertion_trial.sh \
+    --probe-run-id "$PROBE_RUN" \
+    --source-failed-trial-run-id "$FAILED_TRIAL_RUN" \
+    --run-id "$TRIAL_RUN" \
+    --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  TRIAL_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, origin, Step 6R, or Step 7I preflight failed"
+fi
+
+echo "===== SEND BACK STEP 8 ====="
+echo "CD_RC=$CD_RC"
+echo "CHECKOUT_RC=$CHECKOUT_RC"
+echo "SYNC_RC=$SYNC_RC"
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+echo "ORIGIN_HEAD=$ORIGIN_HEAD"
+echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
+echo "PROBE_RUN=$PROBE_RUN"
+echo "FAILED_TRIAL_RUN=$FAILED_TRIAL_RUN"
+echo "TRIAL_RUN=$TRIAL_RUN"
+echo "TRIAL_DIR=$TRIAL_DIR"
+echo "TRIAL_DRIVER_RC=$TRIAL_DRIVER_RC"
+grep -E '^(EVIDENCE_|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|DELETE_FILLER_COMMAND_COUNT|SET_FILLER_MODE_COMMAND_COUNT|ADD_FILLER_COMMAND_COUNT|PG_REBIND_CALL_COUNT|INNOVUS_RC|FILLER_RECYCLE_MODE|FILLER_DELETE_(STATUS|EFFECT_STATUS)|FILLER_COUNT_POST_DELETE|POST_DELETE_(NONFILLER_FINGERPRINT|ROUTE_SIGNATURE)_STATUS|ADD_TIE_(STATUS|EFFECT_STATUS|EFFECT_REASON)|SELECTED_ROUTE_STATUS|FILLER_MODE_STATUS|FILLER_REFILL_(COMMAND_STATUS|STATUS)|PG_CONNECTIVITY_REBIND_STATUS|FINAL_(CONNECTED_HIGH_TERM_COUNT|DISCONNECTED_HIGH_TERM_COUNT|FLAGGED_LOW_TERM_COUNT|TIE_NET_COUNT|FILLER_MASTER_SET_STATUS|SITE_OCCUPANCY_STATUS|PLACEMENT_SITE_OCCUPIED|PLACEMENT_SITE_CAPACITY|DRC|SHORTS|UNROUTED_NETS)|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|NONFILLER_FINGERPRINT_STATUS|DRC_MARKER_SIGNATURE_MATCH_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SOURCE_FAILED_TRIAL_EVIDENCE_READ_ONLY_STATUS|CANDIDATE_CHECKPOINT_STATUS|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -140
+echo "===== OPERATOR GATE ====="
+cat "$TRIAL_DIR/reports/operator_gate_tie1_insertion_trial.rpt" 2>/dev/null
+echo "===== FILLER ACTION ====="
+cat "$TRIAL_DIR/reports/filler_status.rpt" 2>/dev/null
+cat "$TRIAL_DIR/reports/deleteFiller_command.rpt" 2>/dev/null
+cat "$TRIAL_DIR/reports/addFiller_command.rpt" 2>/dev/null
+echo "===== FILLER INVENTORIES ====="
+cat "$TRIAL_DIR/reports/tie1_filler_inventory_baseline.tsv" 2>/dev/null
+cat "$TRIAL_DIR/reports/tie1_filler_inventory_post_delete.tsv" 2>/dev/null
+cat "$TRIAL_DIR/reports/tie1_filler_inventory_final.tsv" 2>/dev/null
+echo "===== FINAL CHECKPLACE ====="
+grep -E '^\*info: (Placed|Unplaced) =|^Placement Density:' \
+  "$TRIAL_DIR/reports/tie1_trial_final_check_place.rpt" 2>/dev/null
+echo "===== INSERTED TIE NETS ====="
+cat "$TRIAL_DIR/reports/tie1_inserted_net_inventory.tsv" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Continue only for driver RC zero, `FILLER_DELETE_EFFECT_STATUS=PASS`, exactly
+zero tracked fillers after deletion, passing post-delete non-filler and route
+signatures, 91 connected and zero disconnected reviewed sinks, a positive
+normal-Vt tie delta with no alternate or low tie cell, passing selected routing
+and refill/PG gates, passing final non-filler fingerprint, exact full final site
+occupancy, unchanged one-marker DRC identity, a hash-proven saved candidate,
+`DECISION=PASS_TIE1_TRIAL_CONTINUE`, and `PUBLISH_RC=0`. The final filler count
+is expected to be dynamic and may be lower than 24797; it is valid only when
+the full-site and master-set gates pass.
+
+#### D4. Run Attributable Diagnostic PVS from the Accepted Tie1 Candidate
+
+Run only after D3 passes and its snapshot is present on `origin/SPADMIC_test`.
+This stage uses the accepted candidate checkpoint and its own dynamic filler
+report. It verifies the live checkpoint tree hash against the published gate,
+prepares the physical source with tie cells preserved, runs base PVS DRC, and
+requires an explicit full LVS match. Density remains out of diagnostic scope,
+and the result remains not signoff eligible.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+TIE1_TRIAL_RUN=REPLACE_WITH_ACCEPTED_STEP8_TRIAL_RUN_ID
+RO_GDS=/sim/ksabra/SPADMIC_work/ro6_oa_exports/20260827_mptdc_ro6_vddfix_fresh_export_150040/RO_tune6.gds
+EXPECTED_RO_GDS_SHA=9d6f269541d51db0c30c5e7cc81334d70578ca8723558b32f34f9803469ea36a
+PVS_RUN="$(date +%Y%m%d)_mptdc_tie1_physical_diagnostic_pvs_$(date +%H%M%S)"
+PVS_DIR=/sim/ksabra/SPADMIC_work/innovus/$PVS_RUN
+DRIVER_LOG=/tmp/${PVS_RUN}.driver.log
+PVS_DRIVER_RC=99
+
+cd "$REPO"
+CD_RC=$?
+git checkout SPADMIC_test
+CHECKOUT_RC=$?
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+ORIGIN_HEAD="$(git rev-parse --verify refs/remotes/origin/SPADMIC_test 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+GDS_SHA="$(sha256sum "$RO_GDS" 2>/dev/null | awk '{print $1}')"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+if [ "$CD_RC" -eq 0 ] && [ "$CHECKOUT_RC" -eq 0 ] && \
+   [ "$SYNC_RC" -eq 0 ] && [ "$EXPECTED_HEAD" = "$ORIGIN_HEAD" ] && \
+   [ -z "$TRACKED_STATUS" ] && [ "$GDS_SHA" = "$EXPECTED_RO_GDS_SHA" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$TIE1_TRIAL_RUN/checkpoints/repaired_route.enc.dat" ]; then
+  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_recovery_pvs.sh \
+    --pnr-run-id "$TIE1_TRIAL_RUN" \
+    --run-id "$PVS_RUN" \
+    --ro-gds "$RO_GDS" \
+    --diagnostic-deferred-minarea \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  PVS_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, RO GDS, or accepted Step 8 checkpoint preflight failed"
+fi
+
+echo "===== SEND BACK STEP 9 ====="
+echo "CD_RC=$CD_RC"
+echo "CHECKOUT_RC=$CHECKOUT_RC"
+echo "SYNC_RC=$SYNC_RC"
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+echo "ORIGIN_HEAD=$ORIGIN_HEAD"
+echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
+echo "TIE1_TRIAL_RUN=$TIE1_TRIAL_RUN"
+echo "GDS_SHA=$GDS_SHA"
+echo "PVS_RUN=$PVS_RUN"
+echo "PVS_DIR=$PVS_DIR"
+echo "PVS_DRIVER_RC=$PVS_DRIVER_RC"
+grep -E '^(PNR_CANDIDATE_KIND|CANDIDATE_GATE_STATUS|CANDIDATE_CHECKPOINT_(EXPECTED_SHA256|ACTUAL_SHA256|HASH_STATUS)|SOURCE_PNR_RUN_ID|PVS_RECOVERY_PREFLIGHT|PVS_RECOVERY_STATUS|PVS_RUN_CLASS|PVS_DRC_BASE|PVS_DRC_BASE_EVIDENCE_STATUS|PVS_DRC_BASE_TOTAL_PRIMARY|PVS_DRC_BASE_NONZERO_RULE_COUNT|PVS_LVS|DIAGNOSTIC_COLLECTION_STATUS|MPTDC_TC_PVS_CLOSED|FINAL_DECISION|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -100
+echo "===== PVS PREPARATION GATE ====="
+cat "$PVS_DIR/reports/operator_gate_pvs_prepare.rpt" 2>/dev/null
+echo "===== PHYSICAL SOURCE CONTRACT ====="
+cat "$PVS_DIR/reports/lvs_source_filter.rpt" 2>/dev/null
+echo "===== BASE DRC GATE ====="
+cat "$PVS_DIR/reports/operator_gate_pvs_drc_base.rpt" 2>/dev/null
+cat "$PVS_DIR/reports/pvs_drc_base_nonzero_rules.tsv" 2>/dev/null
+echo "===== FULL LVS GATE ====="
+cat "$PVS_DIR/reports/operator_gate_pvs_lvs.rpt" 2>/dev/null
+cat "$PVS_DIR/reports/pvs_lvs_status.rpt" 2>/dev/null
+echo "===== DIAGNOSTIC SUMMARY ====="
+cat "$PVS_DIR/reports/operator_gate_pvs_diagnostic_summary.rpt" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+The required connectivity result is `PVS_LVS=MATCH` with an attributable
+base-DRC report and `DIAGNOSTIC_COLLECTION_STATUS=PASS`. Any LVS mismatch,
+candidate hash mismatch, filler-source mismatch, missing explicit match, or
+publish failure is a stop. A diagnostic match closes the tie1 connectivity
+hypothesis only; remaining minimum-area, antenna, density, timing, and canonical
+signoff work stay as separate gates.
 
 #### E. Publish the Read-Only PG Endpoint Probe
 

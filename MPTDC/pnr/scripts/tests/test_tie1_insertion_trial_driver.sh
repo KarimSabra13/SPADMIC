@@ -12,6 +12,7 @@ SOURCE_PNR_ID=failed_v6r
 SOURCE_PVS_ID=physical_source_fillernorm
 BOUNDARY_ID=boundary_step5r
 PROBE_ID=tie1_probe_step6r
+FAILED_TRIAL_ID=tie1_trial_step7i_zero_effect
 SOURCE_PHYSICAL_ID=physical_baseline
 DRIVER="$REPO/MPTDC/pnr/scripts/server_run_mptdc_tie1_insertion_trial.sh"
 TRIAL_TCL="$REPO/MPTDC/pnr/scripts/innovus_mptdc_tie1_insertion_trial.tcl"
@@ -37,10 +38,14 @@ mkdir -p \
   "$REPO/MPTDC/pnr/scripts" \
   "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/reports" \
   "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/manifests" \
+  "$REPO/MPTDC/docs/server_snapshots/innovus/$FAILED_TRIAL_ID/reports" \
+  "$REPO/MPTDC/docs/server_snapshots/innovus/$FAILED_TRIAL_ID/manifests" \
   "$REPO/MPTDC/docs/server_snapshots/innovus/$SOURCE_PHYSICAL_ID/reports" \
   "$WORK/$SOURCE_PNR_ID/checkpoints/repaired_route.enc.dat" \
   "$WORK/$PROBE_ID/reports" \
-  "$WORK/$PROBE_ID/manifests"
+  "$WORK/$PROBE_ID/manifests" \
+  "$WORK/$FAILED_TRIAL_ID/reports" \
+  "$WORK/$FAILED_TRIAL_ID/manifests"
 
 cp -p "$PNR_DIR/server_run_mptdc_tie1_insertion_trial.sh" "$DRIVER"
 cp -p "$PNR_DIR/innovus_mptdc_tie1_insertion_trial.tcl" "$TRIAL_TCL"
@@ -157,6 +162,89 @@ for rel in \
     "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/$rel"
 done
 
+FAILED_TRIAL_TARGETS="$WORK/$FAILED_TRIAL_ID/manifests/tie1_instance_pin_targets.txt"
+awk -F '\t' '
+  NR > 1 {
+    target=$2
+    if (target ~ /^\{.*\}$/) {
+      target=substr(target, 2, length(target)-2)
+    }
+    print target
+  }
+' "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv" \
+  > "$FAILED_TRIAL_TARGETS"
+TEST_TARGET_SHA="$(sha256sum "$FAILED_TRIAL_TARGETS" | awk '{print $1}')"
+
+cat > "$WORK/$FAILED_TRIAL_ID/reports/operator_gate_tie1_insertion_trial.rpt" <<EOF
+STEP=TIE1_INSERTION_TRIAL
+PROBE_RUN_ID=$PROBE_ID
+SOURCE_CHECKPOINT=$SOURCE_CHECKPOINT
+AUTHORIZATION=EXACT_MPTDC_TIE1_HIGH_TRIAL
+INNOVUS_RC=1
+TIE1_INSERTION_TRIAL_STATUS=FAIL
+ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE
+INSTANCE_PIN_INPUT_GENERATION_STATUS=PASS
+INSTANCE_PIN_TARGET_COUNT=91
+INSTANCE_PIN_TARGET_UNIQUE_COUNT=91
+INSTANCE_PIN_TARGET_INVALID_COUNT=0
+INSTANCE_PIN_TARGET_MATCH_STATUS=PASS
+SET_TIE_MODE_STATUS=PASS
+ADD_TIE_STATUS=PASS
+ADD_TIE_EFFECT_STATUS=FAIL
+ADD_TIE_EFFECT_REASON=NO_ELIGIBLE_TARGET_WAS_CONNECTED
+FINAL_CONNECTED_HIGH_TERM_COUNT=0
+FINAL_DISCONNECTED_HIGH_TERM_COUNT=91
+FINAL_TIE_NET_COUNT=0
+FILLER_COUNT_AFTER=24797
+BASELINE_DRC=1
+BASELINE_SHORTS=0
+BASELINE_REGULAR_CONNECTIVITY_BAD=0
+BASELINE_SPECIAL_CONNECTIVITY_BAD=1
+BASELINE_UNROUTED_NETS=0
+SOURCE_CHECKPOINT_HASH_STATUS=PASS
+SAFE_INPUT_READ_ONLY_STATUS=PASS
+INSTANCE_PIN_INPUT_READ_ONLY_STATUS=PASS
+INSTANCE_PIN_TARGET_SHA256_PRE=$TEST_TARGET_SHA
+INSTANCE_PIN_TARGET_SHA256_POST=$TEST_TARGET_SHA
+CANDIDATE_CHECKPOINT_STATUS=FAIL
+DECISION=FAIL_STOP
+NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE
+EOF
+cat > "$WORK/$FAILED_TRIAL_ID/reports/tie1_insertion_trial_status.rpt" <<'EOF'
+STEP=TIE1_INSERTION_TRIAL_STATUS
+TIE1_INSERTION_TRIAL_STATUS=FAIL
+ADD_TIE_EFFECT_STATUS=FAIL
+EOF
+cat > "$WORK/$FAILED_TRIAL_ID/reports/tie1_insertion_trial_action.rpt" <<'EOF'
+STEP=TIE1_INSERTION_TRIAL_ACTION
+ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE
+ADD_TIE_EFFECT_REASON=NO_ELIGIBLE_TARGET_WAS_CONNECTED
+EOF
+cat > "$WORK/$FAILED_TRIAL_ID/manifests/tie1_insertion_trial_inputs.rpt" <<EOF
+STEP=TIE1_INSERTION_TRIAL_INPUTS
+PROBE_RUN_ID=$PROBE_ID
+SOURCE_CHECKPOINT_SHA256_PRE=$SOURCE_CHECKPOINT_SHA
+INSTANCE_PIN_TARGET_SHA256=$TEST_TARGET_SHA
+EOF
+cat > "$WORK/$FAILED_TRIAL_ID/reports/tie1_trial_baseline_check_place.rpt" <<'EOF'
+*info: Placed = 39089
+*info: Unplaced = 0
+Placement Density: 100.00%(907533/907533)
+EOF
+
+for rel in \
+  reports/operator_gate_tie1_insertion_trial.rpt \
+  reports/tie1_insertion_trial_status.rpt \
+  reports/tie1_insertion_trial_action.rpt \
+  reports/tie1_trial_baseline_check_place.rpt \
+  manifests/tie1_instance_pin_targets.txt \
+  manifests/tie1_insertion_trial_inputs.rpt; do
+  cp -p "$WORK/$FAILED_TRIAL_ID/$rel" \
+    "$REPO/MPTDC/docs/server_snapshots/innovus/$FAILED_TRIAL_ID/$rel"
+done
+
+export MPTDC_TIE1_TRIAL_EXPECTED_TARGET_SHA="$TEST_TARGET_SHA"
+
 cat > "$INNOVUS_STUB" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -235,6 +323,12 @@ printf 'accepted candidate fixture\n' \
   > "$outdir/checkpoints/repaired_route.enc.dat/design.bin"
 cat > "$outdir/reports/tie1_insertion_trial_status.rpt" <<'RPT'
 COMMAND_PRECHECK=PASS
+FILLER_RECYCLE_MODE=DELETE_INSERT_ROUTE_REFILL
+FILLER_DELETE_STATUS=PASS
+FILLER_DELETE_EFFECT_STATUS=PASS
+FILLER_COUNT_POST_DELETE=0
+POST_DELETE_NONFILLER_FINGERPRINT_STATUS=PASS
+POST_DELETE_ROUTE_SIGNATURE_STATUS=PASS
 ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE
 INSTANCE_PIN_TARGET_FILE_STATUS=PASS
 INSTANCE_PIN_TARGET_COUNT=91
@@ -246,6 +340,10 @@ ADD_TIE_STATUS=PASS
 ADD_TIE_EFFECT_STATUS=PASS
 ADD_TIE_EFFECT_REASON=NONE
 SELECTED_ROUTE_STATUS=PASS
+FILLER_MODE_STATUS=PASS
+FILLER_REFILL_COMMAND_STATUS=PASS
+PG_CONNECTIVITY_REBIND_STATUS=PASS
+FILLER_REFILL_STATUS=PASS
 BASELINE_PLACEMENT_STATUS=PASS
 FINAL_PLACEMENT_STATUS=PASS
 FINAL_CONNECTED_HIGH_TERM_COUNT=91
@@ -260,7 +358,15 @@ TIE_HIGH_INSTANCE_DELTA=12
 TARGET_HIGH_INSTANCE_DELTA=12
 ALTERNATE_TIE_MASTER_DELTA=0
 TIE_LOW_INSTANCE_DELTA=0
-FILLER_COUNT_AFTER=24797
+FILLER_COUNT_AFTER=24785
+FINAL_FILLER_MASTER_SET_STATUS=PASS
+NONFILLER_FINGERPRINT_STATUS=PASS
+BASELINE_SITE_OCCUPANCY_STATUS=PASS
+BASELINE_PLACEMENT_SITE_OCCUPIED=907533
+BASELINE_PLACEMENT_SITE_CAPACITY=907533
+FINAL_SITE_OCCUPANCY_STATUS=PASS
+FINAL_PLACEMENT_SITE_OCCUPIED=907533
+FINAL_PLACEMENT_SITE_CAPACITY=907533
 UNEXPLAINED_INSTANCE_DELTA=0
 PHYSICAL_DEBT_PRESERVATION_STATUS=PASS
 BASELINE_DRC=1
@@ -317,9 +423,39 @@ if [[ "${MPTDC_TEST_ZERO_EFFECT:-0}" == 1 ]]; then
     -e 's/^TIE1_INSERTION_TRIAL_STATUS=PASS$/TIE1_INSERTION_TRIAL_STATUS=FAIL/' \
     "$outdir/reports/tie1_insertion_trial_status.rpt"
 fi
+if [[ "${MPTDC_TEST_DELETE_EFFECT:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^FILLER_DELETE_EFFECT_STATUS=PASS$/FILLER_DELETE_EFFECT_STATUS=FAIL/' \
+    -e 's/^FILLER_COUNT_POST_DELETE=0$/FILLER_COUNT_POST_DELETE=1/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+if [[ "${MPTDC_TEST_REFILL_FAIL:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^FILLER_REFILL_COMMAND_STATUS=PASS$/FILLER_REFILL_COMMAND_STATUS=FAIL/' \
+    -e 's/^FILLER_REFILL_STATUS=PASS$/FILLER_REFILL_STATUS=FAIL/' \
+    -e 's/^FINAL_SITE_OCCUPANCY_STATUS=PASS$/FINAL_SITE_OCCUPANCY_STATUS=FAIL/' \
+    -e 's/^FINAL_PLACEMENT_SITE_OCCUPIED=907533$/FINAL_PLACEMENT_SITE_OCCUPIED=907532/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+if [[ "${MPTDC_TEST_NONFILLER_CHANGE:-0}" == 1 ]]; then
+  sed -i \
+    's/^NONFILLER_FINGERPRINT_STATUS=PASS$/NONFILLER_FINGERPRINT_STATUS=FAIL/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
 cat > "$outdir/reports/filler_status.rpt" <<'RPT'
-FILLER_COUNT=24797
+FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
+FILLER_COUNT=24785
+FILLER_DELETE_STATUS=PASS
+FILLER_DELETE_EFFECT_STATUS=PASS
+FILLER_REFILL_COMMAND_STATUS=PASS
+FILLER_REFILL_STATUS=PASS
 FILLER_INSERTION_STATUS=PASS
+FILLER_ADJUSTMENT_POLICY=EXACT_DELETE_INSERT_ROUTE_REFILL_PRIVATE_COPY
+FINAL_FILLER_MASTER_SET_STATUS=PASS
+NONFILLER_FINGERPRINT_STATUS=PASS
+FINAL_SITE_OCCUPANCY_STATUS=PASS
+FINAL_PLACEMENT_SITE_OCCUPIED=907533
+FINAL_PLACEMENT_SITE_CAPACITY=907533
 RPT
 cat > "$outdir/reports/tie1_insertion_trial_action.rpt" <<'RPT'
 STEP=TIE1_INSERTION_TRIAL_ACTION
@@ -358,15 +494,20 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/pass.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id "$RUN_ID" \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/pass.stdout"
 
 grep -qx 'TIE1_INSERTION_TRIAL_PREFLIGHT=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'RESTORE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'DELETE_FILLER_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SET_MODE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'ADD_TIE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'INSTANCE_PIN_OPTION_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'SET_FILLER_MODE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'ADD_FILLER_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'PG_REBIND_CALL_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SAVE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SELECTED_ROUTE_CALL_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'FORBIDDEN_MUTATION_COUNT=0' "$TMP_ROOT/pass.stdout"
@@ -384,6 +525,16 @@ grep -qx 'INSTANCE_PIN_TARGET_MATCH_STATUS=PASS' \
 grep -qx 'INSTANCE_PIN_INPUT_READ_ONLY_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'ADD_TIE_EFFECT_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FILLER_DELETE_EFFECT_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FILLER_REFILL_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'NONFILLER_FINGERPRINT_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FINAL_SITE_OCCUPANCY_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FILLER_COUNT_AFTER=24785' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'TARGET_HIGH_INSTANCE_DELTA=12' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
@@ -415,13 +566,14 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/auth.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_bad_auth \
   --authorization WRONG_TOKEN \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/auth.stdout" 2>&1
 AUTH_RC=$?
 set -e
 test "$AUTH_RC" -eq 2
-grep -q 'exact private-copy trial authorization is required' "$TMP_ROOT/auth.stdout"
+grep -q 'exact private-copy filler-recycle authorization is required' "$TMP_ROOT/auth.stdout"
 test ! -e "$WORK/tie1_trial_bad_auth"
 
 cp -p "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv" \
@@ -435,8 +587,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/stale.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_stale_probe \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/stale.stdout" 2>&1
 STALE_RC=$?
 set -e
@@ -446,6 +599,32 @@ grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/stale.stdout"
 test ! -e "$WORK/tie1_trial_stale_probe"
 cp -p "$TMP_ROOT/tie_flagged_term_inventory.good.tsv" \
   "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+
+cp -p "$WORK/$FAILED_TRIAL_ID/reports/tie1_trial_baseline_check_place.rpt" \
+  "$TMP_ROOT/tie1_trial_baseline_check_place.good.rpt"
+sed -i 's/907533\/907533/907532\/907533/' \
+  "$WORK/$FAILED_TRIAL_ID/reports/tie1_trial_baseline_check_place.rpt"
+set +e
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/stale-failed-trial.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id tie1_trial_stale_failed_trial \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/stale-failed-trial.stdout" 2>&1
+STALE_FAILED_TRIAL_RC=$?
+set -e
+test "$STALE_FAILED_TRIAL_RC" -eq 4
+grep -q 'live Step 7I artifact differs from published evidence' \
+  "$TMP_ROOT/stale-failed-trial.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/stale-failed-trial.stdout"
+test ! -e "$WORK/tie1_trial_stale_failed_trial"
+cp -p "$TMP_ROOT/tie1_trial_baseline_check_place.good.rpt" \
+  "$WORK/$FAILED_TRIAL_ID/reports/tie1_trial_baseline_check_place.rpt"
 
 TRACKED_FLAGGED_REL="MPTDC/docs/server_snapshots/innovus/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
 git -C "$REPO" update-index --assume-unchanged "$TRACKED_FLAGGED_REL"
@@ -461,8 +640,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/duplicate.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_duplicate_targets \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/duplicate.stdout" 2>&1
 DUPLICATE_RC=$?
 set -e
@@ -485,8 +665,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/mutation.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_mutated_copy \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/mutation.stdout" 2>&1
 MUTATION_RC=$?
 set -e
@@ -505,8 +686,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/zero-effect.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_zero_effect \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/zero-effect.stdout" 2>&1
 ZERO_EFFECT_RC=$?
 set -e
@@ -519,6 +701,73 @@ grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/zero-effect.stdout"
 test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
 
 set +e
+MPTDC_TEST_DELETE_EFFECT=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/delete-effect.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id tie1_trial_bad_delete_effect \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/delete-effect.stdout" 2>&1
+DELETE_EFFECT_RC=$?
+set -e
+test "$DELETE_EFFECT_RC" -eq 1
+grep -qx 'FILLER_DELETE_EFFECT_STATUS=FAIL' \
+  "$WORK/tie1_trial_bad_delete_effect/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FILLER_COUNT_POST_DELETE=1' \
+  "$WORK/tie1_trial_bad_delete_effect/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/delete-effect.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_REFILL_FAIL=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/refill-fail.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id tie1_trial_refill_fail \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/refill-fail.stdout" 2>&1
+REFILL_FAIL_RC=$?
+set -e
+test "$REFILL_FAIL_RC" -eq 1
+grep -qx 'FILLER_REFILL_STATUS=FAIL' \
+  "$WORK/tie1_trial_refill_fail/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FINAL_SITE_OCCUPANCY_STATUS=FAIL' \
+  "$WORK/tie1_trial_refill_fail/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/refill-fail.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_NONFILLER_CHANGE=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/nonfiller-change.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
+  --run-id tie1_trial_nonfiller_change \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/nonfiller-change.stdout" 2>&1
+NONFILLER_CHANGE_RC=$?
+set -e
+test "$NONFILLER_CHANGE_RC" -eq 1
+grep -qx 'NONFILLER_FINGERPRINT_STATUS=FAIL' \
+  "$WORK/tie1_trial_nonfiller_change/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/nonfiller-change.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
 MPTDC_TEST_ALTERNATE_TIE=1 \
 MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
 MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
@@ -527,8 +776,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/alternate.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_alternate_master \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/alternate.stdout" 2>&1
 ALTERNATE_RC=$?
 set -e
@@ -549,8 +799,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/unused-target.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_unused_target_cell \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/unused-target.stdout" 2>&1
 UNUSED_TARGET_RC=$?
 set -e
@@ -571,8 +822,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/marker-mismatch.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_marker_mismatch \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/marker-mismatch.stdout" 2>&1
 MARKER_MISMATCH_RC=$?
 set -e
@@ -591,8 +843,9 @@ MPTDC_INNOVUS_WORK="$WORK" \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/fail.publish.args" \
 bash "$DRIVER" \
   --probe-run-id "$PROBE_ID" \
+  --source-failed-trial-run-id "$FAILED_TRIAL_ID" \
   --run-id tie1_trial_tool_fail \
-  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --authorization EXACT_MPTDC_TIE1_FILLER_RECYCLE_TRIAL \
   --expected-head "$HEAD_SHA" > "$TMP_ROOT/fail.stdout" 2>&1
 FAIL_RC=$?
 set -e
