@@ -1,0 +1,10 @@
+Total 91 instance pin(s) or IO pin(s) will be tied.
+Options: Max Distance = 20.000 microns, Max Fan-out = 8.
+INFO: Total Number of Tie Cells (LOGIC1DJIHD) placed: 0  
+INFO: Total Number of Tie Cells (LOGIC0DJIHD) placed: 0  
+
+ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE
+INSTANCE_PIN_FILE=/sim/ksabra/SPADMIC_work/innovus/20260828_mptdc_tie1_insertion_trial_instancepin_104318/manifests/tie1_instance_pin_targets.txt
+INSTANCE_PIN_TARGET_COUNT=91
+ADD_TIE_COMMAND_STATUS=PASS
+ADD_TIE_COMMAND_ERROR=NONE
