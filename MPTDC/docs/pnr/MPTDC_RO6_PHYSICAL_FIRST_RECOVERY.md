@@ -2710,6 +2710,94 @@ block. Do not run `addTieHiLo`, `setTieHiLoMode`, placement, routing, or a
 checkpoint save until the published inventory supports one separately reviewed
 hash-guarded trial.
 
+#### D2. Run One Hash-Guarded tie1 Insertion Trial
+
+Run only for the published Step 6R signature: 91 high-flagged terms, zero
+low-flagged terms, every high term disconnected on `0x0`, four available tie
+masters, no physical tie instance, and all read-only/hash gates passing. This
+is an explicitly authorized diagnostic mutation of a private checkpoint copy.
+It does not modify the failed-V6R source checkpoint.
+
+The candidate uses the normal-Vt `LOGIC1DJIHD`/`LOGIC0DJIHD` pair, fanout 8,
+distance 20 um, and selected-net routing only. It saves a candidate only when
+all 91 high sinks are connected, no low tie is inserted, each created net has
+exactly its flagged sinks plus one `LOGIC1DJIHD` source and routed wire, every
+inserted target tie cell owns one created tie net, placement remains clean, and
+the existing one-marker DRC and special-connectivity signatures are exactly
+unchanged.
+
+```bash
+set +e
+
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+PROBE_RUN=20260828_mptdc_tie1_checkpoint_probe_envfix_093807
+TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_insertion_trial_$(date +%H%M%S)"
+TRIAL_DIR=/sim/ksabra/SPADMIC_work/innovus/$TRIAL_RUN
+DRIVER_LOG=/tmp/${TRIAL_RUN}.driver.log
+TRIAL_DRIVER_RC=99
+
+cd "$REPO"
+CD_RC=$?
+git checkout SPADMIC_test
+CHECKOUT_RC=$?
+git pull --ff-only origin SPADMIC_test
+SYNC_RC=$?
+
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+ORIGIN_HEAD="$(git rev-parse --verify refs/remotes/origin/SPADMIC_test 2>/dev/null)"
+TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+
+export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+
+if [ "$CD_RC" -eq 0 ] && [ "$CHECKOUT_RC" -eq 0 ] && \
+   [ "$SYNC_RC" -eq 0 ] && [ "$EXPECTED_HEAD" = "$ORIGIN_HEAD" ] && \
+   [ -z "$TRACKED_STATUS" ] && \
+   [ -d "$MPTDC_INNOVUS_WORK/$PROBE_RUN" ]; then
+  bash MPTDC/pnr/scripts/server_run_mptdc_tie1_insertion_trial.sh \
+    --probe-run-id "$PROBE_RUN" \
+    --run-id "$TRIAL_RUN" \
+    --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "$DRIVER_LOG"
+  TRIAL_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP: sync, tracked-tree, origin, or Step 6R probe preflight failed"
+fi
+
+echo "===== SEND BACK STEP 7 ====="
+echo "CD_RC=$CD_RC"
+echo "CHECKOUT_RC=$CHECKOUT_RC"
+echo "SYNC_RC=$SYNC_RC"
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+echo "ORIGIN_HEAD=$ORIGIN_HEAD"
+echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
+echo "PROBE_RUN=$PROBE_RUN"
+echo "TRIAL_RUN=$TRIAL_RUN"
+echo "TRIAL_DIR=$TRIAL_DIR"
+echo "TRIAL_DRIVER_RC=$TRIAL_DRIVER_RC"
+grep -E '^(EVIDENCE_(STEP|ID|COLLECT_RC|CHECK_RC|COMMIT_RC|PUSH_RC|COMMIT)|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|CADENCE_ENV_(RC|STATUS)|RESTORE_COMMAND_COUNT|SET_MODE_COMMAND_COUNT|ADD_TIE_COMMAND_COUNT|SAVE_COMMAND_COUNT|SELECTED_ROUTE_CALL_COUNT|FORBIDDEN_MUTATION_COUNT|INNOVUS_RC|FINAL_CONNECTED_HIGH_TERM_COUNT|FINAL_DISCONNECTED_HIGH_TERM_COUNT|FINAL_FLAGGED_LOW_TERM_COUNT|FINAL_TIE_NET_COUNT|MAX_OBSERVED_TIE_FANOUT|TIE_HIGH_INSTANCE_DELTA|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|TIE_LOW_INSTANCE_DELTA|PHYSICAL_DEBT_PRESERVATION_STATUS|FINAL_DRC|FINAL_SHORTS|FINAL_UNROUTED_NETS|FINAL_DRC_MARKER_SIGNATURE_COUNT|DRC_MARKER_SIGNATURE_MATCH_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SAFE_COPY_MATCH_STATUS|SAFE_INPUT_READ_ONLY_STATUS|CANDIDATE_CHECKPOINT_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+  "$DRIVER_LOG" 2>/dev/null | tail -100
+echo "===== OPERATOR GATE ====="
+cat "$TRIAL_DIR/reports/operator_gate_tie1_insertion_trial.rpt" 2>/dev/null
+echo "===== TIE ACTION ====="
+cat "$TRIAL_DIR/reports/tie1_insertion_trial_action.rpt" 2>/dev/null
+echo "===== INSERTED NETS ====="
+cat "$TRIAL_DIR/reports/tie1_inserted_net_inventory.tsv" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+Continue only for driver RC zero,
+`DECISION=PASS_TIE1_TRIAL_CONTINUE`, `PUBLISH_RC=0`, 91 connected and zero
+disconnected high terms, zero low terms, a positive normal-Vt target-master
+delta, zero alternate-master delta, bounded fanout, clean placement, exact
+physical-debt and marker-identity preservation, zero unrouted nets, unchanged
+source/probe hashes, and a saved private candidate. This result is still
+`SIGNOFF_ELIGIBLE=NO`; timing, foundry DRC, and
+LVS are not run by this trial. On any other result, stop after the failed
+evidence publishes. Do not rerun with looser fanout, distance, placement,
+routing, or DRC/connectivity acceptance.
+
 #### E. Publish the Read-Only PG Endpoint Probe
 
 Run only for C's exact `RO6_PG_OPEN_ONLY` result. This command analyzes a safe

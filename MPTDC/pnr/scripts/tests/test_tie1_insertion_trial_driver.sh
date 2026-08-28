@@ -1,0 +1,525 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PNR_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+TMP_ROOT="$(mktemp -d /tmp/mptdc_tie1_insertion_trial.XXXXXX)"
+trap 'rm -rf "$TMP_ROOT"' EXIT
+
+REPO="$TMP_ROOT/repo"
+WORK="$TMP_ROOT/work"
+SOURCE_PNR_ID=failed_v6r
+SOURCE_PVS_ID=physical_source_fillernorm
+BOUNDARY_ID=boundary_step5r
+PROBE_ID=tie1_probe_step6r
+SOURCE_PHYSICAL_ID=physical_baseline
+DRIVER="$REPO/MPTDC/pnr/scripts/server_run_mptdc_tie1_insertion_trial.sh"
+TRIAL_TCL="$REPO/MPTDC/pnr/scripts/innovus_mptdc_tie1_insertion_trial.tcl"
+INNOVUS_STUB="$TMP_ROOT/innovus_stub.sh"
+PUBLISHER_STUB="$TMP_ROOT/publisher_stub.sh"
+
+tree_hash() {
+  local root="$1"
+  (
+    cd "$root"
+    find -L . -type f \
+      ! -name '*.cdslck' ! -name '*.lock' ! -name '.*lock*' \
+      -print0 |
+      LC_ALL=C sort -z |
+      while IFS= read -r -d '' file; do
+        printf '%s\t' "$file"
+        sha256sum "$file"
+      done
+  ) | sha256sum | awk '{print $1}'
+}
+
+mkdir -p \
+  "$REPO/MPTDC/pnr/scripts" \
+  "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/reports" \
+  "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/manifests" \
+  "$REPO/MPTDC/docs/server_snapshots/innovus/$SOURCE_PHYSICAL_ID/reports" \
+  "$WORK/$SOURCE_PNR_ID/checkpoints/repaired_route.enc.dat" \
+  "$WORK/$PROBE_ID/reports" \
+  "$WORK/$PROBE_ID/manifests"
+
+cp -p "$PNR_DIR/server_run_mptdc_tie1_insertion_trial.sh" "$DRIVER"
+cp -p "$PNR_DIR/innovus_mptdc_tie1_insertion_trial.tcl" "$TRIAL_TCL"
+printf 'immutable checkpoint fixture\n' \
+  > "$WORK/$SOURCE_PNR_ID/checkpoints/repaired_route.enc.dat/design.bin"
+SOURCE_CHECKPOINT="$WORK/$SOURCE_PNR_ID/checkpoints/repaired_route.enc.dat"
+SOURCE_CHECKPOINT_SHA="$(tree_hash "$SOURCE_CHECKPOINT")"
+
+FILLER_REPORT="$REPO/MPTDC/docs/server_snapshots/innovus/$SOURCE_PHYSICAL_ID/reports/filler_status.rpt"
+ROW_REPORT="$REPO/MPTDC/docs/server_snapshots/innovus/$SOURCE_PHYSICAL_ID/reports/row_infra_insertion.rpt"
+cat > "$FILLER_REPORT" <<'EOF'
+FILLER_INSERTION_STATUS=PASS
+FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
+FILLER_COUNT=24797
+EOF
+cat > "$ROW_REPORT" <<'EOF'
+FILLER_CANDIDATES=FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD
+TIE_HIGH_CANDIDATES=LOGIC1DJIHD LOGIC1LVJIHD
+TIE_LOW_CANDIDATES=LOGIC0DJIHD LOGIC0LVJIHD
+EOF
+FILLER_SHA="$(sha256sum "$FILLER_REPORT" | awk '{print $1}')"
+ROW_SHA="$(sha256sum "$ROW_REPORT" | awk '{print $1}')"
+
+PROBE_GATE="$WORK/$PROBE_ID/reports/operator_gate_tie1_checkpoint_probe.rpt"
+cat > "$PROBE_GATE" <<EOF
+STEP=TIE1_CHECKPOINT_PROBE
+BOUNDARY_PVS_RUN_ID=$BOUNDARY_ID
+SOURCE_PVS_RUN_ID=$SOURCE_PVS_ID
+SOURCE_CHECKPOINT=$SOURCE_CHECKPOINT
+CADENCE_ENV_STATUS=PASS
+INNOVUS_RC=0
+PROBE_STATUS=PASS
+RESTORE_STATUS=PASS
+CORE_QUERY_STATUS=PASS
+CORE_QUERY_ERROR_COUNT=0
+TIE1_SOURCE_TOKEN_COUNT=0
+TIE_MASTER_SOURCE_TOKEN_COUNT=0
+TIE1_NET_COUNT=0
+TIE1_INST_TERM_COUNT=0
+TIE1_REGULAR_WIRE_COUNT=0
+TIE1_SPECIAL_WIRE_COUNT=0
+TIE1_VIA_COUNT=0
+TIE_AVAILABLE_MASTER_COUNT=4
+PHYSICAL_TIE_MASTER_COUNT=0
+PHYSICAL_TIE_INSTANCE_COUNT=0
+FLAGGED_TIE_HIGH_TERM_COUNT=91
+FLAGGED_TIE_LOW_TERM_COUNT=0
+SOURCE_CHECKPOINT_HASH_STATUS=PASS
+SAFE_COPY_MATCH_STATUS=PASS
+SAFE_CHECKPOINT_HASH_STATUS=PASS
+BOUNDARY_EVIDENCE_HASH_STATUS=PASS
+PHYSICAL_SOURCE_HASH_STATUS=PASS
+DESIGN_MUTATION_COUNT=0
+READ_ONLY_STATUS=PASS
+SIGNOFF_ELIGIBLE=NO
+DECISION=PASS_REVIEW_TIE1_EVIDENCE
+NEXT_STAGE=REVIEW_TIE1_EVIDENCE_BEFORE_HASH_GUARDED_TRIAL
+EOF
+
+cat > "$WORK/$PROBE_ID/reports/tie1_checkpoint_probe_status.rpt" <<'EOF'
+STEP=TIE1_CHECKPOINT_PROBE
+PROBE_STATUS=PASS
+EOF
+cat > "$WORK/$PROBE_ID/reports/tie1_candidate_master_inventory.tsv" <<'EOF'
+master	polarity	library_master_count	physical_instance_count	library_status	instance_query_status
+LOGIC1DJIHD	HIGH	1	0	PASS	PASS
+LOGIC1LVJIHD	HIGH	1	0	PASS	PASS
+LOGIC0DJIHD	LOW	1	0	PASS	PASS
+LOGIC0LVJIHD	LOW	1	0	PASS	PASS
+EOF
+{
+  printf 'polarity\tinst_term\tinstance\tmaster\tpin\tnet\n'
+  for index in $(seq 1 91); do
+    printf 'HIGH\tu_sink_%03d/SN\tu_sink_%03d\tDFRSJIHDX1\tSN\t0x0\n' \
+      "$index" "$index"
+  done
+} > "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+cat > "$WORK/$PROBE_ID/reports/tie_command_availability.rpt" <<'EOF'
+addTieHiLo_STATUS=AVAILABLE
+setTieHiLoMode_STATUS=AVAILABLE
+EOF
+cat > "$WORK/$PROBE_ID/manifests/tie1_checkpoint_probe_inputs.rpt" <<EOF
+SOURCE_CHECKPOINT_SHA256_PRE=$SOURCE_CHECKPOINT_SHA
+EOF
+cat > "$WORK/$PROBE_ID/manifests/source_physical_lvs_contract.rpt" <<EOF
+LVS_SOURCE_CONTRACT_STATUS=PASS
+PHYSICAL_ONLY_INSTANCE_REMOVAL_POLICY=EXACT_TRACKED_FILLER_REPORT_MASTER_SET
+FILLER_REPORT=$FILLER_REPORT
+FILLER_REPORT_SHA256=$FILLER_SHA
+ROW_INFRA_REPORT=$ROW_REPORT
+ROW_INFRA_REPORT_SHA256=$ROW_SHA
+PHYSICAL_ONLY_FILLER_MASTER_COUNT=8
+PHYSICAL_ONLY_FILLER_MASTER_SET=FEED25JIHD,FEED15JIHD,FEED10JIHD,FEED7JIHD,FEED5JIHD,FEED3JIHD,FEED2JIHD,FEED1JIHD
+PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_EXPECTED=24797
+PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_INPUT=24797
+PHYSICAL_ONLY_FILLER_INSTANCE_COUNT_REMOVED=24797
+PHYSICAL_ONLY_FILLER_REMOVAL_STATUS=PASS
+PHYSICAL_TIE_CANDIDATE_COUNT=4
+PHYSICAL_TIE_CANDIDATE_SET=LOGIC1DJIHD,LOGIC1LVJIHD,LOGIC0DJIHD,LOGIC0LVJIHD
+PHYSICAL_TIE_MASTER_COUNT=0
+PHYSICAL_TIE_INSTANCE_COUNT=0
+PHYSICAL_TIE_PRESERVATION_STATUS=PASS
+EOF
+
+for rel in \
+  reports/operator_gate_tie1_checkpoint_probe.rpt \
+  reports/tie1_checkpoint_probe_status.rpt \
+  reports/tie1_candidate_master_inventory.tsv \
+  reports/tie_flagged_term_inventory.tsv \
+  reports/tie_command_availability.rpt \
+  manifests/tie1_checkpoint_probe_inputs.rpt \
+  manifests/source_physical_lvs_contract.rpt; do
+  cp -p "$WORK/$PROBE_ID/$rel" \
+    "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/$rel"
+done
+
+cat > "$INNOVUS_STUB" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+outdir="${MPTDC_TIE1_TRIAL_OUTDIR:?}"
+checkpoint="${MPTDC_TIE1_TRIAL_CKPT:?}"
+mkdir -p "$outdir/reports"
+
+if [[ "${MPTDC_TEST_MUTATE_SAFE_COPY:-0}" == 1 ]]; then
+  printf 'unexpected mutation\n' >> "$checkpoint/design.bin"
+fi
+
+if [[ "${MPTDC_TEST_TRIAL_FAIL:-0}" == 1 ]]; then
+  cat > "$outdir/reports/tie1_insertion_trial_status.rpt" <<'RPT'
+COMMAND_PRECHECK=PASS
+SET_TIE_MODE_STATUS=PASS
+ADD_TIE_STATUS=FAIL
+SELECTED_ROUTE_STATUS=NOT_RUN
+BASELINE_PLACEMENT_STATUS=PASS
+FINAL_PLACEMENT_STATUS=PASS
+FINAL_CONNECTED_HIGH_TERM_COUNT=0
+FINAL_DISCONNECTED_HIGH_TERM_COUNT=91
+FINAL_FLAGGED_LOW_TERM_COUNT=0
+FINAL_TIE_NET_COUNT=0
+TIE_NET_SOURCE_CONTRACT_STATUS=FAIL
+TIE_NET_ROUTE_STATUS=FAIL
+TIE_FANOUT_STATUS=PASS
+MAX_OBSERVED_TIE_FANOUT=0
+TIE_HIGH_INSTANCE_DELTA=0
+TARGET_HIGH_INSTANCE_DELTA=0
+ALTERNATE_TIE_MASTER_DELTA=0
+TIE_LOW_INSTANCE_DELTA=0
+FILLER_COUNT_AFTER=24797
+UNEXPLAINED_INSTANCE_DELTA=0
+PHYSICAL_DEBT_PRESERVATION_STATUS=PASS
+BASELINE_DRC=1
+BASELINE_SHORTS=0
+BASELINE_REGULAR_CONNECTIVITY_BAD=0
+BASELINE_SPECIAL_CONNECTIVITY_BAD=1
+BASELINE_UNROUTED_NETS=0
+BASELINE_DRC_MARKER_SIGNATURE_COUNT=1
+BASELINE_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+FINAL_DRC=1
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_UNROUTED_NETS=0
+FINAL_DRC_MARKER_SIGNATURE_COUNT=1
+FINAL_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+CHECKPOINT_SAVE_STATUS=NOT_RUN
+CORE_QUERY_ERROR_COUNT=0
+TIE1_INSERTION_TRIAL_STATUS=FAIL
+RPT
+  cat > "$outdir/reports/filler_status.rpt" <<'RPT'
+FILLER_INSERTION_STATUS=FAIL
+RPT
+  exit 1
+fi
+
+mkdir -p "$outdir/checkpoints/repaired_route.enc.dat"
+printf 'accepted candidate fixture\n' \
+  > "$outdir/checkpoints/repaired_route.enc.dat/design.bin"
+cat > "$outdir/reports/tie1_insertion_trial_status.rpt" <<'RPT'
+COMMAND_PRECHECK=PASS
+SET_TIE_MODE_STATUS=PASS
+ADD_TIE_STATUS=PASS
+SELECTED_ROUTE_STATUS=PASS
+BASELINE_PLACEMENT_STATUS=PASS
+FINAL_PLACEMENT_STATUS=PASS
+FINAL_CONNECTED_HIGH_TERM_COUNT=91
+FINAL_DISCONNECTED_HIGH_TERM_COUNT=0
+FINAL_FLAGGED_LOW_TERM_COUNT=0
+FINAL_TIE_NET_COUNT=12
+TIE_NET_SOURCE_CONTRACT_STATUS=PASS
+TIE_NET_ROUTE_STATUS=PASS
+TIE_FANOUT_STATUS=PASS
+MAX_OBSERVED_TIE_FANOUT=8
+TIE_HIGH_INSTANCE_DELTA=12
+TARGET_HIGH_INSTANCE_DELTA=12
+ALTERNATE_TIE_MASTER_DELTA=0
+TIE_LOW_INSTANCE_DELTA=0
+FILLER_COUNT_AFTER=24797
+UNEXPLAINED_INSTANCE_DELTA=0
+PHYSICAL_DEBT_PRESERVATION_STATUS=PASS
+BASELINE_DRC=1
+BASELINE_SHORTS=0
+BASELINE_REGULAR_CONNECTIVITY_BAD=0
+BASELINE_SPECIAL_CONNECTIVITY_BAD=1
+BASELINE_UNROUTED_NETS=0
+BASELINE_DRC_MARKER_SIGNATURE_COUNT=1
+BASELINE_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+FINAL_DRC=1
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_UNROUTED_NETS=0
+FINAL_DRC_MARKER_SIGNATURE_COUNT=1
+FINAL_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+CHECKPOINT_SAVE_STATUS=PASS
+CORE_QUERY_ERROR_COUNT=0
+TIE1_INSERTION_TRIAL_STATUS=PASS
+RPT
+if [[ "${MPTDC_TEST_ALTERNATE_TIE:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^TARGET_HIGH_INSTANCE_DELTA=12$/TARGET_HIGH_INSTANCE_DELTA=11/' \
+    -e 's/^ALTERNATE_TIE_MASTER_DELTA=0$/ALTERNATE_TIE_MASTER_DELTA=1/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+if [[ "${MPTDC_TEST_UNUSED_TARGET_TIE:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^TIE_HIGH_INSTANCE_DELTA=12$/TIE_HIGH_INSTANCE_DELTA=13/' \
+    -e 's/^TARGET_HIGH_INSTANCE_DELTA=12$/TARGET_HIGH_INSTANCE_DELTA=13/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+if [[ "${MPTDC_TEST_MARKER_MISMATCH:-0}" == 1 ]]; then
+  sed -i \
+    's/^FINAL_DRC_MARKER_SIGNATURE=.*$/FINAL_DRC_MARKER_SIGNATURE={5 6 7 8}|MET2|Metal|MinArea|Net_m/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
+cat > "$outdir/reports/filler_status.rpt" <<'RPT'
+FILLER_COUNT=24797
+FILLER_INSERTION_STATUS=PASS
+RPT
+cat > "$outdir/reports/tie1_insertion_trial_action.rpt" <<'RPT'
+STEP=TIE1_INSERTION_TRIAL_ACTION
+TIE1_INSERTION_TRIAL_STATUS=PASS
+RPT
+cat > "$outdir/reports/tie1_inserted_net_inventory.tsv" <<'RPT'
+net	sink_count	tie_high_source_count	inst_term_count	wire_count	via_count	contract_status	route_status
+MPTDC_TIE1_0	8	1	9	1	0	PASS	PASS
+RPT
+exit 0
+EOF
+
+cat > "$PUBLISHER_STUB" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" > "${MPTDC_TEST_PUBLISH_ARGS:?}"
+exit 0
+EOF
+chmod +x "$INNOVUS_STUB" "$PUBLISHER_STUB"
+
+git init -q -b SPADMIC_test "$REPO"
+git -C "$REPO" config user.name 'MPTDC tie1 trial test'
+git -C "$REPO" config user.email 'mptdc-tie1-trial@example.invalid'
+git -C "$REPO" add MPTDC
+git -C "$REPO" commit -q -m fixtures
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
+SOURCE_HASH_BEFORE="$(tree_hash "$SOURCE_CHECKPOINT")"
+RUN_ID=tie1_trial_pass
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/pass.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id "$RUN_ID" \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/pass.stdout"
+
+grep -qx 'TIE1_INSERTION_TRIAL_PREFLIGHT=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'RESTORE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'SET_MODE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'ADD_TIE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'SAVE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'SELECTED_ROUTE_CALL_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'FORBIDDEN_MUTATION_COUNT=0' "$TMP_ROOT/pass.stdout"
+grep -qx 'TIE1_INSERTION_TRIAL_RECOVERY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
+grep -qx 'DECISION=PASS_TIE1_TRIAL_CONTINUE' "$TMP_ROOT/pass.stdout"
+grep -qx 'NEXT_STAGE=DIAGNOSTIC_PHYSICAL_PVS_FROM_TIE1_TRIAL' "$TMP_ROOT/pass.stdout"
+grep -qx 'NUMERIC_GATE_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'TARGET_HIGH_INSTANCE_DELTA=12' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'ALTERNATE_TIE_MASTER_DELTA=0' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DRC_MARKER_SIGNATURE_MATCH_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'SOURCE_CHECKPOINT_HASH_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -q "innovus $RUN_ID $WORK/$RUN_ID TIE1_INSERTION_TRIAL" \
+  "$TMP_ROOT/pass.publish.args"
+test -s "$WORK/$RUN_ID/checkpoints/repaired_route.enc.dat/design.bin"
+SOURCE_HASH_AFTER="$(tree_hash "$SOURCE_CHECKPOINT")"
+test "$SOURCE_HASH_BEFORE" = "$SOURCE_HASH_AFTER"
+
+set +e
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/auth.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_bad_auth \
+  --authorization WRONG_TOKEN \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/auth.stdout" 2>&1
+AUTH_RC=$?
+set -e
+test "$AUTH_RC" -eq 2
+grep -q 'exact private-copy trial authorization is required' "$TMP_ROOT/auth.stdout"
+test ! -e "$WORK/tie1_trial_bad_auth"
+
+cp -p "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv" \
+  "$TMP_ROOT/tie_flagged_term_inventory.good.tsv"
+sed -i '$d' "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+set +e
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/stale.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_stale_probe \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/stale.stdout" 2>&1
+STALE_RC=$?
+set -e
+test "$STALE_RC" -eq 4
+grep -q 'live Step 6R artifact differs from published evidence' "$TMP_ROOT/stale.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/stale.stdout"
+test ! -e "$WORK/tie1_trial_stale_probe"
+cp -p "$TMP_ROOT/tie_flagged_term_inventory.good.tsv" \
+  "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+
+set +e
+MPTDC_TEST_MUTATE_SAFE_COPY=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/mutation.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_mutated_copy \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/mutation.stdout" 2>&1
+MUTATION_RC=$?
+set -e
+test "$MUTATION_RC" -eq 1
+grep -qx 'SAFE_INPUT_READ_ONLY_STATUS=FAIL' \
+  "$WORK/tie1_trial_mutated_copy/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/mutation.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_ALTERNATE_TIE=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/alternate.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_alternate_master \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/alternate.stdout" 2>&1
+ALTERNATE_RC=$?
+set -e
+test "$ALTERNATE_RC" -eq 1
+grep -qx 'TARGET_HIGH_INSTANCE_DELTA=11' \
+  "$WORK/tie1_trial_alternate_master/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'ALTERNATE_TIE_MASTER_DELTA=1' \
+  "$WORK/tie1_trial_alternate_master/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/alternate.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_UNUSED_TARGET_TIE=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/unused-target.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_unused_target_cell \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/unused-target.stdout" 2>&1
+UNUSED_TARGET_RC=$?
+set -e
+test "$UNUSED_TARGET_RC" -eq 1
+grep -qx 'FINAL_TIE_NET_COUNT=12' \
+  "$WORK/tie1_trial_unused_target_cell/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'TARGET_HIGH_INSTANCE_DELTA=13' \
+  "$WORK/tie1_trial_unused_target_cell/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/unused-target.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_MARKER_MISMATCH=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/marker-mismatch.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_marker_mismatch \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/marker-mismatch.stdout" 2>&1
+MARKER_MISMATCH_RC=$?
+set -e
+test "$MARKER_MISMATCH_RC" -eq 1
+grep -qx 'DRC_MARKER_SIGNATURE_MATCH_STATUS=FAIL' \
+  "$WORK/tie1_trial_marker_mismatch/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/marker-mismatch.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_TRIAL_FAIL=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/fail.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_tool_fail \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/fail.stdout" 2>&1
+FAIL_RC=$?
+set -e
+test "$FAIL_RC" -eq 1
+grep -qx 'INNOVUS_RC=1' "$TMP_ROOT/fail.stdout"
+grep -qx 'TIE1_INSERTION_TRIAL_STATUS=FAIL' "$TMP_ROOT/fail.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/fail.stdout"
+grep -q 'TIE1_INSERTION_TRIAL' "$TMP_ROOT/fail.publish.args"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+tclsh <<EOF
+set fh [open "$TRIAL_TCL" r]
+set data [read \$fh]
+close \$fh
+if {![info complete \$data]} { exit 1 }
+EOF
+
+cat > "$TMP_ROOT/marker_a.tsv" <<'EOF'
+idx	marker_handle	box	layer	type	subType	message
+1	0xaaa	{1 2 3 4}	MET1	Metal	MinArea	Net n
+EOF
+cat > "$TMP_ROOT/marker_b.tsv" <<'EOF'
+idx	marker_handle	box	layer	type	subType	message
+9	0xbbb	{1 2 3 4}	MET1	Metal	MinArea	Net n
+EOF
+MPTDC_TEST_TRIAL_TCL="$TRIAL_TCL" \
+MPTDC_TEST_MARKER_A="$TMP_ROOT/marker_a.tsv" \
+MPTDC_TEST_MARKER_B="$TMP_ROOT/marker_b.tsv" \
+tclsh <<'EOF'
+set fh [open $::env(MPTDC_TEST_TRIAL_TCL) r]
+set data [read $fh]
+close $fh
+set start [string first "proc mptdc_tie1_trial_marker_signature" $data]
+set end [string first "\nproc mptdc_tie1_trial_snapshot_equal_debt" $data $start]
+eval [string range $data $start [expr {$end - 1}]]
+set a [mptdc_tie1_trial_marker_signature $::env(MPTDC_TEST_MARKER_A)]
+set b [mptdc_tie1_trial_marker_signature $::env(MPTDC_TEST_MARKER_B)]
+if {$a ne $b || [llength $a] != 1} { exit 1 }
+EOF
+
+echo "MPTDC_TIE1_INSERTION_TRIAL_DRIVER_TEST=PASS"
