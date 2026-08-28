@@ -60,7 +60,7 @@ publish_snapshot() {
     rc=${PIPESTATUS[0]}
   fi
   set +e
-  if [[ "$rc" -ne 0 ]]; then
+  if [[ "$rc" != 0 ]]; then
     return "$rc"
   fi
   report_value "$log" NEXT_EXPECTED_HEAD
@@ -121,16 +121,16 @@ if [[ -d "$INNOVUS_WORK/$ATTEMPT50" ]]; then
   NEXT_HEAD="$(publish_snapshot innovus "$ATTEMPT50" "$INNOVUS_WORK/$ATTEMPT50" MPTDC_FREE_PLACEMENT_ATTEMPT)"
   PUBLISH50_RC=$?
   set +e
-  if [[ "$PUBLISH50_RC" -ne 0 || -z "$NEXT_HEAD" ]]; then
+  if [[ "$PUBLISH50_RC" != 0 || -z "$NEXT_HEAD" ]]; then
     echo "STOP: 50% attempt evidence publish failed"
     exit 4
   fi
   EXPECTED_HEAD_VALUE="$NEXT_HEAD"
 fi
 
-if [[ "$ATTEMPT50_RC" -eq 0 ]]; then
+if [[ "$ATTEMPT50_RC" == 0 ]]; then
   SELECTED_PNR_RUN="$ATTEMPT50"
-elif [[ "$ATTEMPT50_RC" -eq 20 ]]; then
+elif [[ "$ATTEMPT50_RC" == 20 ]]; then
   set +e
   bash "$ATTEMPT_DRIVER" --run-id "$ATTEMPT45" --expected-head "$EXPECTED_HEAD_VALUE" \
     --handoff-dir "$HANDOFF_DIR" --utilization 0.45 --innovus-work "$INNOVUS_WORK"
@@ -141,13 +141,13 @@ elif [[ "$ATTEMPT50_RC" -eq 20 ]]; then
     NEXT_HEAD="$(publish_snapshot innovus "$ATTEMPT45" "$INNOVUS_WORK/$ATTEMPT45" MPTDC_FREE_PLACEMENT_RETRY)"
     PUBLISH45_RC=$?
     set +e
-    if [[ "$PUBLISH45_RC" -ne 0 || -z "$NEXT_HEAD" ]]; then
+    if [[ "$PUBLISH45_RC" != 0 || -z "$NEXT_HEAD" ]]; then
       echo "STOP: 45% retry evidence publish failed"
       exit 4
     fi
     EXPECTED_HEAD_VALUE="$NEXT_HEAD"
   fi
-  if [[ "$ATTEMPT45_RC" -eq 0 ]]; then
+  if [[ "$ATTEMPT45_RC" == 0 ]]; then
     SELECTED_PNR_RUN="$ATTEMPT45"
   fi
 fi
@@ -172,7 +172,7 @@ if [[ "$SELECTED_PNR_RUN" != NONE ]]; then
     NEXT_HEAD="$(publish_snapshot pvs "$PVS_RUN" "$INNOVUS_WORK/$PVS_RUN" MPTDC_FREE_TRIAL_PVS)"
     PUBLISH_PVS_RC=$?
     set +e
-    if [[ "$PUBLISH_PVS_RC" -ne 0 || -z "$NEXT_HEAD" ]]; then
+    if [[ "$PUBLISH_PVS_RC" != 0 || -z "$NEXT_HEAD" ]]; then
       echo "STOP: PVS evidence publish failed"
       exit 4
     fi
@@ -181,7 +181,7 @@ if [[ "$SELECTED_PNR_RUN" != NONE ]]; then
 fi
 
 PVS_GATE="$INNOVUS_WORK/$PVS_RUN/reports/operator_gate_mptdc_free_trial_pvs.rpt"
-if [[ "$PVS_RC" -eq 0 &&
+if [[ "$PVS_RC" == 0 &&
       "$(report_value "$PVS_GATE" MPTDC_FREE_TRIAL_PVS_STATUS)" == PASS &&
       "$(report_value "$PVS_GATE" PVS_LVS)" == MATCH ]]; then
   PIPELINE_STATUS=PASS

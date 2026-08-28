@@ -24,8 +24,10 @@ The mandatory manager-delivery sequence is:
 - IO: inputs west, outputs east; deterministic north/south overflow only when needed.
 - PD hierarchy: all 64 logical instances are required, but no matrix regions,
   fences, hierarchy boxes, column tags, or phase preplacement are applied.
-- RO macros: broad diagonal R0/MX seeds, concurrent macro-aware placement,
-  then fixed before PG construction; 2 um soft placement halos and no route blockage.
+- RO macros: broad diagonal R0/MX seeds, explicit `placed -> unplaced`
+  eligibility transition, concurrent macro-aware placement, in-core/non-overlap
+  readback, then fixed before PG construction; 2 um soft placement halos and no
+  route blockage.
 - Tie cells: exact 91 proven high targets, inserted before CTS and before fillers,
   maximum fanout 8 and maximum source distance 20 um.
 - Fillers: enabled only after routing in the canonical stage, with
@@ -120,6 +122,10 @@ cat "$PNR_DIR/reports/operator_gate_mptdc_free_placement_attempt.rpt" 2>/dev/nul
 
 echo "===== FREE PROFILE GATE ====="
 cat "$PNR_DIR/reports/operator_gate_mptdc_free_placement_trial.rpt" 2>/dev/null
+
+echo "===== RO CONCURRENT PLACEMENT GATE ====="
+cat "$PNR_DIR/reports/free_ro_seed_status.rpt" 2>/dev/null
+cat "$PNR_DIR/reports/free_macro_aware_placement.rpt" 2>/dev/null
 
 echo "===== TIE GATE ====="
 cat "$PNR_DIR/reports/tie1_routed_status.rpt" 2>/dev/null

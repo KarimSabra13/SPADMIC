@@ -270,38 +270,115 @@ proc mptdc_free_create_soft_halo {inst name margin} {
     error "MPTDC_FREE_SOFT_HALO_CREATE_FAILED: instance=$inst error=$err"
 }
 
+proc mptdc_free_mark_unplaced {inst} {
+    set errors {}
+    set commands {}
+    set ptr [mptdc_pnr_place_db_ptr $inst]
+    if {$ptr ne ""} {
+        lappend commands [list dbSet ${ptr}.pStatus unplaced]
+    }
+    lappend commands \
+        [list setInstancePlacementStatus -status unplaced -name $inst] \
+        [list set_db inst:$inst .place_status unplaced]
+
+    foreach command $commands {
+        if {[catch {uplevel #0 $command} err]} {
+            lappend errors "$command: $err"
+            continue
+        }
+        set actual [string tolower [mptdc_pnr_place_query_attr $inst {pStatus place_status status}]]
+        if {$actual eq "unplaced"} {
+            return [dict create status PASS command $command actual_status $actual errors $errors]
+        }
+        lappend errors "$command: post_status=$actual"
+    }
+    return [dict create status FAIL command "" actual_status \
+        [mptdc_pnr_place_query_attr $inst {pStatus place_status status}] errors $errors]
+}
+
+proc mptdc_free_box_inside {inner outer} {
+    if {![mptdc_signoff_box_valid $inner] || ![mptdc_signoff_box_valid $outer]} {
+        return 0
+    }
+    set epsilon 0.001
+    return [expr {
+        [lindex $inner 0] >= [lindex $outer 0] - $epsilon &&
+        [lindex $inner 1] >= [lindex $outer 1] - $epsilon &&
+        [lindex $inner 2] <= [lindex $outer 2] + $epsilon &&
+        [lindex $inner 3] <= [lindex $outer 3] + $epsilon
+    }]
+}
+
 proc mptdc_free_macro_aware_place_and_freeze {} {
     set rpt [file join [mptdc_signoff_report_dir] free_macro_aware_placement.rpt]
     set fh [open $rpt w]
-    set selected ""
-    set errors {}
-    foreach command [list \
-        [list place_design -concurrent_macros] \
-        [list place_design -concurrent_macros true] \
-        [list placeDesign -concurrent_macros] \
-        [list placeDesign -concurrent_macros true]] {
-        if {![catch {uplevel #0 $command} err]} {
-            set selected $command
-            break
+    set ro_instances [mptdc_free_ro_instances]
+    set unplaced_count 0
+    set index 0
+    foreach inst $ro_instances {
+        set before [mptdc_pnr_place_query_attr $inst {pStatus place_status status}]
+        set transition [mptdc_free_mark_unplaced $inst]
+        puts $fh "RO_${index}_INSTANCE=$inst"
+        puts $fh "RO_${index}_PRE_CONCURRENT_STATUS=$before"
+        puts $fh "RO_${index}_UNPLACE_COMMAND=[dict get $transition command]"
+        puts $fh "RO_${index}_UNPLACE_STATUS=[dict get $transition status]"
+        puts $fh "RO_${index}_POST_UNPLACE_STATUS=[dict get $transition actual_status]"
+        puts $fh "RO_${index}_UNPLACE_ERRORS=[dict get $transition errors]"
+        if {[dict get $transition status] ne "PASS"} {
+            puts $fh "MACRO_AWARE_PLACEMENT_STATUS=FAIL"
+            close $fh
+            error "MPTDC_FREE_RO_UNPLACE_FAILED: instance=$inst errors=[dict get $transition errors]"
         }
-        lappend errors "$command: $err"
+        incr unplaced_count
+        incr index
     }
-    puts $fh "MACRO_AWARE_COMMAND=$selected"
-    puts $fh "MACRO_AWARE_COMMAND_ERRORS=$errors"
-    if {$selected eq ""} {
+    puts $fh "RO_UNPLACED_FOR_CONCURRENT_COUNT=$unplaced_count"
+
+    set command [list place_design -concurrent_macros]
+    puts $fh "MACRO_AWARE_COMMAND=$command"
+    if {[catch {uplevel #0 $command} command_error]} {
+        puts $fh "MACRO_AWARE_COMMAND_STATUS=FAIL"
+        puts $fh "MACRO_AWARE_COMMAND_ERROR=$command_error"
         puts $fh "MACRO_AWARE_PLACEMENT_STATUS=FAIL"
         close $fh
-        error "MPTDC_FREE_MACRO_AWARE_PLACEMENT_UNAVAILABLE: $errors"
+        error "MPTDC_FREE_MACRO_AWARE_PLACEMENT_FAILED: $command_error"
     }
+    puts $fh "MACRO_AWARE_COMMAND_STATUS=PASS"
+    puts $fh "MACRO_AWARE_COMMAND_ERROR=NONE"
 
     set halo_margin [expr {double([mptdc_signoff_env MPTDC_FREE_RO_SOFT_HALO_UM 2.0])}]
+    set core [mptdc_signoff_core_box]
+    set final_boxes {}
+    set index 0
+    foreach inst $ro_instances {
+        set final_status [mptdc_pnr_place_query_attr $inst {pStatus place_status status}]
+        set final_box [mptdc_signoff_cell_box $inst]
+        set in_core [mptdc_free_box_inside $final_box $core]
+        puts $fh "RO_${index}_POST_CONCURRENT_STATUS=$final_status"
+        puts $fh "RO_${index}_FINAL_BBOX=$final_box"
+        puts $fh "RO_${index}_IN_CORE_STATUS=[expr {$in_core ? {PASS} : {FAIL}}]"
+        if {![mptdc_pnr_place_status_is_placed $final_status] || !$in_core} {
+            puts $fh "MACRO_AWARE_PLACEMENT_STATUS=FAIL"
+            close $fh
+            error "MPTDC_FREE_RO_CONCURRENT_READBACK_FAILED: instance=$inst status=$final_status box=$final_box"
+        }
+        lappend final_boxes $final_box
+        incr index
+    }
+    set ro_overlap [mptdc_signoff_box_overlap_area [lindex $final_boxes 0] [lindex $final_boxes 1]]
+    puts $fh "RO_PAIR_OVERLAP_AREA_UM2=[format %.6f $ro_overlap]"
+    puts $fh "RO_PAIR_NONOVERLAP_STATUS=[expr {$ro_overlap <= 0.0 ? {PASS} : {FAIL}}]"
+    if {$ro_overlap > 0.0} {
+        puts $fh "MACRO_AWARE_PLACEMENT_STATUS=FAIL"
+        close $fh
+        error "MPTDC_FREE_RO_CONCURRENT_OVERLAP_FAILED: overlap=$ro_overlap"
+    }
+
     set fixed_count 0
     set halo_count 0
     set index 0
-    foreach inst [mptdc_free_ro_instances] {
+    foreach inst $ro_instances {
         set fixed [mptdc_pnr_place_mark_fixed $inst]
-        puts $fh "RO_${index}_INSTANCE=$inst"
-        puts $fh "RO_${index}_FINAL_BBOX=[mptdc_signoff_cell_box $inst]"
         puts $fh "RO_${index}_FIX_COMMAND=[dict get $fixed command]"
         puts $fh "RO_${index}_FIX_STATUS=[dict get $fixed status]"
         if {[dict get $fixed status] ne "PASS"} {
