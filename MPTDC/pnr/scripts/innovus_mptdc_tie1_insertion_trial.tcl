@@ -613,6 +613,11 @@ proc mptdc_tie1_trial_write_stage_snapshot {
     puts $fh "${prefix}_DRC_MARKER_SIGNATURE=[dict get $snapshot marker_signature]"
 }
 
+if {[info exists ::env(MPTDC_TIE1_TRIAL_LIBRARY_ONLY)] &&
+    $::env(MPTDC_TIE1_TRIAL_LIBRARY_ONLY)} {
+    return
+}
+
 set checkpoint [file normalize \
     [mptdc_tie1_trial_required_env MPTDC_TIE1_TRIAL_CKPT]]
 set outdir [file normalize \

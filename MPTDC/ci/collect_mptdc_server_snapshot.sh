@@ -15,7 +15,10 @@ Optional environment:
   MPTDC_SNAPSHOT_SOURCE_DIR      Override source directory, required for many drygds/pvs runs.
   MPTDC_SNAPSHOT_INCLUDE_NETLIST Set to 1 to include mptdc_axis_core.postsyn.v.
   MPTDC_SNAPSHOT_INCLUDE_DEF     Set to 1 to include DEF files from Innovus snapshots.
+  MPTDC_SNAPSHOT_INCLUDE_MANAGER_IMAGES
+                                Set to 1 to include bounded GIF/PNG manager images.
   MPTDC_SNAPSHOT_MAX_TEXT_BYTES  Largest copied text file. Default: 2097152.
+  MPTDC_SNAPSHOT_MAX_IMAGE_BYTES Largest copied manager image. Default: 10485760.
 
 Run this from the repository checkout on the server after the corresponding run
 finishes. Stage only the snapshot directory printed by this script.
@@ -36,9 +39,14 @@ REPO_ROOT="$(cd "$MPTDC_ROOT/.." && pwd)"
 WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 SNAPSHOT_ROOT="${MPTDC_SNAPSHOT_ROOT:-$MPTDC_ROOT/docs/server_snapshots}"
 MAX_TEXT_BYTES="${MPTDC_SNAPSHOT_MAX_TEXT_BYTES:-2097152}"
+MAX_IMAGE_BYTES="${MPTDC_SNAPSHOT_MAX_IMAGE_BYTES:-10485760}"
 
 if [[ ! "$MAX_TEXT_BYTES" =~ ^[1-9][0-9]*$ ]]; then
   echo "ERROR: MPTDC_SNAPSHOT_MAX_TEXT_BYTES must be a positive integer" >&2
+  exit 2
+fi
+if [[ ! "$MAX_IMAGE_BYTES" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ERROR: MPTDC_SNAPSHOT_MAX_IMAGE_BYTES must be a positive integer" >&2
   exit 2
 fi
 
@@ -136,6 +144,23 @@ copy_text_tree() {
   )
 }
 
+copy_manager_images() {
+  local root="$1"
+  [[ -d "$root" ]] || return 0
+  while IFS= read -r file; do
+    local rel="${file#"$root"/}"
+    local size
+    size="$(wc -c < "$file")"
+    if (( size <= MAX_IMAGE_BYTES )); then
+      copy_file "$file" "manager/$rel"
+    else
+      printf '%s\t%s\n' "$size" "$file" >> "$DST_DIR/skipped_large_images.tmp"
+    fi
+  done < <(
+    find "$root" -type f \( -iname '*.gif' -o -iname '*.png' \) 2>/dev/null | sort
+  )
+}
+
 copy_console_tails() {
   local root="$1"
   local dst_prefix="$2"
@@ -209,6 +234,9 @@ case "$KIND" in
     copy_text_tree "$SRC_DIR/manifests" "manifests"
     copy_text_tree "$SRC_DIR/outputs" "outputs"
     copy_log_tails "$SRC_DIR/logs" "logs"
+    if [[ "${MPTDC_SNAPSHOT_INCLUDE_MANAGER_IMAGES:-0}" == "1" ]]; then
+      copy_manager_images "$SRC_DIR/manager"
+    fi
     if [[ "${MPTDC_SNAPSHOT_INCLUDE_DEF:-0}" == "1" ]]; then
       copy_text_tree "$SRC_DIR/def" "def"
       while IFS= read -r file; do
@@ -244,7 +272,8 @@ esac
   echo "- Created UTC: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
   echo
   echo "## Included Files"
-  find "$DST_DIR" -type f ! -name 'skipped_large_text.tmp' \
+  find "$DST_DIR" -type f \
+    ! -name 'skipped_large_text.tmp' ! -name 'skipped_large_images.tmp' \
     | sed "s#^$DST_DIR/##" | sort | sed 's/^/- `/' | sed 's/$/`/'
   echo
   echo "## Excluded By Policy"
@@ -253,7 +282,7 @@ esac
   echo "- raw GDS/OAS files;"
   echo "- full raw logs unless converted to message tails;"
   echo "- text files larger than $MAX_TEXT_BYTES bytes;"
-  echo "- large binary artifacts;"
+  echo "- large binary artifacts, except bounded manager images when explicitly requested;"
   echo "- server work directories outside this snapshot."
   if [[ -f "$DST_DIR/skipped_large_text.tmp" ]]; then
     echo
@@ -263,9 +292,17 @@ esac
     cat "$DST_DIR/skipped_large_text.tmp"
     echo '```'
   fi
+  if [[ -f "$DST_DIR/skipped_large_images.tmp" ]]; then
+    echo
+    echo "## Skipped Large Manager Images"
+    echo
+    echo '```text'
+    cat "$DST_DIR/skipped_large_images.tmp"
+    echo '```'
+  fi
 } > "$DST_DIR/README.md"
 
-rm -f "$DST_DIR/skipped_large_text.tmp"
+rm -f "$DST_DIR/skipped_large_text.tmp" "$DST_DIR/skipped_large_images.tmp"
 
 echo "Snapshot created: $DST_DIR"
 echo

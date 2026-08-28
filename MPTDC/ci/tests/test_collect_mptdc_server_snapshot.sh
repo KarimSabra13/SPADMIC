@@ -14,6 +14,7 @@ SNAPSHOT="$SNAPSHOT_ROOT/pvs/fixture_pvs"
 mkdir -p \
   "$SRC/reports" \
   "$SRC/manifests" \
+  "$SRC/manager" \
   "$SRC/outputs" \
   "$SRC/pvs_drc/run_base" \
   "$SRC/pvs_lvs/run_lvs/svdb"
@@ -34,6 +35,8 @@ printf 'Run Summary: Connectivity Mismatches\n' \
   > "$SRC/pvs_lvs/run_lvs/mptdc_axis_core_lvs.sum.cls"
 printf 'layout_instances=213790 source_instances=213412\n' \
   > "$SRC/pvs_lvs/run_lvs/svdb/mismatched"
+printf 'small manager image fixture\n' > "$SRC/manager/floorplan.gif"
+dd if=/dev/zero of="$SRC/manager/oversized.png" bs=32 count=2 status=none
 
 MPTDC_SNAPSHOT_ROOT="$SNAPSHOT_ROOT" \
 MPTDC_SNAPSHOT_SOURCE_DIR="$SRC" \
@@ -56,6 +59,16 @@ test ! -e "$SNAPSHOT/outputs/layout.gds"
 grep -Fq 'oversized.rpt' "$SNAPSHOT/README.md"
 grep -Fq 'ERROR fixture failure' \
   "$SNAPSHOT/pvs_drc/run_base/pvs_replay.stdout.messages.tail"
+
+IMAGE_SNAPSHOT="$SNAPSHOT_ROOT/innovus/fixture_images"
+MPTDC_SNAPSHOT_ROOT="$SNAPSHOT_ROOT" \
+MPTDC_SNAPSHOT_SOURCE_DIR="$SRC" \
+MPTDC_SNAPSHOT_INCLUDE_MANAGER_IMAGES=1 \
+MPTDC_SNAPSHOT_MAX_IMAGE_BYTES=32 \
+bash "$COLLECTOR" innovus fixture_images > "$TMP_ROOT/image_collector.stdout"
+test -s "$IMAGE_SNAPSHOT/manager/floorplan.gif"
+test ! -e "$IMAGE_SNAPSHOT/manager/oversized.png"
+grep -Fq 'oversized.png' "$IMAGE_SNAPSHOT/README.md"
 
 set +e
 MPTDC_SNAPSHOT_ROOT="$SNAPSHOT_ROOT" \

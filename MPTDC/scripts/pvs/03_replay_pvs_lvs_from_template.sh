@@ -25,6 +25,7 @@ EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 DRY_RUN=0
 DIAGNOSTIC_ALLOW_BASE_DRC_DEBT=0
 DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX=0
+DIAGNOSTIC_FREE_MANAGER_SCOPE=0
 BLACKBOX_CELL=""
 
 usage() {
@@ -55,6 +56,11 @@ Options:
                             dedicated scope manifest, and skip DRC prerequisites.
                             This proves top-level boundary connectivity only and
                             is never standalone RO or block signoff evidence.
+  --diagnostic-free-manager-scope
+                            Guarded free-placement mode: require attributable
+                            CLEAN or antenna-only base DRC classification and
+                            its manager-exception scope, skip density DRC, and
+                            run full block LVS. Never signoff mode.
   --dry-run                 Patch and audit templates without launching run.pvs.
   -h, --help                Show this help.
 USAGE
@@ -117,6 +123,10 @@ while [[ $# -gt 0 ]]; do
     --diagnostic-ro6-boundary-blackbox)
       DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX=1
       BLACKBOX_CELL=RO_tune6
+      shift
+      ;;
+    --diagnostic-free-manager-scope)
+      DIAGNOSTIC_FREE_MANAGER_SCOPE=1
       shift
       ;;
     --dry-run)
@@ -200,6 +210,62 @@ require_attributable_base_drc() {
     [[ "$nonzero" != 0 ]] || \
       mptdc_pvs_die "diagnostic LVS base DRC FAIL has no nonzero rule inventory: $status_report"
   fi
+}
+
+require_free_manager_scope() {
+  local scope="$NEW_BASE/manifests/pvs_free_trial_manager_scope.rpt"
+  local classification="$NEW_BASE/reports/pvs_free_trial_drc_classification.rpt"
+  local class exception scope_layout_hash scope_rule_hash
+  local classifier_layout_hash classifier_rule_hash
+  local status_layout_hash status_rule_hash actual_layout_hash
+
+  mptdc_pvs_require_file "$scope"
+  mptdc_pvs_require_file "$classification"
+  grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_FREE_PLACEMENT_MANAGER_SCOPE' "$scope" || \
+    mptdc_pvs_die "free-placement manager scope has invalid PVS_RUN_CLASS: $scope"
+  grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_FULL_LVS' "$scope" || \
+    mptdc_pvs_die "free-placement manager scope has invalid DIAGNOSTIC_SCOPE: $scope"
+  grep -qx 'DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE' "$scope" || \
+    mptdc_pvs_die "free-placement manager scope did not explicitly defer density DRC: $scope"
+  grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' "$scope" || \
+    mptdc_pvs_die "free-placement manager scope attempted antenna repair: $scope"
+  grep -qx 'ALLOWED_ANTENNA_RULE_SET=R1M2P1,R1M3P1,R2M2P1,R2M3P1' "$scope" || \
+    mptdc_pvs_die "free-placement manager scope has an unexpected antenna rule set: $scope"
+  grep -qx 'SIGNOFF_ELIGIBLE=NO' "$scope" || \
+    mptdc_pvs_die "free-placement manager scope is not marked signoff-ineligible: $scope"
+  grep -qx 'CLASSIFICATION_STATUS=PASS' "$classification" || \
+    mptdc_pvs_die "free-placement base DRC classifier did not pass: $classification"
+  grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' "$classification" || \
+    mptdc_pvs_die "free-placement base DRC classifier records antenna repair: $classification"
+  grep -qx 'SIGNOFF_ELIGIBLE=NO' "$classification" || \
+    mptdc_pvs_die "free-placement base DRC classifier is not marked signoff-ineligible: $classification"
+
+  class="$(report_value "$scope" BASE_DRC_CLASS)"
+  [[ "$class" == CLEAN || "$class" == ANTENNA_ONLY_MANAGER_EXCEPTION ]] || \
+    mptdc_pvs_die "free-placement manager scope has blocked base DRC class: $class"
+  [[ "$(report_value "$classification" PVS_BASE_DRC_CLASS)" == "$class" ]] || \
+    mptdc_pvs_die "free-placement classifier and scope disagree"
+  exception="$(report_value "$scope" MANAGER_ANTENNA_EXCEPTION)"
+  if [[ "$class" == ANTENNA_ONLY_MANAGER_EXCEPTION ]]; then
+    [[ "$exception" == YES ]] || mptdc_pvs_die "antenna-only class lacks manager exception"
+  else
+    [[ "$exception" == NOT_NEEDED ]] || mptdc_pvs_die "clean base DRC has invalid exception state"
+  fi
+
+  require_attributable_base_drc
+  scope_layout_hash="$(report_value "$scope" BASE_DRC_LAYOUT_SHA256)"
+  scope_rule_hash="$(report_value "$scope" BASE_DRC_RULE_REPORT_SHA256)"
+  classifier_layout_hash="$(report_value "$classification" LAYOUT_INPUT_SHA256)"
+  classifier_rule_hash="$(report_value "$classification" RULE_REPORT_SHA256)"
+  status_layout_hash="$(report_value "$NEW_BASE/reports/pvs_drc_base_status.rpt" LAYOUT_INPUT_SHA256)"
+  status_rule_hash="$(report_value "$NEW_BASE/reports/pvs_drc_base_status.rpt" NONZERO_RULE_REPORT_SHA256)"
+  actual_layout_hash="$(mptdc_pvs_sha256 "$NEW_GDS")"
+  [[ "$scope_layout_hash" == "$status_layout_hash" && \
+     "$scope_layout_hash" == "$classifier_layout_hash" && \
+     "$scope_layout_hash" == "$actual_layout_hash" && \
+     "$scope_rule_hash" == "$status_rule_hash" && \
+     "$scope_rule_hash" == "$classifier_rule_hash" ]] || \
+    mptdc_pvs_die "free-placement manager scope hashes do not bind the base DRC evidence"
 }
 
 require_ro6_boundary_blackbox_scope() {
@@ -357,8 +423,9 @@ write_ro6_boundary_blackbox_gate() {
 }
 
 [[ -n "$NEW_BASE" ]] || { usage >&2; mptdc_pvs_die "--prepared-dir is required"; }
-if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" == 1 && "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
-  mptdc_pvs_die "diagnostic base-DRC debt and RO6 boundary-blackbox modes are mutually exclusive"
+diagnostic_mode_count=$((DIAGNOSTIC_ALLOW_BASE_DRC_DEBT + DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX + DIAGNOSTIC_FREE_MANAGER_SCOPE))
+if [[ "$diagnostic_mode_count" -gt 1 ]]; then
+  mptdc_pvs_die "diagnostic LVS modes are mutually exclusive"
 fi
 NEW_GDS="${NEW_GDS:-$NEW_BASE/outputs/mptdc_axis_core_merged_stdcell_ro6.gds}"
 NEW_SRC="${NEW_SRC:-$NEW_BASE/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v}"
@@ -388,6 +455,11 @@ if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" == 1 ]]; then
 fi
 if [[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
   require_ro6_boundary_blackbox_scope
+fi
+if [[ "$DIAGNOSTIC_FREE_MANAGER_SCOPE" == 1 ]]; then
+  require_free_manager_scope
+  [[ ! -e "$NEW_BASE/reports/pvs_drc_density_status.rpt" ]] || \
+    mptdc_pvs_die "free-placement base-DRC plus LVS scope unexpectedly contains density DRC evidence"
 fi
 
 if [[ -e "$NEW_LVS_RUN" ]]; then
@@ -450,6 +522,7 @@ chmod +x "$NEW_LVS_RUN/run.pvs"
   echo "dcell_cdl: $DCELL_CDL"
   echo "diagnostic_allow_base_drc_debt: $DIAGNOSTIC_ALLOW_BASE_DRC_DEBT"
   echo "diagnostic_ro6_boundary_blackbox: $DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX"
+  echo "diagnostic_free_manager_scope: $DIAGNOSTIC_FREE_MANAGER_SCOPE"
   echo "blackbox_cell: ${BLACKBOX_CELL:-NONE}"
   echo "ro6_bus_pin_normalization: $([[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]] && echo EXACT_SAME_INDEX_SCALAR_ANGLE_PORTS || echo NONE)"
   echo "verilog_global_signal_port_policy: $([[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]] && echo DO_NOT_PROMOTE || echo DEFAULT)"
@@ -470,7 +543,9 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" != 1 && "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" != 1 ]]; then
+if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" != 1 &&
+      "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" != 1 &&
+      "$DIAGNOSTIC_FREE_MANAGER_SCOPE" != 1 ]]; then
   for variant in base density; do
     drc_status="$NEW_BASE/reports/pvs_drc_${variant}_status.rpt"
     mptdc_pvs_require_file "$drc_status"

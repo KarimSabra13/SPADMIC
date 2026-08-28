@@ -93,6 +93,12 @@ proc mptdc_pnr_apply_physical_effort {stage} {
         mptdc_pnr_effort_try $fh opt_mode $cmd
     }
 
+    set fix_antenna true
+    if {[info exists ::env(MPTDC_DISABLE_ANTENNA_REPAIR)] &&
+        $::env(MPTDC_DISABLE_ANTENNA_REPAIR)} {
+        set fix_antenna false
+    }
+    puts $fh "ANTENNA_REPAIR_ENABLED=[expr {$fix_antenna ? 1 : 0}]"
     set route_cmds [list \
         [list setNanoRouteMode -routeBottomRoutingLayer $bottom_layer_idx] \
         [list setNanoRouteMode -routeTopRoutingLayer $top_layer_idx] \
@@ -100,7 +106,7 @@ proc mptdc_pnr_apply_physical_effort {stage} {
         [list setNanoRouteMode -routeWithSiDriven true] \
         [list setNanoRouteMode -drouteUseMultiCutViaEffort high] \
         [list setNanoRouteMode -routeWithViaInPin true] \
-        [list setNanoRouteMode -drouteFixAntenna true] \
+        [list setNanoRouteMode -drouteFixAntenna $fix_antenna] \
     ]
     foreach cmd $route_cmds {
         mptdc_pnr_effort_try $fh route_mode $cmd

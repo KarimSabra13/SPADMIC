@@ -12,6 +12,7 @@ GENUS_RUN_DIR="${MPTDC_GENUS_RUN_DIR:-}"
 HANDOFF_DIR="${MPTDC_GENUS_HANDOFF_DIR:-}"
 MODE="${MPTDC_DIGITAL_SIGNOFF_MODE:-validate_only}"
 EXPECTED_HEAD="${MPTDC_EXPECTED_HEAD:-}"
+INNOVUS_INIT_TCL=""
 
 usage() {
   cat <<'USAGE'
@@ -680,6 +681,7 @@ case "$MODE" in
 esac
 
 RUN_ID="${RUN_ID:-${MPTDC_INNOVUS_RUN_ID:-MPTDC_TC_Closure_Innovus}}"
+INNOVUS_INIT_TCL="$(abs_path "${MPTDC_INNOVUS_INIT_TCL:-MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl}")"
 MPTDC_WORK_ROOT="$(abs_path "${MPTDC_WORK_ROOT:-work}")"
 MPTDC_INNOVUS_WORK="$(abs_path "${MPTDC_INNOVUS_WORK:-$MPTDC_WORK_ROOT/innovus}")"
 MPTDC_GENUS_WORK="$(abs_path "${MPTDC_GENUS_WORK:-$MPTDC_WORK_ROOT/genus}")"
@@ -701,6 +703,11 @@ REPORT_DIR="$RESULT_DIR/reports"
 MANIFEST_DIR="$RESULT_DIR/manifests"
 mkdir -p "$LOG_DIR" "$REPORT_DIR" "$MANIFEST_DIR"
 RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
+
+if [[ ! -f "$INNOVUS_INIT_TCL" ]]; then
+  echo "ERROR: Innovus init Tcl does not exist: $INNOVUS_INIT_TCL" >&2
+  exit 2
+fi
 
 if [[ -n "$EXPECTED_HEAD" ]]; then
   ACTUAL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
@@ -733,6 +740,8 @@ fi
   echo "branch: $(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   echo "head: $(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
   echo "expected_head: ${EXPECTED_HEAD:-unset}"
+  echo "innovus_init_tcl: $INNOVUS_INIT_TCL"
+  echo "innovus_init_tcl_sha256: $(sha256sum "$INNOVUS_INIT_TCL" | awk '{print $1}')"
   echo "mode: $MODE"
   echo "run_id: $RUN_ID"
   echo "result_dir: $RESULT_DIR"
@@ -1037,7 +1046,7 @@ if command -v tclsh >/dev/null 2>&1; then
     O1_RO_LEF_PATH="${O1_RO_LEF_PATH:-}" \
     O1_RO_LIBERTY_PATH="${O1_RO_LIBERTY_PATH:-}" \
     MPTDC_DIGITAL_SIGNOFF_SOURCE_ONLY=1 \
-      tclsh MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl
+      tclsh "$INNOVUS_INIT_TCL"
   ) 2>&1 | tee "$REPORT_DIR/source_check.rpt" | tee -a "$RUN_LOG"
   source_rc=${PIPESTATUS[0]}
   set -e
@@ -1089,7 +1098,7 @@ set +e
   O1_USE_REAL_RO_ABSTRACT="${O1_USE_REAL_RO_ABSTRACT:-1}" \
   O1_RO_LEF_PATH="${O1_RO_LEF_PATH:-}" \
   O1_RO_LIBERTY_PATH="${O1_RO_LIBERTY_PATH:-}" \
-    innovus -nowin -init MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl \
+    innovus -nowin -init "$INNOVUS_INIT_TCL" \
       -log "$LOG_DIR/innovus_mptdc_digital_signoff.log"
 ) 2>&1 | tee -a "$RUN_LOG"
 innovus_rc=${PIPESTATUS[0]}

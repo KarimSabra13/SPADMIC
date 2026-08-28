@@ -20,8 +20,11 @@ NEW_HCELL="$PREPARED/outputs/pvs_hcell_ro6.txt"
 DCELL_CDL="$TMP_ROOT/xh018_D_CELLS_JIHD.cdl"
 SCOPE="$PREPARED/manifests/pvs_diagnostic_scope.rpt"
 BOUNDARY_SCOPE="$PREPARED/manifests/pvs_ro6_boundary_blackbox_scope.rpt"
+FREE_SCOPE="$PREPARED/manifests/pvs_free_trial_manager_scope.rpt"
+FREE_CLASSIFICATION="$PREPARED/reports/pvs_free_trial_drc_classification.rpt"
 DRC_STATUS="$PREPARED/reports/pvs_drc_base_status.rpt"
 RULE_REPORT="$PREPARED/reports/pvs_drc_base_nonzero_rules.tsv"
+DENSITY_STATUS="$PREPARED/reports/pvs_drc_density_status.rpt"
 
 mkdir -p "$REPO/MPTDC/scripts/pvs" "$PREPARED/outputs" "$PREPARED/manifests" \
   "$PREPARED/reports" "$TEMPLATE" "$OLD_BASE"
@@ -171,6 +174,25 @@ run_boundary_dry() {
     --dry-run
 }
 
+run_free_dry() {
+  local run_dir="$1"
+  bash "$REPLAY" \
+    --prepared-dir "$PREPARED" \
+    --template-run "$TEMPLATE" \
+    --new-gds "$NEW_GDS" \
+    --new-source "$NEW_SOURCE" \
+    --new-hcell "$NEW_HCELL" \
+    --dcell-cdl "$DCELL_CDL" \
+    --old-base "$OLD_BASE" \
+    --old-gds "$OLD_GDS" \
+    --old-source "$OLD_SOURCE" \
+    --old-hcell "$OLD_HCELL" \
+    --new-run-dir "$run_dir" \
+    --expected-head "$HEAD_SHA" \
+    --diagnostic-free-manager-scope \
+    --dry-run
+}
+
 run_boundary() {
   local run_dir="$1"
   bash "$REPLAY" \
@@ -208,6 +230,64 @@ BAD_HASH_RC=$?
 set -e
 test "$BAD_HASH_RC" -ne 0
 grep -Fq 'rule inventory hash mismatch' "$TMP_ROOT/bad_hash.stdout"
+
+printf 'rule\tprimary\texpanded\n' > "$RULE_REPORT"
+RULE_HASH="$(sha256sum "$RULE_REPORT" | awk '{print $1}')"
+LAYOUT_HASH="$(sha256sum "$NEW_GDS" | awk '{print $1}')"
+cat > "$DRC_STATUS" <<EOF
+STATUS=PASS
+PVS_DRC_STATUS=PASS
+PVS_DRC_VARIANT=BASE
+PVS_RC=0
+DRC_TOTAL_PRIMARY=0
+DRC_TOTAL_EXPANDED=0
+NONZERO_RULE_COUNT=0
+NONZERO_RULE_REPORT=$RULE_REPORT
+NONZERO_RULE_REPORT_SHA256=$RULE_HASH
+LAYOUT_INPUT_SHA256=$LAYOUT_HASH
+EOF
+cat > "$FREE_CLASSIFICATION" <<EOF
+PVS_BASE_DRC_CLASS=CLEAN
+LAYOUT_INPUT_SHA256=$LAYOUT_HASH
+RULE_REPORT_SHA256=$RULE_HASH
+CLASSIFICATION_STATUS=PASS
+ANTENNA_REPAIR_ATTEMPTED=NO
+SIGNOFF_ELIGIBLE=NO
+EOF
+cat > "$FREE_SCOPE" <<EOF
+PVS_RUN_CLASS=DIAGNOSTIC_FREE_PLACEMENT_MANAGER_SCOPE
+DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_FULL_LVS
+BASE_DRC_CLASS=CLEAN
+DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE
+ANTENNA_REPAIR_ATTEMPTED=NO
+MANAGER_ANTENNA_EXCEPTION=NOT_NEEDED
+ALLOWED_ANTENNA_RULE_SET=R1M2P1,R1M3P1,R2M2P1,R2M3P1
+BASE_DRC_LAYOUT_SHA256=$LAYOUT_HASH
+BASE_DRC_RULE_REPORT_SHA256=$RULE_HASH
+SIGNOFF_ELIGIBLE=NO
+EOF
+
+run_free_dry "$TMP_ROOT/lvs_free_valid" > "$TMP_ROOT/free_valid.stdout"
+grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
+grep -qx 'diagnostic_free_manager_scope: 1' "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
+
+sed -i 's/^CLASSIFICATION_STATUS=PASS$/CLASSIFICATION_STATUS=FAIL/' "$FREE_CLASSIFICATION"
+set +e
+run_free_dry "$TMP_ROOT/lvs_free_bad_classifier" > "$TMP_ROOT/free_bad_classifier.stdout" 2>&1
+FREE_BAD_CLASSIFIER_RC=$?
+set -e
+test "$FREE_BAD_CLASSIFIER_RC" -ne 0
+grep -Fq 'free-placement base DRC classifier did not pass' "$TMP_ROOT/free_bad_classifier.stdout"
+sed -i 's/^CLASSIFICATION_STATUS=FAIL$/CLASSIFICATION_STATUS=PASS/' "$FREE_CLASSIFICATION"
+
+printf 'STATUS=PASS\nPVS_DRC_VARIANT=DENSITY\n' > "$DENSITY_STATUS"
+set +e
+run_free_dry "$TMP_ROOT/lvs_free_with_density" > "$TMP_ROOT/free_with_density.stdout" 2>&1
+FREE_WITH_DENSITY_RC=$?
+set -e
+rm -f "$DENSITY_STATUS"
+test "$FREE_WITH_DENSITY_RC" -ne 0
+grep -Fq 'unexpectedly contains density DRC evidence' "$TMP_ROOT/free_with_density.stdout"
 
 run_boundary_dry "$TMP_ROOT/lvs_boundary_valid" > "$TMP_ROOT/boundary_valid.stdout"
 grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
