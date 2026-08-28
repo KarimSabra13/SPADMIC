@@ -9,6 +9,7 @@ PUBLISHER="${MPTDC_TIE1_PROBE_PUBLISHER:-$REPO_ROOT/MPTDC/ci/publish_mptdc_serve
 PROBE_TCL="${MPTDC_TIE1_PROBE_TCL:-$SCRIPT_DIR/innovus_mptdc_tie1_checkpoint_probe.tcl}"
 INNOVUS_BIN="${MPTDC_TIE1_PROBE_INNOVUS_BIN:-innovus}"
 INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-/sim/ksabra/SPADMIC_work/innovus}"
+CADENCE_ENV="${MPTDC_CADENCE_ENV:-/eda/cadence/eda_2023-2024}"
 
 BOUNDARY_PVS_RUN_ID=""
 RUN_ID=""
@@ -42,6 +43,39 @@ report_value() {
 
 file_sha256() {
   sha256sum "$1" 2>/dev/null | awk '{print $1}'
+}
+
+load_cadence_env() {
+  local env_file="$1"
+
+  echo "CADENCE_ENV=$env_file"
+  if [[ ! -r "$env_file" ]]; then
+    CADENCE_ENV_RC=1
+    CADENCE_ENV_STATUS=FAIL_NOT_READABLE
+    echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+    echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
+    return 1
+  fi
+
+  # Site setup files target interactive shells and may read unset variables.
+  # Keep nounset disabled only while crossing that environment boundary.
+  set +u
+  set +e
+  # shellcheck disable=SC1090
+  source "$env_file" >/dev/null 2>&1
+  CADENCE_ENV_RC=$?
+  set +e
+  set -u
+  set -o pipefail
+
+  if [[ "$CADENCE_ENV_RC" -eq 0 ]]; then
+    CADENCE_ENV_STATUS=PASS
+  else
+    CADENCE_ENV_STATUS=FAIL
+  fi
+  echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+  echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
+  [[ "$CADENCE_ENV_STATUS" == PASS ]]
 }
 
 checkpoint_content_hash() {
@@ -262,10 +296,16 @@ MUTATION_COMMAND_COUNT="$({ sed '/^[[:space:]]*#/d' "$PROBE_TCL" 2>/dev/null | \
 [[ "$MUTATION_COMMAND_COUNT" == 0 ]] || { echo "STOP: mutation command found in read-only probe Tcl"; PREFLIGHT=FAIL; }
 
 CADENCE_ENV_RC=0
-if [[ "$INNOVUS_BIN" == innovus && -f /eda/cadence/eda_2023-2024 ]]; then
-  # shellcheck disable=SC1091
-  source /eda/cadence/eda_2023-2024 2>/dev/null
-  CADENCE_ENV_RC=$?
+CADENCE_ENV_STATUS=SKIPPED_CUSTOM_INNOVUS
+if [[ "$INNOVUS_BIN" == innovus || -n "${MPTDC_CADENCE_ENV+x}" ]]; then
+  if ! load_cadence_env "$CADENCE_ENV"; then
+    echo "STOP: Cadence environment failed"
+    PREFLIGHT=FAIL
+  fi
+else
+  echo "CADENCE_ENV=$CADENCE_ENV"
+  echo "CADENCE_ENV_RC=$CADENCE_ENV_RC"
+  echo "CADENCE_ENV_STATUS=$CADENCE_ENV_STATUS"
 fi
 if [[ "$INNOVUS_BIN" == */* ]]; then
   [[ -x "$INNOVUS_BIN" ]] || { echo "STOP: Innovus executable is unavailable: $INNOVUS_BIN"; PREFLIGHT=FAIL; }
@@ -275,8 +315,6 @@ else
     PREFLIGHT=FAIL
   }
 fi
-[[ "$CADENCE_ENV_RC" -eq 0 ]] || { echo "STOP: Cadence environment failed"; PREFLIGHT=FAIL; }
-CADENCE_ENV_STATUS=$([[ "$CADENCE_ENV_RC" -eq 0 ]] && echo PASS || echo FAIL)
 
 echo "TIE1_CHECKPOINT_PROBE_PREFLIGHT=$PREFLIGHT"
 echo "RESTORE_COMMAND_COUNT=$RESTORE_COMMAND_COUNT"

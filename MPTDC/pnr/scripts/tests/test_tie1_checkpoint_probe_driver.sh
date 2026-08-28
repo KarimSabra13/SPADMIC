@@ -17,6 +17,8 @@ PROBE_TCL="$REPO/MPTDC/pnr/scripts/innovus_mptdc_tie1_checkpoint_probe.tcl"
 INNOVUS_STUB="$TMP_ROOT/innovus_stub.sh"
 PUBLISHER_STUB="$TMP_ROOT/publisher_stub.sh"
 TCL_HARNESS="$TMP_ROOT/tie1_probe_tcl_harness.tcl"
+CADENCE_ENV_STUB="$TMP_ROOT/cadence_env_stub.sh"
+FAILING_CADENCE_ENV="$TMP_ROOT/cadence_env_fail.sh"
 
 mkdir -p "$REPO/MPTDC/pnr/scripts" \
   "$WORK/$SOURCE_PNR_ID/checkpoints/repaired_route.enc.dat" \
@@ -116,6 +118,9 @@ cp -p "$WORK/$SOURCE_PVS_ID/reports/lvs_source_filter.rpt" \
 cat > "$INNOVUS_STUB" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${MPTDC_TEST_REQUIRE_CADENCE_ENV:-0}" == 1 ]]; then
+  [[ "${MPTDC_TEST_CADENCE_ENV_LOADED:-}" == YES ]]
+fi
 outdir="${MPTDC_TIE1_PROBE_OUTDIR:?}"
 checkpoint="${MPTDC_TIE1_PROBE_CKPT:?}"
 mkdir -p "$outdir/reports"
@@ -152,6 +157,21 @@ index	inst_term	instance	master	pin	net	is_tie_high	is_tie_low
 0	u0/A	u0	NA2JIHDX1	A	tie1	1	0
 RPT
 exit 0
+EOF
+
+cat > "$CADENCE_ENV_STUB" <<'EOF'
+#!/usr/bin/env bash
+# This intentional unset-variable read reproduces the server site setup case.
+if [[ -n "$MPTDC_TEST_OPTIONAL_SITE_VALUE" ]]; then
+  :
+fi
+export MPTDC_TEST_CADENCE_ENV_LOADED=YES
+return 0
+EOF
+
+cat > "$FAILING_CADENCE_ENV" <<'EOF'
+#!/usr/bin/env bash
+return 23
 EOF
 
 cat > "$PUBLISHER_STUB" <<'EOF'
@@ -236,7 +256,9 @@ RUN_ID=tie1_probe_pass
 MPTDC_TIE1_PROBE_REPO_ROOT="$REPO" \
 MPTDC_TIE1_PROBE_INNOVUS_BIN="$INNOVUS_STUB" \
 MPTDC_TIE1_PROBE_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_CADENCE_ENV="$CADENCE_ENV_STUB" \
 MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_REQUIRE_CADENCE_ENV=1 \
 MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/pass.publish.args" \
 bash "$DRIVER" \
   --boundary-pvs-run-id "$BOUNDARY_ID" \
@@ -247,6 +269,8 @@ grep -qx 'TIE1_CHECKPOINT_PROBE_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'TIE1_NET_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'TIE1_INST_TERM_COUNT=334' "$TMP_ROOT/pass.stdout"
 grep -qx 'PHYSICAL_TIE_INSTANCE_COUNT=0' "$TMP_ROOT/pass.stdout"
+grep -qx 'CADENCE_ENV_RC=0' "$TMP_ROOT/pass.stdout"
+grep -qx 'CADENCE_ENV_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'READ_ONLY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_REVIEW_TIE1_EVIDENCE' "$TMP_ROOT/pass.stdout"
 grep -qx 'NEXT_STAGE=REVIEW_TIE1_EVIDENCE_BEFORE_HASH_GUARDED_TRIAL' "$TMP_ROOT/pass.stdout"
@@ -256,6 +280,26 @@ grep -qx 'DESIGN_MUTATION_COUNT=0' "$WORK/$RUN_ID/reports/operator_gate_tie1_che
 test "$(wc -l < "$WORK/$RUN_ID/reports/tie1_inst_term_inventory.tsv")" -eq 2
 SOURCE_HASH_AFTER="$(sha256sum "$WORK/$SOURCE_PNR_ID/checkpoints/repaired_route.enc.dat/design.bin" | awk '{print $1}')"
 test "$SOURCE_HASH_BEFORE" = "$SOURCE_HASH_AFTER"
+
+set +e
+MPTDC_TIE1_PROBE_REPO_ROOT="$REPO" \
+MPTDC_TIE1_PROBE_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_PROBE_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_CADENCE_ENV="$FAILING_CADENCE_ENV" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/env_fail.publish.args" \
+bash "$DRIVER" \
+  --boundary-pvs-run-id "$BOUNDARY_ID" \
+  --run-id tie1_probe_env_fail \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/env_fail.stdout" 2>&1
+ENV_FAIL_RC=$?
+set -e
+test "$ENV_FAIL_RC" -eq 4
+grep -qx 'CADENCE_ENV_RC=23' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'CADENCE_ENV_STATUS=FAIL' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'STOP: Cadence environment failed' "$TMP_ROOT/env_fail.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/env_fail.stdout"
+test ! -e "$WORK/tie1_probe_env_fail"
 
 set +e
 MPTDC_TIE1_PROBE_REPO_ROOT="$REPO" \
