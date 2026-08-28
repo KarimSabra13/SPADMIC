@@ -47,9 +47,8 @@ assert_equal ring_layers [option_value $ring -layer] \
 set ::env(MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS) 1
 set mesh [mptdc_signoff_pg_mesh_stripe_commands {VDD VSS} METTP MET3 vertical]
 assert_equal block_aware_mesh_candidate_count [llength $mesh] 1
-if {[lsearch -exact [lindex $mesh 0] -break_stripes_at_block_rings] < 0} {
-    error "block-aware mesh command omitted -break_stripes_at_block_rings"
-}
+assert_equal block_aware_mesh_break_value \
+    [option_value [lindex $mesh 0] -break_stripes_at_block_rings] 1
 
 set ::env(MPTDC_ENABLE_RO_BLOCK_RINGS) 1
 set ::env(MPTDC_PG_STRATEGY) innovus_sroute_golden_ro

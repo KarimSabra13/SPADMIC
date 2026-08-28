@@ -5715,7 +5715,7 @@ proc mptdc_signoff_pg_mesh_stripe_commands {nets layer fallback_layer direction}
     set base [list addStripe -nets $nets -layer $layer -direction $direction \
         -width 2 -spacing 2 -set_to_set_distance 80 -start_from $start_from -start_offset 20]
     if {[mptdc_signoff_env_truthy MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS 0]} {
-        lappend base -break_stripes_at_block_rings
+        lappend base -break_stripes_at_block_rings 1
         return [list $base]
     }
     return [list $base [list addStripe -nets $nets -layer $fallback_layer -direction $direction \

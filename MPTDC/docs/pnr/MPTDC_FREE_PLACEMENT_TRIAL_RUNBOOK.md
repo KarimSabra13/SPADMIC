@@ -28,6 +28,11 @@ The mandatory manager-delivery sequence is:
   eligibility transition, concurrent macro-aware placement, in-core/non-overlap
   readback, then fixed before PG construction; 2 um soft placement halos and no
   route blockage.
+- RO PG mesh: the installed IC23.1 `addStripe` parser requires the value-taking
+  form `-break_stripes_at_block_rings 1`. A bare option is invalid. The archived
+  `20260828_mptdc_free_pnr_roblockring_151008_u50` attempt proved both RO block
+  rings were created, then stopped at PG construction with `IMPTCM-6` because
+  the value was omitted. No earlier archived MPTDC run exercised this option.
 - Tie cells: exact 91 proven high targets, inserted before CTS and before fillers,
   maximum fanout 8 and maximum source distance 20 um.
 - Fillers: enabled only after routing in the canonical stage, with
