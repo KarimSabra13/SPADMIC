@@ -114,7 +114,7 @@ EOF
 {
   printf 'polarity\tinst_term\tinstance\tmaster\tpin\tnet\n'
   for index in $(seq 1 91); do
-    printf 'HIGH\tu_sink_%03d/SN\tu_sink_%03d\tDFRSJIHDX1\tSN\t0x0\n' \
+    printf 'HIGH\t{u_sink[%03d]/SN}\t{u_sink[%03d]}\tDFRSJIHDX1\tSN\t0x0\n' \
       "$index" "$index"
   done
 } > "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
@@ -162,7 +162,10 @@ cat > "$INNOVUS_STUB" <<'EOF'
 set -euo pipefail
 outdir="${MPTDC_TIE1_TRIAL_OUTDIR:?}"
 checkpoint="${MPTDC_TIE1_TRIAL_CKPT:?}"
+instance_pin_file="${MPTDC_TIE1_TRIAL_INSTANCE_PIN_FILE:?}"
 mkdir -p "$outdir/reports"
+test -s "$instance_pin_file"
+test "$(awk 'NF {n++} END {print n+0}' "$instance_pin_file")" -eq 91
 
 if [[ "${MPTDC_TEST_MUTATE_SAFE_COPY:-0}" == 1 ]]; then
   printf 'unexpected mutation\n' >> "$checkpoint/design.bin"
@@ -171,8 +174,16 @@ fi
 if [[ "${MPTDC_TEST_TRIAL_FAIL:-0}" == 1 ]]; then
   cat > "$outdir/reports/tie1_insertion_trial_status.rpt" <<'RPT'
 COMMAND_PRECHECK=PASS
+ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE
+INSTANCE_PIN_TARGET_FILE_STATUS=PASS
+INSTANCE_PIN_TARGET_COUNT=91
+INSTANCE_PIN_TARGET_UNIQUE_COUNT=91
+INSTANCE_PIN_TARGET_INVALID_COUNT=0
+INSTANCE_PIN_TARGET_MATCH_STATUS=PASS
 SET_TIE_MODE_STATUS=PASS
 ADD_TIE_STATUS=FAIL
+ADD_TIE_EFFECT_STATUS=FAIL
+ADD_TIE_EFFECT_REASON=COMMAND_FAILED
 SELECTED_ROUTE_STATUS=NOT_RUN
 BASELINE_PLACEMENT_STATUS=PASS
 FINAL_PLACEMENT_STATUS=PASS
@@ -224,8 +235,16 @@ printf 'accepted candidate fixture\n' \
   > "$outdir/checkpoints/repaired_route.enc.dat/design.bin"
 cat > "$outdir/reports/tie1_insertion_trial_status.rpt" <<'RPT'
 COMMAND_PRECHECK=PASS
+ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE
+INSTANCE_PIN_TARGET_FILE_STATUS=PASS
+INSTANCE_PIN_TARGET_COUNT=91
+INSTANCE_PIN_TARGET_UNIQUE_COUNT=91
+INSTANCE_PIN_TARGET_INVALID_COUNT=0
+INSTANCE_PIN_TARGET_MATCH_STATUS=PASS
 SET_TIE_MODE_STATUS=PASS
 ADD_TIE_STATUS=PASS
+ADD_TIE_EFFECT_STATUS=PASS
+ADD_TIE_EFFECT_REASON=NONE
 SELECTED_ROUTE_STATUS=PASS
 BASELINE_PLACEMENT_STATUS=PASS
 FINAL_PLACEMENT_STATUS=PASS
@@ -283,6 +302,21 @@ if [[ "${MPTDC_TEST_MARKER_MISMATCH:-0}" == 1 ]]; then
     's/^FINAL_DRC_MARKER_SIGNATURE=.*$/FINAL_DRC_MARKER_SIGNATURE={5 6 7 8}|MET2|Geometry|Minimal_Area|Net_m/' \
     "$outdir/reports/tie1_insertion_trial_status.rpt"
 fi
+if [[ "${MPTDC_TEST_ZERO_EFFECT:-0}" == 1 ]]; then
+  sed -i \
+    -e 's/^ADD_TIE_EFFECT_STATUS=PASS$/ADD_TIE_EFFECT_STATUS=FAIL/' \
+    -e 's/^ADD_TIE_EFFECT_REASON=NONE$/ADD_TIE_EFFECT_REASON=NO_ELIGIBLE_TARGET_WAS_CONNECTED/' \
+    -e 's/^SELECTED_ROUTE_STATUS=PASS$/SELECTED_ROUTE_STATUS=NOT_RUN/' \
+    -e 's/^FINAL_CONNECTED_HIGH_TERM_COUNT=91$/FINAL_CONNECTED_HIGH_TERM_COUNT=0/' \
+    -e 's/^FINAL_DISCONNECTED_HIGH_TERM_COUNT=0$/FINAL_DISCONNECTED_HIGH_TERM_COUNT=91/' \
+    -e 's/^FINAL_TIE_NET_COUNT=12$/FINAL_TIE_NET_COUNT=0/' \
+    -e 's/^MAX_OBSERVED_TIE_FANOUT=8$/MAX_OBSERVED_TIE_FANOUT=0/' \
+    -e 's/^TIE_HIGH_INSTANCE_DELTA=12$/TIE_HIGH_INSTANCE_DELTA=0/' \
+    -e 's/^TARGET_HIGH_INSTANCE_DELTA=12$/TARGET_HIGH_INSTANCE_DELTA=0/' \
+    -e 's/^CHECKPOINT_SAVE_STATUS=PASS$/CHECKPOINT_SAVE_STATUS=NOT_RUN/' \
+    -e 's/^TIE1_INSERTION_TRIAL_STATUS=PASS$/TIE1_INSERTION_TRIAL_STATUS=FAIL/' \
+    "$outdir/reports/tie1_insertion_trial_status.rpt"
+fi
 cat > "$outdir/reports/filler_status.rpt" <<'RPT'
 FILLER_COUNT=24797
 FILLER_INSERTION_STATUS=PASS
@@ -295,6 +329,9 @@ cat > "$outdir/reports/tie1_inserted_net_inventory.tsv" <<'RPT'
 net	sink_count	tie_high_source_count	inst_term_count	wire_count	via_count	contract_status	route_status
 MPTDC_TIE1_0	8	1	9	1	0	PASS	PASS
 RPT
+if [[ "${MPTDC_TEST_ZERO_EFFECT:-0}" == 1 ]]; then
+  exit 1
+fi
 exit 0
 EOF
 
@@ -329,6 +366,7 @@ grep -qx 'TIE1_INSERTION_TRIAL_PREFLIGHT=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'RESTORE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SET_MODE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'ADD_TIE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
+grep -qx 'INSTANCE_PIN_OPTION_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SAVE_COMMAND_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'SELECTED_ROUTE_CALL_COUNT=1' "$TMP_ROOT/pass.stdout"
 grep -qx 'FORBIDDEN_MUTATION_COUNT=0' "$TMP_ROOT/pass.stdout"
@@ -336,6 +374,16 @@ grep -qx 'TIE1_INSERTION_TRIAL_RECOVERY_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_TIE1_TRIAL_CONTINUE' "$TMP_ROOT/pass.stdout"
 grep -qx 'NEXT_STAGE=DIAGNOSTIC_PHYSICAL_PVS_FROM_TIE1_TRIAL' "$TMP_ROOT/pass.stdout"
 grep -qx 'NUMERIC_GATE_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'INSTANCE_PIN_INPUT_GENERATION_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'INSTANCE_PIN_TARGET_MATCH_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'INSTANCE_PIN_INPUT_READ_ONLY_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'ADD_TIE_EFFECT_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'TARGET_HIGH_INSTANCE_DELTA=12' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
@@ -350,6 +398,12 @@ grep -qx 'SOURCE_CHECKPOINT_HASH_STATUS=PASS' \
 grep -q "innovus $RUN_ID $WORK/$RUN_ID TIE1_INSERTION_TRIAL" \
   "$TMP_ROOT/pass.publish.args"
 test -s "$WORK/$RUN_ID/checkpoints/repaired_route.enc.dat/design.bin"
+test "$(wc -l < "$WORK/$RUN_ID/manifests/tie1_instance_pin_targets.txt")" -eq 91
+grep -Fqx 'u_sink[001]/SN' \
+  "$WORK/$RUN_ID/manifests/tie1_instance_pin_targets.txt"
+if grep -Eq '[{}]' "$WORK/$RUN_ID/manifests/tie1_instance_pin_targets.txt"; then
+  exit 1
+fi
 SOURCE_HASH_AFTER="$(tree_hash "$SOURCE_CHECKPOINT")"
 test "$SOURCE_HASH_BEFORE" = "$SOURCE_HASH_AFTER"
 
@@ -393,6 +447,35 @@ test ! -e "$WORK/tie1_trial_stale_probe"
 cp -p "$TMP_ROOT/tie_flagged_term_inventory.good.tsv" \
   "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
 
+TRACKED_FLAGGED_REL="MPTDC/docs/server_snapshots/innovus/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+git -C "$REPO" update-index --assume-unchanged "$TRACKED_FLAGGED_REL"
+sed -i '92cHIGH\t{u_sink[001]/SN}\t{u_sink[001]}\tDFRSJIHDX1\tSN\t0x0' \
+  "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+cp -p "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv" \
+  "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+set +e
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/duplicate.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_duplicate_targets \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/duplicate.stdout" 2>&1
+DUPLICATE_RC=$?
+set -e
+test "$DUPLICATE_RC" -eq 1
+grep -qx 'INSTANCE_PIN_INPUT_GENERATION_STATUS=FAIL' \
+  "$WORK/tie1_trial_duplicate_targets/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/duplicate.stdout"
+cp -p "$TMP_ROOT/tie_flagged_term_inventory.good.tsv" \
+  "$WORK/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+cp -p "$TMP_ROOT/tie_flagged_term_inventory.good.tsv" \
+  "$REPO/MPTDC/docs/server_snapshots/innovus/$PROBE_ID/reports/tie_flagged_term_inventory.tsv"
+git -C "$REPO" update-index --no-assume-unchanged "$TRACKED_FLAGGED_REL"
+
 set +e
 MPTDC_TEST_MUTATE_SAFE_COPY=1 \
 MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
@@ -411,6 +494,28 @@ test "$MUTATION_RC" -eq 1
 grep -qx 'SAFE_INPUT_READ_ONLY_STATUS=FAIL' \
   "$WORK/tie1_trial_mutated_copy/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/mutation.stdout"
+test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
+
+set +e
+MPTDC_TEST_ZERO_EFFECT=1 \
+MPTDC_TIE1_TRIAL_REPO_ROOT="$REPO" \
+MPTDC_TIE1_TRIAL_INNOVUS_BIN="$INNOVUS_STUB" \
+MPTDC_TIE1_TRIAL_PUBLISHER="$PUBLISHER_STUB" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/zero-effect.publish.args" \
+bash "$DRIVER" \
+  --probe-run-id "$PROBE_ID" \
+  --run-id tie1_trial_zero_effect \
+  --authorization EXACT_MPTDC_TIE1_HIGH_TRIAL \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/zero-effect.stdout" 2>&1
+ZERO_EFFECT_RC=$?
+set -e
+test "$ZERO_EFFECT_RC" -eq 1
+grep -qx 'ADD_TIE_STATUS=PASS' \
+  "$WORK/tie1_trial_zero_effect/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'ADD_TIE_EFFECT_STATUS=FAIL' \
+  "$WORK/tie1_trial_zero_effect/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/zero-effect.stdout"
 test "$SOURCE_HASH_BEFORE" = "$(tree_hash "$SOURCE_CHECKPOINT")"
 
 set +e
@@ -503,6 +608,25 @@ set fh [open "$TRIAL_TCL" r]
 set data [read \$fh]
 close \$fh
 if {![info complete \$data]} { exit 1 }
+EOF
+
+MPTDC_TEST_TRIAL_TCL="$TRIAL_TCL" \
+MPTDC_TEST_INSTANCE_TARGETS="$WORK/$RUN_ID/manifests/tie1_instance_pin_targets.txt" \
+tclsh <<'EOF'
+set fh [open $::env(MPTDC_TEST_TRIAL_TCL) r]
+set data [read $fh]
+close $fh
+set start [string first "proc mptdc_tie1_trial_canonical_name" $data]
+set end [string first "\nproc mptdc_tie1_trial_master_instances" $data $start]
+eval [string range $data $start [expr {$end - 1}]]
+if {[mptdc_tie1_trial_canonical_name {{u_sink[001]/D}}] ne
+    {u_sink[001]/D}} { exit 1 }
+set targets [mptdc_tie1_trial_read_instance_pin_targets \
+    $::env(MPTDC_TEST_INSTANCE_TARGETS)]
+if {[dict get $targets status] ne "PASS" ||
+    [dict get $targets count] != 91 ||
+    [dict get $targets unique_count] != 91 ||
+    [dict get $targets invalid_count] != 0} { exit 1 }
 EOF
 
 cat > "$TMP_ROOT/marker_a.tsv" <<'EOF'

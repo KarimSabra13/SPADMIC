@@ -82,6 +82,48 @@ proc mptdc_tie1_trial_unique {items} {
     return $result
 }
 
+proc mptdc_tie1_trial_canonical_name {value} {
+    set value [string trim $value]
+    if {$value eq ""} {
+        return ""
+    }
+    if {![catch {llength $value} count] && $count == 1} {
+        return [lindex $value 0]
+    }
+    return $value
+}
+
+proc mptdc_tie1_trial_read_instance_pin_targets {path} {
+    set targets {}
+    set invalid_count 0
+    if {![file exists $path] || ![file readable $path]} {
+        return [dict create \
+            status FAIL targets {} count 0 unique_count 0 invalid_count 1]
+    }
+    if {[catch {set fh [open $path r]}]} {
+        return [dict create \
+            status FAIL targets {} count 0 unique_count 0 invalid_count 1]
+    }
+    while {[gets $fh line] >= 0} {
+        set target [string trim $line]
+        if {$target eq "" || [regexp {[[:space:]]} $target] ||
+            ![regexp {^.+/[^/]+$} $target]} {
+            incr invalid_count
+            continue
+        }
+        lappend targets $target
+    }
+    close $fh
+    set unique_targets [lsort -unique $targets]
+    set status [expr {$invalid_count == 0 ? "PASS" : "FAIL"}]
+    return [dict create \
+        status $status \
+        targets $targets \
+        count [llength $targets] \
+        unique_count [llength $unique_targets] \
+        invalid_count $invalid_count]
+}
+
 proc mptdc_tie1_trial_master_instances {master} {
     return [mptdc_tie1_trial_objects \
         [mptdc_tie1_trial_dbget "instances_$master" 1 \
@@ -115,6 +157,21 @@ proc mptdc_tie1_trial_capture_help {command path} {
     return [list $status $error]
 }
 
+proc mptdc_tie1_trial_capture_man {command path} {
+    set status PASS
+    set error NONE
+    if {[catch {uplevel #0 "man $command > \"$path\""} result]} {
+        set status FAIL_OPTIONAL
+        set error [mptdc_tie1_trial_report_value $result]
+        set fh [open $path w]
+        puts $fh "COMMAND=man $command"
+        puts $fh "MAN_STATUS=$status"
+        puts $fh "MAN_ERROR=$error"
+        close $fh
+    }
+    return [list $status $error]
+}
+
 proc mptdc_tie1_trial_flagged_state {phase report_path} {
     set hi_terms [mptdc_tie1_trial_objects \
         [mptdc_tie1_trial_dbget "${phase}_flagged_hi_terms" 1 \
@@ -125,6 +182,8 @@ proc mptdc_tie1_trial_flagged_state {phase report_path} {
     set connected 0
     set disconnected 0
     set nets {}
+    set hi_names {}
+    set lo_names {}
     array set sink_count {}
     set fh [open $report_path w]
     puts $fh "polarity\tinst_term\tinstance\tmaster\tpin\tnet"
@@ -137,6 +196,12 @@ proc mptdc_tie1_trial_flagged_state {phase report_path} {
             set master [mptdc_tie1_trial_pointer_attr $term inst.cell.name]
             set pin [mptdc_tie1_trial_pointer_attr $term cellTerm.name]
             set net [mptdc_tie1_trial_pointer_attr $term net.name]
+            set canonical_term_name [mptdc_tie1_trial_canonical_name $term_name]
+            if {$polarity eq "HIGH"} {
+                lappend hi_names $canonical_term_name
+            } else {
+                lappend lo_names $canonical_term_name
+            }
             if {$net eq ""} {
                 set printable_net 0x0
                 if {$polarity eq "HIGH"} {
@@ -164,6 +229,8 @@ proc mptdc_tie1_trial_flagged_state {phase report_path} {
     return [dict create \
         hi_terms $hi_terms \
         lo_terms $lo_terms \
+        hi_names $hi_names \
+        lo_names $lo_names \
         hi_count [llength $hi_terms] \
         lo_count [llength $lo_terms] \
         connected $connected \
@@ -321,6 +388,8 @@ set expected_hi [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_HIGH_TERMS 91]
 set expected_lo [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_LOW_TERMS 0]
 set expected_filler [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_FILLERS 24797]
 set expected_drc [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_EXPECTED_DRC 1]
+set instance_pin_file [file normalize \
+    [mptdc_tie1_trial_required_env MPTDC_TIE1_TRIAL_INSTANCE_PIN_FILE]]
 set filler_masters [split [mptdc_tie1_trial_env MPTDC_TIE1_TRIAL_FILLER_MASTERS \
     "FEED25JIHD FEED15JIHD FEED10JIHD FEED7JIHD FEED5JIHD FEED3JIHD FEED2JIHD FEED1JIHD"]]
 set all_tie_masters [list LOGIC1DJIHD LOGIC1LVJIHD LOGIC0DJIHD LOGIC0LVJIHD]
@@ -336,6 +405,7 @@ set master_inventory_report [file join $outdir reports tie1_trial_master_invento
 set filler_report [file join $outdir reports filler_status.rpt]
 set final_checkpoint [file join $outdir checkpoints repaired_route.enc]
 set final_checkpoint_dat "${final_checkpoint}.dat"
+set add_command_report [file join $outdir reports addTieHiLo_command.rpt]
 
 array set ::mptdc_tie1_trial_query_status {}
 array set ::mptdc_tie1_trial_query_error {}
@@ -366,7 +436,9 @@ set baseline_placement_status FAIL
 set baseline_placement_error NONE
 set baseline ""
 set baseline_placement ""
-set baseline_state [dict create hi_count 0 lo_count 0 connected 0 disconnected 0 nets {} sink_pairs {}]
+set baseline_state [dict create \
+    hi_terms {} lo_terms {} hi_names {} lo_names {} \
+    hi_count 0 lo_count 0 connected 0 disconnected 0 nets {} sink_pairs {}]
 set inst_count_before 0
 set filler_count_before 0
 array set tie_count_before {}
@@ -402,6 +474,17 @@ if {$restore_status eq "PASS"} {
     }
 }
 
+set instance_pin_targets \
+    [mptdc_tie1_trial_read_instance_pin_targets $instance_pin_file]
+set instance_pin_target_match_status FAIL
+if {[dict get $instance_pin_targets status] eq "PASS" &&
+    [dict get $instance_pin_targets count] == $expected_hi &&
+    [dict get $instance_pin_targets unique_count] == $expected_hi &&
+    [lsort [dict get $instance_pin_targets targets]] eq
+        [lsort [dict get $baseline_state hi_names]]} {
+    set instance_pin_target_match_status PASS
+}
+
 set command_precheck PASS
 set command_precheck_reasons {}
 if {$restore_status ne "PASS"} { lappend command_precheck_reasons restore_failed }
@@ -413,6 +496,16 @@ if {[dict get $baseline_state connected] != 0 || [dict get $baseline_state disco
     lappend command_precheck_reasons baseline_tie_terms_not_all_disconnected
 }
 if {$filler_count_before != $expected_filler} { lappend command_precheck_reasons filler_count_mismatch }
+if {[dict get $instance_pin_targets status] ne "PASS"} {
+    lappend command_precheck_reasons instance_pin_target_file_invalid
+}
+if {[dict get $instance_pin_targets count] != $expected_hi ||
+    [dict get $instance_pin_targets unique_count] != $expected_hi} {
+    lappend command_precheck_reasons instance_pin_target_count_mismatch
+}
+if {$instance_pin_target_match_status ne "PASS"} {
+    lappend command_precheck_reasons instance_pin_target_set_mismatch
+}
 foreach master $all_tie_masters {
     if {$tie_count_before($master) != 0} {
         lappend command_precheck_reasons preexisting_tie_instance_$master
@@ -439,11 +532,15 @@ lassign [mptdc_tie1_trial_capture_help setTieHiLoMode \
     [file join $outdir reports setTieHiLoMode_help.rpt]] set_mode_help_status set_mode_help_error
 lassign [mptdc_tie1_trial_capture_help addTieHiLo \
     [file join $outdir reports addTieHiLo_help.rpt]] add_help_status add_help_error
+lassign [mptdc_tie1_trial_capture_man addTieHiLo \
+    [file join $outdir reports addTieHiLo_man.rpt]] add_man_status add_man_error
 
 set mode_status NOT_RUN
 set mode_error NONE
 set add_status NOT_RUN
 set add_error NONE
+set add_effect_status NOT_RUN
+set add_effect_reason COMMAND_NOT_RUN
 set route_status NOT_RUN
 set route_error NONE
 if {$command_precheck eq "PASS"} {
@@ -458,18 +555,40 @@ if {$command_precheck eq "PASS"} {
 }
 if {$mode_status eq "PASS"} {
     if {[catch {
-        addTieHiLo -cell "$high_master $low_master" -prefix MPTDC_TIE1
-    } err]} {
+        addTieHiLo -cell "$high_master $low_master" \
+            -instancePin $instance_pin_file \
+            -prefix MPTDC_TIE1 > $add_command_report
+    } add_result]} {
         set add_status FAIL
-        set add_error [mptdc_tie1_trial_report_value $err]
+        set add_error [mptdc_tie1_trial_report_value $add_result]
     } else {
         set add_status PASS
     }
 }
 
+set add_command_fh [open $add_command_report a]
+puts $add_command_fh ""
+puts $add_command_fh "ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE"
+puts $add_command_fh "INSTANCE_PIN_FILE=$instance_pin_file"
+puts $add_command_fh "INSTANCE_PIN_TARGET_COUNT=[dict get $instance_pin_targets count]"
+puts $add_command_fh "ADD_TIE_COMMAND_STATUS=$add_status"
+puts $add_command_fh "ADD_TIE_COMMAND_ERROR=$add_error"
+close $add_command_fh
+
 set post_add_state [mptdc_tie1_trial_flagged_state post_add \
     [file join $outdir reports tie1_flagged_terms_post_add.tsv]]
-if {$add_status eq "PASS" && [dict get $post_add_state disconnected] == 0 &&
+if {$add_status eq "PASS"} {
+    set add_effect_status FAIL
+    set add_effect_reason NO_ELIGIBLE_TARGET_WAS_CONNECTED
+    if {[dict get $post_add_state hi_count] == $expected_hi &&
+        [dict get $post_add_state connected] == $expected_hi &&
+        [dict get $post_add_state disconnected] == 0 &&
+        [llength [dict get $post_add_state nets]] > 0} {
+        set add_effect_status PASS
+        set add_effect_reason NONE
+    }
+}
+if {$add_effect_status eq "PASS" && [dict get $post_add_state disconnected] == 0 &&
     [llength [dict get $post_add_state nets]] > 0} {
     if {[catch {
         mptdc_ckpt_route_selected_nets_route_design [dict get $post_add_state nets]
@@ -549,6 +668,7 @@ set trial_reasons {}
 if {$command_precheck ne "PASS"} { lappend trial_reasons command_precheck_failed }
 if {$mode_status ne "PASS"} { lappend trial_reasons set_tie_mode_failed }
 if {$add_status ne "PASS"} { lappend trial_reasons add_tie_failed }
+if {$add_effect_status ne "PASS"} { lappend trial_reasons add_tie_no_effect }
 if {$route_status ne "PASS"} { lappend trial_reasons selected_net_route_failed }
 if {[dict get $final_state hi_count] != $expected_hi} { lappend trial_reasons final_high_term_count_mismatch }
 if {[dict get $final_state lo_count] != $expected_lo} { lappend trial_reasons final_low_term_count_mismatch }
@@ -598,13 +718,25 @@ puts $action_fh "TARGET_HIGH_MASTER=$high_master"
 puts $action_fh "TARGET_LOW_MASTER=$low_master"
 puts $action_fh "MAX_FANOUT=$max_fanout"
 puts $action_fh "MAX_DISTANCE_UM=$max_distance"
+puts $action_fh "ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE"
+puts $action_fh "INSTANCE_PIN_TARGET_FILE=$instance_pin_file"
+puts $action_fh "INSTANCE_PIN_TARGET_FILE_STATUS=[dict get $instance_pin_targets status]"
+puts $action_fh "INSTANCE_PIN_TARGET_COUNT=[dict get $instance_pin_targets count]"
+puts $action_fh "INSTANCE_PIN_TARGET_UNIQUE_COUNT=[dict get $instance_pin_targets unique_count]"
+puts $action_fh "INSTANCE_PIN_TARGET_INVALID_COUNT=[dict get $instance_pin_targets invalid_count]"
+puts $action_fh "INSTANCE_PIN_TARGET_MATCH_STATUS=$instance_pin_target_match_status"
 puts $action_fh "ROUTE_METHOD=SELECT_NET_SET_NANOROUTE_SELECTED_ONLY_ROUTE_DESIGN_SELECTED"
 puts $action_fh "SET_TIE_MODE_HELP_STATUS=$set_mode_help_status"
 puts $action_fh "ADD_TIE_HELP_STATUS=$add_help_status"
+puts $action_fh "ADD_TIE_MAN_STATUS=$add_man_status"
+puts $action_fh "ADD_TIE_MAN_ERROR=$add_man_error"
 puts $action_fh "SET_TIE_MODE_STATUS=$mode_status"
 puts $action_fh "SET_TIE_MODE_ERROR=$mode_error"
 puts $action_fh "ADD_TIE_STATUS=$add_status"
 puts $action_fh "ADD_TIE_ERROR=$add_error"
+puts $action_fh "ADD_TIE_EFFECT_STATUS=$add_effect_status"
+puts $action_fh "ADD_TIE_EFFECT_REASON=$add_effect_reason"
+puts $action_fh "ADD_TIE_COMMAND_REPORT=$add_command_report"
 puts $action_fh "SELECTED_ROUTE_STATUS=$route_status"
 puts $action_fh "SELECTED_ROUTE_ERROR=$route_error"
 puts $action_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"
@@ -650,6 +782,13 @@ puts $status_fh "RESTORE_STATUS=$restore_status"
 puts $status_fh "RESTORE_ERROR=$restore_error"
 puts $status_fh "COMMAND_PRECHECK=$command_precheck"
 puts $status_fh "COMMAND_PRECHECK_REASONS=$command_precheck_reasons"
+puts $status_fh "ADD_TIE_SELECTION_MODE=EXACT_INSTANCE_PIN_FILE"
+puts $status_fh "INSTANCE_PIN_TARGET_FILE=$instance_pin_file"
+puts $status_fh "INSTANCE_PIN_TARGET_FILE_STATUS=[dict get $instance_pin_targets status]"
+puts $status_fh "INSTANCE_PIN_TARGET_COUNT=[dict get $instance_pin_targets count]"
+puts $status_fh "INSTANCE_PIN_TARGET_UNIQUE_COUNT=[dict get $instance_pin_targets unique_count]"
+puts $status_fh "INSTANCE_PIN_TARGET_INVALID_COUNT=[dict get $instance_pin_targets invalid_count]"
+puts $status_fh "INSTANCE_PIN_TARGET_MATCH_STATUS=$instance_pin_target_match_status"
 puts $status_fh "BASELINE_SNAPSHOT_STATUS=$baseline_snapshot_status"
 puts $status_fh "BASELINE_SNAPSHOT_ERROR=$baseline_snapshot_error"
 puts $status_fh "BASELINE_PLACEMENT_STATUS=$baseline_placement_status"
@@ -660,6 +799,8 @@ puts $status_fh "FINAL_PLACEMENT_STATUS=$final_placement_status"
 puts $status_fh "FINAL_PLACEMENT_ERROR=$final_placement_error"
 puts $status_fh "SET_TIE_MODE_STATUS=$mode_status"
 puts $status_fh "ADD_TIE_STATUS=$add_status"
+puts $status_fh "ADD_TIE_EFFECT_STATUS=$add_effect_status"
+puts $status_fh "ADD_TIE_EFFECT_REASON=$add_effect_reason"
 puts $status_fh "SELECTED_ROUTE_STATUS=$route_status"
 puts $status_fh "EXPECTED_FLAGGED_HIGH_TERM_COUNT=$expected_hi"
 puts $status_fh "BASELINE_FLAGGED_HIGH_TERM_COUNT=[dict get $baseline_state hi_count]"

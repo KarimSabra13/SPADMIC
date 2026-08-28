@@ -2718,8 +2718,20 @@ masters, no physical tie instance, and all read-only/hash gates passing. This
 is an explicitly authorized diagnostic mutation of a private checkpoint copy.
 It does not modify the failed-V6R source checkpoint.
 
-The candidate uses the normal-Vt `LOGIC1DJIHD`/`LOGIC0DJIHD` pair, fanout 8,
-distance 20 um, and selected-net routing only. It saves a candidate only when
+Step 7R established that automatic discovery is not sufficient for this
+checkpoint. Both `setTieHiLoMode` and `addTieHiLo` returned success, while all
+91 reviewed terms remained disconnected, zero tie instances/nets were created,
+and selected routing therefore did not run. The corrected trial derives an
+immutable one-name-per-line instance-pin file from the published Step 6R table,
+removes only the TSV display braces, verifies count, uniqueness, syntax, and
+exact set equality against the restored database, and passes that file through
+`addTieHiLo -instancePin`. Command status and observed connectivity effect are
+separate gates; a second zero-effect return is a published failure, not a
+candidate.
+
+The candidate uses the exact Step 6R instance-pin set, the normal-Vt
+`LOGIC1DJIHD`/`LOGIC0DJIHD` pair, fanout 8, distance 20 um, and selected-net
+routing only. It saves a candidate only when
 all 91 high sinks are connected, no low tie is inserted, each created net has
 exactly its flagged sinks plus one `LOGIC1DJIHD` source and routed wire, every
 inserted target tie cell owns one created tie net, placement remains clean, and
@@ -2738,7 +2750,7 @@ set +e
 
 REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 PROBE_RUN=20260828_mptdc_tie1_checkpoint_probe_envfix_093807
-TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_insertion_trial_$(date +%H%M%S)"
+TRIAL_RUN="$(date +%Y%m%d)_mptdc_tie1_insertion_trial_instancepin_$(date +%H%M%S)"
 TRIAL_DIR=/sim/ksabra/SPADMIC_work/innovus/$TRIAL_RUN
 DRIVER_LOG=/tmp/${TRIAL_RUN}.driver.log
 TRIAL_DRIVER_RC=99
@@ -2783,12 +2795,19 @@ echo "PROBE_RUN=$PROBE_RUN"
 echo "TRIAL_RUN=$TRIAL_RUN"
 echo "TRIAL_DIR=$TRIAL_DIR"
 echo "TRIAL_DRIVER_RC=$TRIAL_DRIVER_RC"
-grep -E '^(EVIDENCE_(STEP|ID|COLLECT_RC|CHECK_RC|COMMIT_RC|PUSH_RC|COMMIT)|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|CADENCE_ENV_(RC|STATUS)|RESTORE_COMMAND_COUNT|SET_MODE_COMMAND_COUNT|ADD_TIE_COMMAND_COUNT|SAVE_COMMAND_COUNT|SELECTED_ROUTE_CALL_COUNT|FORBIDDEN_MUTATION_COUNT|INNOVUS_RC|FINAL_CONNECTED_HIGH_TERM_COUNT|FINAL_DISCONNECTED_HIGH_TERM_COUNT|FINAL_FLAGGED_LOW_TERM_COUNT|FINAL_TIE_NET_COUNT|MAX_OBSERVED_TIE_FANOUT|TIE_HIGH_INSTANCE_DELTA|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|TIE_LOW_INSTANCE_DELTA|PHYSICAL_DEBT_PRESERVATION_STATUS|FINAL_DRC|FINAL_SHORTS|FINAL_UNROUTED_NETS|FINAL_REPORT_ROUTE_ZERO_STATUS|FINAL_DRC_MARKER_SIGNATURE_COUNT|DRC_MARKER_SIGNATURE_MATCH_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SAFE_COPY_MATCH_STATUS|SAFE_INPUT_READ_ONLY_STATUS|CANDIDATE_CHECKPOINT_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
+grep -E '^(EVIDENCE_(STEP|ID|COLLECT_RC|CHECK_RC|COMMIT_RC|PUSH_RC|COMMIT)|TIE1_INSERTION_TRIAL_(PREFLIGHT|RECOVERY_STATUS|STATUS)|CADENCE_ENV_(RC|STATUS)|RESTORE_COMMAND_COUNT|SET_MODE_COMMAND_COUNT|ADD_TIE_COMMAND_COUNT|INSTANCE_PIN_OPTION_COUNT|SAVE_COMMAND_COUNT|SELECTED_ROUTE_CALL_COUNT|FORBIDDEN_MUTATION_COUNT|INNOVUS_RC|ADD_TIE_SELECTION_MODE|INSTANCE_PIN_(INPUT_GENERATION_STATUS|TARGET_(FILE_STATUS|COUNT|UNIQUE_COUNT|INVALID_COUNT|MATCH_STATUS)|INPUT_READ_ONLY_STATUS)|ADD_TIE_(STATUS|EFFECT_STATUS|EFFECT_REASON)|FINAL_CONNECTED_HIGH_TERM_COUNT|FINAL_DISCONNECTED_HIGH_TERM_COUNT|FINAL_FLAGGED_LOW_TERM_COUNT|FINAL_TIE_NET_COUNT|MAX_OBSERVED_TIE_FANOUT|TIE_HIGH_INSTANCE_DELTA|TARGET_HIGH_INSTANCE_DELTA|ALTERNATE_TIE_MASTER_DELTA|TIE_LOW_INSTANCE_DELTA|PHYSICAL_DEBT_PRESERVATION_STATUS|FINAL_DRC|FINAL_SHORTS|FINAL_UNROUTED_NETS|FINAL_REPORT_ROUTE_ZERO_STATUS|FINAL_DRC_MARKER_SIGNATURE_COUNT|DRC_MARKER_SIGNATURE_MATCH_STATUS|SOURCE_CHECKPOINT_HASH_STATUS|SAFE_COPY_MATCH_STATUS|SAFE_INPUT_READ_ONLY_STATUS|CANDIDATE_CHECKPOINT_STATUS|SIGNOFF_ELIGIBLE|DECISION|PUBLISH_RC|NEXT_EXPECTED_HEAD|NEXT_STAGE)=' \
   "$DRIVER_LOG" 2>/dev/null | tail -100
 echo "===== OPERATOR GATE ====="
 cat "$TRIAL_DIR/reports/operator_gate_tie1_insertion_trial.rpt" 2>/dev/null
 echo "===== TIE ACTION ====="
 cat "$TRIAL_DIR/reports/tie1_insertion_trial_action.rpt" 2>/dev/null
+echo "===== EXACT INSTANCE-PIN TARGETS ====="
+sed -n '1,110p' "$TRIAL_DIR/manifests/tie1_instance_pin_targets.txt" 2>/dev/null
+echo "===== ADDTIE COMMAND TRANSCRIPT ====="
+cat "$TRIAL_DIR/reports/addTieHiLo_command.rpt" 2>/dev/null
+echo "===== INSTALLED INSTANCEPIN MANUAL EXCERPT ====="
+grep -nEi -C 4 'instancePin|file format|instance pin' \
+  "$TRIAL_DIR/reports/addTieHiLo_man.rpt" 2>/dev/null | head -160
 echo "===== INSERTED NETS ====="
 cat "$TRIAL_DIR/reports/tie1_inserted_net_inventory.tsv" 2>/dev/null
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
@@ -2796,7 +2815,9 @@ echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 
 Continue only for driver RC zero,
 `DECISION=PASS_TIE1_TRIAL_CONTINUE`, `PUBLISH_RC=0`, 91 connected and zero
-disconnected high terms, zero low terms, a positive normal-Vt target-master
+disconnected high terms, zero low terms, exact 91/91 unique instance-pin input
+with database set match and read-only hash preservation, command and effect
+statuses both passing, a positive normal-Vt target-master
 delta, zero alternate-master delta, bounded fanout, clean placement, exact
 physical-debt and marker-identity preservation, zero unrouted nets, unchanged
 source/probe hashes, and a saved private candidate. This result is still
