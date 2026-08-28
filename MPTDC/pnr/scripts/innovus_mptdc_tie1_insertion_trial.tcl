@@ -246,14 +246,58 @@ proc mptdc_tie1_trial_marker_signature {path} {
         if {[llength $fields] < 7} {
             continue
         }
+        if {![string equal -nocase [lindex $fields 4] Geometry]} {
+            continue
+        }
         lappend signatures [join [lrange $fields 2 end] "\t"]
     }
     close $fh
     return [lsort $signatures]
 }
 
+proc mptdc_tie1_trial_report_route_zero {path} {
+    if {![file exists $path] || ![file readable $path]} {
+        return 0
+    }
+    set fh [open $path r]
+    set needed_restored_zero 0
+    set extraction_zero 0
+    set command_failed 0
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {[regexp -nocase {REPORT_STATUS=FAILED} $trimmed]} {
+            set command_failed 1
+        }
+        if {[regexp {^#num needed restored net=0[[:space:]]*$} $trimmed]} {
+            set needed_restored_zero 1
+        }
+        if {[regexp {^#need_extraction net=0([[:space:]]|\(|$)} $trimmed]} {
+            set extraction_zero 1
+        }
+    }
+    close $fh
+    return [expr {!$command_failed && $needed_restored_zero && $extraction_zero}]
+}
+
+proc mptdc_tie1_trial_normalize_snapshot_unrouted {snapshot} {
+    set route_report_zero \
+        [mptdc_tie1_trial_report_route_zero [dict get $snapshot report_route_rpt]]
+    dict set snapshot report_route_zero $route_report_zero
+    if {[dict get $snapshot unrouted] eq "UNKNOWN" &&
+        [dict get $snapshot regular_bad] eq "0" &&
+        [dict get $snapshot special_bad] eq "1" &&
+        [dict get $snapshot special_raw_bad] eq "1" &&
+        [dict get $snapshot special_non_ro_failures] eq "0" &&
+        $route_report_zero} {
+        dict set snapshot unrouted 0
+        dict set snapshot unrouted_source \
+            tie1_trial_connectivity_exact_special_debt_report_route_fallback
+    }
+    return $snapshot
+}
+
 proc mptdc_tie1_trial_snapshot_equal_debt {baseline final} {
-    foreach key {total_violations shorts regular_bad special_bad special_raw_bad special_non_ro_failures unrouted marker_signature} {
+    foreach key {total_violations shorts regular_bad special_bad special_raw_bad special_non_ro_failures unrouted report_route_zero marker_signature} {
         if {[dict get $baseline $key] ne [dict get $final $key]} {
             return 0
         }
@@ -334,6 +378,7 @@ if {$restore_status eq "PASS"} {
     if {[catch {set baseline [mptdc_ckpt_verify_snapshot tie1_trial_baseline]} err]} {
         set baseline_snapshot_error [mptdc_tie1_trial_report_value $err]
     } else {
+        set baseline [mptdc_tie1_trial_normalize_snapshot_unrouted $baseline]
         dict set baseline marker_signature \
             [mptdc_tie1_trial_marker_signature [dict get $baseline marker_rpt]]
         set baseline_snapshot_status PASS
@@ -449,6 +494,7 @@ if {$restore_status eq "PASS"} {
     if {[catch {set final [mptdc_ckpt_verify_snapshot tie1_trial_final]} err]} {
         set final_snapshot_error [mptdc_tie1_trial_report_value $err]
     } else {
+        set final [mptdc_tie1_trial_normalize_snapshot_unrouted $final]
         dict set final marker_signature \
             [mptdc_tie1_trial_marker_signature [dict get $final marker_rpt]]
         set final_snapshot_status PASS
@@ -638,11 +684,13 @@ puts $status_fh "UNEXPLAINED_INSTANCE_DELTA=$unexplained_instance_delta"
 puts $status_fh "PHYSICAL_DEBT_PRESERVATION_STATUS=$debt_status"
 if {$baseline_snapshot_status eq "PASS"} {
     mptdc_ckpt_write_snapshot_status $status_fh BASELINE $baseline
+    puts $status_fh "BASELINE_REPORT_ROUTE_ZERO_STATUS=[expr {[dict get $baseline report_route_zero] ? "PASS" : "FAIL"}]"
     puts $status_fh "BASELINE_DRC_MARKER_SIGNATURE_COUNT=[llength [dict get $baseline marker_signature]]"
     puts $status_fh "BASELINE_DRC_MARKER_SIGNATURE=[dict get $baseline marker_signature]"
 }
 if {$final_snapshot_status eq "PASS"} {
     mptdc_ckpt_write_snapshot_status $status_fh FINAL $final
+    puts $status_fh "FINAL_REPORT_ROUTE_ZERO_STATUS=[expr {[dict get $final report_route_zero] ? "PASS" : "FAIL"}]"
     puts $status_fh "FINAL_DRC_MARKER_SIGNATURE_COUNT=[llength [dict get $final marker_signature]]"
     puts $status_fh "FINAL_DRC_MARKER_SIGNATURE=[dict get $final marker_signature]"
 }

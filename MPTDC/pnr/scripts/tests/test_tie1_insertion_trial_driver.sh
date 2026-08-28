@@ -196,8 +196,9 @@ BASELINE_SHORTS=0
 BASELINE_REGULAR_CONNECTIVITY_BAD=0
 BASELINE_SPECIAL_CONNECTIVITY_BAD=1
 BASELINE_UNROUTED_NETS=0
+BASELINE_REPORT_ROUTE_ZERO_STATUS=PASS
 BASELINE_DRC_MARKER_SIGNATURE_COUNT=1
-BASELINE_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+BASELINE_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Geometry|Minimal_Area|Net_n
 FINAL_DRC=1
 FINAL_SHORTS=0
 FINAL_REGULAR_CONNECTIVITY_BAD=0
@@ -205,8 +206,9 @@ FINAL_SPECIAL_CONNECTIVITY_BAD=1
 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
 FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 FINAL_UNROUTED_NETS=0
+FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
 FINAL_DRC_MARKER_SIGNATURE_COUNT=1
-FINAL_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+FINAL_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Geometry|Minimal_Area|Net_n
 CHECKPOINT_SAVE_STATUS=NOT_RUN
 CORE_QUERY_ERROR_COUNT=0
 TIE1_INSERTION_TRIAL_STATUS=FAIL
@@ -247,8 +249,9 @@ BASELINE_SHORTS=0
 BASELINE_REGULAR_CONNECTIVITY_BAD=0
 BASELINE_SPECIAL_CONNECTIVITY_BAD=1
 BASELINE_UNROUTED_NETS=0
+BASELINE_REPORT_ROUTE_ZERO_STATUS=PASS
 BASELINE_DRC_MARKER_SIGNATURE_COUNT=1
-BASELINE_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+BASELINE_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Geometry|Minimal_Area|Net_n
 FINAL_DRC=1
 FINAL_SHORTS=0
 FINAL_REGULAR_CONNECTIVITY_BAD=0
@@ -256,8 +259,9 @@ FINAL_SPECIAL_CONNECTIVITY_BAD=1
 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
 FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 FINAL_UNROUTED_NETS=0
+FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
 FINAL_DRC_MARKER_SIGNATURE_COUNT=1
-FINAL_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Metal|MinArea|Net_n
+FINAL_DRC_MARKER_SIGNATURE={1 2 3 4}|MET1|Geometry|Minimal_Area|Net_n
 CHECKPOINT_SAVE_STATUS=PASS
 CORE_QUERY_ERROR_COUNT=0
 TIE1_INSERTION_TRIAL_STATUS=PASS
@@ -276,7 +280,7 @@ if [[ "${MPTDC_TEST_UNUSED_TARGET_TIE:-0}" == 1 ]]; then
 fi
 if [[ "${MPTDC_TEST_MARKER_MISMATCH:-0}" == 1 ]]; then
   sed -i \
-    's/^FINAL_DRC_MARKER_SIGNATURE=.*$/FINAL_DRC_MARKER_SIGNATURE={5 6 7 8}|MET2|Metal|MinArea|Net_m/' \
+    's/^FINAL_DRC_MARKER_SIGNATURE=.*$/FINAL_DRC_MARKER_SIGNATURE={5 6 7 8}|MET2|Geometry|Minimal_Area|Net_m/' \
     "$outdir/reports/tie1_insertion_trial_status.rpt"
 fi
 cat > "$outdir/reports/filler_status.rpt" <<'RPT'
@@ -338,6 +342,8 @@ grep -qx 'TARGET_HIGH_INSTANCE_DELTA=12' \
 grep -qx 'ALTERNATE_TIE_MASTER_DELTA=0' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'DRC_MARKER_SIGNATURE_MATCH_STATUS=PASS' \
+  "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+grep -qx 'FINAL_REPORT_ROUTE_ZERO_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 grep -qx 'SOURCE_CHECKPOINT_HASH_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
@@ -501,15 +507,27 @@ EOF
 
 cat > "$TMP_ROOT/marker_a.tsv" <<'EOF'
 idx	marker_handle	box	layer	type	subType	message
-1	0xaaa	{1 2 3 4}	MET1	Metal	MinArea	Net n
+1	0xaaa	{9 9 9 9}	MET3	Antenna	AntSAreaRatio	Ignored antenna A
+2	0xaab	{1 2 3 4}	MET1	Geometry	Minimal_Area	Net n
 EOF
 cat > "$TMP_ROOT/marker_b.tsv" <<'EOF'
 idx	marker_handle	box	layer	type	subType	message
-9	0xbbb	{1 2 3 4}	MET1	Metal	MinArea	Net n
+8	0xbba	{8 8 8 8}	METTP	Connectivity	ConnectivityAntenna	Ignored connectivity B
+9	0xbbb	{1 2 3 4}	MET1	Geometry	Minimal_Area	Net n
+EOF
+cat > "$TMP_ROOT/report_route_zero.rpt" <<'EOF'
+#num needed restored net=0
+#need_extraction net=0 (total=16329)
+EOF
+cat > "$TMP_ROOT/report_route_nonzero.rpt" <<'EOF'
+#num needed restored net=1
+#need_extraction net=0 (total=16329)
 EOF
 MPTDC_TEST_TRIAL_TCL="$TRIAL_TCL" \
 MPTDC_TEST_MARKER_A="$TMP_ROOT/marker_a.tsv" \
 MPTDC_TEST_MARKER_B="$TMP_ROOT/marker_b.tsv" \
+MPTDC_TEST_REPORT_ROUTE="$TMP_ROOT/report_route_zero.rpt" \
+MPTDC_TEST_REPORT_ROUTE_NONZERO="$TMP_ROOT/report_route_nonzero.rpt" \
 tclsh <<'EOF'
 set fh [open $::env(MPTDC_TEST_TRIAL_TCL) r]
 set data [read $fh]
@@ -520,6 +538,20 @@ eval [string range $data $start [expr {$end - 1}]]
 set a [mptdc_tie1_trial_marker_signature $::env(MPTDC_TEST_MARKER_A)]
 set b [mptdc_tie1_trial_marker_signature $::env(MPTDC_TEST_MARKER_B)]
 if {$a ne $b || [llength $a] != 1} { exit 1 }
+set snapshot [dict create \
+    report_route_rpt $::env(MPTDC_TEST_REPORT_ROUTE) \
+    unrouted UNKNOWN \
+    regular_bad 0 \
+    special_bad 1 \
+    special_raw_bad 1 \
+    special_non_ro_failures 0]
+set normalized [mptdc_tie1_trial_normalize_snapshot_unrouted $snapshot]
+if {[dict get $normalized unrouted] ne "0" ||
+    [dict get $normalized report_route_zero] != 1} { exit 1 }
+dict set snapshot report_route_rpt $::env(MPTDC_TEST_REPORT_ROUTE_NONZERO)
+set rejected [mptdc_tie1_trial_normalize_snapshot_unrouted $snapshot]
+if {[dict get $rejected unrouted] ne "UNKNOWN" ||
+    [dict get $rejected report_route_zero] != 0} { exit 1 }
 EOF
 
 echo "MPTDC_TIE1_INSERTION_TRIAL_DRIVER_TEST=PASS"
