@@ -995,6 +995,11 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_BLOCK_PG_STITCH_SPACING_UM 2.0
         MPTDC_BLOCK_PG_STITCH_SET_DISTANCE_UM 5000.0
         MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 0
+        MPTDC_ENABLE_RO_BLOCK_RINGS 0
+        MPTDC_RO_BLOCK_RING_WIDTH_UM 2.0
+        MPTDC_RO_BLOCK_RING_SPACING_UM 1.0
+        MPTDC_RO_BLOCK_RING_OFFSET_UM 2.0
+        MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS 0
         MPTDC_ENABLE_FINAL_FILLER 0
         MPTDC_ENABLE_POST_FILLER_SROUTE 0
         MPTDC_ENABLE_PREPLACE_PG_SROUTE 0
@@ -1084,6 +1089,14 @@ proc mptdc_signoff_pg_policy_guard {} {
     }
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
         lappend failures "MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS=1 expected 0"
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_BLOCK_RINGS 0]} {
+        if {$strategy ne "innovus_sroute_golden_ro"} {
+            lappend failures "MPTDC_ENABLE_RO_BLOCK_RINGS=1 requires MPTDC_PG_STRATEGY=innovus_sroute_golden_ro"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS 0]} {
+            lappend failures "MPTDC_ENABLE_RO_BLOCK_RINGS=1 requires MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS=1"
+        }
     }
     set core_pin_stop [mptdc_signoff_env MPTDC_SROUTE_CORE_PIN_STOP_ROUTE RowEnd]
     if {$core_pin_stop ne "RowEnd"} {
@@ -2482,14 +2495,21 @@ proc mptdc_signoff_report_value {value} {
     return $text
 }
 
+proc mptdc_signoff_sroute_block_pin_targets {} {
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_BLOCK_RINGS 0]} {
+        return [list blockring]
+    }
+    return [list ring stripe]
+}
+
 proc mptdc_signoff_sroute_commands {nets} {
     set commands [list \
         [list sroute -connect {corePin blockPin} -nets $nets \
-            -blockPin all -blockPinTarget {ring stripe} \
+            -blockPin all -blockPinTarget [mptdc_signoff_sroute_block_pin_targets] \
             -corePinTarget {ring stripe} -allowLayerChange 1]]
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0]} {
         lappend commands [list sroute -connect {corePin blockPin padPin} -nets $nets \
-            -blockPin all -blockPinTarget {ring stripe} \
+            -blockPin all -blockPinTarget [mptdc_signoff_sroute_block_pin_targets] \
             -corePinTarget {ring stripe} -padPinTarget {ring stripe} \
             -allowLayerChange 1]
     }
@@ -2510,11 +2530,11 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
 
     if {[mptdc_signoff_pg_strategy_innovus_sroute]} {
         set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
-            -blockPin all -blockPinTarget {ring stripe} \
+            -blockPin all -blockPinTarget [mptdc_signoff_sroute_block_pin_targets] \
             -corePinTarget {ring stripe} -allowLayerChange 1]]
         if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0]} {
             lappend commands [list sroute -connect {corePin blockPin padPin} -nets $nets \
-                -blockPin all -blockPinTarget {ring stripe} \
+                -blockPin all -blockPinTarget [mptdc_signoff_sroute_block_pin_targets] \
                 -corePinTarget {ring stripe} -padPinTarget {ring stripe} \
                 -allowLayerChange 1]
         }
@@ -2549,7 +2569,7 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
 
     if {[mptdc_signoff_pg_strategy_ro_hookup_blockpin_probe]} {
         set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
-            -blockPin all -blockPinTarget {ring stripe} \
+            -blockPin all -blockPinTarget [mptdc_signoff_sroute_block_pin_targets] \
             -corePinTarget {ring stripe} -allowLayerChange 1]]
         if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
             lappend commands [list sroute -connect {corePin} -nets $nets \
@@ -2567,7 +2587,7 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
 
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
         set cmd [list sroute -connect {corePin blockPin} -nets $nets \
-            -blockPin all -blockPinTarget {ring stripe} \
+            -blockPin all -blockPinTarget [mptdc_signoff_sroute_block_pin_targets] \
             -corePinTarget {ring stripe} -allowLayerChange 1]
         if {[lsearch -exact $commands $cmd] < 0} {
             lappend commands $cmd
@@ -4498,13 +4518,30 @@ proc mptdc_signoff_ro_pg_bridge_area {pin_box target_box direction margin} {
 proc mptdc_signoff_ro_pg_stripe_commands {net layer direction coord area width spacing set_distance} {
     set start_from [expr {$direction eq "horizontal" ? "bottom" : "left"}]
     set coord [format %.3f $coord]
+    set llx [format %.3f [lindex $area 0]]
+    set lly [format %.3f [lindex $area 1]]
+    set urx [format %.3f [lindex $area 2]]
+    set ury [format %.3f [lindex $area 3]]
+    if {$direction eq "horizontal"} {
+        set path [list $llx $coord $urx $coord]
+        set offset [expr {double($coord) - double($lly)}]
+    } else {
+        set path [list $coord $lly $coord $ury]
+        set offset [expr {double($coord) - double($llx)}]
+    }
+    if {$offset < 0.0} {
+        error "MPTDC_RO_PG_STRIPE_COORD_OUTSIDE_AREA: direction=$direction coord=$coord area=$area"
+    }
+    set offset [format %.3f $offset]
     set commands [list]
+    lappend commands [list add_shape -net $net -layer $layer -shape STRIPE -status ROUTED \
+        -pathSeg $path -width $width]
     lappend commands [list addStripe -nets [list $net] -layer $layer -direction $direction \
         -width $width -spacing $spacing -set_to_set_distance $set_distance \
-        -start_from $start_from -start_offset $coord -number_of_sets 1 -area $area]
+        -start_from $start_from -start_offset $offset -number_of_sets 1 -area $area]
     lappend commands [list addStripe -nets [list $net] -layer $layer -direction $direction \
         -width $width -spacing $spacing -set_to_set_distance $set_distance \
-        -start_from $start_from -start_offset $coord -area $area]
+        -start_from $start_from -start_offset $offset -area $area]
     return $commands
 }
 
@@ -5648,6 +5685,164 @@ proc mptdc_signoff_count_ro_pg_pin_connections {ro_instances pin expected_net} {
     return $count
 }
 
+proc mptdc_signoff_pg_swire_count {net} {
+    if {[catch {set net_handle [dbGet top.nets.name $net -p]}] ||
+        $net_handle eq "" || $net_handle eq "0x0"} {
+        return UNKNOWN
+    }
+    if {[catch {set swires [dbGet $net_handle.sWires]}]} {
+        return UNKNOWN
+    }
+    if {$swires eq "" || $swires eq "0x0"} {
+        return 0
+    }
+    return [llength $swires]
+}
+
+proc mptdc_signoff_ro_block_ring_commands {nets} {
+    set width [mptdc_signoff_env_double MPTDC_RO_BLOCK_RING_WIDTH_UM 2.0]
+    set spacing [mptdc_signoff_env_double MPTDC_RO_BLOCK_RING_SPACING_UM 1.0]
+    set offset [mptdc_signoff_env_double MPTDC_RO_BLOCK_RING_OFFSET_UM 2.0]
+    return [list [list addRing -nets $nets -type block_rings -around cluster \
+        -layer {top MET3 bottom MET3 left METTP right METTP} \
+        -width [list top $width bottom $width left $width right $width] \
+        -spacing [list top $spacing bottom $spacing left $spacing right $spacing] \
+        -offset [list top $offset bottom $offset left $offset right $offset]]]
+}
+
+proc mptdc_signoff_pg_mesh_stripe_commands {nets layer fallback_layer direction} {
+    set start_from [expr {$direction eq "horizontal" ? "bottom" : "left"}]
+    set base [list addStripe -nets $nets -layer $layer -direction $direction \
+        -width 2 -spacing 2 -set_to_set_distance 80 -start_from $start_from -start_offset 20]
+    if {[mptdc_signoff_env_truthy MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS 0]} {
+        lappend base -break_stripes_at_block_rings
+        return [list $base]
+    }
+    return [list $base [list addStripe -nets $nets -layer $fallback_layer -direction $direction \
+        -width 2 -spacing 2 -set_to_set_distance 80 -start_from $start_from -start_offset 20]]
+}
+
+proc mptdc_signoff_select_ro_for_block_ring {fh label inst} {
+    catch {deselectAll}
+    set legacy_cmd [list selectInst $inst]
+    puts $fh "${label}_SELECT_COMMAND=$legacy_cmd"
+    if {![catch {{*}$legacy_cmd} err]} {
+        puts $fh "${label}_SELECT_STATUS=PASS"
+        puts $fh "${label}_SELECT_MODE=selectInst"
+        return 1
+    }
+    puts $fh "${label}_SELECT_ATTEMPT_ERROR=[mptdc_signoff_report_value $err]"
+    set cells [list]
+    catch {set cells [get_cells -quiet -hierarchical $inst]}
+    if {[llength $cells] != 1} {
+        puts $fh "${label}_SELECT_STATUS=FAIL"
+        puts $fh "${label}_SELECT_ERROR=expected_one_cell_got_[llength $cells]"
+        return 0
+    }
+    set common_cmd [list select_obj $cells]
+    puts $fh "${label}_SELECT_FALLBACK_COMMAND=$common_cmd"
+    if {[catch {{*}$common_cmd} err]} {
+        puts $fh "${label}_SELECT_STATUS=FAIL"
+        puts $fh "${label}_SELECT_ERROR=[mptdc_signoff_report_value $err]"
+        return 0
+    }
+    puts $fh "${label}_SELECT_STATUS=PASS"
+    puts $fh "${label}_SELECT_MODE=select_obj"
+    return 1
+}
+
+proc mptdc_signoff_create_ro_block_rings {} {
+    set rpt [file join [mptdc_signoff_report_dir] ro_block_ring_status.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC RO Block Ring Status"
+    puts $fh "RO_BLOCK_RING_ENABLE=[mptdc_signoff_env MPTDC_ENABLE_RO_BLOCK_RINGS 0]"
+    puts $fh "RO_BLOCK_RING_WIDTH_UM=[mptdc_signoff_env MPTDC_RO_BLOCK_RING_WIDTH_UM 2.0]"
+    puts $fh "RO_BLOCK_RING_SPACING_UM=[mptdc_signoff_env MPTDC_RO_BLOCK_RING_SPACING_UM 1.0]"
+    puts $fh "RO_BLOCK_RING_OFFSET_UM=[mptdc_signoff_env MPTDC_RO_BLOCK_RING_OFFSET_UM 2.0]"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_BLOCK_RINGS 0]} {
+        puts $fh "RO_BLOCK_RING_STATUS=SKIPPED"
+        puts $fh "RO_BLOCK_RING_REASON=disabled_by_env"
+        close $fh
+        return [list 1 $rpt]
+    }
+
+    set ro_instances [lsort -dictionary [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]]
+    puts $fh "RO_BLOCK_RING_INSTANCE_COUNT=[llength $ro_instances]"
+    puts $fh "RO_BLOCK_RING_INSTANCE_SET=[join $ro_instances ,]"
+    if {[llength $ro_instances] != 2} {
+        puts $fh "RO_BLOCK_RING_STATUS=FAIL"
+        puts $fh "RO_BLOCK_RING_ERROR=expected_exactly_two_ro_instances"
+        close $fh
+        return [list 0 $rpt]
+    }
+
+    set nets [list VDD VSS]
+    set vdd_before [mptdc_signoff_pg_swire_count VDD]
+    set vss_before [mptdc_signoff_pg_swire_count VSS]
+    puts $fh "RO_BLOCK_RING_VDD_SWIRE_COUNT_PRE=$vdd_before"
+    puts $fh "RO_BLOCK_RING_VSS_SWIRE_COUNT_PRE=$vss_before"
+    set created 0
+    set failures [list]
+    set index 0
+    foreach inst $ro_instances {
+        incr index
+        set label "RO_BLOCK_RING_$index"
+        puts $fh ""
+        puts $fh "${label}_INSTANCE=$inst"
+        if {![mptdc_signoff_select_ro_for_block_ring $fh $label $inst]} {
+            lappend failures "$inst:selection_failed"
+            continue
+        }
+        set item_vdd_before [mptdc_signoff_pg_swire_count VDD]
+        set item_vss_before [mptdc_signoff_pg_swire_count VSS]
+        set command_ok [mptdc_signoff_try_pg_command $fh $label \
+            [mptdc_signoff_ro_block_ring_commands $nets]]
+        set item_vdd_after [mptdc_signoff_pg_swire_count VDD]
+        set item_vss_after [mptdc_signoff_pg_swire_count VSS]
+        set item_effect_ok [expr {$item_vdd_before ne "UNKNOWN" && $item_vdd_after ne "UNKNOWN" &&
+            $item_vss_before ne "UNKNOWN" && $item_vss_after ne "UNKNOWN" &&
+            $item_vdd_after > $item_vdd_before && $item_vss_after > $item_vss_before}]
+        puts $fh "${label}_VDD_SWIRE_COUNT_PRE=$item_vdd_before"
+        puts $fh "${label}_VDD_SWIRE_COUNT_POST=$item_vdd_after"
+        puts $fh "${label}_VSS_SWIRE_COUNT_PRE=$item_vss_before"
+        puts $fh "${label}_VSS_SWIRE_COUNT_POST=$item_vss_after"
+        puts $fh "${label}_GEOMETRY_EFFECT_STATUS=[expr {$item_effect_ok ? {PASS} : {FAIL}}]"
+        if {$command_ok && $item_effect_ok} {
+            incr created
+        } else {
+            lappend failures "$inst:addRing_or_geometry_effect_failed"
+        }
+        catch {deselectAll}
+    }
+    catch {deselectAll}
+
+    set vdd_after [mptdc_signoff_pg_swire_count VDD]
+    set vss_after [mptdc_signoff_pg_swire_count VSS]
+    set effect_ok [expr {$vdd_before ne "UNKNOWN" && $vdd_after ne "UNKNOWN" &&
+        $vss_before ne "UNKNOWN" && $vss_after ne "UNKNOWN" &&
+        $vdd_after > $vdd_before && $vss_after > $vss_before}]
+    puts $fh ""
+    puts $fh "RO_BLOCK_RING_CREATED_COUNT=$created"
+    puts $fh "RO_BLOCK_RING_VDD_SWIRE_COUNT_POST=$vdd_after"
+    puts $fh "RO_BLOCK_RING_VSS_SWIRE_COUNT_POST=$vss_after"
+    puts $fh "RO_BLOCK_RING_GEOMETRY_EFFECT_STATUS=[expr {$effect_ok ? {PASS} : {FAIL}}]"
+    if {$created != 2} {
+        lappend failures "created_count:$created"
+    }
+    if {!$effect_ok} {
+        lappend failures "no_verified_vdd_vss_swire_growth"
+    }
+    if {[llength $failures] > 0} {
+        puts $fh "RO_BLOCK_RING_STATUS=FAIL"
+        puts $fh "RO_BLOCK_RING_FAILURES=[join $failures { | }]"
+        close $fh
+        return [list 0 $rpt]
+    }
+    puts $fh "RO_BLOCK_RING_STATUS=PASS"
+    close $fh
+    return [list 1 $rpt]
+}
+
 proc mptdc_signoff_build_power_grid {} {
     global mptdc_xh018_cells
     set rpt [file join [mptdc_signoff_report_dir] pg_physical_status.rpt]
@@ -5664,12 +5859,11 @@ proc mptdc_signoff_build_power_grid {} {
         [list addRing -nets $nets -type core_rings -follow core -layer {top MET3 bottom MET3 left METTP right METTP} -width {top 2 bottom 2 left 2 right 2} -spacing {top 1 bottom 1 left 1 right 1} -offset {top 2 bottom 2 left 2 right 2}] \
         [list addRing -nets $nets -follow core -layer {top MET3 bottom MET3 left METTP right METTP} -width 2 -spacing 1 -offset 2] \
         [list addRing -nets $nets -type core_rings -layer {top MET3 bottom MET3 left METTP right METTP} -width 2 -spacing 1 -offset 2]]]
-    set stripe_v_ok [mptdc_signoff_try_pg_command $fh ADD_STRIPE_VERTICAL [list \
-        [list addStripe -nets $nets -layer METTP -direction vertical -width 2 -spacing 2 -set_to_set_distance 80 -start_from left -start_offset 20] \
-        [list addStripe -nets $nets -layer MET3 -direction vertical -width 2 -spacing 2 -set_to_set_distance 80 -start_from left -start_offset 20]]]
-    set stripe_h_ok [mptdc_signoff_try_pg_command $fh ADD_STRIPE_HORIZONTAL [list \
-        [list addStripe -nets $nets -layer MET3 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20] \
-        [list addStripe -nets $nets -layer MET2 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20]]]
+    lassign [mptdc_signoff_create_ro_block_rings] ro_block_ring_ok ro_block_ring_rpt
+    set stripe_v_ok [mptdc_signoff_try_pg_command $fh ADD_STRIPE_VERTICAL \
+        [mptdc_signoff_pg_mesh_stripe_commands $nets METTP MET3 vertical]]
+    set stripe_h_ok [mptdc_signoff_try_pg_command $fh ADD_STRIPE_HORIZONTAL \
+        [mptdc_signoff_pg_mesh_stripe_commands $nets MET3 MET2 horizontal]]
     close $fh
     lassign [mptdc_signoff_create_block_pg_pins] block_pin_ok block_pin_rpt
     lassign [mptdc_signoff_create_block_pg_stitches block_pg_stitch_status.rpt BLOCK_PG_STITCH] block_stitch_ok block_stitch_rpt
@@ -5721,6 +5915,8 @@ proc mptdc_signoff_build_power_grid {} {
     set fh [open $rpt a]
     puts $fh ""
     puts $fh "RING_CREATED=$ring_ok"
+    puts $fh "RO_BLOCK_RING_STATUS=[expr {$ro_block_ring_ok ? "PASS" : "FAIL"}]"
+    puts $fh "RO_BLOCK_RING_REPORT=$ro_block_ring_rpt"
     puts $fh "VERTICAL_STRAP_CREATED=$stripe_v_ok"
     puts $fh "HORIZONTAL_STRAP_CREATED=$stripe_h_ok"
     puts $fh "BLOCK_PG_PIN_STATUS=[expr {$block_pin_ok ? "PASS" : "FAIL"}]"
@@ -5751,8 +5947,8 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
-    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_progress_ok}]
-    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_gate_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
+    set primitive_pg_ok [expr {$ring_ok && $ro_block_ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_progress_ok}]
+    set status [expr {$ring_ok && $ro_block_ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_gate_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
     set provisional_reason ""
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG] &&

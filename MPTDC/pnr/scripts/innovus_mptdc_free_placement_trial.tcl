@@ -50,7 +50,20 @@ mptdc_free_force_env MPTDC_PNR_FAST_TAG_TARGETED_ECO 0
 mptdc_free_force_env MPTDC_DISABLE_ANTENNA_REPAIR 1
 mptdc_free_force_env MPTDC_ENABLE_FINAL_FILLER 1
 mptdc_free_force_env MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
-mptdc_free_default_env MPTDC_FREE_RO_SOFT_HALO_UM 2.0
+mptdc_free_force_env MPTDC_FREE_RO_SOFT_HALO_UM 8.0
+mptdc_free_force_env MPTDC_ENABLE_RO_BLOCK_RINGS 1
+mptdc_free_force_env MPTDC_RO_BLOCK_RING_WIDTH_UM 2.0
+mptdc_free_force_env MPTDC_RO_BLOCK_RING_SPACING_UM 1.0
+mptdc_free_force_env MPTDC_RO_BLOCK_RING_OFFSET_UM 2.0
+mptdc_free_force_env MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS 1
+mptdc_free_force_env MPTDC_PG_STRATEGY innovus_sroute_golden_ro
+mptdc_free_force_env MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 1
+mptdc_free_force_env MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 1
+mptdc_free_force_env MPTDC_ENABLE_RO_PG_PROBE 1
+mptdc_free_force_env MPTDC_ENABLE_RO_PG_HOOKUP 0
+mptdc_free_force_env MPTDC_REQUIRE_RO_PG_HOOKUP 0
+mptdc_free_force_env MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0
+mptdc_free_force_env MPTDC_SROUTE_MODE_PROFILE block_pin_width
 mptdc_free_default_env MPTDC_FREE_EXPECTED_TIE_HIGH_TARGETS 91
 mptdc_free_default_env MPTDC_FREE_TIE_HIGH_MASTER LOGIC1DJIHD
 mptdc_free_default_env MPTDC_FREE_TIE_LOW_MASTER LOGIC0DJIHD
@@ -90,6 +103,17 @@ proc mptdc_free_validate_contract {} {
         MPTDC_PNR_FAST_TAG_TIMING_FOCUS 0
         MPTDC_PNR_FAST_TAG_TARGETED_ECO 0
         MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
+        MPTDC_FREE_RO_SOFT_HALO_UM 8.0
+        MPTDC_ENABLE_RO_BLOCK_RINGS 1
+        MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS 1
+        MPTDC_PG_STRATEGY innovus_sroute_golden_ro
+        MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 1
+        MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 1
+        MPTDC_ENABLE_RO_PG_PROBE 1
+        MPTDC_ENABLE_RO_PG_HOOKUP 0
+        MPTDC_REQUIRE_RO_PG_HOOKUP 0
+        MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0
+        MPTDC_SROUTE_MODE_PROFILE block_pin_width
     } {
         if {![info exists ::env($name)] || $::env($name) ne $expected} {
             error "MPTDC_FREE_PROFILE_CONTRACT_FAILED: $name expected=$expected actual=[expr {[info exists ::env($name)] ? $::env($name) : {MISSING}}]"
@@ -346,7 +370,7 @@ proc mptdc_free_macro_aware_place_and_freeze {} {
     puts $fh "MACRO_AWARE_COMMAND_STATUS=PASS"
     puts $fh "MACRO_AWARE_COMMAND_ERROR=NONE"
 
-    set halo_margin [expr {double([mptdc_signoff_env MPTDC_FREE_RO_SOFT_HALO_UM 2.0])}]
+    set halo_margin [expr {double([mptdc_signoff_env MPTDC_FREE_RO_SOFT_HALO_UM 8.0])}]
     set core [mptdc_signoff_core_box]
     set final_boxes {}
     set index 0
@@ -572,6 +596,11 @@ proc mptdc_free_write_profile_report {} {
     puts $fh "IO_POLICY=INPUTS_WEST_OUTPUTS_EAST_DETERMINISTIC_OVERFLOW"
     puts $fh "RO_POLICY=BROAD_MOVABLE_SEEDS_THEN_MACRO_AWARE_PLACE_AND_FREEZE"
     puts $fh "RO_SOFT_HALO_UM=$::env(MPTDC_FREE_RO_SOFT_HALO_UM)"
+    puts $fh "RO_BLOCK_RING_POLICY=ONE_SELECTED_CLUSTER_RING_PER_RO_WITH_SWIRE_GROWTH_PROOF"
+    puts $fh "RO_BLOCK_RING_ENABLE=$::env(MPTDC_ENABLE_RO_BLOCK_RINGS)"
+    puts $fh "PG_STRIPE_BLOCK_RING_BREAK=$::env(MPTDC_BREAK_PG_STRIPES_AT_RO_BLOCK_RINGS)"
+    puts $fh "PG_STRATEGY=$::env(MPTDC_PG_STRATEGY)"
+    puts $fh "SROUTE_MODE_PROFILE=$::env(MPTDC_SROUTE_MODE_PROFILE)"
     puts $fh "LOGICAL_DONT_TOUCH_CHANGE_COUNT=0"
     puts $fh "ANTENNA_REPAIR_ATTEMPTED=NO"
     puts $fh "ANTENNA_EXCEPTION_POLICY=MANAGER_EXCEPTION_REPORT_ONLY"

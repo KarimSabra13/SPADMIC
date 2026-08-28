@@ -1,6 +1,10 @@
 set ::env(MPTDC_FREE_PLACEMENT_LIBRARY_ONLY) 1
 source [file join $::env(MPTDC_REPO_ROOT) MPTDC pnr scripts innovus_mptdc_free_placement_trial.tcl]
 
+if {[mptdc_free_validate_contract] ne "PASS"} {
+    error "free-placement profile contract validation failed"
+}
+
 set ::test_dir [file join /tmp "mptdc_free_macro_state_[pid]"]
 file delete -force $::test_dir
 file mkdir $::test_dir
