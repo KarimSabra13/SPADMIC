@@ -25,7 +25,7 @@ Usage:
     --source-tie1-run-id <id> [options]
 
 Stages:
-  tie1-minarea-trial      Add the exact 0.25um same-net MET1 downward tail.
+  tie1-minarea-trial      Add the exact 0.385um same-net MET1 via-overlap shelf.
   tie1-minarea-replay     Replay that edit from the immutable tie1 checkpoint.
   tie1-pg-analyze         Map all special-wire dangling endpoints without edits.
   tie1-pg-delete-trial    Delete only if every endpoint passes full preflight.
@@ -115,24 +115,29 @@ minarea_gate_passes() {
      "$(report_value "$gate" TOOL_RC)" == 0 &&
      "$(report_value "$gate" COMMAND_1_STATUS)" == PASS &&
      "$(report_value "$gate" MANUAL_ECO_STATUS)" == PASS &&
-     "$(report_value "$gate" REPAIR_REVISION)" == V11 &&
-     "$(report_value "$gate" MANUAL_ECO_MODE)" == CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11 &&
+     "$(report_value "$gate" REPAIR_REVISION)" == V12 &&
+     "$(report_value "$gate" MANUAL_ECO_MODE)" == CANONICAL_FIXED_MET1_VIA_OVERLAP_SHELF_V12 &&
      "$(report_value "$gate" ATTRIBUTE_EDIT_POLICY)" == NO_DB_ATTRIBUTE_EDITS &&
-     "$(report_value "$gate" GEOMETRY_EDIT_POLICY)" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_PERPENDICULAR_TAIL &&
+     "$(report_value "$gate" GEOMETRY_EDIT_POLICY)" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_VIA_OVERLAP_SHELF &&
      "$(report_value "$gate" ROUTE_OPTIMIZER_POLICY)" == NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER &&
-     "$(report_value "$gate" FREE_END_TAIL_DIRECTION)" == VERTICAL_DOWN &&
-     "$(report_value "$gate" FREE_END_TAIL_START)" == "385.175 328.405" &&
-     "$(report_value "$gate" FREE_END_TAIL_FINISH)" == "385.175 328.155" &&
-     "$(report_value "$gate" V10_HORIZONTAL_TAIL_DISPOSITION)" == REJECTED_MINAREA_AND_FE_RC_5_0_SPACING &&
-     "$(report_value "$gate" PREDICTED_CONNECTED_AREA_UM2)" == 0.20875 &&
+     "$(report_value "$gate" VIA_OVERLAP_SHELF_DIRECTION)" == HORIZONTAL_RIGHT &&
+     "$(report_value "$gate" VIA_OVERLAP_SHELF_START)" == "385.175 328.280" &&
+     "$(report_value "$gate" VIA_OVERLAP_SHELF_FINISH)" == "385.560 328.280" &&
+     "$(report_value "$gate" PREDICTED_NEW_WIRE_BOX)" == "385.175 328.165 385.560 328.395" &&
+     "$(report_value "$gate" V11_PERPENDICULAR_TAIL_DISPOSITION)" == REJECTED_VIA1_O_NOTCH_SPACING &&
+     "$(report_value "$gate" V11_OBSERVED_NEW_WIRE_BOX)" == "385.06 328.155 385.29 328.405" &&
+     "$(report_value "$gate" V11_OBSERVED_NOTCH_SPACING_UM)" == 0.080 &&
+     "$(report_value "$gate" PREDICTED_CONNECTED_AREA_UM2)" == 0.221075 &&
      "$(report_value "$gate" PRE_DRC_MARKER_RECONCILIATION_STATUS)" == PASS &&
      "$(report_value "$gate" PRE_DRC_MARKER_FRESH_DRC_TOTAL)" == 1 &&
      "$(report_value "$gate" PRE_DRC_MARKER_GEOMETRY_COUNT)" == 2 &&
      "$(report_value "$gate" PRE_DRC_MARKER_LIVE_COUNT)" == 1 &&
      "$(report_value "$gate" PRE_DRC_MARKER_STALE_COUNT)" == 1 &&
      "$(report_value "$gate" PRE_DRC_MARKER_UNMAPPED_COUNT)" == 0 &&
-     "$(report_value "$gate" FIXED_WIRE_TAIL_STATUS)" == PASS &&
-     "$(report_value "$gate" FIXED_WIRE_TAIL_EFFECT_STATUS)" == PASS &&
+     "$(report_value "$gate" FIXED_WIRE_SHELF_STATUS)" == PASS &&
+     "$(report_value "$gate" FIXED_WIRE_SHELF_EFFECT_STATUS)" == PASS &&
+     "$(report_value "$gate" FIXED_WIRE_SHELF_BOX_STATUS)" == PASS &&
+     "$(report_value "$gate" N57556_VIA_OVERLAP_SHELF_BOX_MATCH_STATUS)" == PASS &&
      "$(report_value "$gate" TARGET_WIRE_COUNT_DELTA)" == 1 &&
      "$(report_value "$gate" TARGET_NEW_WIRE_COUNT)" == 1 &&
      "$(report_value "$gate" TARGET_PREEXISTING_WIRE_STATUS)" == PRESERVED &&
@@ -142,7 +147,8 @@ minarea_gate_passes() {
      "$(report_value "$gate" N57556_LANDING_REPRESENTATION_STATUS)" == UNCHANGED &&
      "$(report_value "$gate" TARGET_VIA_FINGERPRINT_STATUS)" == UNCHANGED &&
      "$(report_value "$gate" POST_MINAREA_MARKER_COUNT)" == 0 &&
-     "$(report_value "$gate" FREE_END_TAIL_LENGTH_UM)" == 0.25 &&
+     "$(report_value "$gate" VIA_OVERLAP_SHELF_LENGTH_UM)" == 0.385 &&
+     "$(report_value "$gate" VIA_OVERLAP_SHELF_WIDTH_UM)" == 0.23 &&
      "$(report_value "$gate" INITIAL_DRC)" == 1 &&
      "$(report_value "$gate" FINAL_DRC)" == 0 &&
      "$(report_value "$gate" FINAL_SHORTS)" == 0 &&
@@ -343,14 +349,14 @@ mkdir -p "$RUN_DIR/manifests" "$RUN_DIR/logs" "$RUN_DIR/reports"
 COMMANDS_FILE="$RUN_DIR/manifests/tie1_closure.commands.tcl"
 case "$STAGE" in
   tie1-minarea-trial)
-    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_trial_v11' > "$COMMANDS_FILE"
-    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_trial_v11.rpt"
+    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_trial_v12' > "$COMMANDS_FILE"
+    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_trial_v12.rpt"
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_minarea_endext_trial.rpt"
     STEP=TIE1_MINAREA_ENDEXT_TRIAL
     ;;
   tie1-minarea-replay)
-    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_replay_v11' > "$COMMANDS_FILE"
-    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_replay_v11.rpt"
+    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_replay_v12' > "$COMMANDS_FILE"
+    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_replay_v12.rpt"
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_minarea_endext_replay.rpt"
     STEP=TIE1_MINAREA_ENDEXT_REPLAY
     ;;
@@ -424,10 +430,13 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
   ATTRIBUTE_EDIT_POLICY="$(report_value "$MANUAL_REPORT" ATTRIBUTE_EDIT_POLICY)"
   GEOMETRY_EDIT_POLICY="$(report_value "$MANUAL_REPORT" GEOMETRY_EDIT_POLICY)"
   ROUTE_OPTIMIZER_POLICY="$(report_value "$MANUAL_REPORT" ROUTE_OPTIMIZER_POLICY)"
-  TAIL_DIRECTION="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_DIRECTION)"
-  TAIL_START="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_START)"
-  TAIL_FINISH="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_FINISH)"
-  V10_DISPOSITION="$(report_value "$MANUAL_REPORT" V10_HORIZONTAL_TAIL_DISPOSITION)"
+  SHELF_DIRECTION="$(report_value "$MANUAL_REPORT" VIA_OVERLAP_SHELF_DIRECTION)"
+  SHELF_START="$(report_value "$MANUAL_REPORT" VIA_OVERLAP_SHELF_START)"
+  SHELF_FINISH="$(report_value "$MANUAL_REPORT" VIA_OVERLAP_SHELF_FINISH)"
+  PREDICTED_WIRE_BOX="$(report_value "$MANUAL_REPORT" PREDICTED_NEW_WIRE_BOX)"
+  V11_DISPOSITION="$(report_value "$MANUAL_REPORT" V11_PERPENDICULAR_TAIL_DISPOSITION)"
+  V11_OBSERVED_BOX="$(report_value "$MANUAL_REPORT" V11_OBSERVED_NEW_WIRE_BOX)"
+  V11_NOTCH_SPACING="$(report_value "$MANUAL_REPORT" V11_OBSERVED_NOTCH_SPACING_UM)"
   PREDICTED_CONNECTED_AREA="$(report_value "$MANUAL_REPORT" PREDICTED_CONNECTED_AREA_UM2)"
   PRE_MARKER_RECONCILIATION="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_RECONCILIATION_STATUS)"
   PRE_MARKER_FRESH_TOTAL="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_FRESH_DRC_TOTAL)"
@@ -435,8 +444,10 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
   PRE_MARKER_LIVE_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_LIVE_COUNT)"
   PRE_MARKER_STALE_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_STALE_COUNT)"
   PRE_MARKER_UNMAPPED_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_UNMAPPED_COUNT)"
-  TAIL_STATUS="$(report_value "$MANUAL_REPORT" FIXED_WIRE_TAIL_STATUS)"
-  TAIL_EFFECT_STATUS="$(report_value "$MANUAL_REPORT" FIXED_WIRE_TAIL_EFFECT_STATUS)"
+  SHELF_STATUS="$(report_value "$MANUAL_REPORT" FIXED_WIRE_SHELF_STATUS)"
+  SHELF_EFFECT_STATUS="$(report_value "$MANUAL_REPORT" FIXED_WIRE_SHELF_EFFECT_STATUS)"
+  SHELF_BOX_STATUS="$(report_value "$MANUAL_REPORT" FIXED_WIRE_SHELF_BOX_STATUS)"
+  SHELF_BOX_MATCH_STATUS="$(report_value "$MANUAL_REPORT" N57556_VIA_OVERLAP_SHELF_BOX_MATCH_STATUS)"
   TARGET_WIRE_COUNT_DELTA="$(report_value "$MANUAL_REPORT" TARGET_WIRE_COUNT_DELTA)"
   TARGET_NEW_WIRE_COUNT="$(report_value "$MANUAL_REPORT" TARGET_NEW_WIRE_COUNT)"
   TARGET_PREEXISTING_WIRE_STATUS="$(report_value "$MANUAL_REPORT" TARGET_PREEXISTING_WIRE_STATUS)"
@@ -446,28 +457,34 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
   LANDING_REPRESENTATION_STATUS="$(report_value "$MANUAL_REPORT" N57556_LANDING_REPRESENTATION_STATUS)"
   TARGET_VIA_FINGERPRINT_STATUS="$(report_value "$MANUAL_REPORT" TARGET_VIA_FINGERPRINT_STATUS)"
   POST_MINAREA_COUNT="$(report_value "$MANUAL_REPORT" POST_MINAREA_MARKER_COUNT)"
-  TAIL_LENGTH="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_LENGTH_UM)"
+  SHELF_LENGTH="$(report_value "$MANUAL_REPORT" VIA_OVERLAP_SHELF_LENGTH_UM)"
+  SHELF_WIDTH="$(report_value "$MANUAL_REPORT" VIA_OVERLAP_SHELF_WIDTH_UM)"
   if [[ "$TOOL_RC" -eq 0 && "$COMMAND_STATUS" == PASS && "$MANUAL_STATUS" == PASS &&
-        "$REPAIR_REVISION" == V11 && "$PRE_MARKER_RECONCILIATION" == PASS &&
-        "$MANUAL_ECO_MODE" == CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11 &&
+        "$REPAIR_REVISION" == V12 && "$PRE_MARKER_RECONCILIATION" == PASS &&
+        "$MANUAL_ECO_MODE" == CANONICAL_FIXED_MET1_VIA_OVERLAP_SHELF_V12 &&
         "$ATTRIBUTE_EDIT_POLICY" == NO_DB_ATTRIBUTE_EDITS &&
-        "$GEOMETRY_EDIT_POLICY" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_PERPENDICULAR_TAIL &&
+        "$GEOMETRY_EDIT_POLICY" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_VIA_OVERLAP_SHELF &&
         "$ROUTE_OPTIMIZER_POLICY" == NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER &&
-        "$TAIL_DIRECTION" == VERTICAL_DOWN &&
-        "$TAIL_START" == "385.175 328.405" && "$TAIL_FINISH" == "385.175 328.155" &&
-        "$V10_DISPOSITION" == REJECTED_MINAREA_AND_FE_RC_5_0_SPACING &&
-        "$PREDICTED_CONNECTED_AREA" == 0.20875 &&
+        "$SHELF_DIRECTION" == HORIZONTAL_RIGHT &&
+        "$SHELF_START" == "385.175 328.280" && "$SHELF_FINISH" == "385.560 328.280" &&
+        "$PREDICTED_WIRE_BOX" == "385.175 328.165 385.560 328.395" &&
+        "$V11_DISPOSITION" == REJECTED_VIA1_O_NOTCH_SPACING &&
+        "$V11_OBSERVED_BOX" == "385.06 328.155 385.29 328.405" &&
+        "$V11_NOTCH_SPACING" == 0.080 &&
+        "$PREDICTED_CONNECTED_AREA" == 0.221075 &&
         "$PRE_MARKER_FRESH_TOTAL" == 1 && "$PRE_MARKER_GEOMETRY_COUNT" == 2 &&
         "$PRE_MARKER_LIVE_COUNT" == 1 && "$PRE_MARKER_STALE_COUNT" == 1 &&
-        "$PRE_MARKER_UNMAPPED_COUNT" == 0 && "$TAIL_STATUS" == PASS &&
-        "$TAIL_EFFECT_STATUS" == PASS && "$TARGET_WIRE_COUNT_DELTA" == 1 &&
+        "$PRE_MARKER_UNMAPPED_COUNT" == 0 && "$SHELF_STATUS" == PASS &&
+        "$SHELF_EFFECT_STATUS" == PASS && "$SHELF_BOX_STATUS" == PASS &&
+        "$SHELF_BOX_MATCH_STATUS" == PASS && "$TARGET_WIRE_COUNT_DELTA" == 1 &&
         "$TARGET_NEW_WIRE_COUNT" == 1 && "$TARGET_PREEXISTING_WIRE_STATUS" == PRESERVED &&
         "$TARGET_WIRE_HANDLE_STATUS" == ONE_EXACT_ADDITION &&
         "$TARGET_OTHER_ROUTE_OBJECT_STATUS" == UNCHANGED &&
         "$RESERVED_FILL_OBJECT_STATUS" == UNCHANGED &&
         "$LANDING_REPRESENTATION_STATUS" == UNCHANGED &&
         "$TARGET_VIA_FINGERPRINT_STATUS" == UNCHANGED &&
-        "$POST_MINAREA_COUNT" == 0 && "$TAIL_LENGTH" == 0.25 &&
+        "$POST_MINAREA_COUNT" == 0 && "$SHELF_LENGTH" == 0.385 &&
+        "$SHELF_WIDTH" == 0.23 &&
         "$INITIAL_DRC" == 1 && "$FINAL_DRC" == 0 &&
         "$FINAL_SHORTS" == 0 && "$FINAL_REGULAR" == 0 && "$FINAL_SPECIAL" == 1 &&
         "$FINAL_SPECIAL_RAW" == 1 && "$FINAL_SPECIAL_NON_RO" == 0 &&
@@ -491,10 +508,13 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "ATTRIBUTE_EDIT_POLICY=$ATTRIBUTE_EDIT_POLICY"
     echo "GEOMETRY_EDIT_POLICY=$GEOMETRY_EDIT_POLICY"
     echo "ROUTE_OPTIMIZER_POLICY=$ROUTE_OPTIMIZER_POLICY"
-    echo "FREE_END_TAIL_DIRECTION=$TAIL_DIRECTION"
-    echo "FREE_END_TAIL_START=$TAIL_START"
-    echo "FREE_END_TAIL_FINISH=$TAIL_FINISH"
-    echo "V10_HORIZONTAL_TAIL_DISPOSITION=$V10_DISPOSITION"
+    echo "VIA_OVERLAP_SHELF_DIRECTION=$SHELF_DIRECTION"
+    echo "VIA_OVERLAP_SHELF_START=$SHELF_START"
+    echo "VIA_OVERLAP_SHELF_FINISH=$SHELF_FINISH"
+    echo "PREDICTED_NEW_WIRE_BOX=$PREDICTED_WIRE_BOX"
+    echo "V11_PERPENDICULAR_TAIL_DISPOSITION=$V11_DISPOSITION"
+    echo "V11_OBSERVED_NEW_WIRE_BOX=$V11_OBSERVED_BOX"
+    echo "V11_OBSERVED_NOTCH_SPACING_UM=$V11_NOTCH_SPACING"
     echo "PREDICTED_CONNECTED_AREA_UM2=$PREDICTED_CONNECTED_AREA"
     echo "PRE_DRC_MARKER_RECONCILIATION_STATUS=$PRE_MARKER_RECONCILIATION"
     echo "PRE_DRC_MARKER_FRESH_DRC_TOTAL=$PRE_MARKER_FRESH_TOTAL"
@@ -502,8 +522,10 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "PRE_DRC_MARKER_LIVE_COUNT=$PRE_MARKER_LIVE_COUNT"
     echo "PRE_DRC_MARKER_STALE_COUNT=$PRE_MARKER_STALE_COUNT"
     echo "PRE_DRC_MARKER_UNMAPPED_COUNT=$PRE_MARKER_UNMAPPED_COUNT"
-    echo "FIXED_WIRE_TAIL_STATUS=$TAIL_STATUS"
-    echo "FIXED_WIRE_TAIL_EFFECT_STATUS=$TAIL_EFFECT_STATUS"
+    echo "FIXED_WIRE_SHELF_STATUS=$SHELF_STATUS"
+    echo "FIXED_WIRE_SHELF_EFFECT_STATUS=$SHELF_EFFECT_STATUS"
+    echo "FIXED_WIRE_SHELF_BOX_STATUS=$SHELF_BOX_STATUS"
+    echo "N57556_VIA_OVERLAP_SHELF_BOX_MATCH_STATUS=$SHELF_BOX_MATCH_STATUS"
     echo "TARGET_WIRE_COUNT_DELTA=$TARGET_WIRE_COUNT_DELTA"
     echo "TARGET_NEW_WIRE_COUNT=$TARGET_NEW_WIRE_COUNT"
     echo "TARGET_PREEXISTING_WIRE_STATUS=$TARGET_PREEXISTING_WIRE_STATUS"
@@ -513,7 +535,8 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "N57556_LANDING_REPRESENTATION_STATUS=$LANDING_REPRESENTATION_STATUS"
     echo "TARGET_VIA_FINGERPRINT_STATUS=$TARGET_VIA_FINGERPRINT_STATUS"
     echo "POST_MINAREA_MARKER_COUNT=$POST_MINAREA_COUNT"
-    echo "FREE_END_TAIL_LENGTH_UM=$TAIL_LENGTH"
+    echo "VIA_OVERLAP_SHELF_LENGTH_UM=$SHELF_LENGTH"
+    echo "VIA_OVERLAP_SHELF_WIDTH_UM=$SHELF_WIDTH"
     echo "INITIAL_DRC=$INITIAL_DRC"
     echo "FINAL_DRC=$FINAL_DRC"
     echo "FINAL_SHORTS=$FINAL_SHORTS"
