@@ -1,0 +1,25 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_tie1_minarea_endext_trial_v8
+REPORT_STATUS=FAILED
+ERROR=PRE_MINAREA_MARKER expected the sole geometry marker to be u_core_n_57556 MET1 minimum area 0.17770000/0.202 at 385.06 328.29 385.75 328.52
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+PRE_MINAREA_MARKER expected the sole geometry marker to be u_core_n_57556 MET1 minimum area 0.17770000/0.202 at 385.06 328.29 385.75 328.52
+    while executing
+"error "$label expected the sole geometry marker to be u_core_n_57556 MET1 minimum area $expected_actual/0.202 at $expected_box""
+    (procedure "mptdc_ckpt_manual_assert_minarea_marker" line 64)
+    invoked from within
+"mptdc_ckpt_manual_assert_minarea_marker  $fh $label $snapshot {385.06 328.29 385.75 328.52} 0.17770000"
+    (procedure "mptdc_ckpt_manual_assert_minarea_01777_marker" line 2)
+    invoked from within
+"mptdc_ckpt_manual_assert_minarea_01777_marker  $fh PRE_MINAREA_MARKER $baseline"
+    (procedure "mptdc_ckpt_manual_minarea_endext_v8_impl" line 32)
+    invoked from within
+"mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial"
+    (procedure "mptdc_ckpt_tie1_minarea_endext_trial_v8" line 2)
+    invoked from within
+"mptdc_ckpt_tie1_minarea_endext_trial_v8"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
