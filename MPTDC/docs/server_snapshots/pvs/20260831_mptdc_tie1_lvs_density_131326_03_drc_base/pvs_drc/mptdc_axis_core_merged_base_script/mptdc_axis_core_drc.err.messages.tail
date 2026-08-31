@@ -1,0 +1,3 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_lvs_density_131326/pvs_drc/mptdc_axis_core_merged_base_script/mptdc_axis_core_drc.err
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT|match|MATCH|mismatch|MISMATCH)\b)
+# Last 500 matching lines
