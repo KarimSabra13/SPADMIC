@@ -1,0 +1,19 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7f16ddb9f430	{364.47 358.235 364.67 358.275}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_69629 & Regular Wire of Net u_core_n_57960 Actual: 0.200000 Required: 0.230000 Type: ParallelRunLength Spacing # 200 230 3 2 : 364.6700 358.2750 365.0100 358.6150 1: 364.1850 357.9500 364.4700 358.2350 1
+2	0x7f16c6e6d010	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7f16c6e6d040	{221.75 201.16 221.75 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7f16c6e6d070	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+5	0x7f16c6e6d0a0	{48.0 201.16 48.0 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+6	0x7f16c6e6d0d0	{121.16 233.62 121.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+7	0x7f16c6e6d100	{121.16 648.32 121.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+8	0x7f16c6e6d130	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+9	0x7f16c6e6d160	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7f16c6e6d190	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+11	0x7f16c6e6d1c0	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7f16c6e6d1f0	{125.16 233.62 125.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+13	0x7f16c6e6d220	{125.16 648.32 125.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+14	0x7f16c6e6d250	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+15	0x7f16c6e6d280	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+16	0x7f16c6e6d2b0	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+17	0x7f16c6e6d2e0	{385.035 328.29 385.75 328.52}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57556 Actual: 0.18345000 Required: 0.20200000 Type: Minimum Area # 183450 202000 64 1 : 385.3700 328.2650 385.7500 328.5450 1     LEF Description:  AREA 0.202000 ; 
+18	0x7f16c6e6d310	{384.83 328.5 385.035 328.52}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_57556 & Pin of Cell FE_RC_5_0 Actual: 0.205000 Required: 0.230000 Type: ParallelRunLength Spacing # 205 230 3 2 : 384.4950 328.5000 384.8300 328.8350 1: 385.0350 328.2900 385.2650 328.5200 1     LEF Description:  SPACING 0.230000 
