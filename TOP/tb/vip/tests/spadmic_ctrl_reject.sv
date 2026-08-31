@@ -13,6 +13,7 @@ class spadmic_ctrl_reject extends spadmic_base_test;
     cfg.drv_mode   = DRV_MODE_DIRECT_CSR;
     cfg.profile    = PROFILE_TDC_CHAR;
     cfg.timeout_ns = 500_000;
+    cfg.enable_reset_test = 1'b1;
   endfunction
 
   task body();
@@ -25,7 +26,7 @@ class spadmic_ctrl_reject extends spadmic_base_test;
       spadmic_ctrl_txn ct = new();
       ct.raw_csr_write = 1'b1;
       ct.addr          = SPADMIC_CSR_GLOBAL_CTRL;
-      ct.wdata         = 32'h0000_006f;  // en=1 axis=111 tx_sel=POSITION input=CAL
+      ct.wdata         = 32'h0000_00F5;  // valid POSITION_ONLY control value
       ct.drv_mode      = cfg.drv_mode;
       env.gen.drv_mb.put(ct);
     end
@@ -34,7 +35,7 @@ class spadmic_ctrl_reject extends spadmic_base_test;
     begin
       spadmic_ctrl_txn rd = new();
       rd.is_read = 1'b1;
-      rd.addr    = SPADMIC_CSR_GLOBAL_FAULT;
+      rd.addr    = CSR_ACCESS_LAST_INFO;
       rd.drv_mode = cfg.drv_mode;
       env.gen.drv_mb.put(rd);
     end

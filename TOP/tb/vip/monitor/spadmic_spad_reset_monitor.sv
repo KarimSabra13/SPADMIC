@@ -45,9 +45,11 @@ class spadmic_spad_reset_monitor;
   task automatic capture_pulse();
     spadmic_spad_reset_txn txn;
     int unsigned width;
+    int unsigned expected_width;
     longint unsigned start_time;
 
     start_time = $time;
+    expected_width = reset_if.expected_width_cycles;
     width = 0;
     do begin
       width++;
@@ -55,15 +57,18 @@ class spadmic_spad_reset_monitor;
     end while (reset_if.rst_n && reset_if.spad_matrix_rst);
 
     total_pulses++;
-    if (width != 1) begin
+    if ((expected_width == 0) || (width != expected_width)) begin
       width_errors++;
-      $display("[SPAD_RST_MON] FAIL: reset pulse width=%0d cycles", width);
+      $display("[SPAD_RST_MON] FAIL: reset pulse width=%0d expected=%0d cycles",
+               width, expected_width);
     end else begin
-      $display("[SPAD_RST_MON] Pulse #%0d width=1 cycle @%0t", total_pulses, start_time);
+      $display("[SPAD_RST_MON] Pulse #%0d width=%0d cycles @%0t",
+               total_pulses, width, start_time);
     end
 
     txn = new();
     txn.pulse_width_cycles = width;
+    txn.expected_width_cycles = expected_width;
     txn.start_time_ps      = start_time;
     txn.end_time_ps        = $time;
     sb_mb.put(txn);
@@ -74,4 +79,3 @@ class spadmic_spad_reset_monitor;
   endfunction
 
 endclass
-

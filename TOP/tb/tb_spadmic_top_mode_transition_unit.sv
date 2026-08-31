@@ -121,7 +121,7 @@ module tb_spadmic_top_mode_transition_unit;
     async_rst_n = 1'b1;
     repeat (12) @(posedge clk_sys);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0001_4000);
+    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0000_4000);
     i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_POSITION_ONLY, 1'b1});
     i2c_read_csr(SPADMIC_CSR_MTOP_CTRL_ACTIVE, rd);
@@ -139,8 +139,10 @@ module tb_spadmic_top_mode_transition_unit;
     i2c_read_csr(SPADMIC_CSR_MTOP_CTRL_ACTIVE, rd);
     check("busy mode write does not change active mode",
           rd[3:1] == SPADMIC_MODE_POSITION_ONLY);
-    i2c_read_csr(SPADMIC_CSR_MTOP_FAULT, rd);
-    check("busy mode write records PATH_BUSY", rd[11:8] == CMD_ERR_PATH_BUSY);
+    i2c_read_csr(spadmic_csr_map_pkg::CSR_ACCESS_LAST_INFO, rd);
+    check("busy mode write records an unsafe GLOBAL_CTRL access",
+          rd[15:0] == spadmic_csr_map_pkg::CSR_GLOBAL_CTRL &&
+          rd[23:16] == spadmic_csr_map_pkg::CSR_CAUSE_UNSAFE_WRITE && rd[24]);
 
     R = '0;
     Y = '0;

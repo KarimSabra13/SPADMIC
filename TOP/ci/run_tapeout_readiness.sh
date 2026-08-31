@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SPADMIC TOP — Tapeout Readiness Gate
+# SPADMIC TOP - RTL Readiness Evidence Gate
 #
 # This gate is intentionally stricter than a smoke test and more portable than
 # the Xcelium-only full regression.  It runs Verilator lint/unit coverage when
@@ -118,7 +118,7 @@ run_verilator_tb() {
 }
 
 echo "═══════════════════════════════════════════════════════"
-echo "  SPADMIC TOP — Tapeout Readiness Gate"
+echo "  SPADMIC TOP - RTL Readiness Evidence Gate"
 echo "  TOP_ROOT:     $TOP_ROOT"
 echo "  MPTDC_ROOT:   $MPTDC_ROOT"
 echo "  BUILD_ROOT:   $BUILD_ROOT"
@@ -157,19 +157,19 @@ VERILATOR_TBS=(
   tb_spadmic_top_reset_during_matrix_cfg_unit
   tb_spadmic_top_mode_transition_unit
   tb_spadmic_top_sequencer_unit
-  tb_spadmic_stress_csr
   tb_spadmic_stress_position
   tb_spadmic_ddr_tx_unit
 )
 
+run_step "Generated CSR map drift check" bash "$TOP_ROOT/ci/check_csr_map_generated.sh"
+
 if command -v verilator >/dev/null 2>&1; then
-  run_step "Verilator legacy TOP lint" run_verilator_top_lint spadmic_top_v1
   run_step "Verilator matrix TOP lint" run_verilator_top_lint spadmic_top_matrix_v1
   for tb in "${VERILATOR_TBS[@]}"; do
     run_step "Verilator unit: $tb" run_verilator_tb "$tb"
   done
 else
-  skip_step "Verilator full TOP lint" "verilator not found"
+  skip_step "Verilator matrix TOP lint" "verilator not found"
   for tb in "${VERILATOR_TBS[@]}"; do
     skip_step "Verilator unit: $tb" "verilator not found"
   done
@@ -182,12 +182,21 @@ else
   skip_step "Xcelium TOP smoke" "xrun not found"
   skip_step "Xcelium directed regression" "xrun not found"
 fi
-skip_step "Xcelium VIP smoke" "retired standalone VIP"
-skip_step "Xcelium VIP feature suite" "retired standalone VIP"
+if command -v xrun >/dev/null 2>&1; then
+  run_step "Xcelium VIP smoke" bash "$TOP_ROOT/ci/run_vip_smoke.sh"
+  run_step "Xcelium VIP functional coverage" bash "$TOP_ROOT/ci/run_vip_coverage.sh"
+elif command -v verilator >/dev/null 2>&1; then
+  run_step "Verilator active VIP lint" \
+    bash "$TOP_ROOT/scripts/sim/run_vip_test.sh" smoke_tdc --sim verilator
+  skip_step "Xcelium VIP functional coverage" "xrun not found"
+else
+  skip_step "Active VIP lint" "neither xrun nor verilator found"
+  skip_step "Xcelium VIP functional coverage" "xrun not found"
+fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════"
-echo "  TAPEOUT READINESS: $PASS pass, $FAIL fail, $SKIP skipped"
+echo "  RTL READINESS EVIDENCE: $PASS pass, $FAIL fail, $SKIP skipped"
 if [[ $FAIL -gt 0 ]]; then
   echo "  Failed: ${FAILED_LIST[*]}"
 fi

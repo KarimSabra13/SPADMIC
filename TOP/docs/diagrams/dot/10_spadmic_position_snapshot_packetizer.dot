@@ -1,0 +1,80 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_position_snapshot_packetizer</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Private R/Y/B snapshot capture with cluster/raw packet generation under coordinator control.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_position_snapshot_packetizer.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+
+    start [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Coordinator start</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>shared event ID<BR ALIGN='LEFT'/>cluster/raw mode<BR ALIGN='LEFT'/>gap and minimum-span settings</FONT></TD></TR>
+    </TABLE>
+    >];
+    capture [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Private snapshot capture</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>copy R/Y/B snapshot<BR ALIGN='LEFT'/>acknowledge capture before matrix reset</FONT></TD></TR>
+    </TABLE>
+    >];
+    scan [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Three cluster scanners</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>R/Y/B independently<BR ALIGN='LEFT'/>retain first two clusters<BR ALIGN='LEFT'/>filter by minimum span</FONT></TD></TR>
+    </TABLE>
+    >];
+    cluster [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Cluster packet</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>8 logical words<BR ALIGN='LEFT'/>header + six cluster words + EOP</FONT></TD></TR>
+    </TABLE>
+    >];
+    raw [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Raw packet</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>14 logical words<BR ALIGN='LEFT'/>header + 12 bitmap words + EOP</FONT></TD></TR>
+    </TABLE>
+    >];
+    handshake [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Packet handshake</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>SOP/EOP sidebands<BR ALIGN='LEFT'/>pending/busy/done<BR ALIGN='LEFT'/>drop if start arrives busy</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; start; capture; scan; cluster; raw; handshake; }
+    start -> capture [style="invis" weight=20];
+    capture -> scan [style="invis" weight=20];
+    scan -> cluster [style="invis" weight=20];
+    cluster -> raw [style="invis" weight=20];
+    raw -> handshake [style="invis" weight=20];
+    start -> capture [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="start", fontsize=10, fontcolor="#334155"];
+    capture -> scan [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="stable private image", fontsize=10, fontcolor="#334155"];
+    scan -> cluster [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="cluster mode", fontsize=10, fontcolor="#334155"];
+    capture -> raw [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="raw mode", fontsize=10, fontcolor="#334155"];
+    cluster -> handshake [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="16-bit words", fontsize=10, fontcolor="#334155"];
+    raw -> handshake [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="16-bit words", fontsize=10, fontcolor="#334155"];
+
+    }

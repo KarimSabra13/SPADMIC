@@ -149,7 +149,7 @@ module tb_spadmic_top_matrix_v1_both_full_unit;
     async_rst_n = 1'b1;
     repeat (12) @(posedge clk_sys);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0001_0003);
+    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0000_0003);
     i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_BOTH, 1'b1});
     i2c_read_csr(SPADMIC_CSR_MTOP_CTRL_ACTIVE, rd);
@@ -178,12 +178,12 @@ module tb_spadmic_top_matrix_v1_both_full_unit;
       @(posedge clk_sys);
     end
     check("BOTH event returns safe idle", dut.safe_idle);
-    i2c_read_csr(SPADMIC_CSR_MATRIX_EVENT_STATUS, rd);
+    i2c_read_csr(spadmic_csr_map_pkg::CSR_EVENT_MASK_STATUS, rd);
     check("BOTH required/completed mask is all four sources", rd[7:4] == 4'b1111);
     check("BOTH emits at least one DDR16 pair", ddr_word_count != 0);
     check("BOTH bundle has four EOC words with shared event ID zero",
           count_eoc_for_id(14'h0000) == 4);
-    i2c_read_csr(SPADMIC_CSR_TX_STATUS, rd);
+    i2c_read_csr(spadmic_csr_map_pkg::CSR_TX_FIFO_STATUS, rd);
     check("TX path drains after BOTH bundle", rd[0] && !rd[1]);
 
     if (fail_count != 0)

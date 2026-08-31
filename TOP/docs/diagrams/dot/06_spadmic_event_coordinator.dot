@@ -1,0 +1,88 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_event_coordinator</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">One-event-at-a-time lifecycle with frozen source masks, reset acknowledgements, and one shared event ID.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_event_coordinator.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+
+    trigger [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Accepted trigger</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>normal matrix event<BR ALIGN='LEFT'/>or selected calibration start<BR ALIGN='LEFT'/>resources ready before admission</FONT></TD></TR>
+    </TABLE>
+    >];
+    idle [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>EVT_IDLE</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>compute required packet/reset masks<BR ALIGN='LEFT'/>allocate one shared event ID</FONT></TD></TR>
+    </TABLE>
+    >];
+    ack [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>EVT_WAIT_RESET_ACK</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>wait snapshot capture<BR ALIGN='LEFT'/>wait selected TDC start acknowledgements</FONT></TD></TR>
+    </TABLE>
+    >];
+    reset [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>EVT_WAIT_RESET_DONE</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>optional automatic matrix reset<BR ALIGN='LEFT'/>width from RESET_CFG</FONT></TD></TR>
+    </TABLE>
+    >];
+    packets [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>EVT_WAIT_PACKETS</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>wait every required source pending<BR ALIGN='LEFT'/>frozen event mask</FONT></TD></TR>
+    </TABLE>
+    >];
+    transmit [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>EVT_TRANSMIT</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>start one correlated bundle<BR ALIGN='LEFT'/>wait ordered bundle completion</FONT></TD></TR>
+    </TABLE>
+    >];
+    rearm [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>EVT_REARM</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>wait matrix inputs clear<BR ALIGN='LEFT'/>return to safe idle</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; trigger; idle; ack; reset; packets; transmit; rearm; }
+    trigger -> idle [style="invis" weight=20];
+    idle -> ack [style="invis" weight=20];
+    ack -> reset [style="invis" weight=20];
+    reset -> packets [style="invis" weight=20];
+    packets -> transmit [style="invis" weight=20];
+    transmit -> rearm [style="invis" weight=20];
+    trigger -> idle [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="event trigger", fontsize=10, fontcolor="#334155"];
+    idle -> ack [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="freeze masks", fontsize=10, fontcolor="#334155"];
+    ack -> reset [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="auto reset enabled", fontsize=10, fontcolor="#334155"];
+    ack -> packets [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="no reset", fontsize=10, fontcolor="#334155"];
+    reset -> packets [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="reset done", fontsize=10, fontcolor="#334155"];
+    packets -> transmit [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="all sources pending", fontsize=10, fontcolor="#334155"];
+    transmit -> rearm [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="bundle done", fontsize=10, fontcolor="#334155"];
+
+    }

@@ -16,42 +16,32 @@ echo "════════════════════════�
 PASS=0
 FAIL=0
 
-# ── Step 1: Xcelium compile check ──────────────────────────────
-echo ""
-echo "─── Step 1: Compile check ────────────────────────────"
-BUILD_DIR="$REPO_ROOT/build/smoke_compile"
-mkdir -p "$BUILD_DIR"
+run_step() {
+  local name="$1"
+  shift
+  echo ""
+  echo "─── $name ─────────────────────────────────────────"
+  if "$@"; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+  fi
+}
 
-# Resolve relative-path filelists to absolute paths
-source "$REPO_ROOT/scripts/sim/resolve_flist.sh"
-resolve_flist "$MPTDC_ROOT" "$MPTDC_ROOT/rtl/filelist.f" "$BUILD_DIR/mptdc.f"
-resolve_flist "$REPO_ROOT"  "$REPO_ROOT/filelist.f"      "$BUILD_DIR/top.f"
-
-xrun -64 -sv -compile \
-  -timescale 1ps/1ps \
-  -nowarn DLCVAR \
-  +define+MPTDC_USE_OSC_MODEL \
-  -f "$BUILD_DIR/mptdc.f" \
-  -f "$BUILD_DIR/top.f" \
-  -xmlibdirname "$BUILD_DIR/xcelium.d" \
-  2>&1 | tee "$BUILD_DIR/compile.log"
-
-if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-  echo "  ✓ Compile PASS"
-  PASS=$((PASS + 1))
+if command -v verilator >/dev/null 2>&1; then
+  SIM=verilator
+elif command -v xrun >/dev/null 2>&1; then
+  SIM=xrun
 else
-  echo "  ✗ Compile FAIL"
-  FAIL=$((FAIL + 1))
+  echo "ERROR: neither verilator nor xrun is available" >&2
+  exit 2
 fi
 
-# ── Step 2: First directed bench ───────────────────────────────
-echo ""
-echo "─── Step 2: Directed bench (stress_csr) ──────────────"
-if bash "$REPO_ROOT/scripts/sim/run_tb.sh" tb_spadmic_stress_csr --sim xrun; then
-  PASS=$((PASS + 1))
-else
-  FAIL=$((FAIL + 1))
-fi
+run_step "Generated CSR map drift" bash "$REPO_ROOT/ci/check_csr_map_generated.sh"
+run_step "CSR ABI unit ($SIM)" \
+  bash "$REPO_ROOT/scripts/sim/run_tb.sh" tb_spadmic_matrix_top_csr_unit --sim "$SIM"
+run_step "I2C matrix-top ABI unit ($SIM)" \
+  bash "$REPO_ROOT/scripts/sim/run_tb.sh" tb_spadmic_i2c_matrix_top_16b_unit --sim "$SIM"
 
 # ── Summary ────────────────────────────────────────────────────
 echo ""

@@ -18,7 +18,7 @@ interface spadmic_i2c_if;
   logic sda;          // resolved SDA line
 
   // Timing parameters (in clk_sys cycles)
-  localparam int unsigned I2C_HALF_PERIOD_CYC = 80;  // ~1 MHz @ 160 MHz sys clock
+  localparam int unsigned I2C_HALF_PERIOD_CYC = 800;  // 100 kHz @ 160 MHz sys clock
 
   assign sda = sda_drive & ~sda_oe;
 
@@ -75,9 +75,9 @@ interface spadmic_i2c_if;
 
   // ── High-Level BFM Tasks ──────────────────────────────────────
 
-  // Write 32-bit data to 12-bit CSR address via I2C
+  // Write one 32-bit CSR word using the ABI 1.0 16-bit pointer.
   task automatic i2c_write(
-    input logic [11:0] addr,
+    input logic [15:0] addr,
     input logic [31:0] data,
     output logic       success
   );
@@ -90,8 +90,8 @@ interface spadmic_i2c_if;
     write_byte({SPADMIC_I2C_ADDR, 1'b0}, ack);
     if (ack) begin success = 1'b0; stop_condition(); return; end
 
-    // Pointer high byte (addr[11:8] in lower nibble)
-    write_byte({4'b0, addr[11:8]}, ack);
+    // Pointer bytes are MSB first.
+    write_byte(addr[15:8], ack);
     if (ack) begin success = 1'b0; stop_condition(); return; end
 
     // Pointer low byte
@@ -111,9 +111,9 @@ interface spadmic_i2c_if;
     stop_condition();
   endtask
 
-  // Read 32-bit data from 12-bit CSR address via I2C (repeated-START)
+  // Read one 32-bit CSR word using a repeated START.
   task automatic i2c_read(
-    input  logic [11:0] addr,
+    input  logic [15:0] addr,
     output logic [31:0] data,
     output logic        success
   );
@@ -126,7 +126,7 @@ interface spadmic_i2c_if;
     write_byte({SPADMIC_I2C_ADDR, 1'b0}, ack);
     if (ack) begin success = 1'b0; stop_condition(); return; end
 
-    write_byte({4'b0, addr[11:8]}, ack);
+    write_byte(addr[15:8], ack);
     if (ack) begin success = 1'b0; stop_condition(); return; end
 
     write_byte(addr[7:0], ack);

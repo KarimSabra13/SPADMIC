@@ -24,9 +24,11 @@ class spadmic_pos_clusters extends spadmic_base_test;
 
     for (int g = 0; g < 3; g++) begin
       for (int s = 0; s < 3; s++) begin
-        // Reconfigure position cluster scan thresholds for this sweep point.
-        env.gen.gen_csr_write(SPADMIC_CSR_POS_GAP_CFG, gap_vals[g]);
-        env.gen.gen_csr_write(SPADMIC_CSR_POS_FILTER_CFG, span_vals[s]);
+        env.gen.gen_position_config_update(
+          SPADMIC_POS_MODE_CLUSTER,
+          gap_vals[g][6:0],
+          span_vals[s][SPADMIC_LINE_COUNT_W-1:0]
+        );
 
         // Single cluster pattern
         pat = '0;
@@ -39,7 +41,7 @@ class spadmic_pos_clusters extends spadmic_base_test;
         for (int i = 5 + span_vals[s] + gap_vals[g]; 
              i < 5 + 2*span_vals[s] + gap_vals[g] && i < SPADMIC_LINE_W; i++)
           pat[i] = 1'b1;
-        env.gen.gen_position_event(pat, '0, '0, 200);
+        env.gen.gen_position_event(pat, pat, pat, 200);
       end
     end
 

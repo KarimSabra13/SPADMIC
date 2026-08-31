@@ -1,6 +1,6 @@
 // =============================================================================
 // SPADMIC SVA — Control-Plane Protocol Assertions
-// Checks sequencer, CSR decoder, and config-accept contracts.
+// Checks ABI 1.0 configuration and CSR request/response contracts.
 // =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
@@ -12,65 +12,64 @@ module spadmic_ctrl_sva
   input wire        clk_sys,
   input wire        rst_n,
 
-  // Sequencer signals
-  input wire [1:0]  seq_state,           // 0=RESET, 1=IDLE, 2=DRAIN
   input wire        cfg_accept,
-  input wire        global_enable_active,
-  input wire        path_idle,
-  input wire        transition_busy,
+  input wire        safe_idle,
+  input wire        global_enable,
+  input wire [2:0]  active_mode,
+  input wire [2:0]  active_axis_mask,
 
   // CSR decoder signals
   input wire        csr_req_valid,
   input wire        csr_req_write,
-  input wire [11:0] csr_req_addr,
+  input wire [15:0] csr_req_addr,
   input wire        csr_req_ready,
   input wire        csr_rsp_valid,
-  input wire        csr_rsp_err,
-
-  // Fault tracking
-  input wire        mode_reject_sticky,
-  input wire [7:0]  mode_reject_count
+  input wire        csr_rsp_err
 );
 
-  // SEQ_RESET=0, SEQ_IDLE=1, SEQ_DRAIN=2
-  localparam [1:0] SEQ_RESET = 2'd0;
-  localparam [1:0] SEQ_IDLE  = 2'd1;
-  localparam [1:0] SEQ_DRAIN = 2'd2;
-
-  // P1: cfg_accept only when sequencer is IDLE and path is idle
   property p_cfg_accept_gate;
     @(posedge clk_sys) disable iff (!rst_n)
-    cfg_accept |-> (seq_state == SEQ_IDLE) && path_idle;
+    cfg_accept |-> safe_idle;
   endproperty
   a_cfg_accept_gate: assert property (p_cfg_accept_gate)
-    else $error("[CTRL_SVA] cfg_accept asserted while not IDLE+path_idle");
+    else $error("[CTRL_SVA] cfg_accept asserted while global resources were busy");
 
-  // P2: sequencer forces global_enable low during DRAIN
-  property p_drain_disables;
+  property p_normal_mode_axis_policy;
     @(posedge clk_sys) disable iff (!rst_n)
-    (seq_state == SEQ_DRAIN) |-> (global_enable_active == 1'b0);
+    global_enable && (active_mode inside {SPADMIC_MODE_TDC_ONLY, SPADMIC_MODE_BOTH})
+      |-> (active_axis_mask == 3'b111);
   endproperty
-  a_drain_disables: assert property (p_drain_disables)
-    else $error("[CTRL_SVA] global_enable not deasserted during DRAIN");
+  a_normal_mode_axis_policy: assert property (p_normal_mode_axis_policy)
+    else $error("[CTRL_SVA] normal matrix TDC mode used a partial axis mask");
 
-  // P3: transition_busy cleared only in IDLE state
-  property p_transition_clear_in_idle;
+  property p_response_follows_request;
     @(posedge clk_sys) disable iff (!rst_n)
-    $fell(transition_busy) |-> (seq_state == SEQ_IDLE);
+    csr_req_valid && csr_req_ready |=> csr_rsp_valid;
   endproperty
-  a_transition_clear: assert property (p_transition_clear_in_idle)
-    else $error("[CTRL_SVA] transition_busy cleared outside IDLE");
+  a_response_follows_request: assert property (p_response_follows_request)
+    else $error("[CTRL_SVA] accepted CSR request did not receive a response");
 
-  // P4: mode_reject_count monotonically increases (never decreases except on reset)
-  property p_reject_count_monotonic;
+  property p_no_spurious_response;
     @(posedge clk_sys) disable iff (!rst_n)
-    $past(rst_n) |-> mode_reject_count >= $past(mode_reject_count);
+    csr_rsp_valid |-> $past(csr_req_valid && csr_req_ready);
   endproperty
-  a_reject_monotonic: assert property (p_reject_count_monotonic)
-    else $error("[CTRL_SVA] mode_reject_count decreased");
+  a_no_spurious_response: assert property (p_no_spurious_response)
+    else $error("[CTRL_SVA] CSR response appeared without an accepted request");
 
-  // P5: CSR response valid must follow a request (no spurious responses)
-  // (simplified: if no request was pending, no response should appear)
+  property p_control_change_was_safe;
+    @(posedge clk_sys) disable iff (!rst_n)
+    $past(rst_n) && $changed({global_enable, active_mode, active_axis_mask})
+      |-> $past(safe_idle);
+  endproperty
+  a_control_change_was_safe: assert property (p_control_change_was_safe)
+    else $error("[CTRL_SVA] active global control changed without prior safe-idle");
+
+  property p_cfg_accept_is_write_response;
+    @(posedge clk_sys) disable iff (!rst_n)
+    cfg_accept |-> $past(csr_req_valid && csr_req_ready && csr_req_write);
+  endproperty
+  a_cfg_accept_is_write_response: assert property (p_cfg_accept_is_write_response)
+    else $error("[CTRL_SVA] cfg_accept was not caused by an accepted CSR write");
 
 endmodule
 

@@ -1,132 +1,75 @@
-# SPADMIC I2C — Integration Guide
-
-Author: Karim Sabra
+# I2C Integration Guide
 
 ## Scope
 
-This document explains how the active I2C block participates in the SPADMIC top-level control plane.
-
-It is intentionally integration-focused. It does not try to turn the checked-in I2C logic into a generic reusable IP manual.
-
-## 1. Active hierarchy
+The active endpoint is `spadmic_top_matrix_v1`. Its external I2C pins remain
+`i2c_scl_i`, bidirectional `i2c_sda_io`, and transport reset `i2c_rst_i`.
 
 ```text
-spadmic_top_v1
-  |- spadmic_i2c_slave
-  |- spadmic_i2c_csr_bridge
-  `- spadmic_csr_decoder
-       |- spadmic_global_csr
-       |- X-axis mptdc_axis_core CSR window
-       |- Y-axis mptdc_axis_core CSR window
-       |- Z-axis mptdc_axis_core CSR window
-       `- spadmic_position_block CSR
+pins -> spadmic_i2c_slave -> spadmic_i2c_csr_bridge
+     -> spadmic_matrix_top_csr -> router -> block-owned banks
 ```
 
-## 2. Transaction flow
+## Transaction encoding
 
-### 2.1 Write
+### Write one register
 
 ```text
 START
-device address + write
-pointer high byte
-pointer low byte
-data byte 3
-data byte 2
-data byte 1
-data byte 0
+0x42 + W
+ADDR[15:8]
+ADDR[7:0]
+DATA[31:24]
+DATA[23:16]
+DATA[15:8]
+DATA[7:0]
 STOP
 ```
 
-The slave emits one local transaction:
-
-- `txn_valid_o = 1`
-- `txn_write_o = 1`
-- `txn_addr_o = pointer`
-- `txn_wdata_o = packed 32-bit data`
-
-### 2.2 Read
+### Pointer plus repeated-START read
 
 ```text
 START
-device address + write
-pointer high byte
-pointer low byte
+0x42 + W
+ADDR[15:8]
+ADDR[7:0]
 REPEATED START
-device address + read
-data byte 3
-data byte 2
-data byte 1
-data byte 0
-NACK
+0x42 + R
+DATA[31:24]
+DATA[23:16]
+DATA[15:8]
+DATA[7:0]
 STOP
 ```
 
-The slave first captures the pointer, then issues one local read transaction and waits for the CSR response before shifting the 32-bit payload back out.
+The master ACKs intermediate read bytes and NACKs the final byte. A current-
+pointer read omits the pointer phase. The pointer does not auto-increment.
 
-## 3. Internal handshakes
+## Integration requirements
 
-### 3.1 Slave <-> bridge
+1. Keep the address fixed at `0x42`; no runtime strap exists.
+2. Use 100 kHz standard mode; the slave does not stretch SCL.
+3. Issue only 4-byte-aligned 16-bit pointers.
+4. Treat any partial data write as discarded, never as byte-enable behavior.
+5. Poll software-visible status; no interrupt output exists.
+6. Do not use `i2c_rst_i` to reset acquisition or clear diagnostics.
 
-The I2C slave uses:
+The bridge has a single outstanding request. A local CSR response reports read
+data and an error indication; the I2C read payload is deterministic even for an
+invalid address. The system access page records the exact software-visible
+failure.
 
-- `txn_valid_o`
-- `txn_write_o`
-- `txn_addr_o`
-- `txn_wdata_o`
-- `txn_ready_i`
-- `txn_rsp_valid_i`
-- `txn_rsp_rdata_i`
-- `txn_rsp_err_i`
-- `txn_rsp_ready_o`
+## Initial software checks
 
-### 3.2 Bridge <-> top CSR fabric
+Read the following before configuration:
 
-The bridge maps those signals directly onto the local CSR bus:
+| Address | Expected |
+| ---: | ---: |
+| `0x0000` | `CHIP_ID = 0x53504D54` |
+| `0x0004` | `ABI_VERSION = 0x00010000` |
+| `0x0008` | `GLOBAL_CTRL = 0x000000F0` after chip reset |
 
-```text
-csr_req_valid / csr_req_write / csr_req_addr / csr_req_wdata / csr_req_ready
-csr_rsp_valid / csr_rsp_rdata / csr_rsp_err / csr_rsp_ready
-```
+Then keep global acquisition disabled, wait for `GLOBAL_STATUS[7] == 1`, write
+configuration, and atomically enable the selected mode through `GLOBAL_CTRL`.
 
-The bridge allows only one in-flight request, which keeps the control plane simple and deterministic.
-
-## 4. Error behavior
-
-### 4.1 Invalid region
-
-If the CSR address selects no valid region, `spadmic_csr_decoder` returns:
-
-- `csr_rsp_valid = 1`
-- `csr_rsp_err = 1`
-- `csr_rsp_rdata = 0`
-
-### 4.2 Read timeout
-
-If a valid region is selected but no read response arrives, the decoder waits until `WAIT_TIMEOUT_MAX` is reached and then returns:
-
-- `csr_rsp_valid = 1`
-- `csr_rsp_err = 1`
-- `csr_rsp_rdata = 0`
-
-In the active RTL, `WAIT_TIMEOUT_MAX = 15`, so the timeout fires after at most 16 `clk_sys` cycles in the read-wait state.
-
-### 4.3 Write response
-
-Writes complete immediately from the decoder side once the request has been accepted, because the target register blocks are simple ready/valid CSR endpoints.
-
-## 5. Software-visible implications
-
-1. I2C is a management path, not a runtime packet arbiter.
-2. Register writes that request source or mode changes may still be rejected by the top-level global CSR if the datapath is not idle.
-3. Software should inspect the global status/fault registers after control writes when it needs to know whether a requested image was accepted and then committed.
-
-## 6. Address ownership
-
-For the detailed register fields, use:
-
-- [`../../TOP/docs/02_CSR_MAP.md`](../../TOP/docs/02_CSR_MAP.md) for `GLOBAL` and `POSITION`
-- [`../../MPTDC/HANDOFF.md`](../../MPTDC/HANDOFF.md) and
-  [`../../MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md`](../../MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md)
-  for the product-axis TDC boundary. The retired standalone MPTDC CSR map is no
-  longer an active handoff document.
+See `TOP/docs/42_CSR_I2C_BRINGUP_FR.md` for the operator sequence.

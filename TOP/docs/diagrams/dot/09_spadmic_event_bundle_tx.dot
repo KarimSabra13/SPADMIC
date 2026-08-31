@@ -1,0 +1,95 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_event_bundle_tx</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Deterministic R/Y/B/position packet bundle with one shared event ID and an ordered flush marker.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_event_bundle_tx.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+
+    r [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>R packet</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>pending + SOP/EOP<BR ALIGN='LEFT'/>16-bit logical words</FONT></TD></TR>
+    </TABLE>
+    >];
+    y [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Y packet</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>pending + SOP/EOP<BR ALIGN='LEFT'/>16-bit logical words</FONT></TD></TR>
+    </TABLE>
+    >];
+    b [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>B packet</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>pending + SOP/EOP<BR ALIGN='LEFT'/>16-bit logical words</FONT></TD></TR>
+    </TABLE>
+    >];
+    pos [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Position packet</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>cluster or raw<BR ALIGN='LEFT'/>pending + SOP/EOP</FONT></TD></TR>
+    </TABLE>
+    >];
+    mask [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Frozen required mask</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>captured at bundle start<BR ALIGN='LEFT'/>source presence checked before send</FONT></TD></TR>
+    </TABLE>
+    >];
+    order [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Deterministic source order</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>R -&gt; Y -&gt; B -&gt; position<BR ALIGN='LEFT'/>hold each source through EOP</FONT></TD></TR>
+    </TABLE>
+    >];
+    patch [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Public identity patch</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>TDC header gets R/Y/B source ID<BR ALIGN='LEFT'/>every EOP gets shared event ID</FONT></TD></TR>
+    </TABLE>
+    >];
+    flush [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Ordered flush</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>emit after final required packet<BR ALIGN='LEFT'/>pad odd DDR word deterministically</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; r; y; b; pos; }
+    { rank=same; mask; order; patch; flush; }
+    r -> y [style="invis" weight=20];
+    y -> b [style="invis" weight=20];
+    b -> pos [style="invis" weight=20];
+    mask -> order [style="invis" weight=20];
+    order -> patch [style="invis" weight=20];
+    patch -> flush [style="invis" weight=20];
+    r -> order [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="source 0", fontsize=10, fontcolor="#334155"];
+    y -> order [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="source 1", fontsize=10, fontcolor="#334155"];
+    b -> order [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="source 2", fontsize=10, fontcolor="#334155"];
+    pos -> order [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="source 3", fontsize=10, fontcolor="#334155"];
+    mask -> order [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="required sources", fontsize=10, fontcolor="#334155"];
+    order -> patch [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="packet-atomic words", fontsize=10, fontcolor="#334155"];
+    patch -> flush [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="completed mask", fontsize=10, fontcolor="#334155"];
+
+    }

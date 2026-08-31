@@ -1,80 +1,51 @@
-# SPADMIC TOP — Test Catalog
+# Active Test Catalog
 
-Author: Karim Sabra
+## Fast gates
 
-## 1. Directed Benches (Unit/Stress Layer)
+| Command | Scope |
+| --- | --- |
+| `bash TOP/ci/check_csr_map_generated.sh` | authoritative map versus generated C/Python/register CSV/field CSV/Markdown |
+| `bash TOP/ci/run_smoke.sh` | map drift plus CSR and I2C matrix-top unit smoke |
+| `bash TOP/ci/run_directed_regression.sh` | maintained directed block/integration manifest |
+| `bash TOP/ci/run_vip_smoke.sh` | active matrix-top VIP smoke or local compile/lint fallback |
+| `bash TOP/ci/run_tapeout_readiness.sh` | aggregate RTL evidence gate |
 
-| # | Bench | Block Under Test | Key Checks |
-|---|-------|-------------------|------------|
-| 1 | `tb_spadmic_axis_cluster_scan_unit` | Axis cluster scanner | Single/dual/overflow cluster extraction |
-| 2 | `tb_spadmic_arb_modes` | Unified ARB | Source masks, legacy mode requests masked to fixed packet |
-| 3 | `tb_spadmic_arb_stress` | Unified ARB | 110-word max burst, no interleaving, backpressure, unified tags |
-| 4 | `tb_spadmic_i2c_control_plane_unit` | I2C → CSR bridge | I2C write/read, pointer handling, NACK |
-| 5 | `tb_spadmic_ref_stop_qualifier_hold_unit` | Stop qualifier | Hold timing, qualifier window |
-| 6 | `tb_spadmic_ref_stop_qualifier_unit` | Stop qualifier | Basic qualification, timeout |
-| 7 | `tb_spadmic_stress_cluster_scan` | Cluster scanner | Random patterns, gap/span sweep |
-| 8 | `tb_spadmic_stress_csr` | CSR decoder + global CSR | All-region RW, timeout, back-to-back |
-| 9 | `tb_spadmic_stress_position` | Position block | Full FSM exercise, packet framing |
-| 10 | `tb_spadmic_stress_stop_qualifier` | Stop qualifier | Stress random timing |
-| 11 | `tb_spadmic_top_sequencer_unit` | Top sequencer | RESET→IDLE→DRAIN FSM |
+## CSR and I2C benches
 
-## 2. VIP Smoke Tests (Must-Pass Gate)
+| Bench | Primary checks |
+| --- | --- |
+| `tb_spadmic_matrix_top_csr_unit` | all pages, reset values, access policy, W1C, counters, atomic enable |
+| `tb_spadmic_i2c_control_plane_unit` | protocol framing, pointer/read/write, current pointer, partial and reset aborts |
+| `tb_spadmic_i2c_matrix_top_16b_unit` | full transport through router and banks |
 
-| Test | Scenario | Accept Criteria |
-|------|----------|-----------------|
-| `smoke_tdc` | Enable all axes + CAL, 1 event/axis, collect 3 packets | 3 valid TDC packets with correct source tags |
-| `smoke_position` | Enable position, single-cluster X-axis, 1 packet | 1 valid 8-word position packet |
-| `smoke_position_raw` | Enable raw bitmap position export | 1 valid raw-position packet without EOC-alias decode errors |
-| `smoke_switching` | TDC→drain→position→drain→TDC | Clean transitions, no interleaving, no faults |
+## Matrix-top directed benches
 
-## 3. VIP Feature Tests
+The active set includes shell, BOTH mode, mode transition, reset-during-event,
+FIFO pressure, skew campaign, event bundle, snapshot frontend, position
+packetizer, source mapping, TX egress, sequencer, qualifier, and retained
+cluster/position stress benches. The exact executable list is the `BENCHES`
+array in `TOP/ci/run_directed_regression.sh`.
 
-| Test | Scenario | Accept Criteria |
-|------|----------|-----------------|
-| `tdc_modes` | 3 modes × 4 max_hits = 12 combos | All 12 combos produce correct packets |
-| `pos_clusters` | 3 gap × 3 span × patterns | Cluster extraction matches reference |
-| `ctrl_reject` | CTRL write while NOT idle | `mode_reject_sticky=1`, count increments |
-| `reset_recovery` | Reset during TDC packets | Recovery to clean config + new packets |
-| `spad_reset_modes` | Position reset modes and pulse observation | Expected reset pulse count/width and clean packet recovery |
-| `bp_stress` | READY→RANDOM→STALL→recovery | All packets eventually delivered |
-| `i2c_end_to_end` | Full I2C programming + readback | Correct data through I2C path |
+## VIP tests
 
-## 4. VIP Constrained-Random Tests
+| Test | Purpose |
+| --- | --- |
+| `smoke_tdc` | normal coordinated R/Y/B acquisition |
+| `smoke_position` | cluster position path |
+| `smoke_position_raw` | fixed raw position packet path |
+| `smoke_switching` | legal disabled/idle mode transitions |
+| `spad_reset_modes` | coordinated reset enable/width behavior |
+| `i2c_end_to_end` | fixed-address wire protocol through active top |
+| `tdc_modes` | normal versus calibration mask policy |
+| `ctrl_reject` | unsafe/invalid CSR rejection and diagnostics |
+| `coverage_walk` | deterministic ABI and fault-bin traversal |
+| `stress_random` | constrained long control/event campaign |
 
-| Test | Phases | Seeds | Focus |
-|------|--------|-------|-------|
-| `long_random` | 50 | 1 | Legal/coherent mixed TDC/position/switching/BP/correlated traffic |
-| `coverage_walk` | Systematic | 1 | Fill cross-coverage holes |
-| `stress_random` | 200 | 20–100 | Legal/coherent high-volume coverage closure with explicit phase weights |
+`TOP/ci/run_vip_smoke.sh` and `TOP/ci/run_vip_coverage.sh` define the maintained
+campaign membership.
 
-Random phase weights can be overridden through `run_vip_test.sh`:
+## Simulator policy
 
-```bash
---random-legal-only 0|1
---rand-w-tdc N --rand-w-pos N --rand-w-switch N --rand-w-bp N --rand-w-corr N
-```
-
-The default is legal-only randomization. Fault campaigns that intentionally use
-reset-during-traffic, FIFO-full pressure, or permanently stalled output must be
-named and checked as stress/fault tests rather than mixed into ordinary random.
-
-## 5. Mission Profile Weights
-
-| Profile | Weight | Primary Scenario |
-|---------|--------|------------------|
-| TDC Characterization | 50% | CAL events, all modes, all axes |
-| Position Detection | 20% | Line patterns, cluster diversity |
-| Mode Switching | 15% | TDC↔Position transitions with drain |
-| Stress/Corner | 15% | Reset, stall, fast-close, simultaneous |
-
-## 6. Acceptance Criteria
-
-- [ ] All 11 directed benches pass on Xcelium
-- [ ] All 4 smoke tests pass
-- [ ] All 7 feature tests pass
-- [ ] `long_random` passes with seed=1
-- [ ] `coverage_walk` passes
-- [ ] `stress_random` passes with ≥20 seeds
-- [ ] Functional coverage ≥ 95%
-- [ ] Code coverage ≥ 90%
-- [ ] 0 SVA assertion failures across all runs
+Local Verilator is used for portable directed evidence and VIP compile/lint.
+Xcelium is required for the class-based runtime VIP and functional covergroups.
+Server results must be tied to an exact commit and archived reports.

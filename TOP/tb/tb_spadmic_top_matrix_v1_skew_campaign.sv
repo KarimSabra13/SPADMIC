@@ -289,7 +289,7 @@ module tb_spadmic_top_matrix_v1_skew_campaign;
     async_rst_n = 1'b1;
     repeat (12) @(posedge clk_sys);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0001_0003);
+    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0000_0003);
     i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_TDC_ONLY, 1'b1});
 
@@ -314,7 +314,11 @@ module tb_spadmic_top_matrix_v1_skew_campaign;
                  31 * CLK_SYS_PERIOD,
                  "near default 64-cycle snapshot watchdog");
 
+    i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
+                  {24'h0, 1'b1, 3'b111, SPADMIC_MODE_DISABLED, 1'b0});
     i2c_write_csr(SPADMIC_CSR_MATRIX_SNAPSHOT_CFG, {16'd128, 16'd2});
+    i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
+                  {24'h0, 1'b1, 3'b111, SPADMIC_MODE_TDC_ONLY, 1'b1});
     run_order_ps(2, 1, 0, 65 * CLK_SYS_PERIOD,
                  5 * CLK_SYS_PERIOD,
                  "beyond default watchdog with extended watchdog");

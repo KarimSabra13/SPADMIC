@@ -1,0 +1,98 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>SPADMIC block-owned CSR banks</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">ABI 1.0 register ownership, write admission, W1C fault handling, and saturating diagnostics.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_csr_banks.sv + TOP/rtl/spadmic_csr_map_pkg.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+
+    system [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>System bank</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>ID and ABI version<BR ALIGN='LEFT'/>atomic GLOBAL_CTRL<BR ALIGN='LEFT'/>safe-idle and access diagnostics<BR ALIGN='LEFT'/>maintenance counter clear</FONT></TD></TR>
+    </TABLE>
+    >];
+    tdc [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC R/Y/B banks</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>per-axis status<BR ALIGN='LEFT'/>W1C FIFO fault<BR ALIGN='LEFT'/>saturating error count</FONT></TD></TR>
+    </TABLE>
+    >];
+    position [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Position bank</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>cluster/raw mode<BR ALIGN='LEFT'/>gap and minimum span<BR ALIGN='LEFT'/>drop fault/count</FONT></TD></TR>
+    </TABLE>
+    >];
+    event [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Event bank</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>event lifecycle and masks<BR ALIGN='LEFT'/>snapshot/reset configuration<BR ALIGN='LEFT'/>R/Y/B snapshot readback</FONT></TD></TR>
+    </TABLE>
+    >];
+    matrix [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Matrix bank</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>column command and 64-bit data<BR ALIGN='LEFT'/>readback and validity<BR ALIGN='LEFT'/>W1C command fault</FONT></TD></TR>
+    </TABLE>
+    >];
+    tx [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TX bank</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>bundle/FIFO/DDR status<BR ALIGN='LEFT'/>fixed FIFO geometry<BR ALIGN='LEFT'/>missing/overflow faults and counts</FONT></TD></TR>
+    </TABLE>
+    >];
+    pll [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>PLL bank</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>PLL control image<BR ALIGN='LEFT'/>lock status<BR ALIGN='LEFT'/>disabled-and-idle write gate</FONT></TD></TR>
+    </TABLE>
+    >];
+    analog [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Analog bank</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>SLVS/RX controls<BR ALIGN='LEFT'/>explicit active polarity<BR ALIGN='LEFT'/>disabled-and-idle write gate</FONT></TD></TR>
+    </TABLE>
+    >];
+    policy [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#CA8A04" BGCOLOR="#FEF3C7">
+      <TR><TD BGCOLOR="#CA8A04" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Shared bank policy</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FEF3C7'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>Configuration writes require global disabled and safe idle.<BR ALIGN='LEFT'/>GLOBAL_CTRL validates and commits a complete image atomically.<BR ALIGN='LEFT'/>Faults are W1C; maintenance clears counters only while disabled and idle.</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; system; tdc; position; event; }
+    { rank=same; matrix; tx; pll; analog; }
+    { rank=same; policy; }
+
+    system -> tdc [style="invis" weight=20];
+    tdc -> position [style="invis" weight=20];
+    position -> event [style="invis" weight=20];
+    matrix -> tx [style="invis" weight=20];
+    tx -> pll [style="invis" weight=20];
+    pll -> analog [style="invis" weight=20];
+    system -> matrix [style="invis" weight=40];
+    matrix -> policy [style="invis" weight=40];
+
+    }

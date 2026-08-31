@@ -7,30 +7,34 @@
 
 class spadmic_fault_cov;
 
-  logic       pos_drop_sticky;
-  logic       pos_glitch_sticky;
-  logic       mode_reject_sticky;
-  logic [2:0] tdc_pkt_full;
+  logic [7:0] access_cause;
+  logic       access_is_write;
+  logic [6:0] page_fault_summary;
   logic       reset_during_traffic;
-  logic       csr_read_timeout_hit;
+  logic       csr_error_seen;
 
   covergroup cg_fault;
-    cp_pos_drop:     coverpoint pos_drop_sticky;
-    cp_pos_glitch:   coverpoint pos_glitch_sticky;
-    cp_mode_reject:  coverpoint mode_reject_sticky;
-    cp_fifo_full:    coverpoint tdc_pkt_full {
-      bins none  = {0};
-      bins x_f   = {1};
-      bins y_f   = {2};
-      bins z_f   = {4};
-      bins xy_f  = {3};
-      bins all_f = {7};
-      bins other = default;
+    cp_access_cause: coverpoint access_cause {
+      bins none = {CSR_CAUSE_NONE};
+      bins misaligned = {CSR_CAUSE_MISALIGNED};
+      bins unmapped = {CSR_CAUSE_UNMAPPED};
+      bins read_only_write = {CSR_CAUSE_READ_ONLY_WRITE};
+      bins invalid_value = {CSR_CAUSE_INVALID_VALUE};
+      bins unsafe_write = {CSR_CAUSE_UNSAFE_WRITE};
+      bins incomplete_write = {CSR_CAUSE_INCOMPLETE_WRITE};
+      bins i2c_reset_abort = {CSR_CAUSE_I2C_RESET_ABORT};
+      illegal_bins unknown = default;
+    }
+    cp_access_is_write: coverpoint access_is_write;
+    cp_page_fault_summary: coverpoint page_fault_summary {
+      bins none = {7'b0};
+      bins access_only = {7'b0000001};
+      bins block_fault = {[7'b0000010:7'b1111111]};
     }
     cp_reset_during: coverpoint reset_during_traffic;
-    cp_csr_timeout:  coverpoint csr_read_timeout_hit;
+    cp_csr_error: coverpoint csr_error_seen;
 
-    cx_fault_combo: cross cp_pos_drop, cp_pos_glitch, cp_mode_reject;
+    cx_cause_x_direction: cross cp_access_cause, cp_access_is_write;
   endgroup
 
   function new();
@@ -38,15 +42,17 @@ class spadmic_fault_cov;
   endfunction
 
   function void sample(
-    logic drop, logic glitch, logic reject,
-    logic [2:0] fifo_full, logic rst_traffic, logic csr_to
+    logic [7:0] cause,
+    logic is_write,
+    logic [6:0] page_faults,
+    logic rst_traffic,
+    logic csr_error
   );
-    pos_drop_sticky       = drop;
-    pos_glitch_sticky     = glitch;
-    mode_reject_sticky    = reject;
-    tdc_pkt_full          = fifo_full;
-    reset_during_traffic  = rst_traffic;
-    csr_read_timeout_hit  = csr_to;
+    access_cause = cause;
+    access_is_write = is_write;
+    page_fault_summary = page_faults;
+    reset_during_traffic = rst_traffic;
+    csr_error_seen = csr_error;
     cg_fault.sample();
   endfunction
 
@@ -57,4 +63,3 @@ class spadmic_fault_cov;
 endclass
 
 `endif
-

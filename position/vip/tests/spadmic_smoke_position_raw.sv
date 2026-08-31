@@ -21,7 +21,11 @@ class spadmic_smoke_position_raw extends spadmic_base_test;
     logic [SPADMIC_LINE_W-1:0] zp;
 
     env.gen.gen_initial_config();
-    env.gen.gen_csr_write(SPADMIC_CSR_POS_CTRL, 32'h0000_0003); // enable + raw mode
+    env.gen.gen_position_config_update(
+      SPADMIC_POS_MODE_RAW,
+      cfg.default_gap_threshold,
+      cfg.default_min_cluster_span
+    );
 
     xp = '0;
     yp = '0;

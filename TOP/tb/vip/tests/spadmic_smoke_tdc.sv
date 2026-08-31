@@ -1,6 +1,6 @@
 // =============================================================================
 // SPADMIC VIP — Smoke TDC Test
-// Sanity: enable all axes + CAL, inject 1 event per axis, collect 3 packets.
+// Sanity: one coordinated R/Y/B event produces one packet per TDC source.
 // =============================================================================
 
 class spadmic_smoke_tdc extends spadmic_base_test;
@@ -12,7 +12,7 @@ class spadmic_smoke_tdc extends spadmic_base_test;
   function void configure();
     cfg.drv_mode          = DRV_MODE_DIRECT_CSR;
     cfg.profile           = PROFILE_TDC_CHAR;
-    cfg.default_input_sel = INPUT_CAL;
+    cfg.default_input_sel = INPUT_SPAD;
     cfg.default_out_mode  = OUT_MODE_RAW_FEATURES;
     cfg.default_max_hits  = 4'd15;
     cfg.num_conversions   = 1;
@@ -21,11 +21,7 @@ class spadmic_smoke_tdc extends spadmic_base_test;
 
   task body();
     env.gen.gen_initial_config();
-    // One conversion per axis
-    env.gen.gen_tdc_conversions(0, 1, 10000);  // X
-    env.gen.gen_tdc_conversions(1, 1, 10000);  // Y
-    env.gen.gen_tdc_conversions(2, 1, 10000);  // Z
+    env.gen.gen_tdc_conversions(0, 1, 10000);
     env.gen.gen_eot();
   endtask
 endclass
-

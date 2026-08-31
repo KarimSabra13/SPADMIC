@@ -16,7 +16,7 @@ class spadmic_i2c_driver;
     input logic [SPADMIC_CSR_DATA_W-1:0] data
   );
     logic success;
-    i2c_if.i2c_write(addr[11:0], data, success);
+    i2c_if.i2c_write(addr, data, success);
     if (!success)
       $display("[I2C_DRV] WARN: write to 0x%03h NACKed", addr);
   endtask
@@ -27,84 +27,92 @@ class spadmic_i2c_driver;
     output logic                          err
   );
     logic success;
-    i2c_if.i2c_read(addr[11:0], data, success);
+    i2c_if.i2c_read(addr, data, success);
     err = ~success;
     if (!success)
       $display("[I2C_DRV] WARN: read from 0x%03h NACKed", addr);
   endtask
 
-  // Program global control register from semantic fields
+  function automatic spadmic_operating_mode_e operating_mode(spadmic_ctrl_txn t);
+    spadmic_export_mode_e export_mode;
+    if (!t.global_enable)
+      return SPADMIC_MODE_DISABLED;
+    export_mode = spadmic_export_mode_from_ctrl(t.shared_tx_sel, t.position_enable);
+    case (export_mode)
+      SPADMIC_EXPORT_POSITION_ONLY: return SPADMIC_MODE_POSITION_ONLY;
+      SPADMIC_EXPORT_BOTH_ACTIVE:   return SPADMIC_MODE_BOTH;
+      default:                      return SPADMIC_MODE_TDC_ONLY;
+    endcase
+  endfunction
+
   task automatic program_global_ctrl(spadmic_ctrl_txn t);
     logic [SPADMIC_CSR_DATA_W-1:0] ctrl_word;
+    spadmic_operating_mode_e mode;
+    mode = operating_mode(t);
     ctrl_word = '0;
     ctrl_word[0]   = t.global_enable;
-    ctrl_word[3:1] = t.axis_enable;
-    ctrl_word[4]   = t.position_enable;
-    ctrl_word[5]   = t.shared_tx_sel;
-    ctrl_word[6]   = t.tdc_input_sel;
-    ctrl_word[8:7] = t.tdc_out_mode;
-    write_csr(SPADMIC_CSR_GLOBAL_CTRL, ctrl_word);
+    ctrl_word[3:1] = mode;
+    ctrl_word[6:4] = 3'b111;
+    ctrl_word[7]   = 1'b1;
+    write_csr(CSR_GLOBAL_CTRL, ctrl_word);
   endtask
 
-  // Program TDC axis max_hits register
-  task automatic program_tdc_max_hits(int unsigned axis, logic [MAX_HITS_W-1:0] max_hits);
-    logic [SPADMIC_CSR_ADDR_W-1:0] base_addr;
-    case (axis)
-      0: base_addr = {SPADMIC_REGION_TDC_X, 8'h08};
-      1: base_addr = {SPADMIC_REGION_TDC_Y, 8'h08};
-      2: base_addr = {SPADMIC_REGION_TDC_Z, 8'h08};
-      default: base_addr = {SPADMIC_REGION_TDC_X, 8'h08};
-    endcase
-    write_csr(base_addr, {28'b0, max_hits});
+  task automatic program_disabled();
+    write_csr(CSR_GLOBAL_CTRL, 32'h0000_00F0);
   endtask
 
-  // Arm TDC conversion on specified axis (writes MPTDC CSR_CTRL.conv_arm)
-  task automatic program_tdc_conv_arm(int unsigned axis, logic arm);
-    logic [SPADMIC_CSR_ADDR_W-1:0] base_addr;
-    case (axis)
-      0: base_addr = {SPADMIC_REGION_TDC_X, 8'h00};
-      1: base_addr = {SPADMIC_REGION_TDC_Y, 8'h00};
-      2: base_addr = {SPADMIC_REGION_TDC_Z, 8'h00};
-      default: base_addr = {SPADMIC_REGION_TDC_X, 8'h00};
-    endcase
-    write_csr(base_addr, {31'b0, arm});
+  task automatic program_tdc_shared(logic [MAX_HITS_W-1:0] max_hits);
+    write_csr(CSR_TDC_SHARED_CFG, {{(32-MAX_HITS_W){1'b0}}, max_hits});
   endtask
 
-  // Program position gap/filter config
   task automatic program_position_config(
+    spadmic_pos_mode_e mode,
     logic [6:0] gap_threshold,
-    logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span,
-    logic [3:0] settle_cycles
+    logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span
   );
-    write_csr(SPADMIC_CSR_POS_GAP_CFG, {25'b0, gap_threshold});
-    write_csr(SPADMIC_CSR_POS_FILTER_CFG, {20'b0, settle_cycles, 1'b0, min_cluster_span});
+    logic [31:0] cfg_word;
+    cfg_word = '0;
+    cfg_word[0] = mode;
+    cfg_word[7:1] = gap_threshold;
+    cfg_word[14:8] = 7'(min_cluster_span);
+    write_csr(CSR_POSITION_CFG, cfg_word);
+  endtask
+
+  task automatic program_reset_width(logic [15:0] width_cycles);
+    write_csr(CSR_RESET_CFG, {16'b0, width_cycles});
+  endtask
+
+  task automatic program_snapshot_config(
+    logic [15:0] settle_cycles,
+    logic [15:0] watchdog_cycles
+  );
+    write_csr(CSR_SNAPSHOT_CFG, {watchdog_cycles, settle_cycles});
   endtask
 
   task automatic read_global_status(
     output logic [SPADMIC_CSR_DATA_W-1:0] status,
     output logic                          err
   );
-    read_csr(SPADMIC_CSR_GLOBAL_STATUS, status, err);
+    read_csr(CSR_GLOBAL_STATUS, status, err);
   endtask
 
   task automatic read_global_fault(
     output logic [SPADMIC_CSR_DATA_W-1:0] fault,
     output logic                          err
   );
-    read_csr(SPADMIC_CSR_GLOBAL_FAULT, fault, err);
+    read_csr(CSR_GLOBAL_FAULT, fault, err);
   endtask
 
-  // Poll for cfg_accept (bit 21 of STATUS)
-  task automatic wait_cfg_accept(int unsigned timeout_cycles);
+  task automatic wait_safe_idle(int unsigned timeout_cycles);
     logic [SPADMIC_CSR_DATA_W-1:0] status;
     logic err;
     int unsigned count = 0;
     forever begin
-      read_csr(SPADMIC_CSR_GLOBAL_STATUS, status, err);
-      if (status[21]) return;
+      read_csr(CSR_GLOBAL_STATUS, status, err);
+      if (!err && status[7]) return;
       count++;
       if (count >= timeout_cycles) begin
-        $display("[I2C_DRV] WARN: cfg_accept timeout after %0d polls", count);
+        $display("[I2C_DRV] WARN: safe-idle timeout after %0d polls", count);
         return;
       end
       // I2C is slow, no need for extra wait between polls

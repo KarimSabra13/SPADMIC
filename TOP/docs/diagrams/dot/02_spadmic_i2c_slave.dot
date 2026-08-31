@@ -17,7 +17,7 @@ digraph G {
     <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
       <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_i2c_slave</B></FONT></TD></TR>
       <TR><TD HEIGHT="4"></TD></TR>
-      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Schematic page for the synchronized I2C front end and its pointer-based command/readback behavior.</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Synchronized I2C front end with atomic 32-bit transactions, partial-write discard, and transport-only reset.</FONT></TD></TR>
       <TR><TD HEIGHT="2"></TD></TR>
       <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">I2C/rtl/spadmic_i2c_slave.sv</FONT></TD></TR>
     </TABLE>
@@ -30,7 +30,7 @@ digraph G {
     in_pins [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
       <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Inputs</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>clk_sys<BR ALIGN='LEFT'/>rst_n<BR ALIGN='LEFT'/>i2c_scl_i<BR ALIGN='LEFT'/>i2c_sda_i</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>clk_sys<BR ALIGN='LEFT'/>rst_n<BR ALIGN='LEFT'/>i2c_rst_i<BR ALIGN='LEFT'/>i2c_scl_i<BR ALIGN='LEFT'/>i2c_sda_i</FONT></TD></TR>
     </TABLE>
     >];
     sync [shape=plain margin=0 label=<
@@ -42,19 +42,19 @@ digraph G {
     addr_ptr [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
       <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Address + pointer FSM</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>device address match<BR ALIGN='LEFT'/>16-bit pointer capture<BR ALIGN='LEFT'/>12-bit CSR mapping</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>fixed device address 0x42<BR ALIGN='LEFT'/>16-bit MSB-first pointer<BR ALIGN='LEFT'/>word-alignment checked by CSR router</FONT></TD></TR>
     </TABLE>
     >];
     write_path [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
-      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Write-byte path</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>D0 / D1 / D2 / D3 assembly<BR ALIGN='LEFT'/>ACK held through full SCL-high<BR ALIGN='LEFT'/>emit write transaction</FONT></TD></TR>
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Atomic write-byte path</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>four MSB-first data bytes<BR ALIGN='LEFT'/>emit one 32-bit write only when complete<BR ALIGN='LEFT'/>discard and log partial write</FONT></TD></TR>
     </TABLE>
     >];
     read_path [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
       <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Repeated-start read path</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>pointer-valid read launch<BR ALIGN='LEFT'/>predrive first read bit<BR ALIGN='LEFT'/>ACK/NACK byte stepping</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>pointer-only phase is valid<BR ALIGN='LEFT'/>current pointer retained<BR ALIGN='LEFT'/>one 32-bit register response</FONT></TD></TR>
     </TABLE>
     >];
     sda_drive [shape=plain margin=0 label=<

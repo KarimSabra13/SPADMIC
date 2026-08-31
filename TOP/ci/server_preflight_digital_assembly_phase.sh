@@ -187,7 +187,7 @@ if [ "$RUN_OK" = "1" ]; then
   MPTDC_FLIST_RC=$?
   resolve_flist "$REPO/TOP" "$REPO/TOP/filelist.f" "$OUTPUT_ROOT/filelists/top_abs.raw.f"
   TOP_FLIST_RC=$?
-  grep -v -E '/TOP/rtl/(spadmic_ddr_tx|spadmic_top_v1)\.sv$' \
+  grep -v -E '/TOP/rtl/spadmic_ddr_tx\.sv$' \
     "$OUTPUT_ROOT/filelists/top_abs.raw.f" > "$OUTPUT_ROOT/filelists/top_abs.f"
   FILTER_RC=$?
   if [ "$MPTDC_FLIST_RC" = "0" ] && [ "$TOP_FLIST_RC" = "0" ] && [ "$FILTER_RC" = "0" ]; then

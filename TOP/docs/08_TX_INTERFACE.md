@@ -1,155 +1,93 @@
-# SPADMIC TOP — TX Interface Contract
+# SPADMIC TOP DDR16 Interface Contract
 
 Author: Karim Sabra
 
 ## Scope
 
-This document defines the **chip-facing** TX interface implemented by
-`rtl/spadmic_ddr_tx.sv`.
+This document defines the active chip-facing TX interface implemented by
+`TOP/rtl/spadmic_ddr16_tx_pairer.sv` and exposed by
+`TOP/rtl/spadmic_top_matrix_v1.sv`.
 
-It is the physical boundary between the on-chip logical packet stream and the
-off-chip receiver.
-
-## 1. Pin-level contract
+## Pin-level contract
 
 | Pin | Direction | Meaning |
-|-----|-----------|---------|
-| `chip_tx_clk_o` | output | forwarded source-synchronous clock, same frequency as `clk_sys` |
-| `chip_tx_valid_o` | output | SDR qualifier: one asserted cycle means one logical 16-bit word is present across the two DDR edges of that cycle |
-| `chip_tx_data_o[7:0]` | output | DDR byte lane carrying the two bytes of the logical word |
-| `spad_matrix_rst_o` | output | active-high one-`clk_sys` pulse to the SPAD matrix reset input |
+| --- | --- | --- |
+| `ddr_clk_o` | output | forwarded system clock |
+| `ddr_pair_valid_o` | output | both 16-bit word buses carry one ordered pair |
+| `ddr_data_l_o[15:0]` | output | earlier logical word in the pair |
+| `ddr_data_h_o[15:0]` | output | later logical word, or zero padding after flush |
 
-There is **no** `chip_tx_ready_i` pin in the active contract.
+There is no off-chip ready input. All flow control and elasticity are on chip.
 
-## 2. Logical-to-physical mapping
+## Logical-to-physical mapping
 
-The active transport still thinks in **16-bit logical words** internally.
+The internal packet grammar uses 16-bit logical words. The pairer accepts that
+stream in order:
 
-For each valid logical word:
+1. the first accepted word is retained as the low member
+2. the second accepted word completes the pair
+3. `ddr_pair_valid_o` pulses with both outputs valid
+4. an ordered flush with one retained word emits a padded pair
 
-1. rising edge of `chip_tx_clk_o` carries `word[7:0]`
-2. falling edge of `chip_tx_clk_o` carries `word[15:8]`
-
-The receiver reconstructs:
-
-```text
-word = {byte_on_falling_edge, byte_on_rising_edge}
-```
-
-## 3. Valid behavior
-
-`chip_tx_valid_o` is asserted for the full logical-word cycle.
-
-That means:
-
-- if `chip_tx_valid_o = 1`, the receiver must sample both edges
-- if `chip_tx_valid_o = 0`, the receiver should ignore the DDR lane for that cycle
-
-The design currently drives zeros on idle bytes, but the receiver should treat
-those bytes as **don't care** when `chip_tx_valid_o = 0`.
-
-## 4. What travels over the interface
-
-The physical interface carries the same logical packet words described in:
-
-- [`03_CORRELATED_EVENT_EXPORT.md`](03_CORRELATED_EVENT_EXPORT.md)
-- MPTDC packet helpers in `MPTDC/rtl/pkg/mptdc_pkg.sv`
-
-In other words, the physical interface changes **timing and byte mapping**, not
-the logical packet grammar.
-
-### Packet landmarks
-
-At the logical-word level, the receiver still expects:
-
-1. header
-2. payload words
-3. EOC
-
-Cluster-position packets no longer include a position sub-header. Default
-cluster mode uses an 8-word fixed format with 6-bit `lo`/`hi` cluster
-coordinates for the 64x64x64 SPAD matrix. Compact cluster mode sets header bit
-`[9]` and emits only the valid cluster slots in fixed order `X0, X1, Y0, Y1,
-Z0, Z1`; the valid-slot mask is header bits `[8:3]`. Raw bitmap position packets
-are fixed-length 14-word packets with 12 unescaped bitmap payload words; a
-receiver must parse them by raw header and length because raw payload words can
-look like EOC markers.
-
-For correlated export, the EOC word contains the shared event ID:
+For a padded final pair:
 
 ```text
-[15:14] = 2'b11
-[13:0]  = shared_event_id
+ddr_data_l_o = final logical word
+ddr_data_h_o = 16'h0000
 ```
 
-## 5. Clocking assumptions
+The bundle transmitter generates flush only after every required packet for the
+physical event has completed.
 
-`chip_tx_clk_o` is the forwarded transmit clock. The off-chip receiver is assumed
-to treat it as the sampling reference for both DDR edges.
+## Idle behavior
 
-The active implementation uses `clk_sys` directly as that forwarded clock. There
-is no independent source-strobe generation stage inside the current RTL.
+When `ddr_pair_valid_o` is low and no pair is being emitted, both data outputs
+return to zero. A receiver must still qualify data exclusively with
+`ddr_pair_valid_o`.
 
-The tapeout SDC template must therefore constrain:
+`ddr_clk_o` follows `clk_sys`; it is not gated by valid or idle state.
 
-- rising-edge output delay for `chip_tx_valid_o` and the rising-edge data byte,
-- falling-edge output delay for `chip_tx_data_o[7:0]` using `-clock_fall -add_delay`.
+## Logical stream
 
-The placeholder max/min values in `TOP/syn/inputs/spadmic_top_tapeout_template.sdc`
-must be replaced with the real receiver setup/hold and board/package budget
-before signoff.
+The interface carries the packet words defined by
+[`03_CORRELATED_EVENT_EXPORT.md`](03_CORRELATED_EVENT_EXPORT.md):
 
-## 6. Flow-control assumptions
+- TDC R, Y, and B packets
+- cluster position packets of 8 words
+- raw position packets of 14 words
+- a shared 14-bit event ID in each packet EOP
 
-The physical TX boundary is **unidirectional** and **non-backpressured**:
+Source ordering within one event bundle is R, Y, B, then position, restricted to
+the frozen required mask for that operating mode.
 
-- the receiver cannot stall the transmitter
-- all elasticity must be absorbed on-chip
-- the relevant on-chip elasticity point is the post-arbiter FIFO inside `spadmic_correlated_tx`
+## Receiver checklist
 
-That architectural split is intentional:
+For each asserted `ddr_pair_valid_o`:
 
-1. packet correlation and buffering stay on-chip
-2. the pin-level interface stays simple
-3. off-chip logic only needs to sample and parse
+1. append `ddr_data_l_o` to the logical word stream
+2. append `ddr_data_h_o`
+3. parse packet header and known packet length
+4. discard the high zero word only when protocol length proves the pair is the
+   padded end of a bundle
+5. group packets by shared event ID and source identity
 
-## 7. Receiver checklist
+Do not infer padding from a zero value alone because zero is legal packet data.
 
-An off-chip receiver should implement the following sequence:
+## Timing boundary
 
-1. use `chip_tx_clk_o` as the DDR sampling clock
-2. gate collection with `chip_tx_valid_o`
-3. collect low byte on rising edge
-4. collect high byte on falling edge
-5. rebuild 16-bit logical words
-6. parse the logical packet grammar
-7. group packets by `shared_event_id` and source tag in both-active mode
+RTL establishes functional ordering only. Package/board delay, macro mapping,
+output timing constraints, and receiver setup/hold budgets must be supplied and
+closed in the implementation flow. Local Verilator or server Xcelium success is
+not physical TX signoff.
 
-## 8. Relationship to the VIP
+## VIP relationship
 
-The current TOP VIP follows exactly that model:
+`TOP/tb/vip/interfaces/spadmic_narrow_tx_if.sv` observes the low/high word buses
+and forwards ordered 16-bit words to `spadmic_tx_monitor`. The monitor and
+scoreboard are the executable receiver reference for packet boundaries, source
+identity, and event correlation.
 
-1. `spadmic_vip_tb.sv` connects the real DUT pins
-2. `spadmic_narrow_tx_if.sv` reconstructs 16-bit words from the DDR bus
-3. `spadmic_tx_monitor.sv` assembles packets from the reconstructed words
-
-That means the maintained VIP is a good executable reference for a software or
-FPGA receiver implementation.
-
-## 9. Why the contract was chosen
-
-The active implementation deliberately keeps the internal packet format and only
-changes the **physical egress**. That was chosen to:
-
-- minimize churn inside the packet generators
-- preserve existing packet-oriented tooling and helper functions
-- keep the chip pin count low
-- provide a realistic source-synchronous interface for silicon
-
-Future work can still change the logical framing if a later bandwidth study shows
-that the 16-bit logical layer itself should be compressed further.
-
-## 10. Cross-reference
+## Cross-reference
 
 - [`01_ACTIVE_ARCHITECTURE.md`](01_ACTIVE_ARCHITECTURE.md)
 - [`03_CORRELATED_EVENT_EXPORT.md`](03_CORRELATED_EVENT_EXPORT.md)

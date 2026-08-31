@@ -26,7 +26,13 @@ module spadmic_i2c_slave #(
   input  wire                                txn_rsp_valid_i,
   input  wire [spadmic_pkg::SPADMIC_CSR_DATA_W-1:0] txn_rsp_rdata_i,
   input  wire                                txn_rsp_err_i,
-  output wire                                txn_rsp_ready_o
+  output wire                                txn_rsp_ready_o,
+
+  output wire                                transaction_active_o,
+  output wire                                incomplete_write_active_o,
+  output logic                               write_abort_o,
+  output wire [spadmic_pkg::SPADMIC_CSR_ADDR_W-1:0] write_abort_addr_o,
+  output wire [spadmic_pkg::SPADMIC_CSR_DATA_W-1:0] write_abort_wdata_o
 );
   import spadmic_pkg::*;
 
@@ -79,6 +85,9 @@ module spadmic_i2c_slave #(
   logic       cmd_write_q;
   logic [SPADMIC_CSR_ADDR_W-1:0] cmd_addr_q;
   logic [SPADMIC_CSR_DATA_W-1:0] cmd_wdata_q;
+  logic [2:0] write_byte_count_q;
+  logic [SPADMIC_CSR_ADDR_W-1:0] write_abort_addr_q;
+  logic [SPADMIC_CSR_DATA_W-1:0] write_abort_wdata_q;
 
   wire scl_sync  = scl_sync_q[1];
   wire sda_sync  = sda_sync_q[1];
@@ -94,6 +103,16 @@ module spadmic_i2c_slave #(
   assign txn_addr_o      = cmd_addr_q;
   assign txn_wdata_o     = cmd_wdata_q;
   assign txn_rsp_ready_o = 1'b1;
+  assign transaction_active_o = (state_q != ST_IDLE);
+  assign incomplete_write_active_o = (write_byte_count_q != 3'd0) &&
+                                     (write_byte_count_q != 3'd4);
+  // Expose the live partial payload while a transfer is active so the parent
+  // can preserve provenance across an asynchronous transport reset.  Once the
+  // transfer aborts, retain the registered snapshot for the abort pulse.
+  assign write_abort_addr_o = incomplete_write_active_o
+                              ? pointer_addr_q : write_abort_addr_q;
+  assign write_abort_wdata_o = incomplete_write_active_o
+                               ? write_data_q : write_abort_wdata_q;
 
   // SCL/SDA are double-synchronized into clk_sys before the slave FSM decodes
   // START/STOP conditions and bit transfers.
@@ -119,6 +138,10 @@ module spadmic_i2c_slave #(
       cmd_write_q     <= 1'b0;
       cmd_addr_q      <= '0;
       cmd_wdata_q     <= '0;
+      write_byte_count_q <= '0;
+      write_abort_o       <= 1'b0;
+      write_abort_addr_q  <= '0;
+      write_abort_wdata_q <= '0;
     end else begin
       logic [7:0] rx_byte;
 
@@ -126,17 +149,32 @@ module spadmic_i2c_slave #(
       sda_sync_q <= {sda_sync_q[0], i2c_sda_i};
       scl_q      <= scl_sync;
       sda_q      <= sda_sync;
+      write_abort_o <= 1'b0;
 
       if (cmd_valid_q && txn_ready_i)
         cmd_valid_q <= 1'b0;
 
       if (start_cond) begin
+        if ((write_byte_count_q != 3'd0) && (write_byte_count_q != 3'd4)) begin
+          write_abort_o       <= 1'b1;
+          write_abort_addr_q  <= pointer_addr_q;
+          write_abort_wdata_q <= write_data_q;
+        end
+        write_byte_count_q <= '0;
+        write_data_q       <= '0;
         state_q      <= ST_DEV_ADDR;
         bit_idx_q    <= 3'd7;
         rx_shift_q   <= 8'h00;
         ack_seen_high_q <= 1'b0;
         i2c_sda_oe_o <= 1'b0;
       end else if (stop_cond) begin
+        if ((write_byte_count_q != 3'd0) && (write_byte_count_q != 3'd4)) begin
+          write_abort_o       <= 1'b1;
+          write_abort_addr_q  <= pointer_addr_q;
+          write_abort_wdata_q <= write_data_q;
+        end
+        write_byte_count_q <= '0;
+        write_data_q       <= '0;
         state_q      <= ST_IDLE;
         ack_seen_high_q <= 1'b0;
         i2c_sda_oe_o <= 1'b0;
@@ -169,6 +207,8 @@ module spadmic_i2c_slave #(
                 if (!addr_match_q || (rw_q && !pointer_valid_q)) begin
                   state_q <= ST_IDLE;
                 end else if (!rw_q) begin
+                  write_byte_count_q <= '0;
+                  write_data_q       <= '0;
                   state_q    <= ST_PTR_HI;
                   bit_idx_q  <= 3'd7;
                   rx_shift_q <= 8'h00;
@@ -246,6 +286,7 @@ module spadmic_i2c_slave #(
               state_q <= ST_WRITE_D0;
             if (bit_idx_q == 3'd0) begin
               write_data_q[31:24] <= {rx_shift_q[6:0], sda_sync};
+              write_byte_count_q  <= 3'd1;
               state_q             <= ST_ACK_WRITE_D0;
             end else begin
               bit_idx_q <= bit_idx_q - 3'd1;
@@ -257,6 +298,7 @@ module spadmic_i2c_slave #(
             rx_shift_q <= rx_byte;
             if (bit_idx_q == 3'd0) begin
               write_data_q[31:24] <= rx_byte;
+              write_byte_count_q  <= 3'd1;
               state_q             <= ST_ACK_WRITE_D0;
             end else begin
               bit_idx_q <= bit_idx_q - 3'd1;
@@ -284,6 +326,7 @@ module spadmic_i2c_slave #(
             rx_shift_q <= rx_byte;
             if (bit_idx_q == 3'd0) begin
               write_data_q[23:16] <= rx_byte;
+              write_byte_count_q  <= 3'd2;
               state_q             <= ST_ACK_WRITE_D1;
             end else begin
               bit_idx_q <= bit_idx_q - 3'd1;
@@ -311,6 +354,7 @@ module spadmic_i2c_slave #(
             rx_shift_q <= rx_byte;
             if (bit_idx_q == 3'd0) begin
               write_data_q[15:8] <= rx_byte;
+              write_byte_count_q <= 3'd3;
               state_q            <= ST_ACK_WRITE_D2;
             end else begin
               bit_idx_q <= bit_idx_q - 3'd1;
@@ -338,6 +382,7 @@ module spadmic_i2c_slave #(
             rx_shift_q <= rx_byte;
             if (bit_idx_q == 3'd0) begin
               write_data_q[7:0] <= rx_byte;
+              write_byte_count_q <= 3'd4;
               state_q           <= ST_ACK_WRITE_D3;
             end else begin
               bit_idx_q <= bit_idx_q - 3'd1;

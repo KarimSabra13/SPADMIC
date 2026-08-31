@@ -1,275 +1,103 @@
-# SPADMIC TOP — Global and Position CSR Map
+# CSR ABI 1.0 Guide
 
-Author: Karim Sabra
+## Canonical source
 
-## Scope
+The authoritative address, access, reset, and field source is:
 
-This document covers the software-visible CSR fields owned by the active TOP-level glue:
+```text
+TOP/rtl/spadmic_csr_map_pkg.sv
+```
 
-- `spadmic_global_csr`
-- `spadmic_tdc_axis_csr`
-- `spadmic_position_block`
-- the shared region decode used by `spadmic_csr_decoder`
+`TOP/scripts/generate_csr_map.py` produces the complete register and field
+collateral in:
 
-The TDC regions are now TOP-owned product control/status blocks. Standalone
-MPTDC CSR compatibility, watchdog programming, and local narrow readout controls
-are not part of the product CSR surface.
+- `TOP/docs/csr/CSR_MAP.md`
+- `TOP/docs/csr/spadmic_csr_map.csv`
+- `TOP/docs/csr/spadmic_csr_fields.csv`
+- `TOP/sw/include/spadmic_csr.h`
+- `TOP/sw/python/spadmic_csr_map.py`
 
-## 1. Region decode
+The generated C header includes register addresses plus field shift, width,
+mask, and reset macros. The Python module exposes `REGISTERS`,
+`REGISTER_FIELDS`, and checked field `prep()`/`get()` helpers. Do not duplicate
+or manually edit these generated tables. CI runs
+`TOP/ci/check_csr_map_generated.sh` to reject drift.
 
-The shared 12-bit CSR address uses bits `[11:8]` for region selection.
+## Page allocation
 
-| Region | Bits `[11:8]` | Owner |
-|--------|---------------|-------|
-| `0x0` | `GLOBAL` | `spadmic_global_csr` |
-| `0x1` | `TDC_X` | X-axis `spadmic_tdc_axis_csr` |
-| `0x2` | `TDC_Y` | Y-axis `spadmic_tdc_axis_csr` |
-| `0x3` | `TDC_Z` | Z-axis `spadmic_tdc_axis_csr` |
-| `0x4` | `POSITION` | `spadmic_position_block` |
+| Page | Base | Owner |
+| ---: | ---: | --- |
+| `0x0` | `0x0000` | system, shared TDC configuration, access diagnostics |
+| `0x1` | `0x1000` | TDC R status/fault/count |
+| `0x2` | `0x2000` | TDC Y status/fault/count |
+| `0x3` | `0x3000` | TDC B status/fault/count |
+| `0x4` | `0x4000` | position |
+| `0x5` | `0x5000` | event, snapshot, reset |
+| `0x6` | `0x6000` | matrix configuration/readback |
+| `0x7` | `0x7000` | TX and output FIFO |
+| `0x8` | `0x8000` | PLL and clock controls |
+| `0x9` | `0x9000` | analog controls |
 
-## 2. Global CSR block
+All addresses are 16-bit byte addresses and must be 4-byte aligned. Data is
+32-bit. Reserved bits read zero and are ignored on write.
 
-### 2.1 Register summary
+## Programming constraints
 
-| Addr | Name | R/W | Purpose |
-|------|------|-----|---------|
-| `0x000` | `GLOBAL_ID` | R | constant `0x5350_4144` (`"SPAD"`) |
-| `0x004` | `GLOBAL_VERSION` | R | current top-level version encoding (`0x0004_0000` in the active RTL) |
-| `0x008` | `GLOBAL_CTRL` | R/W | requested control image |
-| `0x00C` | `GLOBAL_STATUS` | R | active state, datapath status, and control-accept state |
-| `0x010` | `GLOBAL_FAULT` | R/W1C | sticky faults |
-| `0x014` | `GLOBAL_FAULT_COUNT` | R | reject counters |
+The generated [complete map](csr/CSR_MAP.md) defines all 68 registers and all
+162 software-visible fields. The constraints below state cross-field rules that
+cannot be represented by masks alone.
 
-### 2.2 `GLOBAL_CTRL` (`0x008`)
+### `GLOBAL_CTRL` and `GLOBAL_STATUS`
 
-This register holds the **requested** control image, not the live committed image.
+| Bits | Field |
+| ---: | --- |
+| `[0]` | global enable |
+| `[3:1]` | operating mode: disabled/TDC/position/BOTH/calibration |
+| `[6:4]` | normal active axis mask; normal TDC/BOTH must be `111` |
+| `[7]` | auto-reset enable in CTRL; safe-idle indication in STATUS |
 
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[0]` | `req_global_enable` | requested top-level enable |
-| `[3:1]` | `req_axis_enable` | requested enables for X/Y/Z TDC axes |
-| `[4]` | `req_position_enable` | requested enable for the position block |
-| `[5]` | `req_shared_tx_sel` | with `req_position_enable`, selects `TDC-only`, `position-only`, or `both-active` |
-| `[6]` | `req_tdc_input_sel` | `0 = SPAD`, `1 = CAL` |
-| `[8:7]` | `req_tdc_out_mode` | compatibility field; maintained RTL reads/emits RAW_FEATURES |
+Reset value is `0x000000F0`: disabled, normal R/Y/B mask selected, automatic
+reset enabled. A valid normal-mode enable also requires a programmed nonzero
+reset width.
 
-### 2.3 `GLOBAL_STATUS` (`0x00C`)
+### Shared and position configuration
 
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[0]` | `tdc_tx_busy` | at least one TDC axis or the TDC arbiter has an active/pending packet |
-| `[3:1]` | `tdc_pkt_pending` | each bit indicates an axis-local packet is active or pending |
-| `[4]` | `position_busy` | position detector or packetizer busy |
-| `[5]` | `position_pending` | position path still has a packet outstanding |
-| `[6]` | `path_idle` | no shared TDC packet, no pending TDC META, no position activity |
-| `[7]` | `active_shared_tx_sel` | live committed export selector (`POSITION` means position-only, `TDC` means TDC-only or both-active depending on `active_position_enable`) |
-| `[8]` | `active_tdc_input_sel` | live committed TDC input source |
-| `[10:9]` | `active_tdc_out_mode` | live committed compatibility value; fixed to RAW_FEATURES |
-| `[13:11]` | `tdc_pkt_full` | each bit mirrors one axis-local packet FIFO full flag |
-| `[14]` | `transition_busy` | sequencer is draining or committing a control transition |
-| `[15]` | `ctrl_apply_pending` | requested image differs from active image |
-| `[16]` | `active_global_enable` | live committed global enable |
-| `[19:17]` | `active_axis_enable` | live committed per-axis enables |
-| `[20]` | `active_position_enable` | live committed position enable |
-| `[21]` | `cfg_accept` | a new requested image would be accepted now |
+| Register | Fields |
+| --- | --- |
+| `TDC_SHARED_CFG` | max hits `[3:0]`, slow RO code `[15:8]`, fast RO code `[23:16]` |
+| `TDC_SHARED_CMD` | soft reset `[0]`, FIFO clear `[1]` pulses |
+| `CALIB_AXIS_MASK` | nonzero calibration R/Y/B mask `[2:0]` |
+| `POSITION_CFG` | raw mode `[0]`, gap `[7:1]`, minimum span `[14:8]` |
+| `SNAPSHOT_CFG` | settle cycles `[15:0]`, nonzero watchdog `[31:16]` |
+| `RESET_CFG` | matrix-reset pulse width `[15:0]` |
 
-### 2.4 `GLOBAL_FAULT` (`0x010`)
+`POSITION_CFG` resets to `0x00000104`: cluster mode, gap 2, minimum span 1.
+`SNAPSHOT_CFG` resets to `0x00400002`.
 
-| Bits | Name | Meaning | Clear behavior |
-|------|------|---------|----------------|
-| `[0]` | `mode_reject_sticky` | software attempted a control change while `cfg_accept = 0` | write `1` to clear |
-| `[1]` | `position_drop_sticky` | a qualifying position snapshot was dropped because the internal queue was full | clear in `POSITION_FAULT_STATUS` |
-| `[2]` | `position_glitch_sticky` | unstable or empty position activity was rejected | clear in `POSITION_FAULT_STATUS` |
-| `[3]` | `correlation_overflow` | reserved sticky fault for event-tagger correlation state overflow | read only in the active RTL |
+## Access diagnostics
 
-### 2.5 `GLOBAL_FAULT_COUNT` (`0x014`)
+Invalid reads return zero. Invalid writes have no block side effect. Both are
+recorded in the system page.
 
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[15:0]` | `mode_reject_count` | number of rejected control writes |
+| Cause | Value | Sticky bit |
+| --- | ---: | ---: |
+| misaligned | `0x01` | `ACCESS_FAULT[0]` |
+| unmapped | `0x02` | `ACCESS_FAULT[1]` |
+| write to read-only | `0x03` | `ACCESS_FAULT[2]` |
+| invalid value | `0x04` | `ACCESS_FAULT[3]` |
+| unsafe write | `0x05` | `ACCESS_FAULT[4]` |
+| incomplete I2C write | `0x06` | `ACCESS_FAULT[5]` |
+| I2C reset abort | `0x07` | `ACCESS_FAULT[6]` |
 
-## 3. Global software rules
+`ACCESS_LAST_INFO` stores address `[15:0]`, cause `[23:16]`, and write/read
+direction `[24]`. `ACCESS_LAST_WDATA` stores the rejected write payload.
+`ACCESS_ERROR_COUNT` saturates at `0xFFFFFFFF`.
 
-1. Write `GLOBAL_CTRL` only when `GLOBAL_STATUS.cfg_accept = 1`.
-2. After an accepted write, poll until:
-   - `transition_busy = 0`
-   - `ctrl_apply_pending = 0`
-3. Read the active fields from `GLOBAL_STATUS`, not from `GLOBAL_CTRL`, when software needs the live state.
-4. Interpret `shared_tx_sel` together with `position_enable`:
-   - `TDC` + `0` -> TDC-only
-   - `POSITION` + `1` -> position-only
-   - `TDC` + `1` -> correlated both-active
+`GLOBAL_FAULT[6:0]` summarizes PLL, TX, matrix, event, position, any TDC, and
+system access faults respectively from bit 6 down to bit 0.
 
-## 4. TDC Axis CSR Blocks
+## Clearing policy
 
-The TDC X/Y/Z regions share the same local MPTDC offset map. The shared decoder
-forwards address bits `[5:0]` into each axis CSR, so the offsets below are the
-RTL-visible offsets used by `spadmic_tdc_axis_csr`.
-
-`TDC_MAX_HITS` is global in effect: a write through any axis region updates one
-shared `max_hits` value that feeds all three `mptdc_axis_core` instances.
-`TDC_RO_CODE` is per-axis: each axis owns independent slow/fast code images.
-
-| Offset | Name | R/W | Purpose |
-|--------|------|-----|---------|
-| `0x000` | `TDC_CTRL` | R/W | product arm and pulse controls |
-| `0x008` | `TDC_MAX_HITS` | R/W | shared global max-hit limit for all TDC axes |
-| `0x014` | `TDC_RO_CODE` | R/W | per-axis slow/fast RO tuning code image |
-| `0x020` | `TDC_STATUS` | R | minimal live axis status |
-| `0x028` | `TDC_FIFO_STATUS` | R | compact FIFO/packet status mirror |
-
-### 4.1 `TDC_CTRL` (`+0x000`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[0]` | `conv_arm` | persistent conversion arm for this axis |
-| `[1]` | `fifo_clear` | write `1` to emit a one-cycle FIFO clear pulse |
-| `[2]` | `soft_reset` | write `1` to emit a short axis-local reset pulse and clear `conv_arm` |
-
-Reads return only `conv_arm`; pulse bits read as `0`.
-
-### 4.2 `TDC_MAX_HITS` (`+0x008`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[3:0]` | `max_hits` | shared global max-hit limit, product reset value `15` |
-
-### 4.3 `TDC_RO_CODE` (`+0x014`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[7:0]` | `ro_slow_code` | per-axis slow `RO_tune4/code[7:0]` requested value |
-| `[15:8]` | `ro_fast_code` | per-axis fast `RO_tune4/code[7:0]` requested value |
-| `[31:16]` | reserved | write ignored, reads `0` |
-
-These fields are the software-visible source of truth. Inside each
-`mptdc_axis_core`, the values are captured into local shadow registers only when
-the measurement engine is idle and both oscillators are stopped. A write during
-an active measurement is allowed, but the new value must not reach the RO macro
-until the axis returns to idle. `soft_reset` does not force these local shadows
-to zero; writing `8'h00` is the normal way to select code zero.
-
-### 4.4 `TDC_STATUS` (`+0x020`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[0]` | `ready` | axis core can accept a START when armed |
-| `[1]` | `busy` | measurement, drain, or packetization activity is in progress |
-| `[2]` | `fifo_full` | axis-local FIFO full |
-| `[3]` | `packet_active` | axis packetizer is inside an active packet |
-| `[4]` | `packet_pending` | axis has packet data active or queued |
-| `[5]` | `stop_armed` | TOP stop qualifier is armed for this axis |
-
-### 4.5 `TDC_FIFO_STATUS` (`+0x028`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[0]` | `fifo_full` | same as `TDC_STATUS[2]` |
-| `[1]` | `packet_active` | same as `TDC_STATUS[3]` |
-| `[2]` | `packet_pending` | same as `TDC_STATUS[4]` |
-
-## 5. Position CSR block
-
-### 5.1 Register summary
-
-| Addr | Name | R/W | Purpose |
-|------|------|-----|---------|
-| `0x400` | `POS_CTRL` | R/W | local position enable, packet mode, and SPAD reset mode/request |
-| `0x404` | `POS_GAP_CFG` | R/W | zero-gap threshold used to split clusters |
-| `0x408` | `POS_FILTER_CFG` | R/W | minimum cluster span and settle-cycle count |
-| `0x40C` | `POS_RESET_CFG` | R/W | SPAD matrix auto-reset period in `clk_sys` cycles |
-| `0x420` | `POS_STATUS` | R | live detector and packet status |
-| `0x424` | `POS_EVENT_COUNT` | R | accepted position-event count |
-| `0x428` | `POS_FAULT_STATUS` | R/W1C | sticky faults and detector-state snapshot |
-| `0x42C` | `POS_DROP_COUNT` | R | count of accepted snapshots dropped because the internal queue was full |
-| `0x430` | `POS_REJECT_COUNT` | R | count of glitch/empty rejections |
-
-### 5.2 `POS_CTRL` (`0x400`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[0]` | `local_enable` | local enable inside the position block |
-| `[1]` | `pos_mode` | `0 = cluster packet`, `1 = raw bitmap packet` |
-| `[3:2]` | `spad_reset_mode` | `0 = manual only`, `1 = event-deferred auto-reset`, `2 = periodic auto-reset` |
-| `[4]` | `manual_reset_req` | write `1` to emit one active-high `spad_matrix_rst_o` pulse; reads back as `0` |
-| `[5]` | `reset_after_capture` | optional auto-reset pulse immediately after a stable snapshot is captured; disabled by default |
-| `[6]` | `compact_cluster` | in cluster mode, emit only valid cluster slots and encode their slot mask in the header |
-
-The effective enable is `global_enable_i & local_enable`.
-
-### 5.3 `POS_GAP_CFG` (`0x404`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[6:0]` | `gap_threshold` | minimum zero-run length that starts a new cluster |
-
-### 5.4 `POS_FILTER_CFG` (`0x408`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[6:0]` | `min_cluster_span` | clusters smaller than this are suppressed; `1` keeps single-line clusters |
-| `[11:8]` | `settle_cycles` | number of stable `clk_sys` cycles required before snapshot |
-
-### 5.5 `POS_RESET_CFG` (`0x40C`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[31:0]` | `auto_reset_period` | auto-reset period in `clk_sys` cycles; `0` disables auto-reset |
-
-`spad_matrix_rst_o` is a one-`clk_sys` active-high pulse. If
-`reset_after_capture` is enabled, a pulse is emitted only after the stable line
-snapshot has been captured into position-block registers. In `event-deferred`
-mode, the period expiry is held pending until the detector, packetizer, FIFO read
-port, and synchronized line buses are idle. In `periodic` mode, the pulse fires
-on schedule even if the matrix is active; this is intended for low-rate raw
-characterization sweeps.
-
-### 5.6 `POS_STATUS` (`0x420`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[0]` | `packet_active` | position packet currently being emitted |
-| `[1]` | `overflow_any` | at least one axis had more than two qualifying clusters in the snapshot |
-| `[4:2]` | `non_empty_mask` | axis snapshot contains at least one kept cluster (`X/Y/Z`) |
-| `[7:5]` | `multi_cluster_mask` | axis snapshot contains two kept clusters (`X/Y/Z`) |
-| `[8]` | `busy` | detector busy, active packet, or queued packet pending |
-| `[9]` | `packet_pending` | packet still outstanding or queued for emission |
-| `[11:10]` | `det_state` | detector FSM state (`IDLE/SETTLE/EVAL/WAIT_CLEAR`) |
-| `[12]` | `pos_mode` | live packet mode (`0 = cluster`, `1 = raw`) |
-| `[14:13]` | `spad_reset_mode` | live reset mode |
-| `[15]` | `auto_reset_pending` | event-deferred auto-reset has expired and is waiting for safe idle |
-| `[16]` | `spad_matrix_rst` | reset pulse is asserted in the current `clk_sys` cycle |
-
-### 5.7 `POS_EVENT_COUNT` (`0x424`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[13:0]` | `event_count` | accepted position-event count |
-
-### 5.8 `POS_FAULT_STATUS` (`0x428`)
-
-| Bits | Name | Meaning | Clear behavior |
-|------|------|---------|----------------|
-| `[0]` | `drop_sticky` | an accepted snapshot was dropped because the internal queue was full | write `1` to clear |
-| `[1]` | `glitch_reject_sticky` | unstable or empty activity was rejected | write `1` to clear |
-| `[3:2]` | `det_state` | current detector FSM state snapshot | read only |
-
-### 5.9 `POS_DROP_COUNT` (`0x42C`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[15:0]` | `drop_count` | count of accepted snapshots dropped because the queue was full |
-
-### 5.10 `POS_REJECT_COUNT` (`0x430`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[15:0]` | `reject_count` | count of glitch or empty-event rejections |
-
-## 5. Position operating rules
-
-1. Keep the global and local enables aligned to the intended operating mode.
-2. Use `drop_count` and `glitch_reject_sticky` as health indicators, not just the packet stream.
-3. Treat `overflow_any` as "more than two clusters existed," not as a transport error.
-4. Use cluster mode for normal event extraction and raw mode for low-rate dark-count/noise or matrix-position characterization.
-5. Use event-deferred reset mode for normal cluster operation and periodic reset mode only when forced periodic reset is acceptable for the characterization mode.
+Sticky block faults and `ACCESS_FAULT` are W1C. `MAINT_CMD[0]` clears saturating
+error counters only while disabled and idle; it does not clear configuration or
+sticky faults. Chip reset is the only global initialization event.

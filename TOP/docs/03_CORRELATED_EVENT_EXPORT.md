@@ -1,163 +1,134 @@
-# SPADMIC TOP — Correlated Event Export Contract
+# SPADMIC TOP Correlated Event Export Contract
 
 Author: Karim Sabra
 
 ## Scope
 
-This document defines the active top-level export behavior implemented by:
+This document defines the active export behavior implemented by:
 
-- `../../MPTDC/rtl/top/mptdc_axis_core.sv`
-- `../arb/rtl/spadmic_packet_arbiter4.sv`
-- `../position/rtl/spadmic_position_block.sv`
-- `../arb/rtl/spadmic_correlated_tx.sv`
+- `TOP/rtl/spadmic_top_matrix_v1.sv`
+- `TOP/rtl/spadmic_event_coordinator.sv`
+- `TOP/rtl/spadmic_event_bundle_tx.sv`
+- `TOP/rtl/spadmic_output_fifo.sv`
+- `TOP/rtl/spadmic_ddr16_tx_pairer.sv`
+- `MPTDC/rtl/top/mptdc_axis_core.sv`, through TOP-owned wrappers
 
-It is the contract for off-chip regrouping of X/Y/Z TDC packets and position packets that describe the same physical event.
+It is the off-chip contract for R/Y/B TDC packets and the optional position
+packet produced by one physical event. The protected MPTDC boundary is not
+modified by this contract.
 
-## 1. Export personalities
+## Event personalities
 
-The active RTL keeps the existing control-image width and derives the export personality from `shared_tx_sel` plus `position_enable`:
+`GLOBAL_CTRL.mode` selects the required packet set. Normal modes require an
+R/Y/B axis mask of `3'b111`.
 
-| `shared_tx_sel` | `position_enable` | Meaning |
-|-----------------|-------------------|---------|
-| `TDC` | `0` | TDC-only |
-| `POSITION` | `1` | position-only |
-| `TDC` | `1` | correlated both-active |
+| Mode | Required packet sources |
+| --- | --- |
+| disabled | none |
+| TDC only | R, Y, B |
+| position only | position |
+| TDC plus position | R, Y, B, position |
+| calibration | selected nonzero calibration-axis mask |
 
-## 2. Packet sources
+Normal matrix operation has no software conversion-start command. A qualified
+matrix event starts the coordinator, which freezes the required packet and
+reset-acknowledgement masks for the complete event lifetime.
 
-The chip-level egress consumes four uniform packet producers:
+## Shared event ID
 
-1. TDC_X direct packet stream from `mptdc_axis_core`
-2. TDC_Y direct packet stream from `mptdc_axis_core`
-3. TDC_Z direct packet stream from `mptdc_axis_core`
-4. one queued position packet stream from `spadmic_position_block`
-
-`spadmic_correlated_tx` arbitrates between them at **packet** granularity, never at word granularity. A packet is never interleaved once its header has started.
-
-## 3. Shared event ID rule
-
-Every emitted packet ends with:
+The coordinator allocates one 14-bit event ID per accepted physical event. All
+required packets in that event bundle receive the same EOP word:
 
 ```text
 [15:14] = 2'b11
 [13:0]  = shared_event_id
 ```
 
-The top-level tagger replaces every producer-local EOC count with one unified rolling ARB event ID.
+The event ID increments once when a new event is accepted, not once per packet.
+The receiver can therefore group R/Y/B and position packets by this ID.
 
-### 3.1 Current correlation rule
+## Source order and identification
 
-The active contract uses one **global emitted-packet ordinal**:
-
-- the first packet accepted into the final ARB FIFO is event `0`
-- the second accepted packet is event `1`
-- and so on modulo 14 bits
-
-Under the active system contract:
-
-1. each enabled source emits at most one packet per physical event
-2. packet order is preserved within each source
-3. the design should avoid silent drops in the normal path
-
-This avoids variable-latency physical-event regrouping stalls in hardware. Host software should use source identity plus arrival order/event tag for prototype analysis.
-
-## 4. Source identification
-
-TDC and position packets now identify source differently:
-
-| Packet type | Source encoding |
-|-------------|-----------------|
-| TDC | header bits `[1:0] = tdc_id` (`00 = X`, `01 = Y`, `10 = Z`, `11 = reserved`) |
-| Position cluster | cluster header marker `[15:14] = 2'b01`; source is implicitly position |
-| Position raw bitmap | raw header pattern from `spadmic_pos_raw_header_word()`; source is implicitly position |
-
-Off-chip software should therefore group packets by:
-
-1. `shared_event_id` from the EOC word
-2. TDC source from header bits `[1:0]` or implicit position source from the position header
-
-## 5. Position overlap behavior
-
-The position path no longer drops a qualifying snapshot just because a previous packet is still draining.
-
-Instead:
-
-- accepted snapshots are queued in `spadmic_position_block`
-- `POS_DROP_COUNT` increments only if that queue becomes full
-- `position_pending` remains asserted while queued packets still need to drain
-
-## 6. Post-arbiter FIFO
-
-`spadmic_correlated_tx` includes a post-arbiter word FIFO with depth:
+`spadmic_event_bundle_tx` transmits required sources in deterministic order:
 
 ```text
-SPADMIC_OUTPUT_FIFO_DEPTH = 256 words
+R -> Y -> B -> position
 ```
 
-This FIFO sits **after** packet arbitration and **after** event-ID tagging. Its role is to:
+It holds each source until its EOP is accepted. Packets cannot interleave.
+TDC header bits `[1:0]` are patched at the TOP boundary:
 
-1. absorb shared-output backpressure
-2. keep arbitration packet-atomic
-3. isolate the packet producers from the fixed-rate physical TX boundary
+| Header ID | Public source |
+| --- | --- |
+| `2'b00` | R |
+| `2'b01` | Y |
+| `2'b10` | B |
+| `2'b11` | reserved |
 
-The depth is formula-based for the legal maximum concurrent burst:
+Position source identity is implicit in the position header format.
+
+## Position packet formats
+
+The position source captures a private R/Y/B snapshot before acknowledging that
+matrix reset may proceed.
+
+| Mode | Logical word count | Payload |
+| --- | ---: | --- |
+| cluster | 8 | header, two cluster slots per R/Y/B axis, EOP |
+| raw | 14 | header, twelve 16-bit bitmap words, EOP |
+
+Cluster mode reset defaults are gap threshold 2 and minimum cluster span 1.
+The packetizer reports pending/busy/drop state to the event and CSR banks.
+
+## Output FIFO
+
+The correlated bundle enters a fixed 256-entry FIFO. Its reserve threshold is
+compile-time fixed and software-readable; software cannot relax it. The FIFO
+absorbs complete legal event bundles and preserves the ordered flush marker.
+
+The bundle does not complete until every required source packet has drained and
+the flush marker has been accepted. Missing-source and FIFO-overflow conditions
+have separate sticky faults and saturating counters.
+
+## DDR16 physical mapping
+
+The active matrix-top boundary is:
 
 ```text
-Max_TDC_Packet_Words = 2 + (15 hits * 2 fixed words/hit) = 32
-Max_Burst = (3 * 32) + 14 raw-position words = 110
-Chosen power-of-two margin depth = 256
+ddr_data_l_o[15:0]
+ddr_data_h_o[15:0]
+ddr_pair_valid_o
+ddr_clk_o
 ```
 
-The current DDR boundary is treated as always-ready at one 16-bit logical word
-per `clk_sys`; recheck this contract when the final external DDR IP is delivered.
+Each asserted `ddr_pair_valid_o` transfers two consecutive logical 16-bit
+words: the earlier word on `ddr_data_l_o`, and the later word on
+`ddr_data_h_o`. If an event bundle ends with an odd logical-word count, the
+ordered flush emits the final word on `ddr_data_l_o` and zero-pads
+`ddr_data_h_o`.
 
-## 7. Physical TX mapping
+There is no off-chip ready input. `ddr_clk_o` follows the system-clock boundary.
 
-The active chip-facing interface is now:
+## Receiver procedure
 
-```text
-chip_tx_clk_o     forwarded 160 MHz source-synchronous clock
-chip_tx_valid_o   SDR word-valid qualifier
-chip_tx_data_o    8-bit DDR byte lane
-```
+For each cycle with `ddr_pair_valid_o == 1`:
 
-The active mapping preserves the internal 16-bit logical packet format:
+1. append `ddr_data_l_o` to the logical stream
+2. append `ddr_data_h_o` unless the final pair is known to be padded
+3. identify TDC source from header bits `[1:0]`
+4. identify position packets from their cluster/raw header
+5. terminate each packet at the EOP marker
+6. group packets sharing the same 14-bit event ID
 
-- rising edge: `word[7:0]`
-- falling edge: `word[15:8]`
+Raw packets are length-delimited because bitmap payload words may also have
+`[15:14] == 2'b11`. Parse a raw packet as exactly 14 logical words rather than
+terminating on the first EOP-looking payload word.
 
-There is no off-chip `ready` signal in the active physical contract.
+## Error and reset behavior
 
-## 8. Receiver-side parsing
-
-Host software should parse packets as:
-
-1. use `chip_tx_valid_o` to identify cycles carrying one logical 16-bit word
-2. sample `chip_tx_data_o` on both edges of `chip_tx_clk_o`
-3. reconstruct the 16-bit logical word from `{falling_edge_byte, rising_edge_byte}`
-4. parse the logical packet stream as:
-   - TDC: header, payload, EOC
-   - position fixed cluster: header, six 6-bit-coordinate cluster words, EOC
-   - position compact cluster: compact header, valid cluster slots in header-mask order, EOC
-   - position raw bitmap: raw header, 12 unescaped bitmap payload words, EOC
-
-For both-active mode, the receiver should treat `shared_event_id` as the emitted-packet sequence tag, not as a hardware-aligned physical-event group tag.
-
-Raw bitmap position packets are fixed length because payload words carry true
-16-bit line levels and can therefore have `[15:14] = 2'b11`. The on-chip
-correlator and the off-chip receiver must parse raw bitmap packets by the raw
-header plus 14 total words, not by the first EOC-looking payload word.
-
-The 64x64x64 SPAD geometry does not change fixed packet word counts: default
-cluster packets remain 8 logical words and raw bitmap packets remain 14 logical
-words. Compact cluster packets are variable length: `1 + popcount(slot_mask) +
-1` words, where header bits `[8:3]` encode `{Z1,Z0,Y1,Y0,X1,X0}`. The
-protocol-level geometry change is the cluster bound width inside each cluster
-word:
-
-```text
-[15:13] = 3'b000 reserved
-[12:7]  = lo[5:0]
-[6:1]   = hi[5:0]
-[0]     = valid
-```
+- An event is rejected before acceptance if required resources are unavailable.
+- Required source masks remain frozen while an event is open.
+- Chip reset clears coordinator, packet, FIFO, and DDR state.
+- `i2c_rst_i` resets only the I2C transport and does not disturb an event.
+- RTL regression evidence does not authorize physical implementation or
+  signoff.

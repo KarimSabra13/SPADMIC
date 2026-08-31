@@ -182,8 +182,8 @@ module tb_spadmic_top_output_fifo_pressure_integration_unit;
     async_rst_n = 1'b1;
     repeat (12) @(posedge clk_sys);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0001_0003);
-    i2c_write_csr(SPADMIC_CSR_POSITION_MODE, 32'h0000_0001);
+    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0000_0003);
+    i2c_write_csr(SPADMIC_CSR_POSITION_MODE, 32'h0000_0105);
     i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_POSITION_ONLY, 1'b1});
     i2c_read_csr(SPADMIC_CSR_MTOP_CTRL_ACTIVE, rd);

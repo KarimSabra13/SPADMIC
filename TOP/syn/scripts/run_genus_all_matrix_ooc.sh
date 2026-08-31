@@ -151,11 +151,8 @@ source "$TOP_ROOT/scripts/sim/resolve_flist.sh"
 resolve_flist "$MPTDC_ROOT" "$MPTDC_ROOT/rtl/filelist.f" "$RUN_ROOT/filelists/mptdc_abs.f"
 resolve_flist "$TOP_ROOT" "$TOP_ROOT/filelist.f" "$RUN_ROOT/filelists/top_abs.raw.f"
 
-# Keep the shared TOP filelist intact for simulation and legacy coverage, but
-# filter the matrix-top Genus OOC input set. The old top and obsolete DDR8
-# dual-edge RTL are not part of the final matrix-top path; reading them makes
-# Genus fail before it reaches the DDR16 matrix-top design.
-TOP_GENUS_EXCLUDE_RE='/TOP/rtl/(spadmic_ddr_tx|spadmic_top_v1)\.sv$'
+# The retained standalone DDR8 block is not part of matrix-top Genus OOC.
+TOP_GENUS_EXCLUDE_RE='/TOP/rtl/spadmic_ddr_tx\.sv$'
 grep -E "$TOP_GENUS_EXCLUDE_RE" "$RUN_ROOT/filelists/top_abs.raw.f" \
   > "$RUN_ROOT/filelists/top_genus_excluded.f" || true
 grep -v -E "$TOP_GENUS_EXCLUDE_RE" "$RUN_ROOT/filelists/top_abs.raw.f" \

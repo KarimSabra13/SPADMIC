@@ -3,6 +3,7 @@
 
 module tb_spadmic_i2c_matrix_top_16b_unit;
   import spadmic_pkg::*;
+  import spadmic_csr_map_pkg::*;
 
   localparam int CLK_SYS_PERIOD   = 6250;
   localparam int CLK_40M_PERIOD   = 25000;
@@ -13,6 +14,7 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
   logic clk_ref_40m;
   logic clk_cfg_40m;
   logic async_rst_n;
+  logic i2c_rst;
   logic i2c_scl_drv;
   logic i2c_sda_master_low;
   wire i2c_scl = i2c_scl_drv;
@@ -55,7 +57,7 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
     .clk_ref_40m(clk_ref_40m),
     .clk_cfg_40m(clk_cfg_40m),
     .async_rst_n(async_rst_n),
-    .i2c_rst_i(1'b0),
+    .i2c_rst_i(i2c_rst),
     .i2c_scl_i(i2c_scl),
     .i2c_sda_i(i2c_sda),
     .i2c_sda_oe_o(i2c_sda_oe),
@@ -103,12 +105,54 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
     end
   endtask
 
+  task automatic i2c_begin_partial_write(
+    input logic [15:0] addr,
+    input logic [31:0] data,
+    input int unsigned byte_count
+  );
+    logic ack_ok;
+    begin
+      i2c_start();
+      i2c_write_byte({SPADMIC_I2C_ADDR, 1'b0}, ack_ok);
+      i2c_expect_ack(ack_ok, "partial device address");
+      i2c_write_byte(addr[15:8], ack_ok);
+      i2c_expect_ack(ack_ok, "partial pointer high");
+      i2c_write_byte(addr[7:0], ack_ok);
+      i2c_expect_ack(ack_ok, "partial pointer low");
+      if (byte_count >= 1) begin
+        i2c_write_byte(data[31:24], ack_ok);
+        i2c_expect_ack(ack_ok, "partial payload byte 0");
+      end
+      if (byte_count >= 2) begin
+        i2c_write_byte(data[23:16], ack_ok);
+        i2c_expect_ack(ack_ok, "partial payload byte 1");
+      end
+      if (byte_count >= 3) begin
+        i2c_write_byte(data[15:8], ack_ok);
+        i2c_expect_ack(ack_ok, "partial payload byte 2");
+      end
+      repeat (8) @(posedge clk_sys);
+    end
+  endtask
+
+  task automatic pulse_i2c_transport_reset;
+    begin
+      i2c_rst = 1'b1;
+      i2c_scl_drv = 1'b1;
+      i2c_sda_master_low = 1'b0;
+      repeat (8) @(posedge clk_sys);
+      i2c_rst = 1'b0;
+      repeat (16) @(posedge clk_sys);
+    end
+  endtask
+
   initial begin
     logic [31:0] rd;
 
     pass_count = 0;
     fail_count = 0;
     async_rst_n = 1'b0;
+    i2c_rst = 1'b0;
     i2c_scl_drv = 1'b1;
     i2c_sda_master_low = 1'b0;
 
@@ -116,26 +160,35 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
     async_rst_n = 1'b1;
     repeat (12) @(posedge clk_sys);
 
-    i2c_read_csr(16'h0000, rd);
+    i2c_read_csr(CSR_CHIP_ID, rd);
     check("I2C reads 0x0000 global ID", rd == 32'h5350_4D54);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0001_0007);
-    i2c_read_csr(16'h5008, rd);
-    check("I2C accesses 0x5000 matrix-reset region", rd[16] && rd[15:0] == 16'd7);
+    i2c_read_csr(CSR_ABI_VERSION, rd);
+    check("I2C reads CSR ABI 1.0 version", rd == 32'h0001_0000);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_CFG_COL, 32'd43);
-    i2c_read_csr(16'h6008, rd);
+    i2c_write_csr(CSR_RESET_CFG, 32'h0000_0007);
+    i2c_read_csr(CSR_RESET_CFG, rd);
+    check("I2C accesses 0x5000 matrix-reset region", rd[15:0] == 16'd7);
+
+    i2c_write_csr(CSR_MATRIX_COLUMN, 32'd43);
+    i2c_read_csr(CSR_MATRIX_COLUMN, rd);
     check("I2C accesses 0x6000 matrix-config region", rd[5:0] == 6'd43);
 
-    i2c_read_csr(16'h7004, rd);
+    i2c_read_csr(CSR_TX_FIFO_STATUS, rd);
     check("I2C accesses 0x7000 output-FIFO region", rd[0] && !rd[1]);
 
-    i2c_read_csr(SPADMIC_CSR_SLVS_GPIO_CTRL, rd);
-    check("I2C reads SLVS GPIO reset defaults", rd == 32'h0);
-    i2c_write_csr(SPADMIC_CSR_SLVS_GPIO_CTRL, 32'hFFFF_7FFF);
-    i2c_read_csr(SPADMIC_CSR_SLVS_GPIO_CTRL, rd);
-    check("I2C writes/reads SLVS GPIO implemented bits", rd[14:0] == 15'h7FFF);
-    check("I2C SLVS GPIO reserved bits read zero", rd[31:15] == 17'h0);
+    i2c_read_csr(CSR_SLVS_CTRL, rd);
+    check("I2C reads active-low SLVS reset defaults", rd == 32'h0000_0140);
+    i2c_read_csr(CSR_RX_CTRL, rd);
+    check("I2C reads inactive RX reset defaults", rd == 32'h0);
+    i2c_write_csr(CSR_SLVS_CTRL, 32'hFFFF_FFFF);
+    i2c_write_csr(CSR_RX_CTRL, 32'hFFFF_FFFF);
+    i2c_read_csr(CSR_SLVS_CTRL, rd);
+    check("I2C writes/reads SLVS implemented bits", rd[8:0] == 9'h1FF);
+    check("I2C SLVS reserved bits read zero", rd[31:9] == 23'h0);
+    i2c_read_csr(CSR_RX_CTRL, rd);
+    check("I2C writes/reads RX implemented bits", rd[5:0] == 6'h3F);
+    check("I2C RX reserved bits read zero", rd[31:6] == 26'h0);
     check("I2C SLVS S_DRV reaches top output", slvs_s_drv == 4'hF);
     check("I2C SLVS control bits reach top outputs",
           slvs_en_vref_ext && slvs_en_drv && slvs_vref_adj_b &&
@@ -143,9 +196,33 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
     check("I2C RX controls reach top outputs",
           rx_s_rx == 4'hF && rx_en_rx && rx_en_term);
 
-    i2c_write_csr(SPADMIC_CSR_SHARED_TDC_MAX_HITS, 32'h0000_000F);
-    i2c_read_csr(16'h0020, rd);
-    check("I2C writes shared max_hits through 16-bit map", rd[3:0] == 4'd15);
+    i2c_write_csr(CSR_TDC_SHARED_CFG, 32'h0034_120F);
+    i2c_read_csr(CSR_TDC_SHARED_CFG, rd);
+    check("I2C atomically writes shared TDC tuning", rd[23:0] == 24'h34_120F);
+
+    i2c_write_csr(CSR_POSITION_CFG, 32'h0000_0105);
+    i2c_read_csr(CSR_ACCESS_ERROR_COUNT, rd);
+    check("No access errors precede transport reset test", rd == 32'd0);
+
+    i2c_begin_partial_write(CSR_PLL_CTRL, 32'hABCD_EF01, 2);
+    pulse_i2c_transport_reset();
+
+    i2c_read_csr(CSR_ACCESS_LAST_INFO, rd);
+    check("I2C reset abort records exact address and cause",
+          rd[15:0] == CSR_PLL_CTRL &&
+          rd[23:16] == CSR_CAUSE_I2C_RESET_ABORT && rd[24]);
+    i2c_read_csr(CSR_ACCESS_LAST_WDATA, rd);
+    check("I2C reset abort records received payload prefix", rd == 32'hABCD_0000);
+    i2c_read_csr(CSR_ACCESS_ERROR_COUNT, rd);
+    check("I2C reset abort increments the access-error counter", rd == 32'd1);
+    i2c_read_csr(CSR_POSITION_CFG, rd);
+    check("I2C transport reset preserves CSR configuration", rd[14:0] == 15'h0105);
+
+    pulse_i2c_transport_reset();
+    i2c_read_csr(CSR_ACCESS_ERROR_COUNT, rd);
+    check("Idle I2C transport reset does not create an error", rd == 32'd1);
+    i2c_read_csr(CSR_POSITION_CFG, rd);
+    check("Idle I2C transport reset also preserves CSR state", rd[14:0] == 15'h0105);
 
     if (fail_count != 0)
       $fatal(1, "tb_spadmic_i2c_matrix_top_16b_unit: %0d failures", fail_count);

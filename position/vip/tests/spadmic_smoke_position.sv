@@ -24,12 +24,11 @@ class spadmic_smoke_position extends spadmic_base_test;
     // Config for position mode
     env.gen.gen_initial_config();
 
-    // Single cluster: bits 20-35 on X axis, clear on Y/Z
+    // One physical matrix event presents all public R/Y/B directions.
     pattern = '0;
     for (int i = 20; i <= 35; i++) pattern[i] = 1'b1;
-    env.gen.gen_position_event(pattern, '0, '0, 300);
+    env.gen.gen_position_event(pattern, pattern, pattern, 300);
 
     env.gen.gen_eot();
   endtask
 endclass
-

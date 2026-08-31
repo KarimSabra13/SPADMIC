@@ -1,0 +1,82 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_csr_router</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">ABI 1.0 request validation, page routing, and fail-closed invalid-access behavior.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_csr_router.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+
+    csr_req [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Shared CSR request</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>valid / write<BR ALIGN='LEFT'/>16-bit byte address<BR ALIGN='LEFT'/>32-bit write payload</FONT></TD></TR>
+    </TABLE>
+    >];
+    validate [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Request validation</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>32-bit word alignment<BR ALIGN='LEFT'/>implemented 4 KiB page<BR ALIGN='LEFT'/>single outstanding request</FONT></TD></TR>
+    </TABLE>
+    >];
+    decode [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Page decode</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>0x0 System<BR ALIGN='LEFT'/>0x1/0x2/0x3 TDC R/Y/B<BR ALIGN='LEFT'/>0x4 Position, 0x5 Event<BR ALIGN='LEFT'/>0x6 Matrix, 0x7 TX<BR ALIGN='LEFT'/>0x8 PLL, 0x9 Analog</FONT></TD></TR>
+    </TABLE>
+    >];
+    banks [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Block-owned bank request</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>one-hot valid<BR ALIGN='LEFT'/>full address and payload<BR ALIGN='LEFT'/>bank response handshake</FONT></TD></TR>
+    </TABLE>
+    >];
+    invalid [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Invalid-access response</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>read returns zero<BR ALIGN='LEFT'/>write has no side effect<BR ALIGN='LEFT'/>cause/address/data recorded</FONT></TD></TR>
+    </TABLE>
+    >];
+    rsp [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Held CSR response</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>valid / 32-bit read data / error<BR ALIGN='LEFT'/>stable until bridge accepts<BR ALIGN='LEFT'/>bank cause forwarded</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; csr_req; validate; decode; banks; rsp; }
+    { rank=same; invalid; }
+
+    csr_req -> validate [style="invis" weight=20];
+    validate -> decode [style="invis" weight=20];
+    decode -> banks [style="invis" weight=20];
+    banks -> rsp [style="invis" weight=20];
+
+    csr_req -> validate [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="request", fontsize=10, fontcolor="#334155"];
+    validate -> decode [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="aligned + mapped", fontsize=10, fontcolor="#334155"];
+    validate -> invalid [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="reject", fontsize=10, fontcolor="#334155"];
+    decode -> banks [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="one bank selected", fontsize=10, fontcolor="#334155"];
+    banks -> rsp [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="bank response", fontsize=10, fontcolor="#334155"];
+    invalid -> rsp [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="zero + error", fontsize=10, fontcolor="#334155"];
+
+    }

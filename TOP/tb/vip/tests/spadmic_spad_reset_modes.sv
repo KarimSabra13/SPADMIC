@@ -1,6 +1,6 @@
 // =============================================================================
 // SPADMIC VIP — SPAD Matrix Reset Modes Test
-// Covers manual, periodic, and event-deferred reset pulse observation.
+// Covers automatic event reset pulses with two programmed widths.
 // =============================================================================
 
 class spadmic_spad_reset_modes extends spadmic_base_test;
@@ -16,32 +16,19 @@ class spadmic_spad_reset_modes extends spadmic_base_test;
   endfunction
 
   task body();
-    logic [SPADMIC_LINE_W-1:0] xp;
+    logic [SPADMIC_LINE_W-1:0] pattern;
 
     env.gen.gen_initial_config();
-
-    // Manual pulse: POS_CTRL[4] is write-one-pulse, with local enable kept high.
-    env.gen.gen_csr_write(SPADMIC_CSR_POS_CTRL, 32'h0000_0011);
-
-    // Short period so the VIP can observe automatic reset behavior quickly.
-    env.gen.gen_csr_write(SPADMIC_CSR_POS_RESET_CFG, 32'd4);
-
-    // Periodic raw-characterization reset can fire while lines are active.
-    env.gen.gen_csr_write(SPADMIC_CSR_POS_CTRL, 32'h0000_000B);
-    xp = '0;
-    xp[0] = 1'b1;
-    xp[SPADMIC_LINE_W-1] = 1'b1;
-    env.gen.gen_position_event(xp, '0, '0, 150);
-
-    // Event-deferred reset waits until the position block reaches safe idle.
-    env.gen.gen_csr_write(SPADMIC_CSR_POS_CTRL, 32'h0000_0005);
-    xp = '0;
+    pattern = '0;
     for (int i = 20; i < 28; i++)
-      xp[i] = 1'b1;
-    env.gen.gen_position_event(xp, '0, '0, 120);
+      pattern[i] = 1'b1;
 
-    env.gen.gen_csr_write(SPADMIC_CSR_POS_CTRL, 32'h0000_0001);
-    env.gen.gen_csr_write(SPADMIC_CSR_POS_RESET_CFG, 32'd0);
+    // Initial high-level configuration programs the ABI default width of four.
+    env.gen.gen_position_event(pattern, pattern, pattern, 120);
+
+    // Width changes are only legal while disabled and globally idle.
+    env.gen.gen_reset_width_update(16'd2);
+    env.gen.gen_position_event(pattern, pattern, pattern, 120);
     env.gen.gen_eot();
   endtask
 

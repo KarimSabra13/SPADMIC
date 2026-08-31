@@ -215,7 +215,7 @@ class spadmic_pos_ref_model;
         !expected_axis[0].empty}) begin
       $display("[POS_REF] FAIL: header non-empty mask mismatch");
       return 0;
-    }
+    end
 
     if (compact_packet) begin
       int word_idx;

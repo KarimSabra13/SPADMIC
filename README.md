@@ -1,90 +1,66 @@
-# SPADMIC — SPAD Matrix Digital IC
+# SPADMIC
 
-> **Author:** Karim Sabra  
-> **Affiliation:** IP2I Lyon / Universite Claude Bernard Lyon 1  
-> **License:** Copyright © 2025 Karim Sabra. All rights reserved.
+SPADMIC is the RTL, verification, software-collateral, and implementation
+repository for the SPAD detector readout ASIC. The active chip integration RTL
+is `TOP/rtl/spadmic_top_matrix_v1.sv`.
 
-## Repository overview
+## Active control plane
 
-This repository contains the active digital implementation of the SPADMIC readout IC and the supporting MPTDC core it integrates.
+The active software-visible control path is:
 
-The current active first-silicon digital baseline is:
-
-- one physical `chip_tx_*` output bus
-- three product `mptdc_axis_core` TDC axes through TOP-owned wrappers
-- one shared TDC serializer fed by per-axis acquisition-record exports
-- one async-qualified 64x64x64 SPAD position path with explicit drop/reject reporting
-- one top-level sequencer that commits requested control only after the old datapath drains
-- one I2C control plane bridged into the shared CSR fabric
-
-## Repository guide
-
-| Directory | Role | Main entrypoint |
-|-----------|------|-----------------|
-| [`MPTDC/`](MPTDC/) | Vernier multi-phase TDC core, verification, calibration, synthesis collateral | [`MPTDC/README.md`](MPTDC/README.md) |
-| [`TOP/`](TOP/) | SPADMIC chip-level integration around three MPTDC axes | [`TOP/README.md`](TOP/README.md) |
-| [`position/`](position/) | Async-qualified SPAD position detector, cluster scanner, packetizer, and position synthesis collateral | [`position/docs/README.md`](position/docs/README.md) |
-| [`I2C/`](I2C/) | I2C slave and CSR bridge used by the active top-level | [`I2C/README.md`](I2C/README.md) |
-| [`Rapport_5PSM_KS/`](Rapport_5PSM_KS/) | Report project kept in the repo but excluded from the current cleanup/documentation pass | — |
-
-## Documentation map
-
-| Area | Quick reference | Deep reference |
-|------|-----------------|----------------|
-| Full chip / integration | [`TOP/README.md`](TOP/README.md) | [`TOP/docs/01_ACTIVE_ARCHITECTURE.md`](TOP/docs/01_ACTIVE_ARCHITECTURE.md), [`TOP/docs/07_BLOCK_GUIDE.md`](TOP/docs/07_BLOCK_GUIDE.md), [`TOP/docs/08_TX_INTERFACE.md`](TOP/docs/08_TX_INTERFACE.md), [`TOP/docs/09_VIP_GUIDE.md`](TOP/docs/09_VIP_GUIDE.md), [`TOP/docs/10_TAPEOUT_READINESS.md`](TOP/docs/10_TAPEOUT_READINESS.md) |
-| TDC core | [`MPTDC/README.md`](MPTDC/README.md) | [`MPTDC/HANDOFF.md`](MPTDC/HANDOFF.md), [`MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md`](MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md), [`MPTDC/docs/synthesis/MPTDC_SYNTHESIS_FLOW.md`](MPTDC/docs/synthesis/MPTDC_SYNTHESIS_FLOW.md), [`MPTDC/docs/verification/MPTDC_VERIFICATION.md`](MPTDC/docs/verification/MPTDC_VERIFICATION.md) |
-| Position block | [`position/docs/README.md`](position/docs/README.md) | [`position/docs/01_REUSABLE_DIGITAL_FLOW_FROM_MPTDC.md`](position/docs/01_REUSABLE_DIGITAL_FLOW_FROM_MPTDC.md) |
-| I2C control plane | [`I2C/README.md`](I2C/README.md) | [`I2C/docs/01_INTEGRATION_GUIDE.md`](I2C/docs/01_INTEGRATION_GUIDE.md), [`I2C/docs/02_BLOCK_GUIDE.md`](I2C/docs/02_BLOCK_GUIDE.md) |
-
-## Active system dataflow
-
-1. **Control path:** `i2c_scl_i/i2c_sda_i` -> `spadmic_i2c_slave` -> `spadmic_i2c_csr_bridge` -> `spadmic_csr_decoder` -> global, per-axis TDC, or position CSR blocks.
-2. **TDC path:** one `spadmic_tdc_axis_wrapper` per axis -> local `mptdc_axis_core` -> product 16-bit packet streams -> unified ARB.
-3. **Position path:** asynchronous 64-line `x/y/z_lines_i` buses -> synchronizers -> pipelined cluster scan and qualification in `spadmic_position_block` -> fixed 8-word cluster packet or 14-word raw bitmap packet.
-4. **Final egress:** `spadmic_correlated_tx` groups packetized TDC and position traffic into one shared correlated stream, then `spadmic_ddr_tx` maps that stream onto the source-synchronous `chip_tx_*` DDR pins.
-
-## Current top-level control model
-
-- `spadmic_global_csr` stores the **requested** control image visible to software.
-- `spadmic_top_sequencer` owns the **active** control image that drives the live datapath.
-- Source and mode changes are accepted only when the datapath is idle and are committed only after the previous path drains.
-- Fault counters and sticky bits report rejected mode writes and position-side capture issues.
-
-## Quick start
-
-### Lint the active full-chip top
-
-```bash
-cd /home/karim/SPADMIC
-MPTDC_FILES=$(sed -e 's,//.*$,,' -e '/^[[:space:]]*$/d' MPTDC/rtl/filelist.f | sed 's,^,MPTDC/,')
-TOP_FILES=$(sed -e 's,//.*$,,' -e '/^[[:space:]]*$/d' TOP/filelist.f | sed 's,^,TOP/,')
-verilator --lint-only --timing +define+MPTDC_USE_OSC_MODEL \
-  $MPTDC_FILES $TOP_FILES \
-  --top-module spadmic_top_v1
+```text
+I2C pins
+  -> I2C/rtl/spadmic_i2c_slave.sv
+  -> I2C/rtl/spadmic_i2c_csr_bridge.sv
+  -> TOP/rtl/spadmic_csr_router.sv
+  -> TOP/rtl/spadmic_csr_banks.sv
+  -> block controls and status
 ```
 
-### Run the maintained MPTDC smoke regression
+The contract is CSR ABI 1.0:
+
+- fixed 7-bit I2C address `0x42` at 100 kHz
+- 16-bit, word-aligned register addresses, MSB first
+- 32-bit register data, MSB first
+- one register transaction at a time, with no burst or auto-increment
+- R, Y, and B public TDC axes
+- invalid and incomplete accesses are fail-closed and recorded
+- `i2c_rst_i` resets transport state only
+
+The authoritative address source is
+`TOP/rtl/spadmic_csr_map_pkg.sv`. Generated C, Python, CSV, and Markdown
+collateral is under `TOP/sw/` and `TOP/docs/csr/`.
+
+## Repository areas
+
+| Area | Purpose |
+| --- | --- |
+| `TOP/` | active integration, CSR banks, event coordination, TX, VIP, and CI |
+| `I2C/` | I2C transport and CSR bridge |
+| `MPTDC/` | protected TDC implementation boundary and collateral |
+| `position/` | position processing RTL and verification |
+| `matrice/` | matrix configuration RTL and verification |
+| `IP/` | reused design IP |
+
+`MPTDC/rtl/top/mptdc_axis_core.sv` remains a protected boundary. Product-level
+configuration and status belong in TOP-owned wrappers and CSR banks.
+
+## Local verification
 
 ```bash
-cd /home/karim/SPADMIC/MPTDC
-bash ci/run_smoke.sh
+bash TOP/ci/check_csr_map_generated.sh
+bash TOP/ci/run_smoke.sh
+bash TOP/ci/run_directed_regression.sh
+bash TOP/ci/run_vip_smoke.sh
+bash TOP/ci/run_tapeout_readiness.sh
 ```
 
-### Run a representative TOP-level unit bench
+The scripts select Xcelium when available and otherwise use the supported local
+Verilator paths. Functional coverage requires Xcelium:
 
 ```bash
-cd /home/karim/SPADMIC
-verilator --binary --timing -Wall \
-  -Wno-UNUSEDSIGNAL -Wno-UNDRIVEN -Wno-DECLFILENAME -Wno-WIDTHEXPAND \
-  -Wno-WIDTHTRUNC -Wno-UNUSEDPARAM -Wno-PINMISSING -Wno-UNUSEDGENVAR \
-  -Wno-CASEINCOMPLETE -Wno-LATCH -Wno-REALCVT -Wno-INITIALDLY -Wno-COMBDLY \
-  -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
-  MPTDC/rtl/pkg/mptdc_pkg.sv \
-  TOP/rtl/spadmic_pkg.sv \
-  arb/rtl/spadmic_tdc_packet_adapter.sv \
-  arb/rtl/spadmic_position_packet_adapter.sv \
-  arb/rtl/spadmic_packet_arbiter4.sv \
-  arb/rtl/spadmic_correlated_tx.sv \
-  arb/tb/tb_spadmic_arb_modes.sv \
-  --top-module tb_spadmic_arb_modes
+bash TOP/ci/run_vip_coverage.sh
 ```
+
+Passing RTL regressions does not imply synthesis, physical, DRC, LVS, timing,
+or tapeout closure. Those remain separate evidence gates.

@@ -9,6 +9,7 @@
 package spadmic_vip_pkg;
   import mptdc_pkg::*;
   import spadmic_pkg::*;
+  import spadmic_csr_map_pkg::*;
 
   // ── Backpressure modes ──────────────────────────────────────────
   typedef enum int unsigned {
@@ -78,7 +79,7 @@ package spadmic_vip_pkg;
   // ── Global configuration ───────────────────────────────────────
   localparam int CLK_PERIOD_PS   = 6250;    // 160 MHz
   localparam int REF_CLK_PERIOD  = 25000;   // 40 MHz
-  localparam int I2C_HALF_PERIOD = 80;      // clk_sys cycles
+  localparam int I2C_HALF_PERIOD = 800;     // 100 kHz at 160 MHz clk_sys
 
   // Legal max_hits values
   localparam int LEGAL_MAX_HITS[4] = '{1, 5, 10, 15};

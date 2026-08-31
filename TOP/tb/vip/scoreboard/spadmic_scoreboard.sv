@@ -19,7 +19,8 @@ class spadmic_scoreboard;
   int unsigned pos_pkts_received;
   int unsigned pkts_expected_by_source [SPADMIC_SRC_COUNT];
   int unsigned pkts_received_by_source [SPADMIC_SRC_COUNT];
-  int unsigned next_event_id_by_source [SPADMIC_SRC_COUNT];
+  int unsigned expected_event_id_q [SPADMIC_SRC_COUNT][$];
+  int unsigned next_expected_event_id;
   int unsigned check_pass;
   int unsigned check_fail;
   int unsigned resets_seen;
@@ -33,8 +34,8 @@ class spadmic_scoreboard;
   logic [MAX_HITS_W-1:0] active_max_hits;
   input_sel_e  active_input_sel;
   spadmic_pos_mode_e active_pos_mode;
-  spadmic_spad_reset_mode_e active_spad_reset_mode;
-  logic [31:0] active_spad_reset_period;
+  logic        active_auto_reset_enable;
+  logic [15:0] active_reset_width;
   logic [SPADMIC_LINE_COUNT_W-1:0] active_pos_gap_threshold;
   logic [SPADMIC_LINE_COUNT_W-1:0] active_pos_min_cluster_span;
   logic [3:0]  active_pos_settle_cycles;
@@ -89,13 +90,13 @@ class spadmic_scoreboard;
     this.active_position_enable = 1'b0;
     this.active_out_mode   = OUT_MODE_RAW_FEATURES;
     this.active_max_hits   = 4'd15;
-    this.active_input_sel  = INPUT_CAL;
+    this.active_input_sel  = INPUT_SPAD;
     this.active_pos_mode   = SPADMIC_POS_MODE_CLUSTER;
-    this.active_spad_reset_mode = SPADMIC_SPAD_RST_MANUAL_ONLY;
-    this.active_spad_reset_period = 32'd0;
+    this.active_auto_reset_enable = 1'b1;
+    this.active_reset_width = 16'd0;
     this.active_pos_gap_threshold = 7'd2;
-    this.active_pos_min_cluster_span = 7'd2;
-    this.active_pos_settle_cycles = 4'd1;
+    this.active_pos_min_cluster_span = 7'd1;
+    this.active_pos_settle_cycles = 4'd2;
     this.spad_reset_pulses_expected_min = 0;
     this.spad_reset_pulses_received = 0;
     this.spad_reset_width_errors = 0;
@@ -106,8 +107,9 @@ class spadmic_scoreboard;
     for (int src = 0; src < SPADMIC_SRC_COUNT; src++) begin
       this.pkts_expected_by_source[src] = 0;
       this.pkts_received_by_source[src] = 0;
-      this.next_event_id_by_source[src] = 0;
+      this.expected_event_id_q[src].delete();
     end
+    this.next_expected_event_id = 0;
   endfunction
 
   function automatic void apply_reset_defaults();
@@ -119,12 +121,15 @@ class spadmic_scoreboard;
     active_max_hits        = 4'd15;
     active_input_sel       = INPUT_SPAD;
     active_pos_mode        = SPADMIC_POS_MODE_CLUSTER;
-    active_spad_reset_mode = SPADMIC_SPAD_RST_MANUAL_ONLY;
-    active_spad_reset_period = 32'd0;
+    active_auto_reset_enable = 1'b1;
+    active_reset_width = 16'd0;
     active_pos_gap_threshold = 7'd2;
-    active_pos_min_cluster_span = 7'd2;
-    active_pos_settle_cycles = 4'd1;
+    active_pos_min_cluster_span = 7'd1;
+    active_pos_settle_cycles = 4'd2;
     expected_pos_q.delete();
+    next_expected_event_id = 0;
+    for (int src = 0; src < SPADMIC_SRC_COUNT; src++)
+      expected_event_id_q[src].delete();
   endfunction
 
   task automatic run();
@@ -156,60 +161,29 @@ class spadmic_scoreboard;
         TXN_TDC_EVENT: begin
           spadmic_tdc_event_txn et;
           $cast(et, txn);
-          if (active_global_enable
-              && (spadmic_export_mode_from_ctrl(active_tx_sel, active_position_enable)
-                  != SPADMIC_EXPORT_POSITION_ONLY)
-              && axis_expected_for_input(et.use_spad)
-              && active_axis_enabled(et.axis)) begin
-            tdc_pkts_expected += et.num_conversions;
-            pkts_expected_by_source[et.axis] += et.num_conversions;
-          end
-          $display("[SB] TDC event: axis=%0d convs=%0d (total expected=%0d)",
-                   et.axis, et.num_conversions, tdc_pkts_expected);
+          for (int conv = 0; conv < et.num_conversions; conv++)
+            note_expected_matrix_event(64'b1, 64'b1, 64'b1);
+          $display("[SB] Matrix TDC event: convs=%0d (total expected=%0d)",
+                   et.num_conversions, tdc_pkts_expected);
         end
 
         TXN_POS_EVENT: begin
-          if (active_global_enable
-              && (spadmic_export_mode_from_ctrl(active_tx_sel, active_position_enable)
-                  != SPADMIC_EXPORT_TDC_ONLY)
-              && active_position_enable) begin
-            spadmic_pos_event_txn pet;
-            if ($cast(pet, txn) &&
-                (pet.x_pattern != '0 || pet.y_pattern != '0 || pet.z_pattern != '0)) begin
-              pos_pkts_expected++;
-              pkts_expected_by_source[SPADMIC_SRC_POSITION]++;
-              push_expected_pos(pet.x_pattern, pet.y_pattern, pet.z_pattern);
-            end else
-              $display("[SB] POS event skipped (empty axis pattern — no packet expected)");
-          end
+          spadmic_pos_event_txn pet;
+          if ($cast(pet, txn) &&
+              (pet.x_pattern != '0 || pet.y_pattern != '0 || pet.z_pattern != '0))
+            note_expected_matrix_event(pet.x_pattern, pet.y_pattern, pet.z_pattern);
+          else
+            $display("[SB] POS event skipped (empty matrix pattern)");
           $display("[SB] POS event (total expected=%0d)", pos_pkts_expected);
         end
 
         TXN_CORRELATED_EVENT: begin
           spadmic_correlated_event_txn ct;
           $cast(ct, txn);
-          if (active_global_enable) begin
-            if ((spadmic_export_mode_from_ctrl(active_tx_sel, active_position_enable)
-                 != SPADMIC_EXPORT_POSITION_ONLY)
-                && axis_expected_for_input(ct.use_spad)) begin
-              for (int ax = 0; ax < 3; ax++) begin
-                if (ct.axis_mask[ax] && active_axis_enabled(ax)) begin
-                  tdc_pkts_expected++;
-                  pkts_expected_by_source[ax]++;
-                end
-              end
-            end
-
-            if ((spadmic_export_mode_from_ctrl(active_tx_sel, active_position_enable)
-                 != SPADMIC_EXPORT_TDC_ONLY)
-                && active_position_enable
-                && ct.position_present
-                && ((ct.x_pattern != '0) || (ct.y_pattern != '0) || (ct.z_pattern != '0))) begin
-              pos_pkts_expected++;
-              pkts_expected_by_source[SPADMIC_SRC_POSITION]++;
-              push_expected_pos(ct.x_pattern, ct.y_pattern, ct.z_pattern);
-            end
-          end
+          if (ct.position_present)
+            note_expected_matrix_event(ct.x_pattern, ct.y_pattern, ct.z_pattern);
+          else
+            note_expected_matrix_event(64'b1, 64'b1, 64'b1);
           $display("[SB] CORR event: mask=%03b pos=%0b (tdc_exp=%0d pos_exp=%0d)",
                    ct.axis_mask, ct.position_present, tdc_pkts_expected, pos_pkts_expected);
         end
@@ -223,8 +197,9 @@ class spadmic_scoreboard;
           apply_reset_defaults();
           for (int src = 0; src < SPADMIC_SRC_COUNT; src++) begin
             pkts_expected_by_source[src] = pkts_received_by_source[src];
-            next_event_id_by_source[src] = 0;
+            expected_event_id_q[src].delete();
           end
+          next_expected_event_id = 0;
         end
 
         TXN_EOT: begin
@@ -296,17 +271,44 @@ class spadmic_scoreboard;
     endcase
   endfunction
 
-  function automatic logic axis_expected_for_input(input logic use_spad);
-    return use_spad ? (active_input_sel == INPUT_SPAD)
-                    : (active_input_sel == INPUT_CAL);
+  function automatic void queue_expected_event(input logic [3:0] source_mask);
+    for (int src = 0; src < SPADMIC_SRC_COUNT; src++) begin
+      if (source_mask[src])
+        expected_event_id_q[src].push_back(next_expected_event_id);
+    end
+    if (source_mask != 4'b0000)
+      next_expected_event_id++;
   endfunction
 
-  function automatic int reset_period_class();
-    if (active_spad_reset_period == 32'd0)
-      return 0;
-    if (active_spad_reset_period <= 32'd16)
-      return 1;
-    return 2;
+  function automatic void note_expected_matrix_event(
+    input logic [SPADMIC_LINE_W-1:0] r_pattern,
+    input logic [SPADMIC_LINE_W-1:0] y_pattern,
+    input logic [SPADMIC_LINE_W-1:0] b_pattern
+  );
+    spadmic_export_mode_e export_mode;
+    logic [3:0] source_mask;
+
+    if (!active_global_enable)
+      return;
+
+    export_mode = spadmic_export_mode_from_ctrl(active_tx_sel, active_position_enable);
+    source_mask = '0;
+    if (export_mode != SPADMIC_EXPORT_POSITION_ONLY) begin
+      tdc_pkts_expected += 3;
+      for (int axis = 0; axis < 3; axis++) begin
+        pkts_expected_by_source[axis]++;
+        source_mask[axis] = 1'b1;
+      end
+    end
+    if ((export_mode != SPADMIC_EXPORT_TDC_ONLY) && active_position_enable) begin
+      pos_pkts_expected++;
+      pkts_expected_by_source[SPADMIC_SRC_POSITION]++;
+      source_mask[SPADMIC_SRC_POSITION] = 1'b1;
+      push_expected_pos(r_pattern, y_pattern, b_pattern);
+    end
+    if (active_auto_reset_enable && (active_reset_width != 16'd0))
+      spad_reset_pulses_expected_min++;
+    queue_expected_event(source_mask);
   endfunction
 
   function automatic void push_expected_pos(
@@ -327,35 +329,24 @@ class spadmic_scoreboard;
   function void update_config(spadmic_ctrl_txn ct);
     if (!ct.is_read && ct.raw_csr_write) begin
       case (ct.addr)
-        SPADMIC_CSR_POS_CTRL: begin
-          active_pos_mode = spadmic_pos_mode_e'(ct.wdata[1]);
-          active_spad_reset_mode = spadmic_spad_reset_mode_e'(ct.wdata[3:2]);
-          if (ct.wdata[4]) begin
-            spad_reset_pulses_expected_min++;
-          end else if ((spadmic_spad_reset_mode_e'(ct.wdata[3:2]) != SPADMIC_SPAD_RST_MANUAL_ONLY)
-                       && (active_spad_reset_period != 32'd0)) begin
-            spad_reset_pulses_expected_min++;
-          end
+        CSR_POSITION_CFG: begin
+          active_pos_mode = spadmic_pos_mode_e'(ct.wdata[0]);
+          active_pos_gap_threshold = SPADMIC_LINE_COUNT_W'(ct.wdata[7:1]);
+          active_pos_min_cluster_span = SPADMIC_LINE_COUNT_W'(ct.wdata[14:8]);
         end
 
-        SPADMIC_CSR_POS_GAP_CFG: begin
-          active_pos_gap_threshold = ct.wdata[SPADMIC_LINE_COUNT_W-1:0];
+        CSR_SNAPSHOT_CFG: begin
+          active_pos_settle_cycles = ct.wdata[3:0];
         end
 
-        SPADMIC_CSR_POS_FILTER_CFG: begin
-          active_pos_min_cluster_span = ct.wdata[SPADMIC_LINE_COUNT_W-1:0];
-          active_pos_settle_cycles = ct.wdata[11:8];
-        end
-
-        SPADMIC_CSR_POS_RESET_CFG: begin
-          active_spad_reset_period = ct.wdata;
+        CSR_RESET_CFG: begin
+          active_reset_width = ct.wdata[15:0];
         end
 
         default: ;
       endcase
-      $display("[SB] Raw CSR write model: addr=0x%03h data=0x%08h pos_mode=%s rst_mode=%s period=%0d",
-               ct.addr, ct.wdata, active_pos_mode.name(),
-               active_spad_reset_mode.name(), active_spad_reset_period);
+      $display("[SB] Raw CSR write model: addr=0x%04h data=0x%08h pos_mode=%s reset_width=%0d",
+               ct.addr, ct.wdata, active_pos_mode.name(), active_reset_width);
     end else if (!ct.is_read) begin
       active_global_enable = ct.global_enable;
       active_tx_sel        = ct.shared_tx_sel;
@@ -363,7 +354,8 @@ class spadmic_scoreboard;
       active_position_enable = ct.position_enable;
       active_out_mode      = OUT_MODE_RAW_FEATURES;
       active_max_hits      = ct.max_hits;
-      active_input_sel     = ct.tdc_input_sel;
+      active_input_sel     = INPUT_SPAD;
+      active_auto_reset_enable = 1'b1;
       $display("[SB] Config update: en=%0b sel=%s pos=%0b mode=%s hits=%0d in=%s",
                active_global_enable, active_tx_sel.name(), active_position_enable,
                active_out_mode.name(), active_max_hits,
@@ -386,13 +378,18 @@ class spadmic_scoreboard;
       $display("[SB] FAIL: unexpected extra packet for source %0d", source_id);
     end
 
-    if (event_id != next_event_id_by_source[source_id]) begin
+    if (expected_event_id_q[source_id].size() == 0) begin
       check_fail++;
-      $display("[SB] FAIL: source %0d event_id %0d != expected %0d",
-               source_id, event_id, next_event_id_by_source[source_id]);
-      next_event_id_by_source[source_id] = event_id + 1;
+      $display("[SB] FAIL: no expected event ID queued for source %0d (observed %0d)",
+               source_id, event_id);
     end else begin
-      next_event_id_by_source[source_id]++;
+      int unsigned expected_event_id;
+      expected_event_id = expected_event_id_q[source_id].pop_front();
+      if (event_id != expected_event_id) begin
+        check_fail++;
+        $display("[SB] FAIL: source %0d event_id %0d != expected %0d",
+                 source_id, event_id, expected_event_id);
+      end
     end
 
     pkts_received_by_source[source_id]++;
@@ -505,15 +502,18 @@ class spadmic_scoreboard;
 
   function void notify_spad_reset(spadmic_spad_reset_txn rt);
     spad_reset_pulses_received++;
-    if (rt.pulse_width_cycles != 1) begin
+    if ((rt.expected_width_cycles == 0) ||
+        (rt.pulse_width_cycles != rt.expected_width_cycles)) begin
       spad_reset_width_errors++;
       check_fail++;
-      $display("[SB] FAIL: SPAD reset pulse width=%0d cycles", rt.pulse_width_cycles);
+      $display("[SB] FAIL: matrix reset width=%0d expected=%0d cycles",
+               rt.pulse_width_cycles, rt.expected_width_cycles);
     end else begin
       check_pass++;
     end
 `ifdef SPADMIC_ENABLE_FUNC_COV
-    reset_cov.sample(active_spad_reset_mode, reset_period_class(), rt.pulse_width_cycles,
+    reset_cov.sample(active_auto_reset_enable, rt.expected_width_cycles,
+                     rt.pulse_width_cycles,
                      !((tdc_pkts_received == tdc_pkts_expected)
                        && (pos_pkts_received == pos_pkts_expected)));
 `endif

@@ -25,6 +25,10 @@ class spadmic_correlated_event_txn extends spadmic_base_txn;
     (axis_mask != 3'b000) || position_present;
   }
 
+  constraint c_normal_axis_mask {
+    axis_mask == 3'b111;
+  }
+
   constraint c_legal_delay {
     start_stop_delay_ps inside {[2000 : 30000]};
   }
@@ -41,7 +45,7 @@ class spadmic_correlated_event_txn extends spadmic_base_txn;
   constraint c_position_timing {
     position_offset_ps inside {[0 : 50000]};
     hold_time_ns       inside {[50 : 1000]};
-    post_family_idle_ps inside {[200000 : 2000000]};
+    post_family_idle_ps inside {[2_000_000 : 4_000_000]};
   }
 
   function new();
@@ -53,8 +57,8 @@ class spadmic_correlated_event_txn extends spadmic_base_txn;
     this.cal_stop_width_ps  = 2000;
     this.position_offset_ps = 3000;
     this.hold_time_ns       = 250;
-    this.post_family_idle_ps = 800000;
-    this.use_spad           = 1'b0;
+    this.post_family_idle_ps = 2_000_000;
+    this.use_spad           = 1'b1;
     this.position_present   = 1'b1;
     this.x_pattern          = '0;
     this.y_pattern          = '0;

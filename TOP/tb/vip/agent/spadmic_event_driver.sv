@@ -17,18 +17,18 @@ class spadmic_event_driver;
     ev_if[2] = z_if;
   endfunction
 
-  // Inject a complete TDC event sequence on the specified axis
+  // Normal matrix TDC mode is one coordinated R/Y/B event. All three public
+  // directions must be present because the ABI requires axis mask 3'b111.
   task automatic inject_tdc_events(spadmic_tdc_event_txn t);
+    int unsigned pulse_width_ps;
+    pulse_width_ps = (t.start_stop_delay_ps < 100_000)
+                     ? 100_000 : t.start_stop_delay_ps;
     for (int c = 0; c < t.num_conversions; c++) begin
-      if (t.use_spad) begin
-        ev_if[t.axis].inject_spad_event(t.start_stop_delay_ps);
-      end else begin
-        ev_if[t.axis].inject_cal_pair(
-          t.cal_start_width_ps,
-          t.start_stop_delay_ps,
-          t.cal_stop_width_ps
-        );
-      end
+      fork
+        ev_if[0].inject_spad_event(pulse_width_ps);
+        ev_if[1].inject_spad_event(pulse_width_ps);
+        ev_if[2].inject_spad_event(pulse_width_ps);
+      join
       if (c < t.num_conversions - 1)
         #(t.inter_conv_gap_ps);
     end

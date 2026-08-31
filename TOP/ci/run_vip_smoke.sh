@@ -1,16 +1,30 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SPADMIC TOP — Retired VIP Smoke Entry Point
+# SPADMIC TOP — Active Matrix-Top VIP Smoke
 # =============================================================================
 set -euo pipefail
 
-cat >&2 <<'MSG'
-ERROR: the standalone TOP VIP smoke suite was retired by the product-only
-mptdc_axis_core cleanup.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-Use the maintained product checks instead:
-  bash TOP/ci/run_tapeout_readiness.sh
-  bash TOP/scripts/sim/run_tb.sh tb_spadmic_arb_modes --sim verilator
-  bash TOP/scripts/sim/run_tb.sh tb_spadmic_arb_stress --sim verilator
-MSG
-exit 2
+bash "$TOP_ROOT/ci/check_csr_map_generated.sh"
+
+if command -v xrun >/dev/null 2>&1; then
+  TESTS=(
+    smoke_tdc
+    smoke_position
+    smoke_position_raw
+    smoke_switching
+    spad_reset_modes
+    i2c_end_to_end
+  )
+  for test_name in "${TESTS[@]}"; do
+    bash "$TOP_ROOT/scripts/sim/run_vip_test.sh" "$test_name" --sim xrun
+  done
+elif command -v verilator >/dev/null 2>&1; then
+  bash "$TOP_ROOT/scripts/sim/run_vip_test.sh" smoke_tdc --sim verilator
+  echo "VIP_SMOKE_STATUS=PASS_LINT_ONLY_XRUN_REQUIRED_FOR_BEHAVIOR"
+else
+  echo "ERROR: neither xrun nor verilator is available" >&2
+  exit 2
+fi

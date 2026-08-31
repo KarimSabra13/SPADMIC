@@ -136,12 +136,15 @@ if [[ "$SIM" == "xrun" ]]; then
 
   # Coverage
   if [[ $FUNC_COV -eq 1 ]]; then
-    XRUN_ARGS+=("+define+SPADMIC_ENABLE_FUNC_COV")
+    XRUN_ARGS+=("+define+SPADMIC_ENABLE_FUNC_COV" -coverage functional)
+  fi
+  if [[ $CODE_COV -eq 1 ]]; then
+    XRUN_ARGS+=(-coverage all)
   fi
   if [[ $CODE_COV -eq 1 || $FUNC_COV -eq 1 ]]; then
     mkdir -p "$COV_WORKDIR"
     XRUN_ARGS+=(
-      -coverage all -covoverwrite
+      -covoverwrite
       -covworkdir "$COV_WORKDIR"
       -covtest "$COV_TEST_NAME"
     )

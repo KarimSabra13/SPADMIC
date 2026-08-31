@@ -1,0 +1,163 @@
+register,field,address,bits,lsb,width,access,reset,description
+CHIP_ID,IDENTITY,0x0000,[31:0],0,32,RO,0x53504D54,ASCII identity value 0x53504D54
+ABI_VERSION,MINOR,0x0004,[15:0],0,16,RO,0x0,ABI minor version
+ABI_VERSION,MAJOR,0x0004,[31:16],16,16,RO,0x1,ABI major version
+GLOBAL_CTRL,ENABLE,0x0008,[0],0,1,RW,0x0,Global acquisition enable; must agree with MODE
+GLOBAL_CTRL,MODE,0x0008,[3:1],1,3,RW,0x0,"0 disabled, 1 TDC, 2 position, 3 both, 4 calibration"
+GLOBAL_CTRL,AXIS_MASK,0x0008,[6:4],4,3,RW,0x7,Normal R Y B enable mask; TDC and both require 0x7
+GLOBAL_CTRL,AUTO_RESET_ENABLE,0x0008,[7],7,1,RW,0x1,Enable automatic matrix reset after an event
+GLOBAL_STATUS,ENABLE,0x000C,[0],0,1,RO,0x0,Active global acquisition enable
+GLOBAL_STATUS,MODE,0x000C,[3:1],1,3,RO,0x0,Active operating mode encoding
+GLOBAL_STATUS,AXIS_MASK,0x000C,[6:4],4,3,RO,0x0,Active R Y B axis mask
+GLOBAL_STATUS,SAFE_IDLE,0x000C,[7],7,1,RO,0x0,All controlled datapaths are idle and configuration-safe
+GLOBAL_FAULT,ACCESS,0x0010,[0],0,1,RO,0x0,System access-protocol fault summary
+GLOBAL_FAULT,TDC,0x0010,[1],1,1,RO,0x0,OR of R Y and B TDC fault summaries
+GLOBAL_FAULT,POSITION,0x0010,[2],2,1,RO,0x0,Position page fault summary
+GLOBAL_FAULT,EVENT,0x0010,[3],3,1,RO,0x0,Event page fault summary
+GLOBAL_FAULT,MATRIX,0x0010,[4],4,1,RO,0x0,Matrix page fault summary
+GLOBAL_FAULT,TX,0x0010,[5],5,1,RO,0x0,TX page fault summary
+GLOBAL_FAULT,PLL,0x0010,[6],6,1,RO,0x0,PLL page fault summary
+MAINT_CMD,CLEAR_ERROR_COUNTERS,0x0014,[0],0,1,WO,0x0,Clear all saturating error counters while disabled and idle
+TDC_SHARED_CFG,MAX_HITS,0x0018,[3:0],0,4,RW,0xF,Shared nonzero maximum hit count from 1 through 15
+TDC_SHARED_CFG,RO_SLOW_CODE,0x0018,[15:8],8,8,RW,0x0,Shared slow-ring oscillator tuning code
+TDC_SHARED_CFG,RO_FAST_CODE,0x0018,[23:16],16,8,RW,0x0,Shared fast-ring oscillator tuning code
+TDC_SHARED_CMD,SOFT_RESET,0x001C,[0],0,1,WO,0x0,Pulse soft reset to all three TDC axes
+TDC_SHARED_CMD,FIFO_CLEAR,0x001C,[1],1,1,WO,0x0,Pulse FIFO clear to all three TDC axes
+CALIB_AXIS_MASK,AXIS_MASK,0x0020,[2:0],0,3,RW,0x7,"Nonzero calibration mask; bit 0 R, bit 1 Y, bit 2 B"
+ACCESS_STATUS,FAULT_PENDING,0x0024,[0],0,1,RO,0x0,At least one ACCESS_FAULT bit is set
+ACCESS_STATUS,LAST_OPERATION_WRITE,0x0024,[1],1,1,RO,0x0,Last failing access was a write
+ACCESS_STATUS,LAST_CAUSE,0x0024,[15:8],8,8,RO,0x0,Cause code for the last failing access
+ACCESS_FAULT,MISALIGNED,0x0028,[0],0,1,W1C,0x0,Misaligned 16-bit register pointer
+ACCESS_FAULT,UNMAPPED,0x0028,[1],1,1,W1C,0x0,Unmapped register address
+ACCESS_FAULT,READ_ONLY_WRITE,0x0028,[2],2,1,W1C,0x0,Write attempted to a read-only register
+ACCESS_FAULT,INVALID_VALUE,0x0028,[3],3,1,W1C,0x0,Field encoding or value violated its contract
+ACCESS_FAULT,UNSAFE_WRITE,0x0028,[4],4,1,W1C,0x0,Write attempted outside its disabled-idle window
+ACCESS_FAULT,INCOMPLETE_WRITE,0x0028,[5],5,1,W1C,0x0,I2C STOP or repeated START discarded a partial data word
+ACCESS_FAULT,I2C_RESET_ABORT,0x0028,[6],6,1,W1C,0x0,I2C transport reset discarded a partial data word
+ACCESS_LAST_INFO,ADDRESS,0x002C,[15:0],0,16,RO,0x0,Register pointer for the last failing access
+ACCESS_LAST_INFO,CAUSE,0x002C,[23:16],16,8,RO,0x0,Cause code for the last failing access
+ACCESS_LAST_INFO,WRITE,0x002C,[24],24,1,RO,0x0,One for a failed write and zero for a failed read
+ACCESS_LAST_WDATA,WRITE_DATA,0x0030,[31:0],0,32,RO,0x0,Payload assembled for the last failing write
+ACCESS_ERROR_COUNT,COUNT,0x0034,[31:0],0,32,RO,0x0,Saturating count of invalid CSR and I2C accesses
+TDC_R_STATUS,READY,0x1000,[0],0,1,RO,0x0,R-axis accepts a new event
+TDC_R_STATUS,BUSY,0x1000,[1],1,1,RO,0x0,R-axis conversion is active
+TDC_R_STATUS,FIFO_FULL,0x1000,[2],2,1,RO,0x0,R-axis local FIFO is full
+TDC_R_STATUS,STOP_ARMED,0x1000,[3],3,1,RO,0x0,R-axis stop capture is armed
+TDC_R_STATUS,PACKET_ACTIVE,0x1000,[4],4,1,RO,0x0,R-axis packet emission is active
+TDC_R_STATUS,PACKET_PENDING,0x1000,[5],5,1,RO,0x0,R-axis packet is pending
+TDC_R_STATUS,PAGE_ID,0x1000,[11:8],8,4,RO,0x0,Page discriminator value 1
+TDC_R_FAULT,FIFO_FULL,0x1004,[0],0,1,W1C,0x0,Sticky R-axis FIFO-full edge
+TDC_R_ERROR_COUNT,COUNT,0x1008,[31:0],0,32,RO,0x0,Saturating R-axis FIFO-full edge count
+TDC_Y_STATUS,READY,0x2000,[0],0,1,RO,0x0,Y-axis accepts a new event
+TDC_Y_STATUS,BUSY,0x2000,[1],1,1,RO,0x0,Y-axis conversion is active
+TDC_Y_STATUS,FIFO_FULL,0x2000,[2],2,1,RO,0x0,Y-axis local FIFO is full
+TDC_Y_STATUS,STOP_ARMED,0x2000,[3],3,1,RO,0x0,Y-axis stop capture is armed
+TDC_Y_STATUS,PACKET_ACTIVE,0x2000,[4],4,1,RO,0x0,Y-axis packet emission is active
+TDC_Y_STATUS,PACKET_PENDING,0x2000,[5],5,1,RO,0x0,Y-axis packet is pending
+TDC_Y_STATUS,PAGE_ID,0x2000,[11:8],8,4,RO,0x0,Page discriminator value 2
+TDC_Y_FAULT,FIFO_FULL,0x2004,[0],0,1,W1C,0x0,Sticky Y-axis FIFO-full edge
+TDC_Y_ERROR_COUNT,COUNT,0x2008,[31:0],0,32,RO,0x0,Saturating Y-axis FIFO-full edge count
+TDC_B_STATUS,READY,0x3000,[0],0,1,RO,0x0,B-axis accepts a new event
+TDC_B_STATUS,BUSY,0x3000,[1],1,1,RO,0x0,B-axis conversion is active
+TDC_B_STATUS,FIFO_FULL,0x3000,[2],2,1,RO,0x0,B-axis local FIFO is full
+TDC_B_STATUS,STOP_ARMED,0x3000,[3],3,1,RO,0x0,B-axis stop capture is armed
+TDC_B_STATUS,PACKET_ACTIVE,0x3000,[4],4,1,RO,0x0,B-axis packet emission is active
+TDC_B_STATUS,PACKET_PENDING,0x3000,[5],5,1,RO,0x0,B-axis packet is pending
+TDC_B_STATUS,PAGE_ID,0x3000,[11:8],8,4,RO,0x0,Page discriminator value 3
+TDC_B_FAULT,FIFO_FULL,0x3004,[0],0,1,W1C,0x0,Sticky B-axis FIFO-full edge
+TDC_B_ERROR_COUNT,COUNT,0x3008,[31:0],0,32,RO,0x0,Saturating B-axis FIFO-full edge count
+POSITION_CFG,MODE,0x4000,[0],0,1,RW,0x0,0 cluster mode and 1 raw mode
+POSITION_CFG,GAP_THRESHOLD,0x4000,[7:1],1,7,RW,0x2,Maximum zero-run retained within one cluster; range 0 through 64
+POSITION_CFG,MIN_CLUSTER_SPAN,0x4000,[14:8],8,7,RW,0x1,Minimum accepted cluster span; range 1 through 64
+POSITION_STATUS,PACKET_PENDING,0x4004,[0],0,1,RO,0x0,A position packet is queued
+POSITION_STATUS,PACKET_BUSY,0x4004,[1],1,1,RO,0x0,Position packet emission is active
+POSITION_STATUS,SNAPSHOT_CAPTURED,0x4004,[2],2,1,RO,0x0,The current position snapshot was captured
+POSITION_FAULT,PACKET_DROP,0x4008,[0],0,1,W1C,0x0,Sticky position packet-drop edge
+POSITION_DROP_COUNT,COUNT,0x400C,[31:0],0,32,RO,0x0,Saturating position packet-drop edge count
+EVENT_STATUS,EVENT_ID,0x5000,[13:0],0,14,RO,0x0,Identifier assigned to the active or most recent event
+EVENT_STATUS,BUSY,0x5000,[14],14,1,RO,0x0,Event coordinator is processing an event
+EVENT_MASK_STATUS,REQUIRED_PACKET_MASK,0x5004,[3:0],0,4,RO,0x0,Sources required for the current event bundle
+EVENT_MASK_STATUS,COMPLETED_PACKET_MASK,0x5004,[7:4],4,4,RO,0x0,Sources that completed the current event bundle
+EVENT_MASK_STATUS,REQUIRED_RESET_ACK_MASK,0x5004,[11:8],8,4,RO,0x0,Sources required to acknowledge matrix reset
+EVENT_MASK_STATUS,OBSERVED_RESET_ACK_MASK,0x5004,[15:12],12,4,RO,0x0,Sources that acknowledged matrix reset
+SNAPSHOT_CFG,SETTLE_CYCLES,0x5008,[15:0],0,16,RW,0x2,Cycles between event acceptance and position snapshot
+SNAPSHOT_CFG,WATCHDOG_CYCLES,0x5008,[31:16],16,16,RW,0x40,Nonzero event-completion watchdog limit
+RESET_CFG,PULSE_WIDTH_CYCLES,0x500C,[15:0],0,16,RW,0x0,Automatic matrix-reset pulse width; zero disables the pulse
+SNAPSHOT_RESET_STATUS,SNAPSHOT_VALID,0x5010,[0],0,1,RO,0x0,A completed snapshot is available
+SNAPSHOT_RESET_STATUS,SNAPSHOT_BUSY,0x5010,[1],1,1,RO,0x0,Snapshot controller is active
+SNAPSHOT_RESET_STATUS,SNAPSHOT_REARM_READY,0x5010,[2],2,1,RO,0x0,Snapshot controller can accept the next event
+SNAPSHOT_RESET_STATUS,RESET_BUSY,0x5010,[3],3,1,RO,0x0,Automatic matrix-reset pulse is active
+SNAPSHOT_RESET_STATUS,RESET_DONE,0x5010,[4],4,1,RO,0x0,Automatic matrix reset completed
+SNAPSHOT_RESET_STATUS,RESET_DISABLED,0x5010,[5],5,1,RO,0x0,The completed event did not request automatic reset
+EVENT_FAULT,EVENT_REJECT,0x5014,[0],0,1,W1C,0x0,Sticky event-not-ready rejection
+EVENT_FAULT,SNAPSHOT_TIMEOUT,0x5014,[1],1,1,W1C,0x0,Sticky snapshot watchdog timeout
+EVENT_FAULT,SNAPSHOT_PROTOCOL,0x5014,[2],2,1,W1C,0x0,Sticky snapshot overlap or rejection
+EVENT_FAULT,RESET_DISABLED,0x5014,[3],3,1,W1C,0x0,Sticky event completion without automatic reset
+EVENT_REJECT_COUNT,COUNT,0x5018,[31:0],0,32,RO,0x0,Saturating event-not-ready rejection count
+SNAPSHOT_TIMEOUT_COUNT,COUNT,0x501C,[31:0],0,32,RO,0x0,Saturating snapshot watchdog-timeout count
+SNAPSHOT_OVERLAP_COUNT,COUNT,0x5020,[31:0],0,32,RO,0x0,Saturating overlapping snapshot-request count
+SNAPSHOT_REJECT_COUNT,COUNT,0x5024,[31:0],0,32,RO,0x0,Saturating rejected snapshot-request count
+RESET_DISABLED_COUNT,COUNT,0x5028,[31:0],0,32,RO,0x0,Saturating event completions without automatic reset
+EVENT_CMD,SNAPSHOT_CLEAR,0x502C,[0],0,1,WO,0x0,Pulse snapshot clear
+SNAPSHOT_R_LO,DATA,0x5040,[31:0],0,32,RO,0x0,R snapshot bits 31 through 0
+SNAPSHOT_R_HI,DATA,0x5044,[31:0],0,32,RO,0x0,R snapshot bits 63 through 32
+SNAPSHOT_Y_LO,DATA,0x5048,[31:0],0,32,RO,0x0,Y snapshot bits 31 through 0
+SNAPSHOT_Y_HI,DATA,0x504C,[31:0],0,32,RO,0x0,Y snapshot bits 63 through 32
+SNAPSHOT_B_LO,DATA,0x5050,[31:0],0,32,RO,0x0,B snapshot bits 31 through 0
+SNAPSHOT_B_HI,DATA,0x5054,[31:0],0,32,RO,0x0,B snapshot bits 63 through 32
+MATRIX_CMD,START,0x6000,[0],0,1,WO,0x0,Pulse the selected matrix configuration operation
+MATRIX_CMD,OPERATION,0x6000,[3:1],1,3,RW,0x1,"1 write column, 2 read column, 3 fill zero, 4 fill one"
+MATRIX_STATUS,BUSY,0x6004,[0],0,1,RO,0x0,Matrix configuration controller is active
+MATRIX_STATUS,DONE,0x6004,[1],1,1,RO,0x0,Most recent matrix command completed
+MATRIX_STATUS,ERROR,0x6004,[2],2,1,RO,0x0,Matrix configuration controller reports an error
+MATRIX_STATUS,LAST_ERROR,0x6004,[6:3],3,4,RO,0x0,Most recent matrix controller error code
+MATRIX_STATUS,READBACK_VALID,0x6004,[7],7,1,RO,0x0,MATRIX_RDATA contains valid readback data
+MATRIX_STATUS,CONFIG_VALID,0x6004,[8],8,1,RO,0x0,Matrix configuration state is valid
+MATRIX_COLUMN,INDEX,0x6008,[5:0],0,6,RW,0x0,Matrix column index from 0 through 43
+MATRIX_WDATA_LO,DATA,0x600C,[31:0],0,32,RW,0x0,Matrix write payload bits 31 through 0
+MATRIX_WDATA_HI,DATA,0x6010,[31:0],0,32,RW,0x0,Matrix write payload bits 63 through 32
+MATRIX_RDATA_LO,DATA,0x6014,[31:0],0,32,RO,0x0,Matrix readback bits 31 through 0
+MATRIX_RDATA_HI,DATA,0x6018,[31:0],0,32,RO,0x0,Matrix readback bits 63 through 32
+MATRIX_FAULT,COMMAND_REJECT,0x601C,[0],0,1,W1C,0x0,Sticky unsafe or invalid matrix command
+MATRIX_FAULT,CONTROLLER_ERROR,0x601C,[1],1,1,W1C,0x0,Sticky matrix controller error edge
+MATRIX_FAULT,LAST_ERROR,0x601C,[7:4],4,4,RO,0x0,Live most recent matrix controller error code
+MATRIX_REJECT_COUNT,COUNT,0x6020,[31:0],0,32,RO,0x0,Saturating rejected matrix-command count
+MATRIX_ERROR_COUNT,COUNT,0x6024,[31:0],0,32,RO,0x0,Saturating matrix controller-error edge count
+TX_BUNDLE_STATUS,BUSY,0x7000,[0],0,1,RO,0x0,Event-bundle transmitter is active
+TX_BUNDLE_STATUS,IDLE,0x7000,[1],1,1,RO,0x0,Event-bundle transmitter is idle
+TX_BUNDLE_STATUS,MISSING_SOURCE,0x7000,[2],2,1,RO,0x0,Current bundle completed without every required source
+TX_FIFO_STATUS,EMPTY,0x7004,[0],0,1,RO,0x0,Output FIFO is empty
+TX_FIFO_STATUS,FULL,0x7004,[1],1,1,RO,0x0,Output FIFO is full
+TX_FIFO_STATUS,ALMOST_FULL,0x7004,[2],2,1,RO,0x0,Output FIFO reached the fixed reserve threshold
+TX_FIFO_STATUS,LEVEL,0x7004,[15:4],4,12,RO,0x0,Number of occupied output FIFO words
+TX_FIFO_STATUS,FREE_WORDS,0x7004,[31:16],16,16,RO,0x0,Number of free output FIFO words
+TX_FIFO_GEOMETRY,RESERVE_ENTRIES,0x7008,[15:0],0,16,RO,0x81,Fixed event-bundle reserve threshold in words
+TX_FIFO_GEOMETRY,DEPTH,0x7008,[31:16],16,16,RO,0x100,Physical output FIFO depth in words
+TX_DDR_STATUS,EMPTY,0x700C,[0],0,1,RO,0x0,DDR pairer has no pending word
+TX_DDR_STATUS,BUSY,0x700C,[1],1,1,RO,0x0,DDR pairer contains or emits a word pair
+TX_DDR_STATUS,PAIR_VALID,0x700C,[2],2,1,RO,0x0,DDR low and high words are valid
+TX_DDR_STATUS,PADDED,0x700C,[3],3,1,RO,0x0,Most recent pair used deterministic odd-word padding
+TX_FAULT,MISSING_SOURCE,0x7010,[0],0,1,W1C,0x0,Sticky event-bundle missing-source edge
+TX_FAULT,FIFO_OVERFLOW,0x7010,[1],1,1,W1C,0x0,Sticky output FIFO overflow edge
+TX_MISSING_SOURCE_COUNT,COUNT,0x7014,[31:0],0,32,RO,0x0,Saturating missing-source edge count
+TX_FIFO_OVERFLOW_COUNT,COUNT,0x7018,[31:0],0,32,RO,0x0,Saturating output FIFO overflow edge count
+PLL_CTRL,FINT_SELECT,0x8000,[7:0],0,8,RW,0x0,PLL fractional or integer selection code
+PLL_CTRL,RO_SWITCH,0x8000,[12:8],8,5,RW,0x0,PLL ring-oscillator switch code
+PLL_CTRL,SELECT_PULSE_PFD,0x8000,[13],13,1,RW,0x0,Select pulse input for the phase-frequency detector
+PLL_CTRL,ENABLE_DIVIDER,0x8000,[14],14,1,RW,0x1,Enable PLL output divider
+PLL_CTRL,SELECT_40M,0x8000,[15],15,1,RW,0x0,Select the 40 MHz PLL path
+PLL_CTRL,SELECT_EXTERNAL_160M,0x8000,[16],16,1,RW,0x0,Select the external 160 MHz system clock
+PLL_STATUS,LOCKED,0x8004,[0],0,1,RO,0x0,PLL lock indication
+PLL_STATUS,EXTERNAL_160M_SELECTED,0x8004,[1],1,1,RO,0x0,External 160 MHz system clock is selected
+PLL_STATUS,DIVIDER_ENABLED,0x8004,[2],2,1,RO,0x0,PLL output divider is enabled
+PLL_FAULT,LOCK_LOSS,0x8008,[0],0,1,W1C,0x0,Sticky falling edge of PLL lock
+PLL_LOCK_LOSS_COUNT,COUNT,0x800C,[31:0],0,32,RO,0x0,Saturating PLL lock-loss edge count
+SLVS_CTRL,DRIVE_STRENGTH,0x9000,[3:0],0,4,RW,0x0,SLVS output-driver strength selection
+SLVS_CTRL,EXTERNAL_VREF_ENABLE,0x9000,[4],4,1,RW,0x0,Enable external SLVS reference input
+SLVS_CTRL,DRIVER_ENABLE,0x9000,[5],5,1,RW,0x0,Enable SLVS output driver
+SLVS_CTRL,VREF_ADJUST_B,0x9000,[6],6,1,RW,0x1,Active-low SLVS reference adjustment control
+SLVS_CTRL,VREF_400MV_ENABLE,0x9000,[7],7,1,RW,0x0,Enable internal 400 mV SLVS reference
+SLVS_CTRL,REFERENCE_DRIVER_ENABLE_B,0x9000,[8],8,1,RW,0x1,Active-low SLVS reference-driver enable
+RX_CTRL,SELECT,0x9004,[3:0],0,4,RW,0x0,Receiver input selection code
+RX_CTRL,ENABLE,0x9004,[4],4,1,RW,0x0,Enable receiver
+RX_CTRL,TERMINATION_ENABLE,0x9004,[5],5,1,RW,0x0,Enable receiver termination

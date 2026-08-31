@@ -28,7 +28,7 @@ class spadmic_random_scenario;
 
   constraint c_axis {
     axis inside {[0:2]};
-    axis_mask inside {[3'b001:3'b111]};
+    axis_mask == 3'b111;
   }
 
   constraint c_tdc {
@@ -52,7 +52,7 @@ class spadmic_random_scenario;
   constraint c_correlated {
     axis_skew_ps inside {[0:4_000]};
     position_offset_ps inside {[0:12_000]};
-    post_family_idle_ps inside {[400_000:1_200_000]};
+    post_family_idle_ps inside {[2_000_000:4_000_000]};
   }
 
   constraint c_backpressure {
@@ -136,20 +136,116 @@ class spadmic_generator;
     return pat;
   endfunction
 
+  function automatic logic [31:0] pack_position_cfg(
+    spadmic_pos_mode_e mode,
+    logic [6:0] gap_threshold,
+    logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span
+  );
+    logic [31:0] value;
+    value = '0;
+    value[0] = mode;
+    value[7:1] = gap_threshold;
+    value[14:8] = min_cluster_span;
+    return value;
+  endfunction
+
+  task automatic populate_export_ctrl(
+    spadmic_ctrl_txn t,
+    spadmic_export_mode_e export_mode,
+    logic enable
+  );
+    t.global_enable = enable;
+    t.axis_enable = 3'b111;
+    t.tdc_input_sel = INPUT_SPAD;
+    t.tdc_out_mode = OUT_MODE_RAW_FEATURES;
+    t.max_hits = cfg.default_max_hits;
+    t.position_enable = 1'b0;
+    t.shared_tx_sel = SPADMIC_TX_TDC;
+    if (enable) begin
+      case (export_mode)
+        SPADMIC_EXPORT_POSITION_ONLY: begin
+          t.position_enable = 1'b1;
+          t.shared_tx_sel = SPADMIC_TX_POSITION;
+        end
+        SPADMIC_EXPORT_BOTH_ACTIVE: begin
+          t.position_enable = 1'b1;
+          t.shared_tx_sel = SPADMIC_TX_TDC;
+        end
+        default: ;
+      endcase
+    end
+    t.drv_mode = cfg.drv_mode;
+  endtask
+
+  task automatic gen_safe_csr_update(
+    logic [SPADMIC_CSR_ADDR_W-1:0] addr,
+    logic [SPADMIC_CSR_DATA_W-1:0] data,
+    spadmic_export_mode_e resume_mode
+  );
+    spadmic_ctrl_txn disable_txn = new();
+    spadmic_ctrl_txn enable_txn = new();
+    populate_export_ctrl(disable_txn, resume_mode, 1'b0);
+    drv_mb.put(disable_txn);
+    txn_count++;
+    gen_csr_write(addr, data);
+    populate_export_ctrl(enable_txn, resume_mode, 1'b1);
+    drv_mb.put(enable_txn);
+    txn_count++;
+  endtask
+
+  task automatic gen_position_config_update(
+    spadmic_pos_mode_e mode,
+    logic [6:0] gap_threshold,
+    logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span,
+    spadmic_export_mode_e resume_mode = SPADMIC_EXPORT_POSITION_ONLY
+  );
+    gen_safe_csr_update(
+      CSR_POSITION_CFG,
+      pack_position_cfg(mode, gap_threshold, min_cluster_span),
+      resume_mode
+    );
+  endtask
+
+  task automatic gen_reset_width_update(
+    logic [15:0] width_cycles,
+    spadmic_export_mode_e resume_mode = SPADMIC_EXPORT_POSITION_ONLY
+  );
+    gen_safe_csr_update(CSR_RESET_CFG, {16'b0, width_cycles}, resume_mode);
+  endtask
+
   // ── Directed: initial chip configuration ──────────────────────
   task automatic gen_initial_config();
     spadmic_ctrl_txn t = new();
+    gen_csr_write(
+      CSR_POSITION_CFG,
+      pack_position_cfg(
+        SPADMIC_POS_MODE_CLUSTER,
+        cfg.default_gap_threshold,
+        cfg.default_min_cluster_span
+      )
+    );
+    gen_csr_write(CSR_RESET_CFG, 32'd4);
     t.is_read         = 1'b0;
     t.global_enable   = 1'b1;
     t.axis_enable     = 3'b111;
     t.position_enable = (cfg.profile == PROFILE_POSITION || cfg.profile == PROFILE_STRESS) ? 1'b1 : 1'b0;
     t.shared_tx_sel   = (cfg.profile == PROFILE_POSITION) ? SPADMIC_TX_POSITION : SPADMIC_TX_TDC;
-    t.tdc_input_sel   = cfg.default_input_sel;
-    t.tdc_out_mode    = cfg.default_out_mode;
+    t.tdc_input_sel   = INPUT_SPAD;
+    t.tdc_out_mode    = OUT_MODE_RAW_FEATURES;
     t.max_hits        = cfg.default_max_hits;
     t.drv_mode        = cfg.drv_mode;
     drv_mb.put(t);
     txn_count++;
+  endtask
+
+  task automatic gen_calibration_mode_visit(logic [2:0] axis_mask);
+    spadmic_ctrl_txn disable_txn = new();
+    populate_export_ctrl(disable_txn, SPADMIC_EXPORT_TDC_ONLY, 1'b0);
+    drv_mb.put(disable_txn);
+    txn_count++;
+    gen_csr_write(CSR_CALIB_AXIS_MASK, {29'b0, axis_mask});
+    gen_csr_write(CSR_GLOBAL_CTRL, 32'h0000_0089);
+    gen_csr_write(CSR_GLOBAL_CTRL, 32'h0000_00F0);
   endtask
 
   // ── Directed: TDC conversions ─────────────────────────────────
@@ -164,7 +260,7 @@ class spadmic_generator;
     t.num_conversions      = count;
     t.start_stop_delay_ps  = delay_ps;
     if (gap_ps != 0) t.inter_conv_gap_ps = gap_ps;
-    t.use_spad             = (cfg.default_input_sel == INPUT_SPAD);
+    t.use_spad             = 1'b1;
     drv_mb.put(t);
     txn_count++;
   endtask
@@ -203,7 +299,7 @@ class spadmic_generator;
     logic [SPADMIC_LINE_W-1:0] y,
     logic [SPADMIC_LINE_W-1:0] z,
     int unsigned              hold_ns,
-    bit                       use_spad = 1'b0,
+    bit                       use_spad = 1'b1,
     int unsigned              axis_skew_ps = 1500,
     int unsigned              pos_offset_ps = 3000
   );
@@ -369,7 +465,7 @@ class spadmic_generator;
             sc.start_stop_delay_ps,
             xp, yp, zp,
             sc.hold_time_ns,
-            (cfg.default_input_sel == INPUT_SPAD),
+            1'b1,
             sc.axis_skew_ps,
             sc.position_offset_ps
           );

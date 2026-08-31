@@ -17,7 +17,7 @@ digraph G {
     <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
       <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_tdc_axis_wrapper</B></FONT></TD></TR>
       <TR><TD HEIGHT="4"></TD></TR>
-      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Per-axis wrapper around the qualifier and one preserved MPTDC kernel, exporting acquisition records to the top-level shared readout.</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">TOP-owned R/Y/B wrapper around the stop qualifier and protected MPTDC axis core.</FONT></TD></TR>
       <TR><TD HEIGHT="2"></TD></TR>
       <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_tdc_axis_wrapper.sv</FONT></TD></TR>
     </TABLE>
@@ -53,14 +53,14 @@ digraph G {
     >];
     mptdc [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
-      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Preserved mptdc_top_asic</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT POINT-SIZE='10' COLOR='#475569'>kernel remains local to the axis</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>async measurement kernel<BR ALIGN='LEFT'/>CSR endpoint<BR ALIGN='LEFT'/>local acquisition FIFO<BR ALIGN='LEFT'/>shared_readout_en_i = 1</FONT></TD></TR>
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Protected mptdc_axis_core</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT POINT-SIZE='10' COLOR='#475569'>kernel remains local to the R, Y, or B axis</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>coordinator-owned conversion start<BR ALIGN='LEFT'/>shared tuning inputs<BR ALIGN='LEFT'/>local acquisition and packet state</FONT></TD></TR>
     </TABLE>
     >];
     export [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
-      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Export outputs</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>acq_valid_o / acq_data_o<BR ALIGN='LEFT'/>acq_ready_i<BR ALIGN='LEFT'/>fifo_full_o</FONT></TD></TR>
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Packet outputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>pkt_valid_o / pkt_data_o<BR ALIGN='LEFT'/>pkt_sop_o / pkt_eop_o<BR ALIGN='LEFT'/>pending / ready / busy / fifo_full</FONT></TD></TR>
     </TABLE>
     >];
 
@@ -76,6 +76,6 @@ digraph G {
     gate_evt -> qual [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="start_async_gated", fontsize=10, fontcolor="#334155"];
     qual -> mptdc [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="qualified STOP", fontsize=10, fontcolor="#334155"];
     mode_csr -> mptdc [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="CSR + override controls", fontsize=10, fontcolor="#334155"];
-    mptdc -> export [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="ACQ record export", fontsize=10, fontcolor="#334155"];
+    mptdc -> export [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="16-bit packet stream", fontsize=10, fontcolor="#334155"];
     
     }

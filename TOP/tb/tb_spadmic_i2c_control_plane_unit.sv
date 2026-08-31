@@ -1,7 +1,8 @@
 // ============================================================================
 // I2C command-path unit test
-// Covers: multi-byte write command capture, repeated-start read command capture,
-//         non-global CSR address propagation, and payload integrity.
+// Covers: fixed-address framing, 16-bit pointer and 32-bit big-endian payloads,
+//         repeated/current-pointer reads, pointer-only writes, and atomic
+//         rejection of one-, two-, and three-byte partial write payloads.
 // ============================================================================
 `timescale 1ps/1ps
 `default_nettype none
@@ -31,7 +32,15 @@ module tb_spadmic_i2c_control_plane_unit;
   logic [SPADMIC_CSR_DATA_W-1:0] txn_rsp_rdata;
   logic                          txn_rsp_err;
   logic                          txn_rsp_ready;
+  logic                          transaction_active;
+  logic                          incomplete_write_active;
+  logic                          write_abort;
+  logic [SPADMIC_CSR_ADDR_W-1:0] write_abort_addr;
+  logic [SPADMIC_CSR_DATA_W-1:0] write_abort_wdata;
   logic [31:0]                   readback_data;
+  int                            abort_count;
+  logic [15:0]                   last_abort_addr;
+  logic [31:0]                   last_abort_wdata;
 
   int pass_count;
   int fail_count;
@@ -54,8 +63,25 @@ module tb_spadmic_i2c_control_plane_unit;
     .txn_rsp_valid_i(txn_rsp_valid),
     .txn_rsp_rdata_i(txn_rsp_rdata),
     .txn_rsp_err_i  (txn_rsp_err),
-    .txn_rsp_ready_o(txn_rsp_ready)
+    .txn_rsp_ready_o(txn_rsp_ready),
+    .transaction_active_o(transaction_active),
+    .incomplete_write_active_o(incomplete_write_active),
+    .write_abort_o(write_abort),
+    .write_abort_addr_o(write_abort_addr),
+    .write_abort_wdata_o(write_abort_wdata)
   );
+
+  always_ff @(posedge clk_sys or negedge rst_n) begin
+    if (!rst_n) begin
+      abort_count <= 0;
+      last_abort_addr <= '0;
+      last_abort_wdata <= '0;
+    end else if (write_abort) begin
+      abort_count <= abort_count + 1;
+      last_abort_addr <= write_abort_addr;
+      last_abort_wdata <= write_abort_wdata;
+    end
+  end
 
   task automatic check(input string label, input logic cond);
     begin
@@ -219,6 +245,99 @@ module tb_spadmic_i2c_control_plane_unit;
     end
   endtask
 
+  task automatic i2c_set_pointer(input logic [15:0] addr);
+    logic ack_ok;
+    begin
+      i2c_start();
+      i2c_write_byte({SPADMIC_I2C_ADDR, 1'b0}, ack_ok);
+      i2c_expect_ack(ack_ok, "device-address pointer-only");
+      i2c_write_byte(addr[15:8], ack_ok);
+      i2c_expect_ack(ack_ok, "pointer-only high");
+      i2c_write_byte(addr[7:0], ack_ok);
+      i2c_expect_ack(ack_ok, "pointer-only low");
+      i2c_stop();
+      repeat (4) @(posedge clk_sys);
+    end
+  endtask
+
+  task automatic i2c_begin_current_pointer_read;
+    logic ack_ok;
+    begin
+      i2c_start();
+      i2c_write_byte({SPADMIC_I2C_ADDR, 1'b1}, ack_ok);
+      i2c_expect_ack(ack_ok, "device-address current-pointer read");
+      repeat (4) @(posedge clk_sys);
+    end
+  endtask
+
+  task automatic i2c_partial_write(
+    input logic [15:0] addr,
+    input logic [31:0] data,
+    input int byte_count,
+    input logic terminate_with_restart
+  );
+    logic ack_ok;
+    begin
+      i2c_start();
+      i2c_write_byte({SPADMIC_I2C_ADDR, 1'b0}, ack_ok);
+      i2c_expect_ack(ack_ok, "partial device-address");
+      i2c_write_byte(addr[15:8], ack_ok);
+      i2c_expect_ack(ack_ok, "partial pointer high");
+      i2c_write_byte(addr[7:0], ack_ok);
+      i2c_expect_ack(ack_ok, "partial pointer low");
+      if (byte_count >= 1) begin
+        i2c_write_byte(data[31:24], ack_ok);
+        i2c_expect_ack(ack_ok, "partial data byte 0");
+      end
+      if (byte_count >= 2) begin
+        i2c_write_byte(data[23:16], ack_ok);
+        i2c_expect_ack(ack_ok, "partial data byte 1");
+      end
+      if (byte_count >= 3) begin
+        i2c_write_byte(data[15:8], ack_ok);
+        i2c_expect_ack(ack_ok, "partial data byte 2");
+      end
+      if (terminate_with_restart) begin
+        i2c_restart();
+        i2c_write_byte({7'h43, 1'b0}, ack_ok);
+        i2c_stop();
+      end else begin
+        i2c_stop();
+      end
+      repeat (8) @(posedge clk_sys);
+    end
+  endtask
+
+  task automatic i2c_read_response(
+    input logic [31:0] response_data,
+    input logic response_error,
+    output logic [31:0] received_data
+  );
+    logic [7:0] read_b3;
+    logic [7:0] read_b2;
+    logic [7:0] read_b1;
+    logic [7:0] read_b0;
+    begin
+      txn_ready = 1'b1;
+      @(posedge clk_sys);
+      txn_ready = 1'b0;
+      txn_rsp_rdata = response_data;
+      txn_rsp_err = response_error;
+      txn_rsp_valid = 1'b1;
+      @(posedge clk_sys);
+      txn_rsp_valid = 1'b0;
+      txn_rsp_err = 1'b0;
+      repeat (2) @(posedge clk_sys);
+      i2c_read_byte(read_b3, 1'b1);
+      i2c_read_byte(read_b2, 1'b1);
+      i2c_read_byte(read_b1, 1'b1);
+      i2c_read_byte(read_b0, 1'b0);
+      received_data = {read_b3, read_b2, read_b1, read_b0};
+      i2c_stop();
+      repeat (2) @(posedge clk_sys);
+    end
+  endtask
+
   task automatic clear_txn_valid;
     begin
       txn_ready = 1'b1;
@@ -244,6 +363,7 @@ module tb_spadmic_i2c_control_plane_unit;
     txn_rsp_rdata      = '0;
     txn_rsp_err        = 1'b0;
     readback_data      = '0;
+    abort_count        = 0;
 
     repeat (10) @(posedge clk_sys);
     rst_n = 1'b1;
@@ -279,29 +399,50 @@ module tb_spadmic_i2c_control_plane_unit;
     check("Read command emitted", txn_valid === 1'b1);
     check("Read command marked read", txn_write === 1'b0);
     check("Read command captures full POSITION address", txn_addr === 16'h0400);
-    txn_ready     = 1'b1;
-    @(posedge clk_sys);
-    txn_ready     = 1'b0;
-    txn_rsp_rdata = 32'h1234_5678;
-    txn_rsp_valid = 1'b1;
-    @(posedge clk_sys);
-    txn_rsp_valid = 1'b0;
-    repeat (2) @(posedge clk_sys);
-    begin
-      logic [7:0] read_b3;
-      logic [7:0] read_b2;
-      logic [7:0] read_b1;
-      logic [7:0] read_b0;
-      i2c_read_byte(read_b3, 1'b1);
-      i2c_read_byte(read_b2, 1'b1);
-      i2c_read_byte(read_b1, 1'b1);
-      i2c_read_byte(read_b0, 1'b0);
-      readback_data = {read_b3, read_b2, read_b1, read_b0};
-    end
-    i2c_stop();
-    repeat (2) @(posedge clk_sys);
+    i2c_read_response(32'h1234_5678, 1'b0, readback_data);
     check("Read command returns 32-bit payload", readback_data === 32'h1234_5678);
     check("Read command clears after ready", txn_valid === 1'b0);
+
+    begin
+      int abort_before;
+      abort_before = abort_count;
+      i2c_set_pointer(16'h9004);
+      check("Pointer-only write emits no CSR command", txn_valid === 1'b0);
+      check("Pointer-only write is not an incomplete write", abort_count == abort_before);
+      i2c_begin_current_pointer_read();
+      check("Current-pointer read emits a read command", txn_valid && !txn_write);
+      check("Current-pointer read reuses the stored pointer", txn_addr == 16'h9004);
+      i2c_read_response(32'hCAFE_BABE, 1'b0, readback_data);
+      check("Current-pointer read preserves byte order", readback_data == 32'hCAFE_BABE);
+    end
+
+    i2c_begin_read_cmd(16'hA000);
+    i2c_read_response(32'hFFFF_FFFF, 1'b1, readback_data);
+    check("Errored CSR reads return four zero bytes", readback_data == 32'h0000_0000);
+
+    begin
+      int abort_before;
+      abort_before = abort_count;
+      i2c_partial_write(16'h4000, 32'hA5B6_C7D8, 1, 1'b0);
+      check("One-byte partial write is discarded", txn_valid === 1'b0);
+      check("STOP reports one-byte partial write", abort_count == abort_before + 1);
+      check("One-byte abort preserves address and received MSB",
+            last_abort_addr == 16'h4000 && last_abort_wdata == 32'hA500_0000);
+
+      abort_before = abort_count;
+      i2c_partial_write(16'h8000, 32'h1122_3344, 2, 1'b1);
+      check("Two-byte repeated-start write is discarded", txn_valid === 1'b0);
+      check("Repeated START reports two-byte partial write", abort_count == abort_before + 1);
+      check("Two-byte abort preserves received prefix",
+            last_abort_addr == 16'h8000 && last_abort_wdata == 32'h1122_0000);
+
+      abort_before = abort_count;
+      i2c_partial_write(16'h9000, 32'hDEAD_BEEF, 3, 1'b0);
+      check("Three-byte partial write is discarded", txn_valid === 1'b0);
+      check("STOP reports three-byte partial write", abort_count == abort_before + 1);
+      check("Three-byte abort preserves received prefix",
+            last_abort_addr == 16'h9000 && last_abort_wdata == 32'hDEAD_BE00);
+    end
 
     i2c_write_cmd(16'h7100, 32'h5566_7788);
     check("Write command preserves full 16-bit high region address", txn_addr === 16'h7100);

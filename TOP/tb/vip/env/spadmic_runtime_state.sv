@@ -13,6 +13,9 @@ class spadmic_runtime_state;
   out_mode_e                active_out_mode;
   logic [MAX_HITS_W-1:0]    active_max_hits;
   spadmic_pos_mode_e        active_pos_mode;
+  logic [6:0]               active_pos_gap_threshold;
+  logic [SPADMIC_LINE_COUNT_W-1:0] active_pos_min_cluster_span;
+  logic [15:0]              active_reset_width;
 
   function new();
     apply_reset_defaults();
@@ -26,6 +29,9 @@ class spadmic_runtime_state;
     active_out_mode        = OUT_MODE_RAW_FEATURES;
     active_max_hits        = 4'd15;
     active_pos_mode        = SPADMIC_POS_MODE_CLUSTER;
+    active_pos_gap_threshold = 7'd2;
+    active_pos_min_cluster_span = 7'd1;
+    active_reset_width = 16'd4;
   endfunction
 
   function automatic void note_ctrl_txn(spadmic_ctrl_txn ct);
@@ -34,7 +40,12 @@ class spadmic_runtime_state;
 
     if (ct.raw_csr_write) begin
       case (ct.addr)
-        SPADMIC_CSR_POS_CTRL: active_pos_mode = spadmic_pos_mode_e'(ct.wdata[1]);
+        CSR_POSITION_CFG: begin
+          active_pos_mode = spadmic_pos_mode_e'(ct.wdata[0]);
+          active_pos_gap_threshold = ct.wdata[7:1];
+          active_pos_min_cluster_span = ct.wdata[14:8];
+        end
+        CSR_RESET_CFG: active_reset_width = ct.wdata[15:0];
         default: ;
       endcase
       return;
@@ -43,8 +54,8 @@ class spadmic_runtime_state;
     active_global_enable   = ct.global_enable;
     active_tx_sel          = ct.shared_tx_sel;
     active_position_enable = ct.position_enable;
-    active_input_sel       = ct.tdc_input_sel;
-    active_out_mode        = ct.tdc_out_mode;
+    active_input_sel       = INPUT_SPAD;
+    active_out_mode        = OUT_MODE_RAW_FEATURES;
     active_max_hits        = ct.max_hits;
   endfunction
 
@@ -54,4 +65,3 @@ class spadmic_runtime_state;
   endfunction
 
 endclass
-

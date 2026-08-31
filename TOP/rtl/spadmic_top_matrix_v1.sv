@@ -1,8 +1,8 @@
 // =============================================================================
 // Project  : SPADMIC Top-Level Integration
 // File     : spadmic_top_matrix_v1.sv
-// Purpose  : Phase 2/3 matrix-top shell with final matrix, CSR/I2C, and DDR16
-//            boundary ports. MPTDC/position packet integration remains Phase 4.
+// Purpose  : Active matrix-top integration with CSR/I2C, R/Y/B MPTDC and
+//            position event coordination, matrix control, and DDR16 egress.
 // =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
@@ -77,6 +77,22 @@ module spadmic_top_matrix_v1 (
   wire [SPADMIC_CSR_DATA_W-1:0] i2c_rsp_rdata;
   wire i2c_rsp_err;
   wire i2c_rsp_ready;
+  wire i2c_transaction_active;
+  wire i2c_incomplete_write_active;
+  wire i2c_write_abort;
+  wire [SPADMIC_CSR_ADDR_W-1:0] i2c_write_abort_addr;
+  wire [SPADMIC_CSR_DATA_W-1:0] i2c_write_abort_wdata;
+  logic [1:0] i2c_rst_sync_q;
+  logic i2c_rst_seen_q;
+  logic i2c_incomplete_shadow_q;
+  logic [SPADMIC_CSR_ADDR_W-1:0] i2c_incomplete_addr_q;
+  logic [SPADMIC_CSR_DATA_W-1:0] i2c_incomplete_wdata_q;
+  logic i2c_reset_abort_q;
+  wire i2c_error_event;
+  wire i2c_error_write;
+  wire [SPADMIC_CSR_ADDR_W-1:0] i2c_error_addr;
+  wire [SPADMIC_CSR_DATA_W-1:0] i2c_error_wdata;
+  wire [7:0] i2c_error_cause;
 
   wire csr_req_valid;
   wire csr_req_write;
@@ -345,9 +361,6 @@ module spadmic_top_matrix_v1 (
       event_open && event_id_valid && required_packet_mask[3] &&
       snapshot_valid && !pos_packet_started_q && !pos_packet_busy &&
       !pos_packet_pending;
-  assign position_gap_threshold = SPADMIC_LINE_COUNT_W'(2);
-  assign position_min_cluster_span = SPADMIC_LINE_COUNT_W'(1);
-
   assign src_valid[TDC_ID_X] = tdc_pkt_valid[0];
   assign src_valid[TDC_ID_Y] = tdc_pkt_valid[1];
   assign src_valid[TDC_ID_Z] = tdc_pkt_valid[2];
@@ -435,6 +448,47 @@ module spadmic_top_matrix_v1 (
   );
 
   assign i2c_async_rst_n = async_rst_n & ~i2c_rst_i;
+  assign i2c_error_event = i2c_write_abort | i2c_reset_abort_q;
+  assign i2c_error_write = 1'b1;
+  assign i2c_error_addr = i2c_reset_abort_q ? i2c_incomplete_addr_q :
+                                             i2c_write_abort_addr;
+  assign i2c_error_wdata = i2c_reset_abort_q ? i2c_incomplete_wdata_q :
+                                              i2c_write_abort_wdata;
+  assign i2c_error_cause = i2c_reset_abort_q
+                         ? spadmic_csr_map_pkg::CSR_CAUSE_I2C_RESET_ABORT
+                         : spadmic_csr_map_pkg::CSR_CAUSE_INCOMPLETE_WRITE;
+
+  // Keep incomplete-write provenance in the system-reset domain. The I2C
+  // transport reset may asynchronously clear the slave before its reset edge
+  // can be reported, but it must not erase CSR diagnostics or configuration.
+  always_ff @(posedge clk_sys or negedge rst_sys_n) begin
+    if (!rst_sys_n) begin
+      i2c_rst_sync_q          <= '0;
+      i2c_rst_seen_q          <= 1'b0;
+      i2c_incomplete_shadow_q <= 1'b0;
+      i2c_incomplete_addr_q   <= '0;
+      i2c_incomplete_wdata_q  <= '0;
+      i2c_reset_abort_q       <= 1'b0;
+    end else begin
+      i2c_rst_sync_q    <= {i2c_rst_sync_q[0], i2c_rst_i};
+      i2c_rst_seen_q    <= i2c_rst_sync_q[1];
+      i2c_reset_abort_q <= 1'b0;
+
+      if (i2c_incomplete_write_active) begin
+        i2c_incomplete_shadow_q <= 1'b1;
+        i2c_incomplete_addr_q   <= i2c_write_abort_addr;
+        i2c_incomplete_wdata_q  <= i2c_write_abort_wdata;
+      end
+
+      if (i2c_write_abort || (i2c_cmd_valid && i2c_cmd_write))
+        i2c_incomplete_shadow_q <= 1'b0;
+
+      if (i2c_rst_sync_q[1] && !i2c_rst_seen_q && i2c_incomplete_shadow_q) begin
+        i2c_reset_abort_q       <= 1'b1;
+        i2c_incomplete_shadow_q <= 1'b0;
+      end
+    end
+  end
 
   mptdc_reset_sync #(.STAGES(2)) u_rst_i2c_sync (
     .clk         (clk_sys),
@@ -456,7 +510,12 @@ module spadmic_top_matrix_v1 (
     .txn_rsp_valid_i (i2c_rsp_valid),
     .txn_rsp_rdata_i (i2c_rsp_rdata),
     .txn_rsp_err_i   (i2c_rsp_err),
-    .txn_rsp_ready_o (i2c_rsp_ready)
+    .txn_rsp_ready_o (i2c_rsp_ready),
+    .transaction_active_o(i2c_transaction_active),
+    .incomplete_write_active_o(i2c_incomplete_write_active),
+    .write_abort_o   (i2c_write_abort),
+    .write_abort_addr_o(i2c_write_abort_addr),
+    .write_abort_wdata_o(i2c_write_abort_wdata)
   );
 
   spadmic_i2c_csr_bridge u_i2c_bridge (
@@ -493,6 +552,11 @@ module spadmic_top_matrix_v1 (
     .csr_rvalid_o                (csr_rsp_valid),
     .csr_rdata_o                 (csr_rsp_rdata),
     .csr_err_o                   (csr_rsp_err),
+    .i2c_error_event_i           (i2c_error_event),
+    .i2c_error_write_i           (i2c_error_write),
+    .i2c_error_addr_i            (i2c_error_addr),
+    .i2c_error_wdata_i           (i2c_error_wdata),
+    .i2c_error_cause_i           (i2c_error_cause),
     .safe_idle_i                 (safe_idle),
     .transition_busy_i           (1'b0),
     .event_busy_i                (event_busy),
@@ -514,6 +578,15 @@ module spadmic_top_matrix_v1 (
     .reset_busy_i                (reset_busy),
     .reset_done_i                (reset_done),
     .reset_disabled_i            (reset_disabled),
+    .tdc_ready_i                 (tdc_ready),
+    .tdc_busy_i                  (tdc_busy),
+    .tdc_fifo_full_i             (tdc_fifo_full),
+    .tdc_stop_armed_i            (tdc_stop_armed),
+    .tdc_packet_active_i         (tdc_packet_active),
+    .tdc_packet_pending_i        (tdc_packet_pending),
+    .position_packet_pending_i   (pos_packet_pending),
+    .position_packet_busy_i      (pos_packet_busy),
+    .position_snapshot_captured_i(pos_snapshot_captured),
     .matrix_cfg_busy_i           (matrix_cfg_busy),
     .matrix_cfg_done_i           (matrix_cfg_done),
     .matrix_cfg_error_i          (matrix_cfg_error),
@@ -521,6 +594,8 @@ module spadmic_top_matrix_v1 (
     .matrix_cfg_rdata_i          (matrix_cfg_rdata),
     .matrix_cfg_readback_valid_i (matrix_cfg_readback_valid),
     .matrix_cfg_valid_i          (matrix_cfg_valid),
+    .bundle_busy_i               (bundle_busy),
+    .bundle_idle_i               (bundle_idle),
     .ddr_empty_i                 (ddr_empty),
     .ddr_busy_i                  (ddr_busy),
     .ddr_pair_valid_i            (ddr_pair_valid_o),
@@ -551,6 +626,8 @@ module spadmic_top_matrix_v1 (
     .tdc_fifo_clr_o              (shared_tdc_fifo_clr),
     .calib_axis_mask_o           (calib_axis_mask),
     .position_mode_o             (position_mode),
+    .position_gap_threshold_o    (position_gap_threshold),
+    .position_min_cluster_span_o (position_min_cluster_span),
     .pll_fint_sel_o              (pll_fint_sel_o),
     .pll_ro_sw_o                 (pll_ro_sw_o),
     .pll_sel_pulse_pfd_o         (pll_sel_pulse_pfd_o),

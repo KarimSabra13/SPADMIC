@@ -39,7 +39,6 @@ class spadmic_tx_monitor;
   endfunction
 
   task automatic run();
-    logic [NARROW_W-1:0] word;
     captured_packet_t    pkt;
     bit                  in_packet;
 
@@ -55,53 +54,56 @@ class spadmic_tx_monitor;
         continue;
       end
 
-      if (tx_if.valid) begin
-        word = tx_if.data;
-        total_words++;
+      if (tx_if.pair_valid) begin
+        consume_word(tx_if.data_l, pkt, in_packet);
+        if (!tx_if.pair_padded)
+          consume_word(tx_if.data_h, pkt, in_packet);
+      end
+    end
+  endtask
 
-        if (!in_packet && (is_tdc_header(word) || is_spadmic_pos_cluster_header(word))) begin
-          // New packet starts (TDC, cluster-position, and raw-position headers
-          // use header markers; cluster-position uses 2'b01.
+  task automatic consume_word(
+    input logic [NARROW_W-1:0] word,
+    ref captured_packet_t      pkt,
+    ref bit                    in_packet
+  );
+    total_words++;
+
+    if (!in_packet && (is_tdc_header(word) || is_spadmic_pos_cluster_header(word))) begin
+      pkt.words = {};
+      pkt.words.push_back(word);
+      if (is_spadmic_pos_cluster_header(word)) begin
+        pkt.is_tdc    = 1'b0;
+        pkt.source_id = SPADMIC_SRC_POSITION;
+      end else if (state.raw_pos_allowed() && is_spadmic_pos_raw_header(word)) begin
+        pkt.is_tdc    = 1'b0;
+        pkt.source_id = SPADMIC_SRC_POSITION;
+      end else begin
+        pkt.is_tdc    = 1'b1;
+        pkt.source_id = tdc_header_source_id(word);
+      end
+      pkt.event_id  = 0;
+      pkt.timestamp = $time;
+      in_packet     = 1'b1;
+    end else if (in_packet) begin
+      pkt.words.push_back(word);
+
+      if (!pkt.is_tdc && is_spadmic_pos_raw_header(pkt.words[0])) begin
+        if (pkt.words.size() == SPADMIC_POS_RAW_PKT_WORDS) begin
+          pkt.event_id = word[13:0];
+          dispatch_packet(pkt);
           pkt.words = {};
-          pkt.words.push_back(word);
-          if (is_spadmic_pos_cluster_header(word)) begin
-            pkt.is_tdc    = 1'b0;
-            pkt.source_id = SPADMIC_SRC_POSITION;
-          end else if (state.raw_pos_allowed() && is_spadmic_pos_raw_header(word)) begin
-            pkt.is_tdc    = 1'b0;
-            pkt.source_id = SPADMIC_SRC_POSITION;
-          end else begin
-            pkt.is_tdc    = 1'b1;
-            pkt.source_id = tdc_header_source_id(word);
-          end
-          pkt.event_id  = 0;
-          pkt.timestamp = $time;
-          in_packet     = 1'b1;
-        end else if (in_packet) begin
-          pkt.words.push_back(word);
-
-          if (!pkt.is_tdc && is_spadmic_pos_raw_header(pkt.words[0])) begin
-            if (pkt.words.size() == SPADMIC_POS_RAW_PKT_WORDS) begin
-              pkt.event_id = word[13:0];
-              dispatch_packet(pkt);
-              pkt.words = {};
-              in_packet = 1'b0;
-            end
-          end else if (is_tdc_eoc(word)) begin
-            pkt.event_id = word[13:0];
-            dispatch_packet(pkt);
-            pkt.words = {};
-            in_packet = 1'b0;
-          end else begin
-            if (is_spadmic_subheader(word)) begin
-              pkt.source_id = word[5:4];
-              if (word[5:4] == SPADMIC_SRC_POSITION)
-                pkt.is_tdc = 1'b0;
-            end
-          end
-        end else if (is_tdc_header(word)) begin
-          $display("[TX_MON] WARN: unreachable header decode for word 0x%04h", word);
+          in_packet = 1'b0;
         end
+      end else if (is_tdc_eoc(word)) begin
+        pkt.event_id = word[13:0];
+        dispatch_packet(pkt);
+        pkt.words = {};
+        in_packet = 1'b0;
+      end else if (is_spadmic_subheader(word)) begin
+        pkt.source_id = word[5:4];
+        if (word[5:4] == SPADMIC_SRC_POSITION)
+          pkt.is_tdc = 1'b0;
       end
     end
   endtask

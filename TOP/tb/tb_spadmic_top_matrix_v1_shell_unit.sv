@@ -317,15 +317,12 @@ module tb_spadmic_top_matrix_v1_shell_unit;
     i2c_read_csr(SPADMIC_CSR_GLOBAL_ID, rd);
     check("I2C reads matrix-top ID", rd == 32'h5350_4D54);
 
-    i2c_write_csr(SPADMIC_CSR_SHARED_TDC_MAX_HITS, 32'h0000_000A);
+    i2c_write_csr(SPADMIC_CSR_SHARED_TDC_MAX_HITS, 32'h0034_120A);
     i2c_read_csr(SPADMIC_CSR_SHARED_TDC_MAX_HITS, rd);
-    check("I2C writes shared TDC max_hits", rd[3:0] == 4'd10 && dut.shared_tdc_max_hits == 4'd10);
-    i2c_write_csr(SPADMIC_CSR_SHARED_TDC_RO_SLOW, 32'h0000_0012);
-    i2c_write_csr(SPADMIC_CSR_SHARED_TDC_RO_FAST, 32'h0000_0034);
-    i2c_read_csr(SPADMIC_CSR_SHARED_TDC_RO_SLOW, rd);
-    check("I2C writes shared slow RO code", rd[7:0] == 8'h12 && dut.shared_tdc_ro_slow_code == 8'h12);
-    i2c_read_csr(SPADMIC_CSR_SHARED_TDC_RO_FAST, rd);
-    check("I2C writes shared fast RO code", rd[7:0] == 8'h34 && dut.shared_tdc_ro_fast_code == 8'h34);
+    check("I2C atomically writes shared TDC tuning",
+          rd[23:0] == 24'h34_120A && dut.shared_tdc_max_hits == 4'd10 &&
+          dut.shared_tdc_ro_slow_code == 8'h12 &&
+          dut.shared_tdc_ro_fast_code == 8'h34);
 
     i2c_write_csr(SPADMIC_CSR_CALIB_AXIS_MASK, 32'h0000_0001);
     i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
@@ -353,9 +350,9 @@ module tb_spadmic_top_matrix_v1_shell_unit;
     async_rst_n = 1'b1;
     repeat (12) @(posedge clk_sys);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0001_0003);
+    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0000_0003);
     i2c_read_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, rd);
-    check("I2C writes reset width and auto reset", rd[16] && rd[15:0] == 16'd3);
+    check("I2C writes matrix reset width", rd[15:0] == 16'd3);
 
     i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_POSITION_ONLY, 1'b1});
@@ -373,19 +370,22 @@ module tb_spadmic_top_matrix_v1_shell_unit;
     R = '0;
     Y = '0;
     B = '0;
-    wait ((ddr_pair_count - start_pair_count) >= 7);
+    wait ((ddr_pair_count - start_pair_count) >=
+          ((SPADMIC_POS_PKT_WORDS + 1) / 2));
     repeat (10) @(posedge clk_sys);
-    i2c_read_csr(SPADMIC_CSR_TX_STATUS, rd);
+    i2c_read_csr(spadmic_csr_map_pkg::CSR_TX_DDR_STATUS, rd);
     check("position-only event drains DDR16 pairer", rd[0] && !rd[1]);
     i2c_read_csr(SPADMIC_CSR_MTOP_STATUS, rd);
-    check("top returns safe idle after position event", rd[0]);
+    check("top returns safe idle after position event", rd[7]);
 
     force dut.tdc_busy[0] = 1'b1;
     i2c_read_csr(SPADMIC_CSR_MTOP_STATUS, rd);
-    check("position-only safe_idle ignores inactive TDC busy", rd[0]);
+    check("position-only safe_idle ignores inactive TDC busy", rd[7]);
     release dut.tdc_busy[0];
     repeat (4) @(posedge clk_sys);
 
+    i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
+                  {24'h0, 1'b1, 3'b111, SPADMIC_MODE_DISABLED, 1'b0});
     i2c_write_csr(SPADMIC_CSR_MATRIX_CFG_COL, 32'd7);
     i2c_write_csr(SPADMIC_CSR_MATRIX_CFG_WDATA_LO, 32'h89AB_CDEF);
     i2c_write_csr(SPADMIC_CSR_MATRIX_CFG_WDATA_HI, 32'h0123_4567);
@@ -428,9 +428,9 @@ module tb_spadmic_top_matrix_v1_shell_unit;
       @(posedge clk_sys);
     end
     i2c_read_csr(SPADMIC_CSR_MTOP_STATUS, rd);
-    check("TDC-only event returns safe idle", rd[0]);
+    check("TDC-only event returns safe idle", rd[7]);
     check("TDC-only event emits DDR16 output", ddr_pair_count > start_pair_count);
-    i2c_read_csr(SPADMIC_CSR_MATRIX_EVENT_STATUS, rd);
+    i2c_read_csr(spadmic_csr_map_pkg::CSR_EVENT_MASK_STATUS, rd);
     check("TDC-only completed packet mask is R/Y/B only", rd[7:4] == 4'b0111);
 
     if (fail_count != 0)

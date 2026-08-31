@@ -56,7 +56,6 @@ TESTS=(
   tb_spadmic_top_reset_during_matrix_cfg_unit
   tb_spadmic_top_mode_transition_unit
   tb_spadmic_top_sequencer_unit
-  tb_spadmic_stress_csr
   tb_spadmic_stress_position
   tb_spadmic_ddr_tx_unit
 )

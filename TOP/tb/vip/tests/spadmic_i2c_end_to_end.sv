@@ -12,7 +12,7 @@ class spadmic_i2c_end_to_end extends spadmic_base_test;
   function void configure();
     cfg.drv_mode   = DRV_MODE_I2C;
     cfg.profile    = PROFILE_TDC_CHAR;
-    cfg.timeout_ns = 5_000_000;  // I2C is slow
+    cfg.timeout_ns = 100_000_000;  // Full sequence at the fixed 100 kHz bus rate
   endfunction
 
   task body();
@@ -52,4 +52,3 @@ class spadmic_i2c_end_to_end extends spadmic_base_test;
     env.gen.gen_eot();
   endtask
 endclass
-

@@ -11,7 +11,6 @@ class spadmic_tdc_ref_model;
     out_mode_e   mode,
     int unsigned hit_count
   );
-    void'(mode);
     return 2 + hit_count * 2;
   endfunction
 

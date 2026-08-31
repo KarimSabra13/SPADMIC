@@ -30,7 +30,7 @@ class spadmic_pos_driver;
     // Let the synchronized detector observe an idle window before the next
     // position stimulus. Without this gap, back-to-back VIP events can merge
     // across the detector's WAIT_CLEAR re-arm path.
-    #(8 * CLK_PERIOD_PS);
+    #(2_000_000);  // 2 us detector and shared-export re-arm window
   endtask
 
   task automatic clear_all();

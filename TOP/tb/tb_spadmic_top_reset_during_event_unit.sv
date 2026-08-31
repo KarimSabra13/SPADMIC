@@ -108,7 +108,7 @@ module tb_spadmic_top_reset_during_event_unit;
     async_rst_n = 1'b1;
     repeat (12) @(posedge clk_sys);
 
-    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0001_0010);
+    i2c_write_csr(SPADMIC_CSR_MATRIX_RESET_CTRL, 32'h0000_0010);
     i2c_write_csr(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_POSITION_ONLY, 1'b1});
     R[0] = 1'b1;
@@ -134,7 +134,7 @@ module tb_spadmic_top_reset_during_event_unit;
     i2c_read_csr(SPADMIC_CSR_GLOBAL_ID, rd);
     check("I2C responds again after reset release", rd == 32'h5350_4D54);
     i2c_read_csr(SPADMIC_CSR_MTOP_STATUS, rd);
-    check("top returns safe idle after reset release", rd[0]);
+    check("top returns safe idle after reset release", rd[7]);
 
     if (fail_count != 0)
       $fatal(1, "tb_spadmic_top_reset_during_event_unit: %0d failures", fail_count);

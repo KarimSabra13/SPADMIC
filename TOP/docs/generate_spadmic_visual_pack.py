@@ -17,7 +17,10 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from pypdf import PdfReader, PdfWriter
+try:
+    from pypdf import PdfReader, PdfWriter
+except ModuleNotFoundError:
+    from PyPDF2 import PdfReader, PdfWriter
 
 
 COLORS = {
@@ -168,7 +171,7 @@ def wrap_graph(page: Page) -> str:
 def top_page() -> Page:
     body = f"""
     subgraph cluster_chip {{
-      label="SPADMIC top chip - conceptual floorplan schematic";
+      label="SPADMIC active matrix-top architecture";
       labeljust=l;
       labelloc=t;
       fontsize=18;
@@ -177,92 +180,80 @@ def top_page() -> Page:
       penwidth=2.2;
       style="rounded";
 
-      {block_node("pad_clk", "I/O pads - clock/reset", theme="io", lines=["ref clock in", "reset / test straps", "power-good / enables"])}
-      {macro_node("pll", "PLL / CLOCK MACRO", ["black-box clock source", "clk_ref_40m", "clk_sys_160m"], width=2.3, height=1.0)}
-      {block_node("pad_status", "I/O pads - status", theme="io", lines=["tdc_stop_armed[2:0]", "tdc_shared_busy", "position_busy"])}
+      {block_node("clock_reset", "Clock and reset boundary", theme="clock", lines=["clk_sys / clk_ref_40m / clk_cfg_40m", "async_rst_n", "transport-only i2c_rst_i"])}
+      {block_node("i2c", "I2C control plane", theme="control", subtitle="7-bit address 0x42, 16-bit pointer, 32-bit data", lines=["slave + one-outstanding bridge", "CSR router + block-owned banks", "fault and counter provenance"])}
+      {block_node("analog", "PLL and analog controls", theme="control", lines=["disabled-and-idle writes", "documented active polarity", "PLL lock status"])}
 
-      {block_node("pad_i2c", "I/O pads - control", theme="io", lines=["i2c_scl_i", "i2c_sda_i", "i2c_sda_oe_o"])}
-      {block_node("control", "Control plane", theme="control", subtitle="I2C slave -> bridge -> CSR decoder -> global CSR -> sequencer", lines=["requested image", "active image commit", "fault / status readback"])}
-      {block_node("axis_x", "TDC axis X", theme="tdc", subtitle="stop qualifier + preserved mptdc_top_asic", lines=["spad event X", "CAL start/stop X", "CSR + ACQ export"])}
-      {block_node("axis_y", "TDC axis Y", theme="tdc", subtitle="stop qualifier + preserved mptdc_top_asic", lines=["spad event Y", "CAL start/stop Y", "CSR + ACQ export"])}
-      {block_node("axis_z", "TDC axis Z", theme="tdc", subtitle="stop qualifier + preserved mptdc_top_asic", lines=["spad event Z", "CAL start/stop Z", "CSR + ACQ export"])}
-      {block_node("tx_mux", "Shared TX mux", theme="egress", subtitle="one physical chip_tx_* bus", lines=["select TDC or position packet", "ready only to selected source"])}
-      {block_node("pad_tx", "I/O pads - chip TX", theme="io", lines=["chip_tx_clk_o", "chip_tx_valid_o", "chip_tx_data_o[7:0] DDR"])}
+      {macro_node("spad_matrix", "SPAD MATRIX", ["R/Y/B event buses", "Rz/Yz/Bz reset selects", "44-column config/readback"], width=2.6, height=2.2)}
+      {block_node("snapshot", "Snapshot + event coordinator", theme="position", lines=["settle/watchdog", "one event ID per physical event", "frozen packet/reset masks"])}
+      {block_node("axis_r", "TDC axis R", theme="tdc", subtitle="TOP wrapper around protected mptdc_axis_core", lines=["qualified conversion start", "shared tuning", "packet pending/ready"])}
+      {block_node("axis_y", "TDC axis Y", theme="tdc", subtitle="TOP wrapper around protected mptdc_axis_core", lines=["qualified conversion start", "shared tuning", "packet pending/ready"])}
+      {block_node("axis_b", "TDC axis B", theme="tdc", subtitle="TOP wrapper around protected mptdc_axis_core", lines=["qualified conversion start", "shared tuning", "packet pending/ready"])}
+      {block_node("position", "Position snapshot packetizer", theme="position", lines=["cluster/raw mode", "gap 2 / minimum span 1 reset defaults", "private snapshot before matrix reset"])}
 
-      {block_node("shared_readout", "Shared TDC readout", theme="tdc", subtitle="META arbitration + shared narrow16 serializer", lines=["packet-atomic owner hold", "source tag patch", "shared TDC packet stream"])}
-      {block_node("position", "Position path", theme="position", subtitle="sync + settle FSM + cluster scan + packetizer", lines=["x/y/z line snapshots", "fault counters / stickies", "fixed 8-word position packet"])}
+      {block_node("bundle", "Correlated event bundle", theme="egress", lines=["R then Y then B then position", "patch source ID and shared EOC event ID", "packet-completion mask"])}
+      {block_node("fifo", "Fixed output FIFO", theme="control", lines=["fixed reserve threshold", "overflow accounting", "ordered flush marker"])}
+      {block_node("ddr", "DDR16 pairer", theme="egress", lines=["two logical 16-bit words per transfer", "zero-pad odd final word", "ddr_data_l/h + valid + clock"])}
+      {block_node("matrix_cfg", "Matrix configuration controller", theme="control", lines=["44-column serial commands", "64-bit write/readback", "clk_cfg_40m domain"])}
 
-      {macro_node("spad_matrix", "SPAD MATRIX", ["black-box sensor macro", "event taps X / Y / Z", "x_lines / y_lines / z_lines"], width=2.6, height=2.4)}
+      {{ rank=same; clock_reset; i2c; analog; }}
+      {{ rank=same; spad_matrix; snapshot; matrix_cfg; }}
+      {{ rank=same; axis_r; axis_y; axis_b; position; }}
+      {{ rank=same; bundle; fifo; ddr; }}
 
-      {{ rank=same; pad_clk; pll; pad_status; }}
-      {{ rank=same; pad_i2c; control; axis_x; axis_y; axis_z; tx_mux; pad_tx; }}
-      {{ rank=same; shared_readout; position; }}
-      {{ rank=same; spad_matrix; }}
+      {invis("clock_reset", "i2c")}
+      {invis("i2c", "analog")}
+      {invis("spad_matrix", "snapshot")}
+      {invis("snapshot", "matrix_cfg")}
+      {invis("axis_r", "axis_y")}
+      {invis("axis_y", "axis_b")}
+      {invis("axis_b", "position")}
+      {invis("bundle", "fifo")}
+      {invis("fifo", "ddr")}
 
-      {invis("pad_i2c", "control")}
-      {invis("control", "axis_x")}
-      {invis("axis_x", "axis_y")}
-      {invis("axis_y", "axis_z")}
-      {invis("axis_z", "tx_mux")}
-      {invis("tx_mux", "pad_tx")}
-      {invis("shared_readout", "position")}
-
-      {edge("pad_clk", "pll", label="ref clock / reset", color=COLORS["io"])}
-      {edge("pll", "control", label="clk_sys_160m", color=COLORS["clock"])}
-      {edge("pll", "axis_x", label="clk_ref_40m + clk_sys", color=COLORS["clock"])}
-      {edge("pll", "axis_y", color=COLORS["clock"])}
-      {edge("pll", "axis_z", color=COLORS["clock"])}
-      {edge("pll", "shared_readout", color=COLORS["clock"])}
-      {edge("pll", "position", color=COLORS["clock"])}
-
-      {edge("pad_i2c", "control", label="scl / sda", color=COLORS["control"])}
-      {edge("control", "axis_x", label="X CSR + mode", color=COLORS["control"])}
-      {edge("control", "axis_y", label="Y CSR + mode", color=COLORS["control"])}
-      {edge("control", "axis_z", label="Z CSR + mode", color=COLORS["control"])}
-      {edge("control", "position", label="POS CSR", color=COLORS["control"])}
-
-      {edge("spad_matrix", "axis_x", label="event X", color=COLORS["tdc"])}
-      {edge("spad_matrix", "axis_y", label="event Y", color=COLORS["tdc"])}
-      {edge("spad_matrix", "axis_z", label="event Z", color=COLORS["tdc"])}
-      {edge("spad_matrix", "position", label="x/y/z line buses", color=COLORS["position"])}
-
-      {edge("axis_x", "shared_readout", label="ACQ export X", color=COLORS["tdc"])}
-      {edge("axis_y", "shared_readout", label="ACQ export Y", color=COLORS["tdc"])}
-      {edge("axis_z", "shared_readout", label="ACQ export Z", color=COLORS["tdc"])}
-      {edge("shared_readout", "tx_mux", label="TDC packet bus", color=COLORS["tdc"])}
-      {edge("position", "tx_mux", label="position packet bus", color=COLORS["position"])}
-      {edge("tx_mux", "pad_tx", label="chip_tx_*", color=COLORS["egress"])}
-
-      {edge("axis_x", "pad_status", label="stop_armed[0]", color=COLORS["io"])}
-      {edge("axis_y", "pad_status", label="stop_armed[1]", color=COLORS["io"])}
-      {edge("axis_z", "pad_status", label="stop_armed[2]", color=COLORS["io"])}
-      {edge("shared_readout", "pad_status", label="tdc_shared_busy", color=COLORS["io"])}
-      {edge("position", "pad_status", label="position_busy", color=COLORS["io"])}
+      {edge("clock_reset", "i2c", label="clk/reset domains", color=COLORS["clock"])}
+      {edge("clock_reset", "snapshot", color=COLORS["clock"])}
+      {edge("clock_reset", "matrix_cfg", color=COLORS["clock"])}
+      {edge("i2c", "analog", label="CSR controls", color=COLORS["control"])}
+      {edge("i2c", "snapshot", label="mode + event config", color=COLORS["control"])}
+      {edge("i2c", "matrix_cfg", label="matrix commands", color=COLORS["control"])}
+      {edge("spad_matrix", "snapshot", label="R/Y/B snapshot", color=COLORS["position"])}
+      {edge("snapshot", "axis_r", label="event R", color=COLORS["tdc"])}
+      {edge("snapshot", "axis_y", label="event Y", color=COLORS["tdc"])}
+      {edge("snapshot", "axis_b", label="event B", color=COLORS["tdc"])}
+      {edge("snapshot", "position", label="captured R/Y/B", color=COLORS["position"])}
+      {edge("axis_r", "bundle", label="R packet", color=COLORS["tdc"])}
+      {edge("axis_y", "bundle", label="Y packet", color=COLORS["tdc"])}
+      {edge("axis_b", "bundle", label="B packet", color=COLORS["tdc"])}
+      {edge("position", "bundle", label="position packet", color=COLORS["position"])}
+      {edge("bundle", "fifo", label="16-bit words + flush", color=COLORS["egress"])}
+      {edge("fifo", "ddr", label="logical word stream", color=COLORS["egress"])}
+      {edge("matrix_cfg", "spad_matrix", label="DIN/CIN and DOUT/COUT", color=COLORS["control"])}
     }}
 
     {block_node("top_note", "Technical note", theme="note", lines=[
-        "The SPAD matrix and PLL are shown as black-box macros for chip-level communication clarity.",
-        "The active RTL still treats clocks and matrix outputs as top-level interfaces.",
-        "Three preserved TDC kernels stay local until acquisition-record export."
+        "The external matrix-top port list is preserved by the CSR ABI 1.0 integration.",
+        "MPTDC/rtl/top/mptdc_axis_core.sv remains a protected implementation boundary.",
+        "RTL verification does not authorize Genus, Innovus, OA edits, or signoff."
     ])}
     {{ rank=same; top_note; }}
     """
     return Page(
         "01_spadmic_top_floorplan",
-        "SPADMIC top conceptual floorplan schematic",
-        "Professional chip-level page with grouped I/O pads, black-box SPAD matrix, black-box PLL, and the active shared-bus architecture.",
-        "TOP/rtl/spadmic_top_v1.sv + TOP/docs/01_ACTIVE_ARCHITECTURE.md",
+        "SPADMIC active matrix-top architecture",
+        "Current CSR/I2C, R/Y/B event, correlated packet, matrix configuration, and DDR16 data paths.",
+        "TOP/rtl/spadmic_top_matrix_v1.sv + TOP/docs/01_ACTIVE_ARCHITECTURE.md",
         body,
     )
 
 
 def i2c_slave_page() -> Page:
     body = f"""
-    {block_node("in_pins", "Inputs", theme="io", lines=["clk_sys", "rst_n", "i2c_scl_i", "i2c_sda_i"], mono=True)}
+    {block_node("in_pins", "Inputs", theme="io", lines=["clk_sys", "rst_n", "i2c_rst_i", "i2c_scl_i", "i2c_sda_i"], mono=True)}
     {block_node("sync", "SCL/SDA synchronizers", theme="clock", lines=["double-sync into clk_sys", "START / STOP decode", "scl_rise / scl_fall timing"])}
-    {block_node("addr_ptr", "Address + pointer FSM", theme="control", lines=["device address match", "16-bit pointer capture", "12-bit CSR mapping"])}
-    {block_node("write_path", "Write-byte path", theme="control", lines=["D0 / D1 / D2 / D3 assembly", "ACK held through full SCL-high", "emit write transaction"])}
-    {block_node("read_path", "Repeated-start read path", theme="control", lines=["pointer-valid read launch", "predrive first read bit", "ACK/NACK byte stepping"])}
+    {block_node("addr_ptr", "Address + pointer FSM", theme="control", lines=["fixed device address 0x42", "16-bit MSB-first pointer", "word-alignment checked by CSR router"])}
+    {block_node("write_path", "Atomic write-byte path", theme="control", lines=["four MSB-first data bytes", "emit one 32-bit write only when complete", "discard and log partial write"])}
+    {block_node("read_path", "Repeated-start read path", theme="control", lines=["pointer-only phase is valid", "current pointer retained", "one 32-bit register response"])}
     {block_node("sda_drive", "SDA drive control", theme="io", lines=["i2c_sda_oe_o", "ACK generation", "read-data bit drive"])}
     {block_node("txn_out", "Local transaction outputs", theme="control", lines=["txn_valid_o / txn_write_o", "txn_addr_o / txn_wdata_o", "txn_rsp_ready_o"], mono=True)}
     {block_node("rsp_in", "Response inputs", theme="control", lines=["txn_ready_i", "txn_rsp_valid_i", "txn_rsp_rdata_i", "txn_rsp_err_i"], mono=True)}
@@ -290,7 +281,7 @@ def i2c_slave_page() -> Page:
     return Page(
         "02_spadmic_i2c_slave",
         "spadmic_i2c_slave",
-        "Schematic page for the synchronized I2C front end and its pointer-based command/readback behavior.",
+        "Synchronized I2C front end with atomic 32-bit transactions, partial-write discard, and transport-only reset.",
         "I2C/rtl/spadmic_i2c_slave.sv",
         body,
     )
@@ -330,117 +321,103 @@ def bridge_page() -> Page:
     )
 
 
-def csr_decoder_page() -> Page:
+def csr_router_page() -> Page:
     body = f"""
-    {block_node("csr_req", "Shared CSR request", theme="control", lines=["csr_req_valid_i", "csr_req_write_i", "csr_req_addr_i[11:0]", "csr_req_wdata_i", "csr_req_ready_o"], mono=True)}
-    {block_node("decode", "Region decode", theme="control", lines=["[11:8] -> GLOBAL / X / Y / Z / POS", "lower subset forwarded to local MPTDC CSR"], mono=False)}
-    {block_node("write_fast", "Write fast-path", theme="egress", lines=["immediate empty response", "invalid region -> error"], mono=False)}
-    {block_node("read_wait", "Read wait / timeout", theme="clock", lines=["wait downstream rvalid", "15-cycle timeout", "avoid stalled CSR fabric"], mono=False)}
-    {block_node("global", "GLOBAL region", theme="control", lines=["global_csr_*"], mono=True)}
-    {block_node("x_tdc", "TDC X region", theme="tdc", lines=["x_csr_*"], mono=True)}
-    {block_node("y_tdc", "TDC Y region", theme="tdc", lines=["y_csr_*"], mono=True)}
-    {block_node("z_tdc", "TDC Z region", theme="tdc", lines=["z_csr_*"], mono=True)}
-    {block_node("pos", "POSITION region", theme="position", lines=["pos_csr_*"], mono=True)}
-    {block_node("rsp_mux", "Response mux / hold", theme="control", lines=["csr_rsp_valid_o", "csr_rsp_rdata_o", "csr_rsp_err_o", "csr_rsp_ready_i"], mono=True)}
+    {block_node("csr_req", "Shared CSR request", theme="control", lines=["valid / write", "16-bit byte address", "32-bit write payload"], mono=True)}
+    {block_node("validate", "Request validation", theme="egress", lines=["32-bit word alignment", "implemented 4 KiB page", "single outstanding request"])}
+    {block_node("decode", "Page decode", theme="control", lines=["0x0 System", "0x1/0x2/0x3 TDC R/Y/B", "0x4 Position, 0x5 Event", "0x6 Matrix, 0x7 TX", "0x8 PLL, 0x9 Analog"])}
+    {block_node("banks", "Block-owned bank request", theme="control", lines=["one-hot valid", "full address and payload", "bank response handshake"])}
+    {block_node("invalid", "Invalid-access response", theme="egress", lines=["read returns zero", "write has no side effect", "cause/address/data recorded"])}
+    {block_node("rsp", "Held CSR response", theme="control", lines=["valid / 32-bit read data / error", "stable until bridge accepts", "bank cause forwarded"])}
 
-    {{ rank=same; csr_req; decode; global; x_tdc; y_tdc; z_tdc; pos; }}
-    {{ rank=same; write_fast; read_wait; rsp_mux; }}
+    {{ rank=same; csr_req; validate; decode; banks; rsp; }}
+    {{ rank=same; invalid; }}
 
-    {invis("csr_req", "decode")}
-    {invis("global", "x_tdc")}
-    {invis("x_tdc", "y_tdc")}
-    {invis("y_tdc", "z_tdc")}
-    {invis("z_tdc", "pos")}
+    {invis("csr_req", "validate")}
+    {invis("validate", "decode")}
+    {invis("decode", "banks")}
+    {invis("banks", "rsp")}
 
-    {edge("csr_req", "decode", label="region select", color=COLORS["control"])}
-    {edge("decode", "global", label="GLOBAL", color=COLORS["control"])}
-    {edge("decode", "x_tdc", label="X", color=COLORS["tdc"])}
-    {edge("decode", "y_tdc", label="Y", color=COLORS["tdc"])}
-    {edge("decode", "z_tdc", label="Z", color=COLORS["tdc"])}
-    {edge("decode", "pos", label="POS", color=COLORS["position"])}
-    {edge("decode", "write_fast", label="write requests", color=COLORS["egress"])}
-    {edge("decode", "read_wait", label="read requests", color=COLORS["clock"])}
-    {edge("global", "rsp_mux", color=COLORS["control"])}
-    {edge("x_tdc", "rsp_mux", color=COLORS["tdc"])}
-    {edge("y_tdc", "rsp_mux", color=COLORS["tdc"])}
-    {edge("z_tdc", "rsp_mux", color=COLORS["tdc"])}
-    {edge("pos", "rsp_mux", color=COLORS["position"])}
+    {edge("csr_req", "validate", label="request", color=COLORS["control"])}
+    {edge("validate", "decode", label="aligned + mapped", color=COLORS["control"])}
+    {edge("validate", "invalid", label="reject", color=COLORS["egress"])}
+    {edge("decode", "banks", label="one bank selected", color=COLORS["control"])}
+    {edge("banks", "rsp", label="bank response", color=COLORS["control"])}
+    {edge("invalid", "rsp", label="zero + error", color=COLORS["egress"])}
     """
     return Page(
-        "04_spadmic_csr_decoder",
-        "spadmic_csr_decoder",
-        "Shared 12-bit CSR routing page with timeout-protected read behavior and explicit invalid-region handling.",
-        "TOP/rtl/spadmic_csr_decoder.sv",
+        "04_spadmic_csr_router",
+        "spadmic_csr_router",
+        "ABI 1.0 request validation, page routing, and fail-closed invalid-access behavior.",
+        "TOP/rtl/spadmic_csr_router.sv",
         body,
     )
 
 
-def global_csr_page() -> Page:
+def csr_banks_page() -> Page:
     body = f"""
-    {block_node("csr_if", "CSR interface", theme="control", lines=["csr_valid_i / csr_write_i", "csr_addr_i / csr_wdata_i", "csr_ready_o / csr_rvalid_o / csr_rdata_o"], mono=True)}
-    {block_node("requested", "Requested image registers", theme="control", lines=["req_global_enable_o", "req_axis_enable_o[2:0]", "req_position_enable_o", "req_shared_tx_sel_o", "req_tdc_input_sel_o / req_tdc_out_mode_o"], mono=True)}
-    {block_node("admission", "Admission + reject logic", theme="egress", lines=["cfg_accept_i gate", "ctrl_change_req detect", "mode_reject_count_q", "mode_reject_sticky_q"])}
-    {block_node("status_in", "Datapath status inputs", theme="position", lines=["tdc_tx_busy_i / tdc_pkt_pending_i", "tdc_pkt_full_i", "position busy / pending", "position drop / glitch sticky"], mono=True)}
-    {block_node("active", "Active image mirror", theme="clock", lines=["active_global_enable_i", "active_axis_enable_i", "active_position_enable_i", "active_shared_tx_sel_i", "active_tdc_input_sel_i / active_tdc_out_mode_i"], mono=True)}
-    {block_node("readback", "Readback mux", theme="control", lines=["GLOBAL_ID / VERSION", "GLOBAL_CTRL request image", "GLOBAL_STATUS live image + path state", "GLOBAL_FAULT / GLOBAL_FAULT_COUNT"], mono=False)}
-    {block_node("out_req", "Requested outputs", theme="control", lines=["req_* image", "cfg_update_o pulse"], mono=True)}
+    {block_node("system", "System bank", theme="control", lines=["ID and ABI version", "atomic GLOBAL_CTRL", "safe-idle and access diagnostics", "maintenance counter clear"])}
+    {block_node("tdc", "TDC R/Y/B banks", theme="tdc", lines=["per-axis status", "W1C FIFO fault", "saturating error count"])}
+    {block_node("position", "Position bank", theme="position", lines=["cluster/raw mode", "gap and minimum span", "drop fault/count"])}
+    {block_node("event", "Event bank", theme="position", lines=["event lifecycle and masks", "snapshot/reset configuration", "R/Y/B snapshot readback"])}
+    {block_node("matrix", "Matrix bank", theme="control", lines=["column command and 64-bit data", "readback and validity", "W1C command fault"])}
+    {block_node("tx", "TX bank", theme="egress", lines=["bundle/FIFO/DDR status", "fixed FIFO geometry", "missing/overflow faults and counts"])}
+    {block_node("pll", "PLL bank", theme="clock", lines=["PLL control image", "lock status", "disabled-and-idle write gate"])}
+    {block_node("analog", "Analog bank", theme="io", lines=["SLVS/RX controls", "explicit active polarity", "disabled-and-idle write gate"])}
+    {block_node("policy", "Shared bank policy", theme="note", lines=["Configuration writes require global disabled and safe idle.", "GLOBAL_CTRL validates and commits a complete image atomically.", "Faults are W1C; maintenance clears counters only while disabled and idle."])}
 
-    {{ rank=same; csr_if; requested; admission; out_req; }}
-    {{ rank=same; status_in; active; readback; }}
+    {{ rank=same; system; tdc; position; event; }}
+    {{ rank=same; matrix; tx; pll; analog; }}
+    {{ rank=same; policy; }}
 
-    {invis("csr_if", "requested")}
-    {invis("requested", "admission")}
-    {invis("admission", "out_req")}
-    {invis("status_in", "active")}
-    {invis("active", "readback")}
-
-    {edge("csr_if", "requested", label="writes requested image", color=COLORS["control"])}
-    {edge("requested", "admission", label="ctrl_change_req", color=COLORS["egress"])}
-    {edge("admission", "out_req", label="req_* + cfg_update_o", color=COLORS["control"])}
-    {edge("status_in", "readback", label="fault / path state", color=COLORS["position"])}
-    {edge("active", "readback", label="active image mirror", color=COLORS["clock"])}
-    {edge("requested", "readback", label="requested image mirror", color=COLORS["control"])}
+    {invis("system", "tdc")}
+    {invis("tdc", "position")}
+    {invis("position", "event")}
+    {invis("matrix", "tx")}
+    {invis("tx", "pll")}
+    {invis("pll", "analog")}
+    {invis("system", "matrix", weight=40)}
+    {invis("matrix", "policy", weight=40)}
     """
     return Page(
-        "05_spadmic_global_csr",
-        "spadmic_global_csr",
-        "Requested-control bank with active-state mirror, path-idle visibility, and counted reject reporting.",
-        "TOP/rtl/spadmic_global_csr.sv",
+        "05_spadmic_csr_banks",
+        "SPADMIC block-owned CSR banks",
+        "ABI 1.0 register ownership, write admission, W1C fault handling, and saturating diagnostics.",
+        "TOP/rtl/spadmic_csr_banks.sv + TOP/rtl/spadmic_csr_map_pkg.sv",
         body,
     )
 
 
-def sequencer_page() -> Page:
+def event_coordinator_page() -> Page:
     body = f"""
-    {block_node("req_img", "Requested image inputs", theme="control", lines=["cfg_update_i", "req_global_enable_i", "req_axis_enable_i", "req_position_enable_i", "req_shared_tx_sel_i", "req_tdc_input_sel_i / req_tdc_out_mode_i"], mono=True)}
-    {block_node("path_state", "Drain-status inputs", theme="clock", lines=["tdc_tx_busy_i", "tdc_pkt_pending_i[2:0]", "position_busy_i", "position_pending_i"], mono=True)}
-    {block_node("reset_s", "SEQ_RESET", theme="clock", lines=["active image disabled", "wait path_idle"])}
-    {block_node("idle_s", "SEQ_IDLE", theme="control", lines=["cfg_accept_o only if path_idle", "wait cfg_update_i"])}
-    {block_node("drain_s", "SEQ_DRAIN", theme="egress", lines=["force active_global_enable_o low", "drain old path", "copy req_* -> active_* when idle"])}
-    {block_node("active_img", "Active image outputs", theme="control", lines=["active_global_enable_o", "active_axis_enable_o", "active_position_enable_o", "active_shared_tx_sel_o", "active_tdc_input_sel_o / active_tdc_out_mode_o"], mono=True)}
-    {block_node("status", "Status outputs", theme="egress", lines=["cfg_accept_o", "transition_busy_o"], mono=True)}
+    {block_node("trigger", "Accepted trigger", theme="position", lines=["normal matrix event", "or selected calibration start", "resources ready before admission"])}
+    {block_node("idle", "EVT_IDLE", theme="clock", lines=["compute required packet/reset masks", "allocate one shared event ID"])}
+    {block_node("ack", "EVT_WAIT_RESET_ACK", theme="position", lines=["wait snapshot capture", "wait selected TDC start acknowledgements"])}
+    {block_node("reset", "EVT_WAIT_RESET_DONE", theme="control", lines=["optional automatic matrix reset", "width from RESET_CFG"])}
+    {block_node("packets", "EVT_WAIT_PACKETS", theme="tdc", lines=["wait every required source pending", "frozen event mask"])}
+    {block_node("transmit", "EVT_TRANSMIT", theme="egress", lines=["start one correlated bundle", "wait ordered bundle completion"])}
+    {block_node("rearm", "EVT_REARM", theme="clock", lines=["wait matrix inputs clear", "return to safe idle"])}
 
-    {{ rank=same; req_img; reset_s; idle_s; drain_s; active_img; }}
-    {{ rank=same; path_state; status; }}
-
-    {invis("req_img", "reset_s")}
-    {invis("reset_s", "idle_s")}
-    {invis("idle_s", "drain_s")}
-    {invis("drain_s", "active_img")}
-
-    {edge("req_img", "idle_s", label="cfg_update_i", color=COLORS["control"])}
-    {edge("path_state", "reset_s", label="path_idle", color=COLORS["clock"])}
-    {edge("path_state", "idle_s", color=COLORS["clock"])}
-    {edge("path_state", "drain_s", color=COLORS["clock"])}
-    {edge("drain_s", "active_img", label="commit active_*", color=COLORS["control"])}
-    {edge("idle_s", "status", label="cfg_accept_o", color=COLORS["egress"])}
-    {edge("drain_s", "status", label="transition_busy_o", color=COLORS["egress"])}
+    {{ rank=same; trigger; idle; ack; reset; packets; transmit; rearm; }}
+    {invis("trigger", "idle")}
+    {invis("idle", "ack")}
+    {invis("ack", "reset")}
+    {invis("reset", "packets")}
+    {invis("packets", "transmit")}
+    {invis("transmit", "rearm")}
+    {edge("trigger", "idle", label="event trigger", color=COLORS["position"])}
+    {edge("idle", "ack", label="freeze masks", color=COLORS["control"])}
+    {edge("ack", "reset", label="auto reset enabled", color=COLORS["control"])}
+    {edge("ack", "packets", label="no reset", color=COLORS["tdc"])}
+    {edge("reset", "packets", label="reset done", color=COLORS["tdc"])}
+    {edge("packets", "transmit", label="all sources pending", color=COLORS["egress"])}
+    {edge("transmit", "rearm", label="bundle done", color=COLORS["egress"])}
     """
     return Page(
-        "06_spadmic_top_sequencer",
-        "spadmic_top_sequencer",
-        "Drain-aware requested-to-active handoff that keeps mode/source changes packet-safe.",
-        "TOP/rtl/spadmic_top_sequencer.sv",
+        "06_spadmic_event_coordinator",
+        "spadmic_event_coordinator",
+        "One-event-at-a-time lifecycle with frozen source masks, reset acknowledgements, and one shared event ID.",
+        "TOP/rtl/spadmic_event_coordinator.sv",
         body,
     )
 
@@ -485,8 +462,8 @@ def axis_wrapper_page() -> Page:
     {block_node("mode_csr", "Mode + CSR inputs", theme="control", lines=["global_enable_i / axis_enable_i", "input_sel_override_i", "out_mode_override_i", "csr_valid_i / csr_addr_i / csr_wdata_i"], mono=True)}
     {block_node("gate_evt", "Event gate", theme="control", lines=["spad_event_async_i AND global/axis enable"])}
     {block_node("qual", "STOP qualifier", theme="tdc", lines=["exactly one qualified STOP pulse", "stop_armed_o"])}
-    {block_node("mptdc", "Preserved mptdc_top_asic", theme="tdc", subtitle="kernel remains local to the axis", lines=["async measurement kernel", "CSR endpoint", "local acquisition FIFO", "shared_readout_en_i = 1"])}
-    {block_node("export", "Export outputs", theme="tdc", lines=["acq_valid_o / acq_data_o", "acq_ready_i", "fifo_full_o"], mono=True)}
+    {block_node("mptdc", "Protected mptdc_axis_core", theme="tdc", subtitle="kernel remains local to the R, Y, or B axis", lines=["coordinator-owned conversion start", "shared tuning inputs", "local acquisition and packet state"])}
+    {block_node("export", "Packet outputs", theme="tdc", lines=["pkt_valid_o / pkt_data_o", "pkt_sop_o / pkt_eop_o", "pending / ready / busy / fifo_full"], mono=True)}
 
     {{ rank=same; in_async; gate_evt; qual; mptdc; export; }}
     {{ rank=same; mode_csr; }}
@@ -500,85 +477,80 @@ def axis_wrapper_page() -> Page:
     {edge("gate_evt", "qual", label="start_async_gated", color=COLORS["tdc"])}
     {edge("qual", "mptdc", label="qualified STOP", color=COLORS["tdc"])}
     {edge("mode_csr", "mptdc", label="CSR + override controls", color=COLORS["control"])}
-    {edge("mptdc", "export", label="ACQ record export", color=COLORS["tdc"])}
+    {edge("mptdc", "export", label="16-bit packet stream", color=COLORS["tdc"])}
     """
     return Page(
         "08_spadmic_tdc_axis_wrapper",
         "spadmic_tdc_axis_wrapper",
-        "Per-axis wrapper around the qualifier and one preserved MPTDC kernel, exporting acquisition records to the top-level shared readout.",
+        "TOP-owned R/Y/B wrapper around the stop qualifier and protected MPTDC axis core.",
         "TOP/rtl/spadmic_tdc_axis_wrapper.sv",
         body,
     )
 
 
-def unified_arb_page() -> Page:
+def event_bundle_page() -> Page:
     body = f"""
-    {block_node("tdc_inputs", "3 acquisition-record inputs", theme="tdc", lines=["acq_valid_i[2:0]", "ACQ_REC_META / ACQ_REC_HIT", "fixed v2.7 feature packet"], mono=True)}
-    {block_node("adapters", "TDC packet adapters x3", theme="tdc", lines=["HEADER[2]=boundary", "HIT W0/W1", "EOC placeholder"])}
-    {block_node("pos", "Position packet sideband adapter", theme="position", lines=["cluster fixed 8 words", "raw fixed 14 words", "SOP/EOP/source sidebands"])}
-    {block_node("mask", "Registered source masks", theme="control", lines=["axis_enable", "position_enable", "legacy modes masked"])}
-    {block_node("arb", "4-way packet arbiter", theme="egress", lines=["source skids", "registered grant", "lock until EOP"])}
-    {block_node("tag", "Unified event tag patch", theme="egress", lines=["single 14-bit rolling tag", "overwrite producer EOC", "increment on FIFO write EOP"])}
-    {block_node("fifo", "Output FIFO", theme="control", lines=["256 words", "155-word max burst + margin", "DDR always-ready baseline"])}
+    {block_node("r", "R packet", theme="tdc", lines=["pending + SOP/EOP", "16-bit logical words"])}
+    {block_node("y", "Y packet", theme="tdc", lines=["pending + SOP/EOP", "16-bit logical words"])}
+    {block_node("b", "B packet", theme="tdc", lines=["pending + SOP/EOP", "16-bit logical words"])}
+    {block_node("pos", "Position packet", theme="position", lines=["cluster or raw", "pending + SOP/EOP"])}
+    {block_node("mask", "Frozen required mask", theme="control", lines=["captured at bundle start", "source presence checked before send"])}
+    {block_node("order", "Deterministic source order", theme="egress", lines=["R -> Y -> B -> position", "hold each source through EOP"])}
+    {block_node("patch", "Public identity patch", theme="egress", lines=["TDC header gets R/Y/B source ID", "every EOP gets shared event ID"])}
+    {block_node("flush", "Ordered flush", theme="control", lines=["emit after final required packet", "pad odd DDR word deterministically"])}
 
-    {{ rank=same; tdc_inputs; adapters; arb; tag; fifo; }}
-    {{ rank=same; pos; mask; }}
-
-    {invis("tdc_inputs", "adapters")}
-    {invis("adapters", "arb")}
-    {invis("arb", "tag")}
-    {invis("tag", "fifo")}
-
-    {edge("tdc_inputs", "adapters", label="per-axis records", color=COLORS["tdc"])}
-    {edge("adapters", "arb", label="TDC_X/Y/Z packet streams", color=COLORS["tdc"])}
-    {edge("pos", "arb", label="position packet stream", color=COLORS["position"])}
-    {edge("mask", "arb", label="enabled sources", color=COLORS["control"])}
-    {edge("arb", "tag", label="packet-atomic words", color=COLORS["egress"])}
-    {edge("tag", "fifo", label="tagged logical stream", color=COLORS["egress"])}
+    {{ rank=same; r; y; b; pos; }}
+    {{ rank=same; mask; order; patch; flush; }}
+    {invis("r", "y")}
+    {invis("y", "b")}
+    {invis("b", "pos")}
+    {invis("mask", "order")}
+    {invis("order", "patch")}
+    {invis("patch", "flush")}
+    {edge("r", "order", label="source 0", color=COLORS["tdc"])}
+    {edge("y", "order", label="source 1", color=COLORS["tdc"])}
+    {edge("b", "order", label="source 2", color=COLORS["tdc"])}
+    {edge("pos", "order", label="source 3", color=COLORS["position"])}
+    {edge("mask", "order", label="required sources", color=COLORS["control"])}
+    {edge("order", "patch", label="packet-atomic words", color=COLORS["egress"])}
+    {edge("patch", "flush", label="completed mask", color=COLORS["egress"])}
     """
     return Page(
-        "09_spadmic_correlated_tx",
-        "spadmic_correlated_tx",
-        "Unified four-source ARB with per-axis TDC adapters, packet locks, event tagging, and a 256-word output FIFO.",
-        "arb/rtl/spadmic_correlated_tx.sv",
+        "09_spadmic_event_bundle_tx",
+        "spadmic_event_bundle_tx",
+        "Deterministic R/Y/B/position packet bundle with one shared event ID and an ordered flush marker.",
+        "TOP/rtl/spadmic_event_bundle_tx.sv",
         body,
     )
 
 
-def position_block_page() -> Page:
+def position_packetizer_page() -> Page:
     body = f"""
-    {block_node("pins", "Position inputs", theme="position", lines=["clk_sys / rst_n", "global_enable_i", "x_lines_i / y_lines_i / z_lines_i", "pos_ready_i"], mono=True)}
-    {block_node("csr", "Position CSR", theme="control", lines=["csr_valid_i / csr_write_i", "csr_addr_i / csr_wdata_i", "csr_ready_o / csr_rvalid_o / csr_rdata_o"], mono=True)}
-    {block_node("sync", "3-stage synchronizers", theme="clock", lines=["ff1 / ff2 / ff3 for x, y, z", "lines_nonzero_sync", "lines_stable_sync"])}
-    {block_node("fsm", "Detect / settle / scan FSM", theme="position", lines=["DET_IDLE", "DET_SETTLE", "DET_SCAN", "DET_WAIT_CLEAR"])}
-    {block_node("scan", "3x five-cycle cluster scan + filter", theme="position", lines=["u_scan_x / u_scan_y / u_scan_z", "gap_threshold_q", "min_cluster_span_q", "meaningful_event / overflow_any"])}
-    {block_node("acct", "Accounting", theme="egress", lines=["event_count_q", "drop_count_q", "reject_count_q", "drop / glitch sticky"], mono=True)}
-    {block_node("pkt", "Fixed 8-word packetizer", theme="egress", lines=["header", "six cluster words", "EOC/tag"])}
-    {block_node("outs", "Outputs", theme="position", lines=["pos_valid_o / pos_data_o", "busy_o / packet_pending_o", "drop_sticky_o", "glitch_reject_sticky_o"], mono=True)}
+    {block_node("start", "Coordinator start", theme="control", lines=["shared event ID", "cluster/raw mode", "gap and minimum-span settings"])}
+    {block_node("capture", "Private snapshot capture", theme="position", lines=["copy R/Y/B snapshot", "acknowledge capture before matrix reset"])}
+    {block_node("scan", "Three cluster scanners", theme="position", lines=["R/Y/B independently", "retain first two clusters", "filter by minimum span"])}
+    {block_node("cluster", "Cluster packet", theme="egress", lines=["8 logical words", "header + six cluster words + EOP"])}
+    {block_node("raw", "Raw packet", theme="egress", lines=["14 logical words", "header + 12 bitmap words + EOP"])}
+    {block_node("handshake", "Packet handshake", theme="position", lines=["SOP/EOP sidebands", "pending/busy/done", "drop if start arrives busy"])}
 
-    {{ rank=same; pins; sync; fsm; scan; pkt; outs; }}
-    {{ rank=same; csr; acct; }}
-
-    {invis("pins", "sync")}
-    {invis("sync", "fsm")}
-    {invis("fsm", "scan")}
-    {invis("scan", "pkt")}
-    {invis("pkt", "outs")}
-
-    {edge("pins", "sync", label="async line buses", color=COLORS["position"])}
-    {edge("sync", "fsm", label="stable / nonzero detect", color=COLORS["clock"])}
-    {edge("fsm", "scan", label="accepted snapshots", color=COLORS["position"])}
-    {edge("scan", "pkt", label="cluster summaries", color=COLORS["position"])}
-    {edge("csr", "fsm", label="enable / settle config", color=COLORS["control"])}
-    {edge("csr", "scan", label="gap / span config", color=COLORS["control"])}
-    {edge("fsm", "acct", label="drops / rejects", color=COLORS["egress"])}
-    {edge("pkt", "outs", label="position packet bus", color=COLORS["egress"])}
+    {{ rank=same; start; capture; scan; cluster; raw; handshake; }}
+    {invis("start", "capture")}
+    {invis("capture", "scan")}
+    {invis("scan", "cluster")}
+    {invis("cluster", "raw")}
+    {invis("raw", "handshake")}
+    {edge("start", "capture", label="start", color=COLORS["control"])}
+    {edge("capture", "scan", label="stable private image", color=COLORS["position"])}
+    {edge("scan", "cluster", label="cluster mode", color=COLORS["position"])}
+    {edge("capture", "raw", label="raw mode", color=COLORS["position"])}
+    {edge("cluster", "handshake", label="16-bit words", color=COLORS["egress"])}
+    {edge("raw", "handshake", label="16-bit words", color=COLORS["egress"])}
     """
     return Page(
-        "10_spadmic_position_block",
-        "spadmic_position_block",
-        "Async-qualified position detector with explicit settle filtering, cluster extraction, and fixed packet output.",
-        "position/rtl/spadmic_position_block.sv",
+        "10_spadmic_position_snapshot_packetizer",
+        "spadmic_position_snapshot_packetizer",
+        "Private R/Y/B snapshot capture with cluster/raw packet generation under coordinator control.",
+        "TOP/rtl/spadmic_position_snapshot_packetizer.sv",
         body,
     )
 
@@ -619,13 +591,13 @@ def pages() -> list[Page]:
         top_page(),
         i2c_slave_page(),
         bridge_page(),
-        csr_decoder_page(),
-        global_csr_page(),
-        sequencer_page(),
+        csr_router_page(),
+        csr_banks_page(),
+        event_coordinator_page(),
         stop_qualifier_page(),
         axis_wrapper_page(),
-        unified_arb_page(),
-        position_block_page(),
+        event_bundle_page(),
+        position_packetizer_page(),
         cluster_scan_page(),
     ]
 
@@ -655,6 +627,9 @@ def main():
     pdf_dir = outdir / "pdf"
     for path in (outdir, dot_dir, svg_dir, pdf_dir):
         path.mkdir(parents=True, exist_ok=True)
+    for path, suffix in ((dot_dir, ".dot"), (svg_dir, ".svg"), (pdf_dir, ".pdf")):
+        for generated_path in path.glob(f"*{suffix}"):
+            generated_path.unlink()
 
     rendered = []
     for page in pages():

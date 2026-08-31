@@ -21,13 +21,34 @@ module spadmic_vip_tb;
 
   // ── DUT output wires ──────────────────────────────────────────
   wire        i2c_sda_oe;
-  wire        chip_tx_clk;
-  wire        chip_tx_valid;
-  wire [SPADMIC_TX_PHY_W-1:0] chip_tx_data;
+  wire        ddr_clk;
+  wire        ddr_pair_valid;
+  wire [SPADMIC_DDR16_PHY_W-1:0] ddr_data_l;
+  wire [SPADMIC_DDR16_PHY_W-1:0] ddr_data_h;
   wire        spad_matrix_rst;
-  wire [2:0]  tdc_stop_armed;
-  wire        tdc_shared_busy;
-  wire        position_busy;
+  wire [SPADMIC_LINE_W-1:0] matrix_r;
+  wire [SPADMIC_LINE_W-1:0] matrix_y;
+  wire [SPADMIC_LINE_W-1:0] matrix_b;
+  wire [SPADMIC_LINE_W-1:0] matrix_rz;
+  wire [SPADMIC_LINE_W-1:0] matrix_yz;
+  wire [SPADMIC_LINE_W-1:0] matrix_bz;
+  wire [SPADMIC_MATRIX_COLUMN_COUNT-1:0] matrix_din;
+  wire [SPADMIC_MATRIX_COLUMN_COUNT-1:0] matrix_cin;
+  wire [7:0] pll_fint_sel;
+  wire [4:0] pll_ro_sw;
+  wire pll_sel_pulse_pfd;
+  wire pll_enable_div;
+  wire pll_sel_40m;
+  wire clk_160m_ext_select;
+  wire [3:0] slvs_s_drv;
+  wire slvs_en_vref_ext;
+  wire slvs_en_drv;
+  wire slvs_vref_adj_b;
+  wire slvs_en_vref_400mv;
+  wire slvs_en_ref_drv_b;
+  wire [3:0] rx_s_rx;
+  wire rx_en_rx;
+  wire rx_en_term;
 
   // ── VIP Interfaces ────────────────────────────────────────────
   spadmic_reset_if          reset_if (.clk_sys(clk_sys));
@@ -41,52 +62,76 @@ module spadmic_vip_tb;
   spadmic_spad_reset_if     spad_rst_if (.clk_sys(clk_sys), .rst_n(reset_if.rst_n));
 
   // ── DUT Instantiation ─────────────────────────────────────────
-  spadmic_top_v1 u_dut (
+  assign matrix_r = pos_if.x_lines | {{(SPADMIC_LINE_W-1){1'b0}}, x_ev_if.spad_event_async};
+  assign matrix_y = pos_if.y_lines | {{(SPADMIC_LINE_W-1){1'b0}}, y_ev_if.spad_event_async};
+  assign matrix_b = pos_if.z_lines | {{(SPADMIC_LINE_W-1){1'b0}}, z_ev_if.spad_event_async};
+
+  spadmic_top_matrix_v1 u_dut (
     .clk_sys              (clk_sys),
     .clk_ref_40m          (clk_ref_40m),
+    .clk_cfg_40m          (clk_ref_40m),
     .async_rst_n          (reset_if.rst_n),
 
     // I2C
+    .i2c_rst_i            (1'b0),
     .i2c_scl_i            (i2c_if.scl),
     .i2c_sda_i            (i2c_if.sda),
     .i2c_sda_oe_o         (i2c_sda_oe),
 
-    // TDC async events (per axis)
-    .spad_x_event_async_i (x_ev_if.spad_event_async),
-    .spad_y_event_async_i (y_ev_if.spad_event_async),
-    .spad_z_event_async_i (z_ev_if.spad_event_async),
-    .cal_x_start_async_i  (x_ev_if.cal_start_async),
-    .cal_x_stop_async_i   (x_ev_if.cal_stop_async),
+    .pll_lock_i           (1'b1),
+    .pll_fint_sel_o       (pll_fint_sel),
+    .pll_ro_sw_o          (pll_ro_sw),
+    .pll_sel_pulse_pfd_o  (pll_sel_pulse_pfd),
+    .pll_enable_div_o     (pll_enable_div),
+    .pll_sel_40m_o        (pll_sel_40m),
+    .clk_160m_ext_select_o(clk_160m_ext_select),
+    .slvs_s_drv_o         (slvs_s_drv),
+    .slvs_en_vref_ext_o   (slvs_en_vref_ext),
+    .slvs_en_drv_o        (slvs_en_drv),
+    .slvs_vref_adj_b_o    (slvs_vref_adj_b),
+    .slvs_en_vref_400mv_o (slvs_en_vref_400mv),
+    .slvs_en_ref_drv_b_o  (slvs_en_ref_drv_b),
+    .rx_s_rx_o            (rx_s_rx),
+    .rx_en_rx_o           (rx_en_rx),
+    .rx_en_term_o         (rx_en_term),
+
+    .R_i                  (matrix_r),
+    .Y_i                  (matrix_y),
+    .B_i                  (matrix_b),
+    .Rz_o                 (matrix_rz),
+    .Yz_o                 (matrix_yz),
+    .Bz_o                 (matrix_bz),
+    .matrix_din_o         (matrix_din),
+    .matrix_cin_o         (matrix_cin),
+    .matrix_dout_i        ('0),
+    .matrix_cout_i        ('0),
+
+    .cal_r_start_async_i  (x_ev_if.cal_start_async),
+    .cal_r_stop_async_i   (x_ev_if.cal_stop_async),
     .cal_y_start_async_i  (y_ev_if.cal_start_async),
     .cal_y_stop_async_i   (y_ev_if.cal_stop_async),
-    .cal_z_start_async_i  (z_ev_if.cal_start_async),
-    .cal_z_stop_async_i   (z_ev_if.cal_stop_async),
+    .cal_b_start_async_i  (z_ev_if.cal_start_async),
+    .cal_b_stop_async_i   (z_ev_if.cal_stop_async),
 
-    // Position lines
-    .x_lines_i            (pos_if.x_lines),
-    .y_lines_i            (pos_if.y_lines),
-    .z_lines_i            (pos_if.z_lines),
-
-    // Chip TX output
-    .chip_tx_clk_o        (chip_tx_clk),
-    .chip_tx_valid_o      (chip_tx_valid),
-    .chip_tx_data_o       (chip_tx_data),
-    .spad_matrix_rst_o    (spad_matrix_rst),
-
-    // Debug / status
-    .tdc_stop_armed_o     (tdc_stop_armed),
-    .tdc_shared_busy_o    (tdc_shared_busy),
-    .position_busy_o      (position_busy)
+    .ddr_data_l_o         (ddr_data_l),
+    .ddr_data_h_o         (ddr_data_h),
+    .ddr_pair_valid_o     (ddr_pair_valid),
+    .ddr_clk_o            (ddr_clk)
   );
+
+  assign spad_matrix_rst = ~((&matrix_rz) & (&matrix_yz) & (&matrix_bz));
 
   // ── Wire connections ──────────────────────────────────────────
   assign i2c_if.clk_sys = clk_sys;
   assign i2c_if.rst_n   = reset_if.rst_n;
   assign i2c_if.sda_oe = i2c_sda_oe;
-  assign tx_if.phy_clk   = chip_tx_clk;
-  assign tx_if.phy_valid = chip_tx_valid;
-  assign tx_if.phy_data  = chip_tx_data;
+  assign tx_if.ddr_clk     = ddr_clk;
+  assign tx_if.pair_valid  = ddr_pair_valid;
+  assign tx_if.pair_padded = u_dut.ddr_padded;
+  assign tx_if.data_l      = ddr_data_l;
+  assign tx_if.data_h      = ddr_data_h;
   assign spad_rst_if.spad_matrix_rst = spad_matrix_rst;
+  assign spad_rst_if.expected_width_cycles = u_dut.reset_width;
 
   initial begin
     i2c_if.idle_bus();

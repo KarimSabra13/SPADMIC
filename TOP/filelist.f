@@ -8,6 +8,7 @@
 //   -f ../MPTDC/rtl/filelist.f
 
 // ── SPADMIC package ──────────────────────────────────────────────
+rtl/spadmic_csr_map_pkg.sv
 rtl/spadmic_pkg.sv
 
 // ── Matrix-top standalone Phase 1 blocks ────────────────────────
@@ -20,6 +21,8 @@ rtl/spadmic_ddrs2_adapter.sv
 rtl/spadmic_output_fifo.sv
 rtl/spadmic_output_fifo_topcfg.sv
 rtl/spadmic_matrix_cfg_ctrl.sv
+rtl/spadmic_csr_router.sv
+rtl/spadmic_csr_banks.sv
 rtl/spadmic_matrix_top_csr.sv
 rtl/spadmic_position_snapshot_packetizer.sv
 rtl/spadmic_position_core.sv
@@ -37,11 +40,8 @@ pnr/assembly/spadmic_digital_assembly_v1.sv
 // ── Reverse START/STOP adapter ───────────────────────────────────
 rtl/spadmic_ref_stop_qualifier.sv
 
-// ── CSR decode / global registers ────────────────────────────────
-rtl/spadmic_global_csr.sv
+// ── Retained independent control/datapath support ────────────────
 rtl/spadmic_top_sequencer.sv
-rtl/spadmic_csr_decoder.sv
-rtl/spadmic_tdc_axis_csr.sv
 
 // ── Packet arbiter path ──────────────────────────────────────────
 ../arb/rtl/spadmic_position_packet_adapter.sv
@@ -57,5 +57,4 @@ rtl/spadmic_ddr_tx.sv
 // ── Per-axis TDC wrapper & top shell ─────────────────────────────
 rtl/spadmic_tdc_axis_wrapper.sv
 rtl/spadmic_tdc3_frontend.sv
-rtl/spadmic_top_v1.sv
 rtl/spadmic_top_matrix_v1.sv

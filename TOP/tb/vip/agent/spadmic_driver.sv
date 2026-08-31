@@ -124,28 +124,30 @@ class spadmic_driver;
   task automatic sample_ctrl_fault_cov(input logic reset_during_traffic);
     logic [SPADMIC_CSR_DATA_W-1:0] status;
     logic [SPADMIC_CSR_DATA_W-1:0] fault;
+    logic [SPADMIC_CSR_DATA_W-1:0] access_status;
     logic status_err;
     logic fault_err;
-    logic [1:0] seq_state_derived;
+    logic access_status_err;
 
     if (cfg.drv_mode == DRV_MODE_DIRECT_CSR) begin
-      csr_drv.read_global_status(status);
-      status_err = 1'b0;
+      csr_drv.read_csr(CSR_GLOBAL_STATUS, status, status_err);
       csr_drv.read_global_fault(fault, fault_err);
+      csr_drv.read_csr(CSR_ACCESS_STATUS, access_status, access_status_err);
     end else begin
       i2c_drv.read_global_status(status, status_err);
       i2c_drv.read_global_fault(fault, fault_err);
+      i2c_drv.read_csr(CSR_ACCESS_STATUS, access_status, access_status_err);
     end
 
-    if (status[21] && status[6])
-      seq_state_derived = 2'd1;
-    else if (status[14])
-      seq_state_derived = 2'd2;
-    else
-      seq_state_derived = 2'd0;
-
-    ctrl_cov.sample(status[21], status[14], status[15], fault[0], status[6], seq_state_derived);
-    fault_cov.sample(fault[1], fault[2], fault[0], status[13:11], reset_during_traffic, status_err | fault_err);
+    ctrl_cov.sample(
+      status[7], status[0], status[3:1], status[6:4],
+      access_status[0], |fault[6:0]
+    );
+    fault_cov.sample(
+      access_status[15:8], access_status[1], fault[6:0],
+      reset_during_traffic,
+      status_err | fault_err | access_status_err
+    );
   endtask
 `endif
 
@@ -178,7 +180,7 @@ class spadmic_driver;
           spadmic_tdc_event_txn et;
           $cast(et, txn);
 `ifdef SPADMIC_ENABLE_FUNC_COV
-          sample_stimulus_cov(STIM_KIND_TDC, (3'b001 << et.axis), 1'b0, et.start_stop_delay_ps);
+          sample_stimulus_cov(STIM_KIND_TDC, 3'b111, 1'b0, et.start_stop_delay_ps);
 `endif
           sb_mb.put(txn);
           ev_drv.inject_tdc_events(et);
@@ -186,7 +188,7 @@ class spadmic_driver;
             // Keep a short guard in normal sequencing so an immediate follow-on
             // control write does not cut off data that has only just entered the
             // shared export path.
-            #(et.num_conversions * 500_000);  // 500 ns per conversion
+            #(et.num_conversions * 2_000_000);  // 2 us per conversion
           end
         end
 
@@ -212,41 +214,20 @@ class spadmic_driver;
                               ct.start_stop_delay_ps);
 `endif
           sb_mb.put(txn);
-          fork
-            begin : tdc_family
-              for (int ax = 0; ax < 3; ax++) begin
-                if (ct.axis_mask[ax]) begin
-                  automatic int axis_idx = ax;
-                  fork
-                    begin
-                      spadmic_tdc_event_txn et = new();
-                      et.axis                = axis_idx;
-                      et.num_conversions     = 1;
-                      et.start_stop_delay_ps = ct.start_stop_delay_ps;
-                      et.inter_conv_gap_ps   = 0;
-                      et.use_spad            = ct.use_spad;
-                      et.cal_start_width_ps  = ct.cal_start_width_ps;
-                      et.cal_stop_width_ps   = ct.cal_stop_width_ps;
-                      #(axis_idx * ct.axis_skew_ps);
-                      ev_drv.inject_tdc_events(et);
-                    end
-                  join_none
-                end
-              end
-              wait fork;
-            end
-            begin : pos_family
-              if (ct.position_present) begin
-                spadmic_pos_event_txn pt = new();
-                pt.x_pattern    = ct.x_pattern;
-                pt.y_pattern    = ct.y_pattern;
-                pt.z_pattern    = ct.z_pattern;
-                pt.hold_time_ns = ct.hold_time_ns;
-                #(ct.position_offset_ps);
-                pos_drv.drive_position_event(pt);
-              end
-            end
-          join
+          if (ct.position_present) begin
+            spadmic_pos_event_txn pt = new();
+            pt.x_pattern    = ct.x_pattern;
+            pt.y_pattern    = ct.y_pattern;
+            pt.z_pattern    = ct.z_pattern;
+            pt.hold_time_ns = ct.hold_time_ns;
+            pos_drv.drive_position_event(pt);
+          end else begin
+            spadmic_tdc_event_txn et = new();
+            et.axis                = 0;
+            et.num_conversions     = 1;
+            et.start_stop_delay_ps = ct.start_stop_delay_ps;
+            ev_drv.inject_tdc_events(et);
+          end
           #(ct.post_family_idle_ps);
         end
 
@@ -323,35 +304,40 @@ class spadmic_driver;
     end else begin
       // Full chip config sequence
       if (ct.drv_mode == DRV_MODE_DIRECT_CSR) begin
-        // Respect the DUT control protocol: GLOBAL_CTRL writes are only accepted
-        // while cfg_accept is high. Poll first so random/stress tests don't turn
-        // a transient busy window into a rejected write plus a long timeout.
-        csr_drv.wait_cfg_accept(500);
-        for (int ax = 0; ax < 3; ax++) begin
-          csr_drv.program_tdc_max_hits(ax, ct.max_hits);
-          csr_drv.program_tdc_conv_arm(ax, 1'b1);
-        end
+        csr_drv.wait_safe_idle(500);
+        csr_drv.program_disabled();
+        csr_drv.wait_safe_idle(500);
+        csr_drv.program_reset_width(state.active_reset_width);
+        csr_drv.program_snapshot_config(16'(cfg.default_settle_cycles), 16'd64);
+        csr_drv.program_tdc_shared(ct.max_hits);
+        csr_drv.program_position_config(
+          state.active_pos_mode,
+          state.active_pos_gap_threshold,
+          state.active_pos_min_cluster_span
+        );
         csr_drv.program_global_ctrl(ct);
-        // Wait for sequencer to commit the new active config
-        csr_drv.wait_cfg_accept(500);
+        csr_drv.wait_safe_idle(500);
       end else begin
-        // Respect the DUT control protocol: GLOBAL_CTRL writes are only accepted
-        // while cfg_accept is high. Poll first so random/stress tests don't turn
-        // a transient busy window into a rejected write plus a long timeout.
-        i2c_drv.wait_cfg_accept(500);
-        for (int ax = 0; ax < 3; ax++) begin
-          i2c_drv.program_tdc_max_hits(ax, ct.max_hits);
-          i2c_drv.program_tdc_conv_arm(ax, 1'b1);
-        end
+        i2c_drv.wait_safe_idle(500);
+        i2c_drv.program_disabled();
+        i2c_drv.wait_safe_idle(500);
+        i2c_drv.program_reset_width(state.active_reset_width);
+        i2c_drv.program_snapshot_config(16'(cfg.default_settle_cycles), 16'd64);
+        i2c_drv.program_tdc_shared(ct.max_hits);
+        i2c_drv.program_position_config(
+          state.active_pos_mode,
+          state.active_pos_gap_threshold,
+          state.active_pos_min_cluster_span
+        );
         i2c_drv.program_global_ctrl(ct);
-        i2c_drv.wait_cfg_accept(500);
+        i2c_drv.wait_safe_idle(500);
       end
 
       active_global_enable   = ct.global_enable;
       active_tx_sel          = ct.shared_tx_sel;
       active_position_enable = ct.position_enable;
-      active_input_sel       = ct.tdc_input_sel;
-      active_out_mode        = ct.tdc_out_mode;
+      active_input_sel       = INPUT_SPAD;
+      active_out_mode        = OUT_MODE_RAW_FEATURES;
       active_max_hits        = ct.max_hits;
       state.note_ctrl_txn(ct);
 

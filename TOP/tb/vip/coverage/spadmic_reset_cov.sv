@@ -6,35 +6,31 @@
 
 class spadmic_reset_cov;
 
-  logic [1:0]  reset_mode;
-  int unsigned reset_period_class;
+  logic        auto_reset_enable;
+  int unsigned configured_width_cycles;
   int unsigned pulse_width_cycles;
   logic        traffic_active;
 
   covergroup cg_reset;
-    cp_reset_mode: coverpoint reset_mode {
-      bins manual_only    = {SPADMIC_SPAD_RST_MANUAL_ONLY};
-      bins event_deferred = {SPADMIC_SPAD_RST_EVENT_DEFERRED};
-      bins periodic       = {SPADMIC_SPAD_RST_PERIODIC};
-      illegal_bins bad    = {2'd3};
-    }
-
-    cp_period_class: coverpoint reset_period_class {
-      bins disabled = {0};
-      bins short_p  = {1};
-      bins long_p   = {2};
+    cp_auto_reset: coverpoint auto_reset_enable;
+    cp_configured_width: coverpoint configured_width_cycles {
+      illegal_bins disabled = {0};
+      bins short_width = {[1:4]};
+      bins medium_width = {[5:16]};
+      bins long_width = {[17:$]};
     }
 
     cp_pulse_width: coverpoint pulse_width_cycles {
-      bins one_cycle = {1};
-      illegal_bins wide = {[2:$]};
       illegal_bins zero = {0};
+      bins short_width = {[1:4]};
+      bins medium_width = {[5:16]};
+      bins long_width = {[17:$]};
     }
 
     cp_traffic_active: coverpoint traffic_active;
 
-    cx_mode_x_period: cross cp_reset_mode, cp_period_class;
-    cx_mode_x_traffic: cross cp_reset_mode, cp_traffic_active;
+    cx_enable_x_width: cross cp_auto_reset, cp_configured_width;
+    cx_enable_x_traffic: cross cp_auto_reset, cp_traffic_active;
   endgroup
 
   function new();
@@ -42,13 +38,13 @@ class spadmic_reset_cov;
   endfunction
 
   function void sample(
-    logic [1:0] reset_mode_v,
-    int unsigned reset_period_class_v,
+    logic auto_reset_enable_v,
+    int unsigned configured_width_cycles_v,
     int unsigned pulse_width_cycles_v,
     logic traffic_active_v
   );
-    reset_mode          = reset_mode_v;
-    reset_period_class  = reset_period_class_v;
+    auto_reset_enable       = auto_reset_enable_v;
+    configured_width_cycles = configured_width_cycles_v;
     pulse_width_cycles  = pulse_width_cycles_v;
     traffic_active      = traffic_active_v;
     cg_reset.sample();
@@ -61,4 +57,3 @@ class spadmic_reset_cov;
 endclass
 
 `endif
-

@@ -50,7 +50,7 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
     this.axis_enable     = 3'b111;
     this.position_enable = 1'b0;
     this.shared_tx_sel   = SPADMIC_TX_TDC;
-    this.tdc_input_sel   = INPUT_CAL;
+    this.tdc_input_sel   = INPUT_SPAD;
     this.tdc_out_mode    = OUT_MODE_RAW_FEATURES;
     this.max_hits        = 4'd15;
     this.drv_mode        = DRV_MODE_DIRECT_CSR;
