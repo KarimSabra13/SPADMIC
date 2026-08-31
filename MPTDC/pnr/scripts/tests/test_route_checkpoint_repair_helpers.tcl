@@ -25,6 +25,8 @@ set ::mptdc_test_manual_route_points {}
 set ::mptdc_test_manual_command_calls {}
 set ::mptdc_test_local_ecoroute_called 0
 set ::mptdc_test_normalize_minarea_v8 0
+set ::mptdc_test_canonicalize_v13_shelf 0
+set ::mptdc_test_wire_attribute_queries {}
 set ::mptdc_test_report_dir [file join [file dirname [file normalize [info script]]] .probe_fixture_reports]
 
 proc mptdc_signoff_report_dir {} {
@@ -194,6 +196,7 @@ proc dbGet {args} {
             }
         }
         if {[regexp {^mwire:([0-9]+)\.(.+)$} $expression -> idx attribute]} {
+            lappend ::mptdc_test_wire_attribute_queries $attribute
             set row [lindex $::mptdc_test_manual_wires $idx]
             switch -- $attribute {
                 layer.name { return [dict get $row layer] }
@@ -542,6 +545,16 @@ proc editCommitRoute {x y} {
             set wire_length 0.385
             set begin_ext 0.115
             set end_ext 0.115
+        }
+        if {$::mptdc_test_canonicalize_v13_shelf &&
+            $::mptdc_test_manual_edit_net eq "u_core_n_57556" &&
+            [mptdc_ckpt_manual_point_equal \
+                [lindex $::mptdc_test_manual_route_points 0] {385.175 328.305}] &&
+            [mptdc_ckpt_manual_point_equal \
+                [lindex $::mptdc_test_manual_route_points end] {385.560 328.305}]} {
+            set wire_box {385.175 328.190 385.560 328.420}
+            set wire_points {{385.290 328.305} {385.445 328.305}}
+            set wire_length 0.155
         }
         lappend ::mptdc_test_manual_wires [dict create \
             net $::mptdc_test_manual_edit_net \
@@ -1709,6 +1722,146 @@ foreach tie_mode {tie1_trial tie1_replay} {
     if {$route_start_count != 1 || $route_commit_count != 1} {
         error "minimum-area V12 $tie_mode did not issue one bounded shelf edit"
     }
+}
+
+foreach tie_mode {tie1_trial tie1_replay} {
+    set ::mptdc_test_manual_vias [list \
+        [dict create net u_core_n_57556 name VIA2_CH1_so point {385.56 330.12} status routed \
+            bot_rects {{{385.42 329.93 386.22 330.31}}} \
+            cut_rects {{{385.43 329.99 385.69 330.25} {385.95 329.99 386.21 330.25}}} \
+            top_rects {{{385.37 329.98 386.27 330.26}}}]]
+    set ::mptdc_test_manual_wires [list \
+        [dict create net u_core_n_57556 layer MET1 \
+            box {385.06 328.29 385.75 328.52} width 0.23 \
+            points {{385.56 328.405} {385.175 328.405}} \
+            status fixed shape 0x0 length 0.385 beginExt 0.115 endExt 0.0]]
+    set ::mptdc_test_manual_pwires [list \
+        [dict create net u_core_n_57556 layer MET1 box {380 320 381 321} \
+            width 0.23 points {{380 320} {381 320}} status fixed] \
+        [dict create net _SADP_FILLS_RESERVED layer MET1 box {10 10 11 11} \
+            width 0.23 points {{10 10} {11 10}} status fixed]]
+    set ::mptdc_test_manual_swires [list \
+        [dict create net u_core_n_57556] \
+        [dict create net _SADP_FILLS_RESERVED]]
+    set ::mptdc_test_manual_command_calls {}
+    set ::mptdc_test_set_db_calls {}
+    set ::mptdc_test_wire_attribute_queries {}
+    set ::mptdc_test_manual_verify_count 0
+    set ::mptdc_test_canonicalize_v13_shelf 1
+    set ::mptdc_test_manual_snapshot_tuples [dict create \
+        minarea_v13_${tie_mode}_pre \
+            [list 1 0 0 $minarea_01777_with_stale_marker] \
+        minarea_v13_${tie_mode}_post {0 0 0}]
+    if {$tie_mode eq "tie1_trial"} {
+        set tie_result [mptdc_ckpt_tie1_minarea_endext_trial_v13]
+    } else {
+        set tie_result [mptdc_ckpt_tie1_minarea_endext_replay_v13]
+    }
+    set ::mptdc_test_canonicalize_v13_shelf 0
+    if {[dict get $tie_result status] ne "PASS" ||
+        [dict get $tie_result mode] ne $tie_mode ||
+        ![file exists [dict get $tie_result report]]} {
+        error "minimum-area V13 $tie_mode entry point did not pass: $tie_result"
+    }
+    if {$::mptdc_test_manual_verify_count != 2 ||
+        [llength $::mptdc_test_manual_wires] != 2 ||
+        [llength $::mptdc_test_set_db_calls] != 0} {
+        error "minimum-area V13 $tie_mode changed an unexpected object"
+    }
+    if {[lsearch -exact $::mptdc_test_wire_attribute_queries shape] >= 0} {
+        error "minimum-area V13 $tie_mode queried the unsupported wire shape attribute"
+    }
+    set new_wire [lindex $::mptdc_test_manual_wires 1]
+    if {[dict get $new_wire net] ne "u_core_n_57556" ||
+        [dict get $new_wire layer] ne "MET1" ||
+        ![mptdc_ckpt_manual_close [dict get $new_wire width] 0.23] ||
+        ![mptdc_ckpt_manual_close [dict get $new_wire length] 0.155] ||
+        ![mptdc_ckpt_manual_point_equal \
+            [lindex [dict get $new_wire points] 0] {385.290 328.305}] ||
+        ![mptdc_ckpt_manual_point_equal \
+            [lindex [dict get $new_wire points] 1] {385.445 328.305}] ||
+        ![mptdc_ckpt_manual_box_equal [dict get $new_wire box] \
+            {385.175 328.190 385.560 328.420}]} {
+        error "minimum-area V13 $tie_mode created the wrong shelf: $new_wire"
+    }
+    set fh [open [dict get $tie_result report] r]
+    set tie_text [read $fh]
+    close $fh
+    foreach expected [list \
+        {MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_VIA_OVERLAP_SHELF_CLEARANCE_V13} \
+        {REPAIR_REVISION=V13} \
+        "V13_STAGE_MODE=$tie_mode" \
+        {VIA_OVERLAP_SHELF_LENGTH_UM=0.385} \
+        {VIA_OVERLAP_SHELF_WIDTH_UM=0.23} \
+        {VIA_OVERLAP_SHELF_START=385.175 328.305} \
+        {VIA_OVERLAP_SHELF_FINISH=385.560 328.305} \
+        {PREDICTED_NEW_WIRE_BOX=385.175 328.190 385.560 328.420} \
+        {EXPECTED_CANONICAL_WIRE_POINTS=385.290 328.305 385.445 328.305} \
+        {EXPECTED_CANONICAL_WIRE_LENGTH_UM=0.155} \
+        {V12_VIA_OVERLAP_SHELF_DISPOSITION=REJECTED_FE_RC_5_0_SPACING} \
+        {V12_OBSERVED_BLOCKAGE_SPACING_UM=0.215} \
+        {PREDICTED_BLOCKAGE_SPACING_UM=0.240} \
+        {PREDICTED_BLOCKAGE_SPACING_MARGIN_UM=0.010} \
+        {PREDICTED_CONNECTED_AREA_UM2=0.211450} \
+        {WIRE_READBACK_POLICY=EXACT_BOX_AND_CANONICAL_CENTERLINE} \
+        {N57556_VIA_OVERLAP_SHELF_SHAPE_QUERY_POLICY=NOT_QUERIED_UNSUPPORTED_WIRE_ATTRIBUTE} \
+        {N57556_VIA_OVERLAP_SHELF_EXPECTED_CANONICAL_POINTS=385.290 328.305 385.445 328.305} \
+        {N57556_VIA_OVERLAP_SHELF_EXPECTED_CANONICAL_LENGTH_UM=0.155} \
+        {N57556_VIA_OVERLAP_SHELF_NEW_LENGTH_UM=0.155} \
+        {N57556_VIA_OVERLAP_SHELF_NEW_POINTS=385.290 328.305 385.445 328.305} \
+        {N57556_VIA_OVERLAP_SHELF_CANONICAL_POINTS_MATCH_STATUS=PASS} \
+        {N57556_VIA_OVERLAP_SHELF_CANONICAL_LENGTH_MATCH_STATUS=PASS} \
+        {N57556_VIA_OVERLAP_SHELF_BOX_MATCH_STATUS=PASS} \
+        {N57556_VIA_OVERLAP_SHELF_STATUS=PASS} \
+        {FIXED_WIRE_SHELF_STATUS=PASS} \
+        {TARGET_WIRE_COUNT_DELTA=1} \
+        {TARGET_NEW_WIRE_COUNT=1} \
+        {TARGET_WIRE_HANDLE_STATUS=ONE_EXACT_ADDITION} \
+        {TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED} \
+        {RESERVED_FILL_OBJECT_STATUS=UNCHANGED} \
+        {TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED} \
+        {POST_MINAREA_MARKER_COUNT=0} \
+        {MANUAL_ECO_STATUS=PASS}] {
+        if {[string first $expected $tie_text] < 0} {
+            error "minimum-area V13 $tie_mode report is missing $expected"
+        }
+    }
+    set route_start_count 0
+    set route_commit_count 0
+    foreach call $::mptdc_test_manual_command_calls {
+        if {[lindex $call 0] eq "editAddRoute"} {
+            incr route_start_count
+        }
+        if {[lindex $call 0] eq "editCommitRoute"} {
+            incr route_commit_count
+        }
+        if {[lindex $call 0] in {editDelete editAddVia ecoRoute routeDesign globalDetailRoute detailRoute createRouteBlk editPowerVia}} {
+            error "minimum-area V13 $tie_mode invoked a prohibited command: $call"
+        }
+    }
+    if {$route_start_count != 1 || $route_commit_count != 1} {
+        error "minimum-area V13 $tie_mode did not issue one bounded shelf edit"
+    }
+}
+
+set ::mptdc_test_manual_wires [list \
+    [dict create net u_core_n_57556 layer MET1 \
+        box {385.06 328.29 385.75 328.52} width 0.23 \
+        points {{385.56 328.405} {385.175 328.405}} \
+        status fixed shape 0x0 length 0.385 beginExt 0.115 endExt 0.0]]
+set ::mptdc_test_manual_command_calls {}
+set v13_reject_report [file join $::mptdc_test_report_dir v13_readback_reject.rpt]
+set fh [open $v13_reject_report w]
+set v13_reject_rc [catch {
+    mptdc_ckpt_manual_add_via_overlap_shelf_v13 \
+        $fh N57556_VIA_OVERLAP_SHELF u_core_n_57556 \
+        {385.06 328.29 385.75 328.52} {385.56 328.44} 0.385
+} v13_reject_error]
+close $fh
+if {!$v13_reject_rc ||
+    [string first {materialized an unexpected regular-wire object} \
+        $v13_reject_error] < 0} {
+    error "minimum-area V13 accepted noncanonical readback: $v13_reject_error"
 }
 
 set ::mptdc_test_manual_vias [list \

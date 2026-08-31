@@ -1521,10 +1521,9 @@ proc mptdc_ckpt_manual_find_canonical_via_side_stub {
         set layer [dict get $row layer]
         set width [dict get $row width]
         set status UNKNOWN
-        set shape UNKNOWN
         set length UNKNOWN
         set attribute_failed 0
-        foreach attribute {status shape length} {
+        foreach attribute {status length} {
             if {[catch {set value [lindex [dbGet ${handle}.${attribute}] 0]}]} {
                 set attribute_failed 1
             } else {
@@ -1543,12 +1542,10 @@ proc mptdc_ckpt_manual_find_canonical_via_side_stub {
         puts $fh "${row_label}_HANDLE=$handle"
         puts $fh "${row_label}_BOX=$box"
         puts $fh "${row_label}_STATUS=$status"
-        puts $fh "${row_label}_SHAPE=$shape"
         puts $fh "${row_label}_WIDTH=$width"
         puts $fh "${row_label}_LENGTH=$length"
         puts $fh "${row_label}_POINTS=[dict get $row pts]"
         if {$attribute_failed || ![string equal -nocase $status fixed] ||
-            $shape ne "0x0" ||
             ![mptdc_ckpt_manual_close $width 0.23] ||
             ![mptdc_ckpt_manual_close $length 0.385]} {
             continue
@@ -1589,6 +1586,7 @@ proc mptdc_ckpt_manual_find_canonical_via_side_stub {
     }
 
     puts $fh "${label}_WIRE_COUNT=$wire_count"
+    puts $fh "${label}_SHAPE_QUERY_POLICY=NOT_QUERIED_UNSUPPORTED_WIRE_ATTRIBUTE"
     puts $fh "${label}_LOCAL_WIRE_COUNT=$local_wire_count"
     puts $fh "${label}_ATTRIBUTE_FAIL_COUNT=$attribute_fail_count"
     puts $fh "${label}_CANDIDATE_COUNT=[llength $candidates]"
@@ -1621,7 +1619,7 @@ proc mptdc_ckpt_manual_wire_inventory {net} {
     foreach row [mptdc_ckpt_manual_wire_rows $net] {
         set handle [dict get $row handle]
         set signature [dict remove $row handle]
-        foreach attribute {status shape length beginExt endExt} {
+        foreach attribute {status length beginExt endExt} {
             set value QUERY_FAILED
             if {![catch {set value [lindex [dbGet ${handle}.${attribute}] 0]}]} {
                 # Keep the scalar readback returned by the installed DB schema.
@@ -1635,7 +1633,8 @@ proc mptdc_ckpt_manual_wire_inventory {net} {
 
 proc mptdc_ckpt_manual_add_free_end_tail {
         fh label net marker_box via_point tail_length direction \
-        expected_start expected_finish expected_box} {
+        expected_start expected_finish expected_box \
+        {expected_canonical_points {}} {expected_canonical_length {}}} {
     if {![string is double -strict $tail_length] || $tail_length <= 0} {
         error "$label requires a positive numeric tail length"
     }
@@ -1673,12 +1672,31 @@ proc mptdc_ckpt_manual_add_free_end_tail {
         ![mptdc_ckpt_manual_point_equal $finish $expected_finish]} {
         error "$label rejected derived tail $start -> $finish"
     }
+    if {$expected_canonical_points eq {}} {
+        set expected_canonical_points [concat $expected_start $expected_finish]
+    } else {
+        set expected_canonical_points \
+            [mptdc_ckpt_manual_flat_values $expected_canonical_points]
+    }
+    if {[llength $expected_canonical_points] != 4} {
+        error "$label requires exactly two canonical readback points"
+    }
+    if {$expected_canonical_length eq {}} {
+        set expected_canonical_length $tail_length
+    }
+    if {![string is double -strict $expected_canonical_length] ||
+        $expected_canonical_length <= 0} {
+        error "$label requires a positive canonical readback length"
+    }
 
     set pre [mptdc_ckpt_manual_wire_inventory $net]
     set pre_handles [lsort [dict keys $pre]]
     puts $fh "${label}_START=$start"
     puts $fh "${label}_FINISH=$finish"
     puts $fh "${label}_EXPECTED_BOX=$expected_box"
+    puts $fh "${label}_EXPECTED_CANONICAL_POINTS=$expected_canonical_points"
+    puts $fh "${label}_EXPECTED_CANONICAL_LENGTH_UM=$expected_canonical_length"
+    puts $fh "${label}_SHAPE_QUERY_POLICY=NOT_QUERIED_UNSUPPORTED_WIRE_ATTRIBUTE"
     puts $fh "${label}_LENGTH_UM=$tail_length"
     puts $fh "${label}_DIRECTION=$direction"
     puts $fh "${label}_PRE_COUNT=[llength $pre_handles]"
@@ -1744,12 +1762,13 @@ proc mptdc_ckpt_manual_add_free_end_tail {
     set layer [dict get $new_row layer]
     set width [dict get $new_row width]
     set status [string tolower [dict get $new_row status]]
-    set shape [dict get $new_row shape]
     set length [dict get $new_row length]
     set points [mptdc_ckpt_manual_flat_values [dict get $new_row pts]]
     set box [dict get $new_row box]
-    set expected_points [concat $expected_start $expected_finish]
-    set reverse_points [concat $expected_finish $expected_start]
+    set expected_points $expected_canonical_points
+    set reverse_points [concat \
+        [lrange $expected_canonical_points 2 3] \
+        [lrange $expected_canonical_points 0 1]]
     set points_match 1
     if {[llength $points] != 4} {
         set points_match 0
@@ -1783,21 +1802,25 @@ proc mptdc_ckpt_manual_add_free_end_tail {
         }]
     }
     set box_match [mptdc_ckpt_manual_box_equal $box $expected_box]
+    set length_match [expr {
+        [string is double -strict $length] &&
+        [mptdc_ckpt_manual_close $length $expected_canonical_length]
+    }]
     puts $fh "${label}_NEW_HANDLE=$new_handle"
     puts $fh "${label}_NEW_LAYER=$layer"
     puts $fh "${label}_NEW_WIDTH=$width"
     puts $fh "${label}_NEW_STATUS=$status"
-    puts $fh "${label}_NEW_SHAPE=$shape"
     puts $fh "${label}_NEW_LENGTH_UM=$length"
     puts $fh "${label}_NEW_POINTS=$points"
     puts $fh "${label}_NEW_BOX=$box"
     puts $fh "${label}_POINTS_MATCH_STATUS=[expr {$points_match ? "PASS" : "FAIL"}]"
+    puts $fh "${label}_CANONICAL_POINTS_MATCH_STATUS=[expr {$points_match ? "PASS" : "FAIL"}]"
+    puts $fh "${label}_CANONICAL_LENGTH_MATCH_STATUS=[expr {$length_match ? "PASS" : "FAIL"}]"
     puts $fh "${label}_BOX_MATCH_STATUS=[expr {$box_match ? "PASS" : "FAIL"}]"
     puts $fh "${label}_LOCAL_BOX_STATUS=[expr {$box_is_local ? "PASS" : "FAIL"}]"
     if {$layer ne "MET1" || ![string is double -strict $width] ||
         ![mptdc_ckpt_manual_close $width 0.23] || $status ne "fixed" ||
-        $shape ne "0x0" || ![string is double -strict $length] ||
-        ![mptdc_ckpt_manual_close $length $tail_length] ||
+        !$length_match ||
         !$points_match || !$box_match || !$box_is_local} {
         puts $fh "${label}_STATUS=FAIL"
         error "$label materialized an unexpected regular-wire object"
@@ -1808,6 +1831,7 @@ proc mptdc_ckpt_manual_add_free_end_tail {
         pre_count [llength $pre_handles] post_count [llength $post_handles] \
         count_delta $count_delta new_handle $new_handle new_count 1 \
         start $start finish $finish length $tail_length direction $direction \
+        canonical_points $points canonical_length $length \
         box $box box_match_status PASS]
 }
 
@@ -1833,6 +1857,15 @@ proc mptdc_ckpt_manual_add_via_overlap_shelf_v12 {
         $fh $label $net $marker_box $via_point $shelf_length \
         HORIZONTAL_SHELF {385.175 328.280} {385.560 328.280} \
         {385.175 328.165 385.560 328.395}]
+}
+
+proc mptdc_ckpt_manual_add_via_overlap_shelf_v13 {
+        fh label net marker_box via_point shelf_length} {
+    return [mptdc_ckpt_manual_add_free_end_tail \
+        $fh $label $net $marker_box $via_point $shelf_length \
+        HORIZONTAL_SHELF {385.175 328.305} {385.560 328.305} \
+        {385.175 328.190 385.560 328.420} \
+        {385.290 328.305 385.445 328.305} 0.155]
 }
 
 proc mptdc_ckpt_manual_extend_canonical_stub_v8 {
@@ -2192,10 +2225,10 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     if {$mode ni {trial replay tie1_trial tie1_replay}} {
         error "minimum-area endpoint-extension mode must be trial, replay, tie1_trial, or tie1_replay"
     }
-    if {$revision ni {V8 V9 V10 V11 V12}} {
-        error "minimum-area endpoint-extension revision must be V8, V9, V10, V11, or V12"
+    if {$revision ni {V8 V9 V10 V11 V12 V13}} {
+        error "minimum-area endpoint-extension revision must be V8, V9, V10, V11, V12, or V13"
     }
-    if {$revision in {V9 V10 V11 V12} && $mode ni {tie1_trial tie1_replay}} {
+    if {$revision in {V9 V10 V11 V12 V13} && $mode ni {tie1_trial tie1_replay}} {
         error "minimum-area $revision is restricted to tie1 trial and replay"
     }
     set revision_lower [string tolower $revision]
@@ -2208,7 +2241,10 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     }
     set report [file join $report_dir $report_name]
     set fh [open $report w]
-    if {$revision eq "V12"} {
+    if {$revision eq "V13"} {
+        puts $fh "# MPTDC Canonical Fixed-Wire Via-Overlap Shelf Clearance V13"
+        puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_VIA_OVERLAP_SHELF_CLEARANCE_V13"
+    } elseif {$revision eq "V12"} {
         puts $fh "# MPTDC Canonical Fixed-Wire Via-Overlap Shelf V12"
         puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_VIA_OVERLAP_SHELF_V12"
     } elseif {$revision eq "V11"} {
@@ -2226,7 +2262,26 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     puts $fh "TARGET_NET=u_core_n_57556"
     puts $fh "TARGET_MARKER=MET1_MINIMUM_AREA_0.1777_OF_0.202"
     puts $fh "CANONICAL_STUB_PROFILE=FIXED_MET1_WIDTH_0.23_LENGTH_0.385"
-    if {$revision eq "V12"} {
+    if {$revision eq "V13"} {
+        puts $fh "VIA_OVERLAP_SHELF_LENGTH_UM=0.385"
+        puts $fh "VIA_OVERLAP_SHELF_WIDTH_UM=0.23"
+        puts $fh "VIA_OVERLAP_SHELF_DIRECTION=HORIZONTAL_RIGHT"
+        puts $fh "VIA_OVERLAP_SHELF_START=385.175 328.305"
+        puts $fh "VIA_OVERLAP_SHELF_FINISH=385.560 328.305"
+        puts $fh "PREDICTED_NEW_WIRE_BOX=385.175 328.190 385.560 328.420"
+        puts $fh "EXPECTED_CANONICAL_WIRE_POINTS=385.290 328.305 385.445 328.305"
+        puts $fh "EXPECTED_CANONICAL_WIRE_LENGTH_UM=0.155"
+        puts $fh "V12_VIA_OVERLAP_SHELF_DISPOSITION=REJECTED_FE_RC_5_0_SPACING"
+        puts $fh "V12_OBSERVED_NEW_WIRE_BOX=385.175 328.165 385.560 328.395"
+        puts $fh "V12_OBSERVED_BLOCKAGE_SPACING_UM=0.215"
+        puts $fh "V12_REQUIRED_BLOCKAGE_SPACING_UM=0.230"
+        puts $fh "PREDICTED_BLOCKAGE_SPACING_UM=0.240"
+        puts $fh "PREDICTED_BLOCKAGE_SPACING_MARGIN_UM=0.010"
+        puts $fh "PREDICTED_CONNECTED_AREA_UM2=0.211450"
+        puts $fh "WIRE_READBACK_POLICY=EXACT_BOX_AND_CANONICAL_CENTERLINE"
+        puts $fh "ATTRIBUTE_EDIT_POLICY=NO_DB_ATTRIBUTE_EDITS"
+        puts $fh "GEOMETRY_EDIT_POLICY=ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_VIA_OVERLAP_SHELF"
+    } elseif {$revision eq "V12"} {
         puts $fh "VIA_OVERLAP_SHELF_LENGTH_UM=0.385"
         puts $fh "VIA_OVERLAP_SHELF_WIDTH_UM=0.23"
         puts $fh "VIA_OVERLAP_SHELF_DIRECTION=HORIZONTAL_RIGHT"
@@ -2325,8 +2380,15 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
         set reserved_swire_pre [mptdc_ckpt_manual_net_route_handles \
             _SADP_FILLS_RESERVED sWires]
 
-        if {$revision in {V10 V11 V12}} {
-            if {$revision eq "V12"} {
+        if {$revision in {V10 V11 V12 V13}} {
+            if {$revision eq "V13"} {
+                set bounded_wire [mptdc_ckpt_manual_add_via_overlap_shelf_v13 \
+                    $fh N57556_VIA_OVERLAP_SHELF u_core_n_57556 \
+                    {385.06 328.29 385.75 328.52} {385.56 328.44} 0.385]
+                puts $fh "FIXED_WIRE_SHELF_STATUS=[dict get $bounded_wire status]"
+                puts $fh "FIXED_WIRE_SHELF_EFFECT_STATUS=PASS"
+                puts $fh "FIXED_WIRE_SHELF_BOX_STATUS=[dict get $bounded_wire box_match_status]"
+            } elseif {$revision eq "V12"} {
                 set bounded_wire [mptdc_ckpt_manual_add_via_overlap_shelf_v12 \
                     $fh N57556_VIA_OVERLAP_SHELF u_core_n_57556 \
                     {385.06 328.29 385.75 328.52} {385.56 328.44} 0.385]
@@ -2373,7 +2435,7 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
         set reserved_swire_post [mptdc_ckpt_manual_net_route_handles \
             _SADP_FILLS_RESERVED sWires]
 
-        if {$revision in {V10 V11 V12}} {
+        if {$revision in {V10 V11 V12 V13}} {
             if {[dict get $bounded_wire pre_handles] ne $target_wire_pre ||
                 [dict get $bounded_wire post_handles] ne $target_wire_post ||
                 [llength $target_wire_post] != ([llength $target_wire_pre] + 1)} {
@@ -2487,6 +2549,14 @@ proc mptdc_ckpt_tie1_minarea_endext_trial_v12 {} {
 
 proc mptdc_ckpt_tie1_minarea_endext_replay_v12 {} {
     return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay V12]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_trial_v13 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial V13]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_replay_v13 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay V13]
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
