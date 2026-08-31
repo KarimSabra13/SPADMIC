@@ -1,0 +1,12 @@
+# MPTDC Route Checkpoint Repair Wrapper
+date: 2026-08-31T17:15:07+02:00
+repo: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+branch: SPADMIC_test
+head: 03b8a99b7bbc8b20a8b01ff0811b15709e3e9990
+run_id: 20260831_171507_mptdc_tie1_minarea_viaoverlap_v12_trial
+result_dir: /sim/ksabra/SPADMIC_work/innovus/20260831_171507_mptdc_tie1_minarea_viaoverlap_v12_trial
+source_checkpoint: /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/checkpoints/repaired_route.enc.dat
+commands_file: /sim/ksabra/SPADMIC_work/innovus/20260831_171507_mptdc_tie1_minarea_viaoverlap_v12_trial/manifests/tie1_closure.commands.tcl
+top_cell: mptdc_axis_core
+
+git status --short --untracked-files=no:

@@ -1,0 +1,25 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_tie1_minarea_endext_trial_v12
+REPORT_STATUS=FAILED
+ERROR=N57556_VIA_OVERLAP_SHELF materialized an unexpected regular-wire object
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N57556_VIA_OVERLAP_SHELF materialized an unexpected regular-wire object
+    while executing
+"error "$label materialized an unexpected regular-wire object""
+    (procedure "mptdc_ckpt_manual_add_free_end_tail" line 143)
+    invoked from within
+"mptdc_ckpt_manual_add_free_end_tail  $fh $label $net $marker_box $via_point $shelf_length  HORIZONTAL_SHELF {385.175 328.280} {385.560 328.280}  {385...."
+    (procedure "mptdc_ckpt_manual_add_via_overlap_shelf_v12" line 2)
+    invoked from within
+"mptdc_ckpt_manual_add_via_overlap_shelf_v12  $fh N57556_VIA_OVERLAP_SHELF u_core_n_57556  {385.06 328.29 385.75 328.52} {385.56 328.44} 0.385"
+    (procedure "mptdc_ckpt_manual_minarea_endext_v8_impl" line 124)
+    invoked from within
+"mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial V12"
+    (procedure "mptdc_ckpt_tie1_minarea_endext_trial_v12" line 2)
+    invoked from within
+"mptdc_ckpt_tie1_minarea_endext_trial_v12"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
