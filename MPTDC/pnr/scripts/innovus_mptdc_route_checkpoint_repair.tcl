@@ -1616,6 +1616,170 @@ proc mptdc_ckpt_manual_wire_handles {net} {
     return [lsort $handles]
 }
 
+proc mptdc_ckpt_manual_wire_inventory {net} {
+    set inventory {}
+    foreach row [mptdc_ckpt_manual_wire_rows $net] {
+        set handle [dict get $row handle]
+        set signature [dict remove $row handle]
+        foreach attribute {status shape length beginExt endExt} {
+            set value QUERY_FAILED
+            if {![catch {set value [lindex [dbGet ${handle}.${attribute}] 0]}]} {
+                # Keep the scalar readback returned by the installed DB schema.
+            }
+            dict set signature $attribute $value
+        }
+        dict set inventory $handle $signature
+    }
+    return $inventory
+}
+
+proc mptdc_ckpt_manual_add_free_end_tail_v10 {
+        fh label net marker_box via_point tail_length} {
+    if {![string is double -strict $tail_length] || $tail_length <= 0} {
+        error "$label requires a positive numeric tail length"
+    }
+
+    set candidate [mptdc_ckpt_manual_find_canonical_via_side_stub \
+        $fh ${label}_CANONICAL_STUB $net $marker_box $via_point -1]
+    set start [dict get $candidate far]
+    lassign $start start_x start_y
+    set finish [list [expr {double($start_x) - double($tail_length)}] $start_y]
+    set expected_start {385.175 328.405}
+    set expected_finish {385.035 328.405}
+    if {![mptdc_ckpt_manual_point_equal $start $expected_start] ||
+        ![mptdc_ckpt_manual_point_equal $finish $expected_finish]} {
+        error "$label rejected derived tail $start -> $finish"
+    }
+
+    set pre [mptdc_ckpt_manual_wire_inventory $net]
+    set pre_handles [lsort [dict keys $pre]]
+    puts $fh "${label}_START=$start"
+    puts $fh "${label}_FINISH=$finish"
+    puts $fh "${label}_LENGTH_UM=$tail_length"
+    puts $fh "${label}_PRE_COUNT=[llength $pre_handles]"
+
+    set setup [list setEditMode \
+        -nets $net \
+        -type regular \
+        -shape None \
+        -layer_horizontal MET1 \
+        -layer_vertical MET1 \
+        -width_horizontal 0.23 \
+        -width_vertical 0.23 \
+        -status fixed \
+        -snap false \
+        -reshape false \
+        -create_crossover_vias false \
+        -create_via_on_pin false \
+        -via_auto_replace false \
+        -drc_on true \
+        -stop_at_drc false]
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_EDIT_MODE" $setup
+    mptdc_ckpt_manual_log_command $fh "${label}_SET_TOOL" {uiSetTool addWire}
+    mptdc_ckpt_manual_log_command $fh "${label}_ADD_ROUTE" \
+        [list editAddRoute {*}$start]
+    mptdc_ckpt_manual_log_command $fh "${label}_COMMIT_ROUTE" \
+        [list editCommitRoute {*}$finish]
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+
+    set post [mptdc_ckpt_manual_wire_inventory $net]
+    set post_handles [lsort [dict keys $post]]
+    set new_handles {}
+    set changed_pre_handles {}
+    foreach handle $pre_handles {
+        if {![dict exists $post $handle]} {
+            lappend changed_pre_handles "${handle}:MISSING"
+        } elseif {[dict get $pre $handle] ne [dict get $post $handle]} {
+            lappend changed_pre_handles "${handle}:CHANGED"
+        }
+    }
+    foreach handle $post_handles {
+        if {![dict exists $pre $handle]} {
+            lappend new_handles $handle
+        }
+    }
+    set count_delta [expr {[llength $post_handles] - [llength $pre_handles]}]
+    puts $fh "${label}_POST_COUNT=[llength $post_handles]"
+    puts $fh "${label}_COUNT_DELTA=$count_delta"
+    puts $fh "${label}_NEW_COUNT=[llength $new_handles]"
+    puts $fh "${label}_CHANGED_PREEXISTING_HANDLES=[expr {
+        [llength $changed_pre_handles] ? $changed_pre_handles : "NONE"
+    }]"
+    if {$count_delta != 1 || [llength $new_handles] != 1 ||
+        [llength $changed_pre_handles] != 0} {
+        puts $fh "${label}_PREEXISTING_WIRE_STATUS=FAIL"
+        puts $fh "${label}_STATUS=FAIL"
+        error "$label did not create exactly one new wire while preserving every pre-existing wire"
+    }
+    puts $fh "${label}_PREEXISTING_WIRE_STATUS=PRESERVED"
+
+    set new_handle [lindex $new_handles 0]
+    set new_row [dict get $post $new_handle]
+    set layer [dict get $new_row layer]
+    set width [dict get $new_row width]
+    set status [string tolower [dict get $new_row status]]
+    set shape [dict get $new_row shape]
+    set length [dict get $new_row length]
+    set points [mptdc_ckpt_manual_flat_values [dict get $new_row pts]]
+    set box [dict get $new_row box]
+    set expected_points [concat $expected_start $expected_finish]
+    set reverse_points [concat $expected_finish $expected_start]
+    set points_match 1
+    if {[llength $points] != 4} {
+        set points_match 0
+    } else {
+        set forward_match 1
+        set reverse_match 1
+        foreach actual $points expected $expected_points {
+            if {![mptdc_ckpt_manual_close $actual $expected]} {
+                set forward_match 0
+            }
+        }
+        foreach actual $points expected $reverse_points {
+            if {![mptdc_ckpt_manual_close $actual $expected]} {
+                set reverse_match 0
+            }
+        }
+        set points_match [expr {$forward_match || $reverse_match}]
+    }
+    set box_is_local 0
+    if {[mptdc_signoff_box_valid $box]} {
+        lassign $box llx lly urx ury
+        set midpoint_x [expr {($start_x + [lindex $finish 0]) / 2.0}]
+        set box_is_local [expr {
+            $llx >= 384.75 && $urx <= 385.45 &&
+            $lly >= 328.10 && $ury <= 328.70 &&
+            $midpoint_x >= $llx && $midpoint_x <= $urx &&
+            $start_y >= $lly && $start_y <= $ury
+        }]
+    }
+    puts $fh "${label}_NEW_HANDLE=$new_handle"
+    puts $fh "${label}_NEW_LAYER=$layer"
+    puts $fh "${label}_NEW_WIDTH=$width"
+    puts $fh "${label}_NEW_STATUS=$status"
+    puts $fh "${label}_NEW_SHAPE=$shape"
+    puts $fh "${label}_NEW_LENGTH_UM=$length"
+    puts $fh "${label}_NEW_POINTS=$points"
+    puts $fh "${label}_NEW_BOX=$box"
+    puts $fh "${label}_POINTS_MATCH_STATUS=[expr {$points_match ? "PASS" : "FAIL"}]"
+    puts $fh "${label}_LOCAL_BOX_STATUS=[expr {$box_is_local ? "PASS" : "FAIL"}]"
+    if {$layer ne "MET1" || ![string is double -strict $width] ||
+        ![mptdc_ckpt_manual_close $width 0.23] || $status ne "fixed" ||
+        $shape ne "0x0" || ![string is double -strict $length] ||
+        ![mptdc_ckpt_manual_close $length $tail_length] ||
+        !$points_match || !$box_is_local} {
+        puts $fh "${label}_STATUS=FAIL"
+        error "$label materialized an unexpected regular-wire object"
+    }
+    puts $fh "${label}_STATUS=PASS"
+    return [dict create \
+        status PASS pre_handles $pre_handles post_handles $post_handles \
+        pre_count [llength $pre_handles] post_count [llength $post_handles] \
+        count_delta $count_delta new_handle $new_handle new_count 1 \
+        start $start finish $finish length $tail_length]
+}
+
 proc mptdc_ckpt_manual_extend_canonical_stub_v8 {
         fh label net marker_box via_point extension_delta} {
     if {![string is double -strict $extension_delta] || $extension_delta <= 0} {
@@ -1973,11 +2137,11 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     if {$mode ni {trial replay tie1_trial tie1_replay}} {
         error "minimum-area endpoint-extension mode must be trial, replay, tie1_trial, or tie1_replay"
     }
-    if {$revision ni {V8 V9}} {
-        error "minimum-area endpoint-extension revision must be V8 or V9"
+    if {$revision ni {V8 V9 V10}} {
+        error "minimum-area endpoint-extension revision must be V8, V9, or V10"
     }
-    if {$revision eq "V9" && $mode ni {tie1_trial tie1_replay}} {
-        error "minimum-area V9 is restricted to tie1 trial and replay"
+    if {$revision in {V9 V10} && $mode ni {tie1_trial tie1_replay}} {
+        error "minimum-area $revision is restricted to tie1 trial and replay"
     }
     set revision_lower [string tolower $revision]
     set report_dir [mptdc_signoff_report_dir]
@@ -1989,20 +2153,33 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     }
     set report [file join $report_dir $report_name]
     set fh [open $report w]
-    puts $fh "# MPTDC Canonical Fixed-Wire Free-End Extension $revision"
-    puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_$revision"
+    if {$revision eq "V10"} {
+        puts $fh "# MPTDC Canonical Fixed-Wire Free-End Regular Tail V10"
+        puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_REGULAR_TAIL_V10"
+    } else {
+        puts $fh "# MPTDC Canonical Fixed-Wire Free-End Extension $revision"
+        puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_$revision"
+    }
     puts $fh "REPAIR_REVISION=$revision"
     puts $fh "${revision}_STAGE_MODE=$mode"
     puts $fh "TARGET_NET=u_core_n_57556"
     puts $fh "TARGET_MARKER=MET1_MINIMUM_AREA_0.1777_OF_0.202"
     puts $fh "CANONICAL_STUB_PROFILE=FIXED_MET1_WIDTH_0.23_LENGTH_0.385"
-    puts $fh "FREE_END_EXTENSION_DELTA_UM=0.14"
-    puts $fh "ATTRIBUTE_EDIT_POLICY=ONLY_CANONICAL_STUB_BEGINEXT_OR_ENDEXT"
+    if {$revision eq "V10"} {
+        puts $fh "FREE_END_TAIL_LENGTH_UM=0.14"
+        puts $fh "FREE_END_TAIL_START=385.175 328.405"
+        puts $fh "FREE_END_TAIL_FINISH=385.035 328.405"
+        puts $fh "ATTRIBUTE_EDIT_POLICY=NO_DB_ATTRIBUTE_EDITS"
+        puts $fh "GEOMETRY_EDIT_POLICY=ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_TAIL"
+    } else {
+        puts $fh "FREE_END_EXTENSION_DELTA_UM=0.14"
+        puts $fh "ATTRIBUTE_EDIT_POLICY=ONLY_CANONICAL_STUB_BEGINEXT_OR_ENDEXT"
+    }
     puts $fh "VIA_EDIT_POLICY=NO_VIAS_MODIFIED"
     puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
-    set expected_stale_count [expr {$revision eq "V9" ? 1 : 0}]
+    set expected_stale_count [expr {$revision eq "V8" ? 0 : 1}]
     puts $fh "MARKER_RECONCILIATION_POLICY=FRESH_DRC_CLASS_COUNTS_WITH_EXACT_STALE_COUNT"
     puts $fh "EXPECTED_STALE_GEOMETRY_MARKER_COUNT=$expected_stale_count"
 
@@ -2064,15 +2241,26 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
         set reserved_swire_pre [mptdc_ckpt_manual_net_route_handles \
             _SADP_FILLS_RESERVED sWires]
 
-        set extension [mptdc_ckpt_manual_extend_canonical_stub_v8 \
-            $fh N57556_END_EXT u_core_n_57556 \
-            {385.06 328.29 385.75 328.52} {385.56 328.44} 0.14]
-        puts $fh "FIXED_WIRE_EXTENSION_STATUS=[dict get $extension status]"
-        puts $fh "FIXED_WIRE_EXTENSION_METHOD=[dict get $extension edit_method]"
-        puts $fh "FIXED_WIRE_EXTENSION_ATTRIBUTE=[dict get $extension free_attribute]"
-        puts $fh "FIXED_WIRE_EXTENSION_PRE_UM=[dict get $extension free_pre]"
-        puts $fh "FIXED_WIRE_EXTENSION_POST_UM=[dict get $extension free_post]"
-        puts $fh "FIXED_WIRE_EXTENSION_EFFECT_STATUS=PASS"
+        if {$revision eq "V10"} {
+            set tail [mptdc_ckpt_manual_add_free_end_tail_v10 \
+                $fh N57556_FREE_END_TAIL u_core_n_57556 \
+                {385.06 328.29 385.75 328.52} {385.56 328.44} 0.14]
+            puts $fh "FIXED_WIRE_TAIL_STATUS=[dict get $tail status]"
+            puts $fh "FIXED_WIRE_TAIL_EFFECT_STATUS=PASS"
+            puts $fh "TARGET_WIRE_COUNT_DELTA=[dict get $tail count_delta]"
+            puts $fh "TARGET_NEW_WIRE_COUNT=[dict get $tail new_count]"
+            puts $fh "TARGET_PREEXISTING_WIRE_STATUS=PRESERVED"
+        } else {
+            set extension [mptdc_ckpt_manual_extend_canonical_stub_v8 \
+                $fh N57556_END_EXT u_core_n_57556 \
+                {385.06 328.29 385.75 328.52} {385.56 328.44} 0.14]
+            puts $fh "FIXED_WIRE_EXTENSION_STATUS=[dict get $extension status]"
+            puts $fh "FIXED_WIRE_EXTENSION_METHOD=[dict get $extension edit_method]"
+            puts $fh "FIXED_WIRE_EXTENSION_ATTRIBUTE=[dict get $extension free_attribute]"
+            puts $fh "FIXED_WIRE_EXTENSION_PRE_UM=[dict get $extension free_pre]"
+            puts $fh "FIXED_WIRE_EXTENSION_POST_UM=[dict get $extension free_post]"
+            puts $fh "FIXED_WIRE_EXTENSION_EFFECT_STATUS=PASS"
+        }
 
         set target_wire_post [mptdc_ckpt_manual_wire_handles u_core_n_57556]
         set target_pwire_post [mptdc_ckpt_manual_net_route_handles \
@@ -2084,11 +2272,20 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
         set reserved_swire_post [mptdc_ckpt_manual_net_route_handles \
             _SADP_FILLS_RESERVED sWires]
 
-        if {$target_wire_post ne $target_wire_pre} {
+        if {$revision eq "V10"} {
+            if {[dict get $tail pre_handles] ne $target_wire_pre ||
+                [dict get $tail post_handles] ne $target_wire_post ||
+                [llength $target_wire_post] != ([llength $target_wire_pre] + 1)} {
+                puts $fh "TARGET_WIRE_HANDLE_STATUS=FAIL"
+                error "V10 wire-handle audit disagrees with the bounded tail result"
+            }
+            puts $fh "TARGET_WIRE_HANDLE_STATUS=ONE_EXACT_ADDITION"
+        } elseif {$target_wire_post ne $target_wire_pre} {
             puts $fh "TARGET_WIRE_HANDLE_STATUS=FAIL"
             error "$revision changed the target net wire-handle set"
+        } else {
+            puts $fh "TARGET_WIRE_HANDLE_STATUS=UNCHANGED"
         }
-        puts $fh "TARGET_WIRE_HANDLE_STATUS=UNCHANGED"
         if {$target_pwire_post ne $target_pwire_pre ||
             $target_swire_post ne $target_swire_pre} {
             puts $fh "TARGET_OTHER_ROUTE_OBJECT_STATUS=FAIL"
@@ -2165,6 +2362,14 @@ proc mptdc_ckpt_tie1_minarea_endext_trial_v9 {} {
 
 proc mptdc_ckpt_tie1_minarea_endext_replay_v9 {} {
     return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay V9]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_trial_v10 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial V10]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_replay_v10 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay V10]
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
