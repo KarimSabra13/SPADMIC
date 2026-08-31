@@ -1,0 +1,25 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_tie1_minarea_endext_trial_v11
+REPORT_STATUS=FAILED
+ERROR=N57556_FREE_END_TAIL materialized an unexpected regular-wire object
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N57556_FREE_END_TAIL materialized an unexpected regular-wire object
+    while executing
+"error "$label materialized an unexpected regular-wire object""
+    (procedure "mptdc_ckpt_manual_add_free_end_tail" line 131)
+    invoked from within
+"mptdc_ckpt_manual_add_free_end_tail  $fh $label $net $marker_box $via_point $tail_length  VERTICAL_DOWN {385.175 328.405} {385.175 328.155}"
+    (procedure "mptdc_ckpt_manual_add_free_end_tail_v11" line 2)
+    invoked from within
+"mptdc_ckpt_manual_add_free_end_tail_v11  $fh N57556_FREE_END_TAIL u_core_n_57556  {385.06 328.29 385.75 328.52} {385.56 328.44} 0.25"
+    (procedure "mptdc_ckpt_manual_minarea_endext_v8_impl" line 108)
+    invoked from within
+"mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial V11"
+    (procedure "mptdc_ckpt_tie1_minarea_endext_trial_v11" line 2)
+    invoked from within
+"mptdc_ckpt_tie1_minarea_endext_trial_v11"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END

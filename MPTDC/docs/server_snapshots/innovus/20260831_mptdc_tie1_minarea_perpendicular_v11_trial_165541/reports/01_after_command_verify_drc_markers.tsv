@@ -1,0 +1,18 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7f7443fd1430	{364.47 358.235 364.67 358.275}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_69629 & Regular Wire of Net u_core_n_57960 Actual: 0.200000 Required: 0.230000 Type: ParallelRunLength Spacing # 200 230 3 2 : 364.6700 358.2750 365.0100 358.6150 1: 364.1850 357.9500 364.4700 358.2350 1
+2	0x7f746435c9e0	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7f746435ca10	{221.75 201.16 221.75 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7f746435ca40	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+5	0x7f746435ca70	{48.0 201.16 48.0 201.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+6	0x7f746435caa0	{121.16 233.62 121.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+7	0x7f746435cad0	{121.16 648.32 121.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+8	0x7f746435cb00	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+9	0x7f746435cb30	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7f746435cb60	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+11	0x7f746435cb90	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7f746435cbc0	{125.16 233.62 125.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+13	0x7f746435cbf0	{125.16 648.32 125.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+14	0x7f746435cc20	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+15	0x7f746435cc50	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+16	0x7f746435cc80	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+17	0x7f746435ccb0	{385.29 328.265 385.37 328.29}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_57556 Actual: 0.080000 Required: 0.230000 Type: ParallelRunLength Spacing # 80 230 3 2 : 385.0600 328.2650 385.2900 328.2900 1: 385.3700 328.2650 385.6500 328.5450 1     LEF Description:  SPACING 0.230000 
