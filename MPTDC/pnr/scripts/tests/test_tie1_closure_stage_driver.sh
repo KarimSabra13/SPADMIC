@@ -94,20 +94,23 @@ final_unrouted=UNKNOWN
 dangling=15
 if grep -q 'minarea_endext' "$commands"; then
   initial_drc=1
-  if grep -q '_trial_v10' "$commands"; then
-    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_trial_v10.rpt"
+  if grep -q '_trial_v11' "$commands"; then
+    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_trial_v11.rpt"
   else
-    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_replay_v10.rpt"
+    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_replay_v11.rpt"
   fi
   cat > "$manual" <<'RPT'
 MANUAL_ECO_STATUS=PASS
-REPAIR_REVISION=V10
-MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_REGULAR_TAIL_V10
+REPAIR_REVISION=V11
+MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11
 ATTRIBUTE_EDIT_POLICY=NO_DB_ATTRIBUTE_EDITS
-GEOMETRY_EDIT_POLICY=ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_TAIL
+GEOMETRY_EDIT_POLICY=ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_PERPENDICULAR_TAIL
 ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER
+FREE_END_TAIL_DIRECTION=VERTICAL_DOWN
 FREE_END_TAIL_START=385.175 328.405
-FREE_END_TAIL_FINISH=385.035 328.405
+FREE_END_TAIL_FINISH=385.175 328.155
+V10_HORIZONTAL_TAIL_DISPOSITION=REJECTED_MINAREA_AND_FE_RC_5_0_SPACING
+PREDICTED_CONNECTED_AREA_UM2=0.20875
 PRE_MINAREA_MARKER_RECONCILIATION_STATUS=PASS
 PRE_MINAREA_MARKER_FRESH_DRC_TOTAL=1
 PRE_MINAREA_MARKER_GEOMETRY_COUNT=2
@@ -125,7 +128,7 @@ RESERVED_FILL_OBJECT_STATUS=UNCHANGED
 N57556_LANDING_REPRESENTATION_STATUS=UNCHANGED
 TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED
 POST_MINAREA_MARKER_COUNT=0
-FREE_END_TAIL_LENGTH_UM=0.14
+FREE_END_TAIL_LENGTH_UM=0.25
 RPT
 else
   pg="$run_dir/reports/pg_dangling_analysis_status.rpt"
@@ -266,13 +269,17 @@ grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/minarea_trial.stdout"
 grep -qx 'NEXT_STAGE=TIE1_MINAREA_ENDEXT_REPLAY' "$TMP_ROOT/minarea_trial.stdout"
 grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
-grep -qx 'REPAIR_REVISION=V10' \
+grep -qx 'REPAIR_REVISION=V11' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
-grep -qx 'MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_REGULAR_TAIL_V10' \
+grep -qx 'MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'FREE_END_TAIL_DIRECTION=VERTICAL_DOWN' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
 grep -qx 'FREE_END_TAIL_START=385.175 328.405' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
-grep -qx 'FREE_END_TAIL_FINISH=385.035 328.405' \
+grep -qx 'FREE_END_TAIL_FINISH=385.175 328.155' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'PREDICTED_CONNECTED_AREA_UM2=0.20875' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
 grep -qx 'PRE_DRC_MARKER_GEOMETRY_COUNT=2' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
@@ -286,7 +293,7 @@ grep -qx 'FINAL_UNROUTED_NETS_SOURCE=tie1_closure_exact_special_debt_report_rout
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
 grep -qx 'TARGET_WIRE_HANDLE_STATUS=ONE_EXACT_ADDITION' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
-grep -qx 'mptdc_ckpt_tie1_minarea_endext_trial_v10' \
+grep -qx 'mptdc_ckpt_tie1_minarea_endext_trial_v11' \
   "$WORK/$TRIAL_RUN/manifests/tie1_closure.commands.tcl"
 
 REPLAY_RUN=minarea_replay

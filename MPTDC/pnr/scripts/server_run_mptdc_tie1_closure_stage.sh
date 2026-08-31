@@ -25,7 +25,7 @@ Usage:
     --source-tie1-run-id <id> [options]
 
 Stages:
-  tie1-minarea-trial      Add the exact 0.14um same-net MET1 free-end tail.
+  tie1-minarea-trial      Add the exact 0.25um same-net MET1 downward tail.
   tie1-minarea-replay     Replay that edit from the immutable tie1 checkpoint.
   tie1-pg-analyze         Map all special-wire dangling endpoints without edits.
   tie1-pg-delete-trial    Delete only if every endpoint passes full preflight.
@@ -115,13 +115,16 @@ minarea_gate_passes() {
      "$(report_value "$gate" TOOL_RC)" == 0 &&
      "$(report_value "$gate" COMMAND_1_STATUS)" == PASS &&
      "$(report_value "$gate" MANUAL_ECO_STATUS)" == PASS &&
-     "$(report_value "$gate" REPAIR_REVISION)" == V10 &&
-     "$(report_value "$gate" MANUAL_ECO_MODE)" == CANONICAL_FIXED_MET1_FREE_END_REGULAR_TAIL_V10 &&
+     "$(report_value "$gate" REPAIR_REVISION)" == V11 &&
+     "$(report_value "$gate" MANUAL_ECO_MODE)" == CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11 &&
      "$(report_value "$gate" ATTRIBUTE_EDIT_POLICY)" == NO_DB_ATTRIBUTE_EDITS &&
-     "$(report_value "$gate" GEOMETRY_EDIT_POLICY)" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_TAIL &&
+     "$(report_value "$gate" GEOMETRY_EDIT_POLICY)" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_PERPENDICULAR_TAIL &&
      "$(report_value "$gate" ROUTE_OPTIMIZER_POLICY)" == NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER &&
+     "$(report_value "$gate" FREE_END_TAIL_DIRECTION)" == VERTICAL_DOWN &&
      "$(report_value "$gate" FREE_END_TAIL_START)" == "385.175 328.405" &&
-     "$(report_value "$gate" FREE_END_TAIL_FINISH)" == "385.035 328.405" &&
+     "$(report_value "$gate" FREE_END_TAIL_FINISH)" == "385.175 328.155" &&
+     "$(report_value "$gate" V10_HORIZONTAL_TAIL_DISPOSITION)" == REJECTED_MINAREA_AND_FE_RC_5_0_SPACING &&
+     "$(report_value "$gate" PREDICTED_CONNECTED_AREA_UM2)" == 0.20875 &&
      "$(report_value "$gate" PRE_DRC_MARKER_RECONCILIATION_STATUS)" == PASS &&
      "$(report_value "$gate" PRE_DRC_MARKER_FRESH_DRC_TOTAL)" == 1 &&
      "$(report_value "$gate" PRE_DRC_MARKER_GEOMETRY_COUNT)" == 2 &&
@@ -139,7 +142,7 @@ minarea_gate_passes() {
      "$(report_value "$gate" N57556_LANDING_REPRESENTATION_STATUS)" == UNCHANGED &&
      "$(report_value "$gate" TARGET_VIA_FINGERPRINT_STATUS)" == UNCHANGED &&
      "$(report_value "$gate" POST_MINAREA_MARKER_COUNT)" == 0 &&
-     "$(report_value "$gate" FREE_END_TAIL_LENGTH_UM)" == 0.14 &&
+     "$(report_value "$gate" FREE_END_TAIL_LENGTH_UM)" == 0.25 &&
      "$(report_value "$gate" INITIAL_DRC)" == 1 &&
      "$(report_value "$gate" FINAL_DRC)" == 0 &&
      "$(report_value "$gate" FINAL_SHORTS)" == 0 &&
@@ -340,14 +343,14 @@ mkdir -p "$RUN_DIR/manifests" "$RUN_DIR/logs" "$RUN_DIR/reports"
 COMMANDS_FILE="$RUN_DIR/manifests/tie1_closure.commands.tcl"
 case "$STAGE" in
   tie1-minarea-trial)
-    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_trial_v10' > "$COMMANDS_FILE"
-    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_trial_v10.rpt"
+    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_trial_v11' > "$COMMANDS_FILE"
+    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_trial_v11.rpt"
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_minarea_endext_trial.rpt"
     STEP=TIE1_MINAREA_ENDEXT_TRIAL
     ;;
   tie1-minarea-replay)
-    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_replay_v10' > "$COMMANDS_FILE"
-    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_replay_v10.rpt"
+    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_replay_v11' > "$COMMANDS_FILE"
+    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_replay_v11.rpt"
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_minarea_endext_replay.rpt"
     STEP=TIE1_MINAREA_ENDEXT_REPLAY
     ;;
@@ -421,8 +424,11 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
   ATTRIBUTE_EDIT_POLICY="$(report_value "$MANUAL_REPORT" ATTRIBUTE_EDIT_POLICY)"
   GEOMETRY_EDIT_POLICY="$(report_value "$MANUAL_REPORT" GEOMETRY_EDIT_POLICY)"
   ROUTE_OPTIMIZER_POLICY="$(report_value "$MANUAL_REPORT" ROUTE_OPTIMIZER_POLICY)"
+  TAIL_DIRECTION="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_DIRECTION)"
   TAIL_START="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_START)"
   TAIL_FINISH="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_FINISH)"
+  V10_DISPOSITION="$(report_value "$MANUAL_REPORT" V10_HORIZONTAL_TAIL_DISPOSITION)"
+  PREDICTED_CONNECTED_AREA="$(report_value "$MANUAL_REPORT" PREDICTED_CONNECTED_AREA_UM2)"
   PRE_MARKER_RECONCILIATION="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_RECONCILIATION_STATUS)"
   PRE_MARKER_FRESH_TOTAL="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_FRESH_DRC_TOTAL)"
   PRE_MARKER_GEOMETRY_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_GEOMETRY_COUNT)"
@@ -442,12 +448,15 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
   POST_MINAREA_COUNT="$(report_value "$MANUAL_REPORT" POST_MINAREA_MARKER_COUNT)"
   TAIL_LENGTH="$(report_value "$MANUAL_REPORT" FREE_END_TAIL_LENGTH_UM)"
   if [[ "$TOOL_RC" -eq 0 && "$COMMAND_STATUS" == PASS && "$MANUAL_STATUS" == PASS &&
-        "$REPAIR_REVISION" == V10 && "$PRE_MARKER_RECONCILIATION" == PASS &&
-        "$MANUAL_ECO_MODE" == CANONICAL_FIXED_MET1_FREE_END_REGULAR_TAIL_V10 &&
+        "$REPAIR_REVISION" == V11 && "$PRE_MARKER_RECONCILIATION" == PASS &&
+        "$MANUAL_ECO_MODE" == CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11 &&
         "$ATTRIBUTE_EDIT_POLICY" == NO_DB_ATTRIBUTE_EDITS &&
-        "$GEOMETRY_EDIT_POLICY" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_TAIL &&
+        "$GEOMETRY_EDIT_POLICY" == ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_PERPENDICULAR_TAIL &&
         "$ROUTE_OPTIMIZER_POLICY" == NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER &&
-        "$TAIL_START" == "385.175 328.405" && "$TAIL_FINISH" == "385.035 328.405" &&
+        "$TAIL_DIRECTION" == VERTICAL_DOWN &&
+        "$TAIL_START" == "385.175 328.405" && "$TAIL_FINISH" == "385.175 328.155" &&
+        "$V10_DISPOSITION" == REJECTED_MINAREA_AND_FE_RC_5_0_SPACING &&
+        "$PREDICTED_CONNECTED_AREA" == 0.20875 &&
         "$PRE_MARKER_FRESH_TOTAL" == 1 && "$PRE_MARKER_GEOMETRY_COUNT" == 2 &&
         "$PRE_MARKER_LIVE_COUNT" == 1 && "$PRE_MARKER_STALE_COUNT" == 1 &&
         "$PRE_MARKER_UNMAPPED_COUNT" == 0 && "$TAIL_STATUS" == PASS &&
@@ -458,7 +467,7 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
         "$RESERVED_FILL_OBJECT_STATUS" == UNCHANGED &&
         "$LANDING_REPRESENTATION_STATUS" == UNCHANGED &&
         "$TARGET_VIA_FINGERPRINT_STATUS" == UNCHANGED &&
-        "$POST_MINAREA_COUNT" == 0 && "$TAIL_LENGTH" == 0.14 &&
+        "$POST_MINAREA_COUNT" == 0 && "$TAIL_LENGTH" == 0.25 &&
         "$INITIAL_DRC" == 1 && "$FINAL_DRC" == 0 &&
         "$FINAL_SHORTS" == 0 && "$FINAL_REGULAR" == 0 && "$FINAL_SPECIAL" == 1 &&
         "$FINAL_SPECIAL_RAW" == 1 && "$FINAL_SPECIAL_NON_RO" == 0 &&
@@ -482,8 +491,11 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "ATTRIBUTE_EDIT_POLICY=$ATTRIBUTE_EDIT_POLICY"
     echo "GEOMETRY_EDIT_POLICY=$GEOMETRY_EDIT_POLICY"
     echo "ROUTE_OPTIMIZER_POLICY=$ROUTE_OPTIMIZER_POLICY"
+    echo "FREE_END_TAIL_DIRECTION=$TAIL_DIRECTION"
     echo "FREE_END_TAIL_START=$TAIL_START"
     echo "FREE_END_TAIL_FINISH=$TAIL_FINISH"
+    echo "V10_HORIZONTAL_TAIL_DISPOSITION=$V10_DISPOSITION"
+    echo "PREDICTED_CONNECTED_AREA_UM2=$PREDICTED_CONNECTED_AREA"
     echo "PRE_DRC_MARKER_RECONCILIATION_STATUS=$PRE_MARKER_RECONCILIATION"
     echo "PRE_DRC_MARKER_FRESH_DRC_TOTAL=$PRE_MARKER_FRESH_TOTAL"
     echo "PRE_DRC_MARKER_GEOMETRY_COUNT=$PRE_MARKER_GEOMETRY_COUNT"

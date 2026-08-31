@@ -1466,6 +1466,126 @@ foreach tie_mode {tie1_trial tie1_replay} {
     }
 }
 
+foreach tie_mode {tie1_trial tie1_replay} {
+    set ::mptdc_test_manual_vias [list \
+        [dict create net u_core_n_57556 name VIA2_CH1_so point {385.56 330.12} status routed \
+            bot_rects {{{385.42 329.93 386.22 330.31}}} \
+            cut_rects {{{385.43 329.99 385.69 330.25} {385.95 329.99 386.21 330.25}}} \
+            top_rects {{{385.37 329.98 386.27 330.26}}}]]
+    set ::mptdc_test_manual_wires [list \
+        [dict create net u_core_n_57556 layer MET1 \
+            box {385.06 328.29 385.75 328.52} width 0.23 \
+            points {{385.56 328.405} {385.175 328.405}} \
+            status fixed shape 0x0 length 0.385 beginExt 0.115 endExt 0.0]]
+    set ::mptdc_test_manual_pwires [list \
+        [dict create net u_core_n_57556 layer MET1 box {380 320 381 321} \
+            width 0.23 points {{380 320} {381 320}} status fixed] \
+        [dict create net _SADP_FILLS_RESERVED layer MET1 box {10 10 11 11} \
+            width 0.23 points {{10 10} {11 10}} status fixed]]
+    set ::mptdc_test_manual_swires [list \
+        [dict create net u_core_n_57556] \
+        [dict create net _SADP_FILLS_RESERVED]]
+    set ::mptdc_test_manual_command_calls {}
+    set ::mptdc_test_set_db_calls {}
+    set ::mptdc_test_manual_verify_count 0
+    set ::mptdc_test_manual_snapshot_tuples [dict create \
+        minarea_v11_${tie_mode}_pre \
+            [list 1 0 0 $minarea_01777_with_stale_marker] \
+        minarea_v11_${tie_mode}_post {0 0 0}]
+    if {$tie_mode eq "tie1_trial"} {
+        set tie_result [mptdc_ckpt_tie1_minarea_endext_trial_v11]
+    } else {
+        set tie_result [mptdc_ckpt_tie1_minarea_endext_replay_v11]
+    }
+    if {[dict get $tie_result status] ne "PASS" ||
+        [dict get $tie_result mode] ne $tie_mode ||
+        ![file exists [dict get $tie_result report]]} {
+        error "minimum-area V11 $tie_mode entry point did not pass: $tie_result"
+    }
+    if {$::mptdc_test_manual_verify_count != 2 ||
+        [llength $::mptdc_test_manual_wires] != 2 ||
+        [llength $::mptdc_test_set_db_calls] != 0} {
+        error "minimum-area V11 $tie_mode changed an unexpected object"
+    }
+    set new_wire [lindex $::mptdc_test_manual_wires 1]
+    if {[dict get $new_wire net] ne "u_core_n_57556" ||
+        [dict get $new_wire layer] ne "MET1" ||
+        ![mptdc_ckpt_manual_close [dict get $new_wire width] 0.23] ||
+        ![mptdc_ckpt_manual_close [dict get $new_wire length] 0.25] ||
+        ![mptdc_ckpt_manual_point_equal \
+            [lindex [dict get $new_wire points] 0] {385.175 328.405}] ||
+        ![mptdc_ckpt_manual_point_equal \
+            [lindex [dict get $new_wire points] 1] {385.175 328.155}]} {
+        error "minimum-area V11 $tie_mode created the wrong tail: $new_wire"
+    }
+    set fh [open [dict get $tie_result report] r]
+    set tie_text [read $fh]
+    close $fh
+    foreach expected [list \
+        {MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11} \
+        {REPAIR_REVISION=V11} \
+        "V11_STAGE_MODE=$tie_mode" \
+        {EXPECTED_STALE_GEOMETRY_MARKER_COUNT=1} \
+        {PRE_MINAREA_MARKER_RECONCILIATION_STATUS=PASS} \
+        {FREE_END_TAIL_LENGTH_UM=0.25} \
+        {FREE_END_TAIL_DIRECTION=VERTICAL_DOWN} \
+        {FREE_END_TAIL_START=385.175 328.405} \
+        {FREE_END_TAIL_FINISH=385.175 328.155} \
+        {V10_HORIZONTAL_TAIL_DISPOSITION=REJECTED_MINAREA_AND_FE_RC_5_0_SPACING} \
+        {PREDICTED_CONNECTED_AREA_UM2=0.20875} \
+        {ATTRIBUTE_EDIT_POLICY=NO_DB_ATTRIBUTE_EDITS} \
+        {GEOMETRY_EDIT_POLICY=ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_PERPENDICULAR_TAIL} \
+        {N57556_FREE_END_TAIL_CANONICAL_STUB_STATUS=PASS} \
+        {N57556_FREE_END_TAIL_DIRECTION=VERTICAL_DOWN} \
+        {N57556_FREE_END_TAIL_PREEXISTING_WIRE_STATUS=PRESERVED} \
+        {N57556_FREE_END_TAIL_POINTS_MATCH_STATUS=PASS} \
+        {N57556_FREE_END_TAIL_LOCAL_BOX_STATUS=PASS} \
+        {N57556_FREE_END_TAIL_STATUS=PASS} \
+        {FIXED_WIRE_TAIL_STATUS=PASS} \
+        {FIXED_WIRE_TAIL_EFFECT_STATUS=PASS} \
+        {TARGET_WIRE_COUNT_DELTA=1} \
+        {TARGET_NEW_WIRE_COUNT=1} \
+        {TARGET_PREEXISTING_WIRE_STATUS=PRESERVED} \
+        {TARGET_WIRE_HANDLE_STATUS=ONE_EXACT_ADDITION} \
+        {TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED} \
+        {RESERVED_FILL_OBJECT_STATUS=UNCHANGED} \
+        {N57556_LANDING_REPRESENTATION_STATUS=UNCHANGED} \
+        {TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED} \
+        {POST_MINAREA_MARKER_COUNT=0} \
+        {MANUAL_ECO_STATUS=PASS}] {
+        if {[string first $expected $tie_text] < 0} {
+            error "minimum-area V11 $tie_mode report is missing $expected"
+        }
+    }
+    set route_start_count 0
+    set route_commit_count 0
+    set bounded_mode_count 0
+    foreach call $::mptdc_test_manual_command_calls {
+        if {[lindex $call 0] eq "editAddRoute"} {
+            incr route_start_count
+        }
+        if {[lindex $call 0] eq "editCommitRoute"} {
+            incr route_commit_count
+        }
+        if {[lindex $call 0] eq "setEditMode" &&
+            [lsearch -exact $call -type] >= 0 &&
+            [lindex $call [expr {[lsearch -exact $call -type] + 1}]] eq "regular" &&
+            [lsearch -exact $call -status] >= 0 &&
+            [lindex $call [expr {[lsearch -exact $call -status] + 1}]] eq "fixed" &&
+            [lsearch -exact $call -snap] >= 0 &&
+            [lindex $call [expr {[lsearch -exact $call -snap] + 1}]] eq "false"} {
+            incr bounded_mode_count
+        }
+        if {[lindex $call 0] in {editDelete editAddVia ecoRoute routeDesign globalDetailRoute detailRoute createRouteBlk editPowerVia}} {
+            error "minimum-area V11 $tie_mode invoked a prohibited command: $call"
+        }
+    }
+    if {$route_start_count != 1 || $route_commit_count != 1 ||
+        $bounded_mode_count != 1} {
+        error "minimum-area V11 $tie_mode did not issue one bounded perpendicular tail edit"
+    }
+}
+
 set ::mptdc_test_manual_vias [list \
     [dict create net u_core_n_57960 name VIA1_o point {363.72 358.12} status routed \
         bot_rects {{{363.53 357.98 363.91 358.26}}} \

@@ -1633,8 +1633,9 @@ proc mptdc_ckpt_manual_wire_inventory {net} {
     return $inventory
 }
 
-proc mptdc_ckpt_manual_add_free_end_tail_v10 {
-        fh label net marker_box via_point tail_length} {
+proc mptdc_ckpt_manual_add_free_end_tail {
+        fh label net marker_box via_point tail_length direction \
+        expected_start expected_finish} {
     if {![string is double -strict $tail_length] || $tail_length <= 0} {
         error "$label requires a positive numeric tail length"
     }
@@ -1643,9 +1644,21 @@ proc mptdc_ckpt_manual_add_free_end_tail_v10 {
         $fh ${label}_CANONICAL_STUB $net $marker_box $via_point -1]
     set start [dict get $candidate far]
     lassign $start start_x start_y
-    set finish [list [expr {double($start_x) - double($tail_length)}] $start_y]
-    set expected_start {385.175 328.405}
-    set expected_finish {385.035 328.405}
+    switch -- $direction {
+        HORIZONTAL_LEFT {
+            set finish [list \
+                [format %.3f [expr {double($start_x) - double($tail_length)}]] \
+                $start_y]
+        }
+        VERTICAL_DOWN {
+            set finish [list \
+                $start_x \
+                [format %.3f [expr {double($start_y) - double($tail_length)}]]]
+        }
+        default {
+            error "$label rejected unsupported tail direction $direction"
+        }
+    }
     if {![mptdc_ckpt_manual_point_equal $start $expected_start] ||
         ![mptdc_ckpt_manual_point_equal $finish $expected_finish]} {
         error "$label rejected derived tail $start -> $finish"
@@ -1656,6 +1669,7 @@ proc mptdc_ckpt_manual_add_free_end_tail_v10 {
     puts $fh "${label}_START=$start"
     puts $fh "${label}_FINISH=$finish"
     puts $fh "${label}_LENGTH_UM=$tail_length"
+    puts $fh "${label}_DIRECTION=$direction"
     puts $fh "${label}_PRE_COUNT=[llength $pre_handles]"
 
     set setup [list setEditMode \
@@ -1747,10 +1761,13 @@ proc mptdc_ckpt_manual_add_free_end_tail_v10 {
     if {[mptdc_signoff_box_valid $box]} {
         lassign $box llx lly urx ury
         set midpoint_x [expr {($start_x + [lindex $finish 0]) / 2.0}]
+        set midpoint_y [expr {($start_y + [lindex $finish 1]) / 2.0}]
         set box_is_local [expr {
             $llx >= 384.75 && $urx <= 385.45 &&
-            $lly >= 328.10 && $ury <= 328.70 &&
+            $lly >= 327.95 && $ury <= 328.70 &&
             $midpoint_x >= $llx && $midpoint_x <= $urx &&
+            $midpoint_y >= $lly && $midpoint_y <= $ury &&
+            $start_x >= $llx && $start_x <= $urx &&
             $start_y >= $lly && $start_y <= $ury
         }]
     }
@@ -1777,7 +1794,21 @@ proc mptdc_ckpt_manual_add_free_end_tail_v10 {
         status PASS pre_handles $pre_handles post_handles $post_handles \
         pre_count [llength $pre_handles] post_count [llength $post_handles] \
         count_delta $count_delta new_handle $new_handle new_count 1 \
-        start $start finish $finish length $tail_length]
+        start $start finish $finish length $tail_length direction $direction]
+}
+
+proc mptdc_ckpt_manual_add_free_end_tail_v10 {
+        fh label net marker_box via_point tail_length} {
+    return [mptdc_ckpt_manual_add_free_end_tail \
+        $fh $label $net $marker_box $via_point $tail_length \
+        HORIZONTAL_LEFT {385.175 328.405} {385.035 328.405}]
+}
+
+proc mptdc_ckpt_manual_add_free_end_tail_v11 {
+        fh label net marker_box via_point tail_length} {
+    return [mptdc_ckpt_manual_add_free_end_tail \
+        $fh $label $net $marker_box $via_point $tail_length \
+        VERTICAL_DOWN {385.175 328.405} {385.175 328.155}]
 }
 
 proc mptdc_ckpt_manual_extend_canonical_stub_v8 {
@@ -2137,10 +2168,10 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     if {$mode ni {trial replay tie1_trial tie1_replay}} {
         error "minimum-area endpoint-extension mode must be trial, replay, tie1_trial, or tie1_replay"
     }
-    if {$revision ni {V8 V9 V10}} {
-        error "minimum-area endpoint-extension revision must be V8, V9, or V10"
+    if {$revision ni {V8 V9 V10 V11}} {
+        error "minimum-area endpoint-extension revision must be V8, V9, V10, or V11"
     }
-    if {$revision in {V9 V10} && $mode ni {tie1_trial tie1_replay}} {
+    if {$revision in {V9 V10 V11} && $mode ni {tie1_trial tie1_replay}} {
         error "minimum-area $revision is restricted to tie1 trial and replay"
     }
     set revision_lower [string tolower $revision]
@@ -2153,7 +2184,10 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     }
     set report [file join $report_dir $report_name]
     set fh [open $report w]
-    if {$revision eq "V10"} {
+    if {$revision eq "V11"} {
+        puts $fh "# MPTDC Canonical Fixed-Wire Free-End Perpendicular Tail V11"
+        puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_PERPENDICULAR_TAIL_V11"
+    } elseif {$revision eq "V10"} {
         puts $fh "# MPTDC Canonical Fixed-Wire Free-End Regular Tail V10"
         puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_REGULAR_TAIL_V10"
     } else {
@@ -2165,8 +2199,18 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     puts $fh "TARGET_NET=u_core_n_57556"
     puts $fh "TARGET_MARKER=MET1_MINIMUM_AREA_0.1777_OF_0.202"
     puts $fh "CANONICAL_STUB_PROFILE=FIXED_MET1_WIDTH_0.23_LENGTH_0.385"
-    if {$revision eq "V10"} {
+    if {$revision eq "V11"} {
+        puts $fh "FREE_END_TAIL_LENGTH_UM=0.25"
+        puts $fh "FREE_END_TAIL_DIRECTION=VERTICAL_DOWN"
+        puts $fh "FREE_END_TAIL_START=385.175 328.405"
+        puts $fh "FREE_END_TAIL_FINISH=385.175 328.155"
+        puts $fh "V10_HORIZONTAL_TAIL_DISPOSITION=REJECTED_MINAREA_AND_FE_RC_5_0_SPACING"
+        puts $fh "PREDICTED_CONNECTED_AREA_UM2=0.20875"
+        puts $fh "ATTRIBUTE_EDIT_POLICY=NO_DB_ATTRIBUTE_EDITS"
+        puts $fh "GEOMETRY_EDIT_POLICY=ONE_EXACT_TARGET_NET_REGULAR_FIXED_MET1_PERPENDICULAR_TAIL"
+    } elseif {$revision eq "V10"} {
         puts $fh "FREE_END_TAIL_LENGTH_UM=0.14"
+        puts $fh "FREE_END_TAIL_DIRECTION=HORIZONTAL_LEFT"
         puts $fh "FREE_END_TAIL_START=385.175 328.405"
         puts $fh "FREE_END_TAIL_FINISH=385.035 328.405"
         puts $fh "ATTRIBUTE_EDIT_POLICY=NO_DB_ATTRIBUTE_EDITS"
@@ -2241,10 +2285,16 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
         set reserved_swire_pre [mptdc_ckpt_manual_net_route_handles \
             _SADP_FILLS_RESERVED sWires]
 
-        if {$revision eq "V10"} {
-            set tail [mptdc_ckpt_manual_add_free_end_tail_v10 \
-                $fh N57556_FREE_END_TAIL u_core_n_57556 \
-                {385.06 328.29 385.75 328.52} {385.56 328.44} 0.14]
+        if {$revision in {V10 V11}} {
+            if {$revision eq "V11"} {
+                set tail [mptdc_ckpt_manual_add_free_end_tail_v11 \
+                    $fh N57556_FREE_END_TAIL u_core_n_57556 \
+                    {385.06 328.29 385.75 328.52} {385.56 328.44} 0.25]
+            } else {
+                set tail [mptdc_ckpt_manual_add_free_end_tail_v10 \
+                    $fh N57556_FREE_END_TAIL u_core_n_57556 \
+                    {385.06 328.29 385.75 328.52} {385.56 328.44} 0.14]
+            }
             puts $fh "FIXED_WIRE_TAIL_STATUS=[dict get $tail status]"
             puts $fh "FIXED_WIRE_TAIL_EFFECT_STATUS=PASS"
             puts $fh "TARGET_WIRE_COUNT_DELTA=[dict get $tail count_delta]"
@@ -2272,12 +2322,12 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
         set reserved_swire_post [mptdc_ckpt_manual_net_route_handles \
             _SADP_FILLS_RESERVED sWires]
 
-        if {$revision eq "V10"} {
+        if {$revision in {V10 V11}} {
             if {[dict get $tail pre_handles] ne $target_wire_pre ||
                 [dict get $tail post_handles] ne $target_wire_post ||
                 [llength $target_wire_post] != ([llength $target_wire_pre] + 1)} {
                 puts $fh "TARGET_WIRE_HANDLE_STATUS=FAIL"
-                error "V10 wire-handle audit disagrees with the bounded tail result"
+                error "$revision wire-handle audit disagrees with the bounded tail result"
             }
             puts $fh "TARGET_WIRE_HANDLE_STATUS=ONE_EXACT_ADDITION"
         } elseif {$target_wire_post ne $target_wire_pre} {
@@ -2321,8 +2371,8 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
             tie1_replay { set post_tag minarea_${revision_lower}_tie1_replay_post }
         }
         set final [mptdc_ckpt_verify_snapshot $post_tag]
-        mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
         puts $fh "POST_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
+        mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
     } body_error body_opts]
 
     catch {uiSetTool select}
@@ -2370,6 +2420,14 @@ proc mptdc_ckpt_tie1_minarea_endext_trial_v10 {} {
 
 proc mptdc_ckpt_tie1_minarea_endext_replay_v10 {} {
     return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay V10]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_trial_v11 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial V11]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_replay_v11 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay V11]
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {
