@@ -1,0 +1,22 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_tie1_minarea_endext_trial_v9
+REPORT_STATUS=FAILED
+ERROR=N57556_END_EXT could not persist beginExt=0.255: set_db:.begin_extension:READBACK=0.115 set_db:.begin_ext:ERROR={} dbSet:READBACK=0.115
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+N57556_END_EXT could not persist beginExt=0.255: set_db:.begin_extension:READBACK=0.115 set_db:.begin_ext:ERROR={} dbSet:READBACK=0.115
+    while executing
+"error "$label could not persist $free_attribute=$target_text: $edit_attempts""
+    (procedure "mptdc_ckpt_manual_extend_canonical_stub_v8" line 80)
+    invoked from within
+"mptdc_ckpt_manual_extend_canonical_stub_v8  $fh N57556_END_EXT u_core_n_57556  {385.06 328.29 385.75 328.52} {385.56 328.44} 0.14"
+    (procedure "mptdc_ckpt_manual_minarea_endext_v8_impl" line 80)
+    invoked from within
+"mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial V9"
+    (procedure "mptdc_ckpt_tie1_minarea_endext_trial_v9" line 2)
+    invoked from within
+"mptdc_ckpt_tie1_minarea_endext_trial_v9"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 $invoke"
+ERRORINFO_END
