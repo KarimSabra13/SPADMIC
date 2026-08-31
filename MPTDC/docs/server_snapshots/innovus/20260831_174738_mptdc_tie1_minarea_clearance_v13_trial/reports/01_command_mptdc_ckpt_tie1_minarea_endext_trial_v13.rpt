@@ -1,0 +1,4 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_tie1_minarea_endext_trial_v13
+HELPER_RESULT=status PASS report /sim/ksabra/SPADMIC_work/innovus/20260831_174738_mptdc_tie1_minarea_clearance_v13_trial/reports/tie1_min_area_fixed_wire_endext_trial_v13.rpt mode tie1_trial
+REPORT_STATUS=PASS
