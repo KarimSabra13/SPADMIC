@@ -115,6 +115,16 @@ minarea_gate_passes() {
      "$(report_value "$gate" TOOL_RC)" == 0 &&
      "$(report_value "$gate" COMMAND_1_STATUS)" == PASS &&
      "$(report_value "$gate" MANUAL_ECO_STATUS)" == PASS &&
+     "$(report_value "$gate" REPAIR_REVISION)" == V9 &&
+     "$(report_value "$gate" PRE_DRC_MARKER_RECONCILIATION_STATUS)" == PASS &&
+     "$(report_value "$gate" PRE_DRC_MARKER_FRESH_DRC_TOTAL)" == 1 &&
+     "$(report_value "$gate" PRE_DRC_MARKER_GEOMETRY_COUNT)" == 2 &&
+     "$(report_value "$gate" PRE_DRC_MARKER_LIVE_COUNT)" == 1 &&
+     "$(report_value "$gate" PRE_DRC_MARKER_STALE_COUNT)" == 1 &&
+     "$(report_value "$gate" PRE_DRC_MARKER_UNMAPPED_COUNT)" == 0 &&
+     "$(report_value "$gate" FIXED_WIRE_EXTENSION_STATUS)" == PASS &&
+     "$(report_value "$gate" FIXED_WIRE_EXTENSION_EFFECT_STATUS)" == PASS &&
+     "$(report_value "$gate" POST_MINAREA_MARKER_COUNT)" == 0 &&
      "$(report_value "$gate" FREE_END_EXTENSION_DELTA_UM)" == 0.14 &&
      "$(report_value "$gate" INITIAL_DRC)" == 1 &&
      "$(report_value "$gate" FINAL_DRC)" == 0 &&
@@ -125,6 +135,7 @@ minarea_gate_passes() {
      "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES)" == 0 &&
      "$(report_value "$gate" FINAL_SPECIAL_DANGLING_COUNT)" == 15 &&
      "$(report_value "$gate" FINAL_UNROUTED_NETS)" == 0 &&
+     "$(report_value "$gate" FINAL_REPORT_ROUTE_ZERO_STATUS)" == PASS &&
      "$(report_value "$gate" TIE_TARGET_COUNT)" == 91 &&
      "$(report_value "$gate" TIE_NET_COUNT)" == 85 &&
      "$(report_value "$gate" FILLER_COUNT)" == 24856 &&
@@ -211,6 +222,14 @@ special_dangling_count() {
   else
     printf 'MISSING\n'
   fi
+}
+
+report_route_zero() {
+  local report="$1"
+  [[ -s "$report" ]] || return 1
+  ! grep -Eqi 'REPORT_STATUS=FAILED' "$report" 2>/dev/null || return 1
+  grep -Eq '^#num needed restored net=0[[:space:]]*$' "$report" 2>/dev/null || return 1
+  grep -Eq '^#need_extraction net=0([[:space:]]|\(|$)' "$report" 2>/dev/null
 }
 
 while [[ $# -gt 0 ]]; do
@@ -307,14 +326,14 @@ mkdir -p "$RUN_DIR/manifests" "$RUN_DIR/logs" "$RUN_DIR/reports"
 COMMANDS_FILE="$RUN_DIR/manifests/tie1_closure.commands.tcl"
 case "$STAGE" in
   tie1-minarea-trial)
-    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_trial_v8' > "$COMMANDS_FILE"
-    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_trial_v8.rpt"
+    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_trial_v9' > "$COMMANDS_FILE"
+    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_trial_v9.rpt"
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_minarea_endext_trial.rpt"
     STEP=TIE1_MINAREA_ENDEXT_TRIAL
     ;;
   tie1-minarea-replay)
-    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_replay_v8' > "$COMMANDS_FILE"
-    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_replay_v8.rpt"
+    printf '%s\n' 'mptdc_ckpt_tie1_minarea_endext_replay_v9' > "$COMMANDS_FILE"
+    MANUAL_REPORT="$RUN_DIR/reports/tie1_min_area_fixed_wire_endext_replay_v9.rpt"
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_minarea_endext_replay.rpt"
     STEP=TIE1_MINAREA_ENDEXT_REPLAY
     ;;
@@ -359,6 +378,20 @@ FINAL_UNROUTED="$(report_value "$STATUS_REPORT" FINAL_UNROUTED_NETS)"
 FINAL_ROUTE_GATE="$(report_value "$STATUS_REPORT" FINAL_ROUTE_GATE_PASS)"
 FINAL_SPECIAL_REPORT="$(report_value "$STATUS_REPORT" FINAL_SPECIAL_CONNECTIVITY_REPORT)"
 FINAL_DANGLING="$(special_dangling_count "$FINAL_SPECIAL_REPORT")"
+FINAL_REPORT_ROUTE="$(report_value "$STATUS_REPORT" FINAL_REPORT_ROUTE)"
+FINAL_UNROUTED_RAW="$FINAL_UNROUTED"
+FINAL_UNROUTED_SOURCE=checkpoint_repair_status
+FINAL_REPORT_ROUTE_ZERO_STATUS=FAIL
+if report_route_zero "$FINAL_REPORT_ROUTE"; then
+  FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
+fi
+if [[ "$FINAL_UNROUTED" == UNKNOWN && "$FINAL_REGULAR" == 0 &&
+      "$FINAL_SPECIAL" == 1 && "$FINAL_SPECIAL_RAW" == 1 &&
+      "$FINAL_SPECIAL_NON_RO" == 0 && "$FINAL_DANGLING" == 15 &&
+      "$FINAL_REPORT_ROUTE_ZERO_STATUS" == PASS ]]; then
+  FINAL_UNROUTED=0
+  FINAL_UNROUTED_SOURCE=tie1_closure_exact_special_debt_report_route_fallback
+fi
 FINAL_CHECKPOINT="$(report_value "$STATUS_REPORT" FINAL_CHECKPOINT_DAT)"
 FINAL_CHECKPOINT_EXISTS="$(report_value "$STATUS_REPORT" FINAL_CHECKPOINT_DAT_EXISTS)"
 FINAL_CHECKPOINT_HASH="$(tree_hash "$FINAL_CHECKPOINT")"
@@ -369,8 +402,23 @@ OUTCOME=FAIL
 
 if [[ "$STAGE" == tie1-minarea-* ]]; then
   MANUAL_STATUS="$(report_value "$MANUAL_REPORT" MANUAL_ECO_STATUS)"
+  REPAIR_REVISION="$(report_value "$MANUAL_REPORT" REPAIR_REVISION)"
+  PRE_MARKER_RECONCILIATION="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_RECONCILIATION_STATUS)"
+  PRE_MARKER_FRESH_TOTAL="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_FRESH_DRC_TOTAL)"
+  PRE_MARKER_GEOMETRY_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_GEOMETRY_COUNT)"
+  PRE_MARKER_LIVE_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_LIVE_COUNT)"
+  PRE_MARKER_STALE_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_STALE_COUNT)"
+  PRE_MARKER_UNMAPPED_COUNT="$(report_value "$MANUAL_REPORT" PRE_MINAREA_MARKER_UNMAPPED_COUNT)"
+  EXTENSION_STATUS="$(report_value "$MANUAL_REPORT" FIXED_WIRE_EXTENSION_STATUS)"
+  EXTENSION_EFFECT_STATUS="$(report_value "$MANUAL_REPORT" FIXED_WIRE_EXTENSION_EFFECT_STATUS)"
+  POST_MINAREA_COUNT="$(report_value "$MANUAL_REPORT" POST_MINAREA_MARKER_COUNT)"
   EXTENSION_DELTA="$(report_value "$MANUAL_REPORT" FREE_END_EXTENSION_DELTA_UM)"
   if [[ "$TOOL_RC" -eq 0 && "$COMMAND_STATUS" == PASS && "$MANUAL_STATUS" == PASS &&
+        "$REPAIR_REVISION" == V9 && "$PRE_MARKER_RECONCILIATION" == PASS &&
+        "$PRE_MARKER_FRESH_TOTAL" == 1 && "$PRE_MARKER_GEOMETRY_COUNT" == 2 &&
+        "$PRE_MARKER_LIVE_COUNT" == 1 && "$PRE_MARKER_STALE_COUNT" == 1 &&
+        "$PRE_MARKER_UNMAPPED_COUNT" == 0 && "$EXTENSION_STATUS" == PASS &&
+        "$EXTENSION_EFFECT_STATUS" == PASS && "$POST_MINAREA_COUNT" == 0 &&
         "$EXTENSION_DELTA" == 0.14 && "$INITIAL_DRC" == 1 && "$FINAL_DRC" == 0 &&
         "$FINAL_SHORTS" == 0 && "$FINAL_REGULAR" == 0 && "$FINAL_SPECIAL" == 1 &&
         "$FINAL_SPECIAL_RAW" == 1 && "$FINAL_SPECIAL_NON_RO" == 0 &&
@@ -389,6 +437,16 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "TOOL_RC=$TOOL_RC"
     echo "COMMAND_1_STATUS=$COMMAND_STATUS"
     echo "MANUAL_ECO_STATUS=$MANUAL_STATUS"
+    echo "REPAIR_REVISION=$REPAIR_REVISION"
+    echo "PRE_DRC_MARKER_RECONCILIATION_STATUS=$PRE_MARKER_RECONCILIATION"
+    echo "PRE_DRC_MARKER_FRESH_DRC_TOTAL=$PRE_MARKER_FRESH_TOTAL"
+    echo "PRE_DRC_MARKER_GEOMETRY_COUNT=$PRE_MARKER_GEOMETRY_COUNT"
+    echo "PRE_DRC_MARKER_LIVE_COUNT=$PRE_MARKER_LIVE_COUNT"
+    echo "PRE_DRC_MARKER_STALE_COUNT=$PRE_MARKER_STALE_COUNT"
+    echo "PRE_DRC_MARKER_UNMAPPED_COUNT=$PRE_MARKER_UNMAPPED_COUNT"
+    echo "FIXED_WIRE_EXTENSION_STATUS=$EXTENSION_STATUS"
+    echo "FIXED_WIRE_EXTENSION_EFFECT_STATUS=$EXTENSION_EFFECT_STATUS"
+    echo "POST_MINAREA_MARKER_COUNT=$POST_MINAREA_COUNT"
     echo "FREE_END_EXTENSION_DELTA_UM=$EXTENSION_DELTA"
     echo "INITIAL_DRC=$INITIAL_DRC"
     echo "FINAL_DRC=$FINAL_DRC"
@@ -398,7 +456,10 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=$FINAL_SPECIAL_RAW"
     echo "FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=$FINAL_SPECIAL_NON_RO"
     echo "FINAL_SPECIAL_DANGLING_COUNT=$FINAL_DANGLING"
+    echo "FINAL_UNROUTED_NETS_RAW=$FINAL_UNROUTED_RAW"
     echo "FINAL_UNROUTED_NETS=$FINAL_UNROUTED"
+    echo "FINAL_UNROUTED_NETS_SOURCE=$FINAL_UNROUTED_SOURCE"
+    echo "FINAL_REPORT_ROUTE_ZERO_STATUS=$FINAL_REPORT_ROUTE_ZERO_STATUS"
     echo "TIE_TARGET_COUNT=91"
     echo "TIE_NET_COUNT=85"
     echo "FILLER_COUNT=24856"
@@ -480,7 +541,10 @@ else
     echo "FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=$FINAL_SPECIAL_RAW"
     echo "FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=$FINAL_SPECIAL_NON_RO"
     echo "FINAL_SPECIAL_DANGLING_COUNT=$FINAL_DANGLING"
+    echo "FINAL_UNROUTED_NETS_RAW=$FINAL_UNROUTED_RAW"
     echo "FINAL_UNROUTED_NETS=$FINAL_UNROUTED"
+    echo "FINAL_UNROUTED_NETS_SOURCE=$FINAL_UNROUTED_SOURCE"
+    echo "FINAL_REPORT_ROUTE_ZERO_STATUS=$FINAL_REPORT_ROUTE_ZERO_STATUS"
     echo "FINAL_ROUTE_GATE_PASS=$FINAL_ROUTE_GATE"
     echo "PG_DELETE_TRIAL_OUTCOME=$OUTCOME"
     echo "TIE_TARGET_COUNT=91"

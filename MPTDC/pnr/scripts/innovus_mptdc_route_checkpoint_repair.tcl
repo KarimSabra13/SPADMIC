@@ -1318,17 +1318,76 @@ proc mptdc_ckpt_manual_assert_snapshot_tuple {fh label snapshot expected_drc exp
     return $snapshot
 }
 
+proc mptdc_ckpt_manual_normalize_marker_class {name} {
+    set normalized [string tolower \
+        [string map [list "_" "" "-" "" " " ""] $name]]
+    switch -- $normalized {
+        mar - minarea - minimalarea - minimumarea {
+            return Mar
+        }
+        metspc - metalspacing - parallelrunlengthspacing {
+            return MetSpc
+        }
+        short - metalshort {
+            return Short
+        }
+        default {
+            return UNKNOWN
+        }
+    }
+}
+
 proc mptdc_ckpt_manual_assert_minarea_marker {
-        fh label snapshot expected_box expected_actual} {
+        fh label snapshot expected_box expected_actual {expected_stale_count 0}} {
     if {![dict exists $snapshot marker_rpt]} {
         error "$label snapshot has no marker report"
+    }
+    if {![dict exists $snapshot total_violations] ||
+        ![dict exists $snapshot drc_class_counts]} {
+        error "$label snapshot has no authoritative DRC totals"
+    }
+    if {![string is integer -strict $expected_stale_count] ||
+        $expected_stale_count < 0} {
+        error "$label expected stale-marker count must be a nonnegative integer"
     }
     set marker_rpt [dict get $snapshot marker_rpt]
     if {![file readable $marker_rpt]} {
         error "$label marker report is not readable: $marker_rpt"
     }
 
+    set total [dict get $snapshot total_violations]
+    set class_counts [dict get $snapshot drc_class_counts]
+    array set expected {Mar 0 MetSpc 0 Short 0}
+    set authoritative_total 0
+    set reasons {}
+    if {![string is integer -strict $total] || $total < 0} {
+        lappend reasons INVALID_DRC_TOTAL
+    }
+    dict for {name count} $class_counts {
+        if {![string is integer -strict $count] || $count < 0} {
+            lappend reasons INVALID_CLASS_COUNT_$name
+            continue
+        }
+        incr authoritative_total $count
+        set marker_class [mptdc_ckpt_manual_normalize_marker_class $name]
+        if {$marker_class eq "UNKNOWN"} {
+            if {$count != 0} {
+                lappend reasons UNSUPPORTED_LIVE_CLASS_$name
+            }
+            continue
+        }
+        incr expected($marker_class) $count
+    }
+    if {[string is integer -strict $total] &&
+        $authoritative_total != $total} {
+        lappend reasons AUTHORITATIVE_CLASS_TOTAL_MISMATCH
+    }
+
+    array set observed {Mar 0 MetSpc 0 Short 0}
     set geometry_count 0
+    set live_count 0
+    set stale_count 0
+    set unmapped_count 0
     set target_count 0
     set target_box {}
     set target_actual UNKNOWN
@@ -1343,6 +1402,17 @@ proc mptdc_ckpt_manual_assert_minarea_marker {
         set layer [lindex $fields 3]
         set subtype [lindex $fields 5]
         set message [join [lrange $fields 6 end] \t]
+        set marker_class [mptdc_ckpt_manual_normalize_marker_class $subtype]
+        if {$marker_class eq "UNKNOWN"} {
+            incr unmapped_count
+            continue
+        }
+        if {$expected($marker_class) == 0} {
+            incr stale_count
+            continue
+        }
+        incr observed($marker_class)
+        incr live_count
         if {$layer ne "MET1" || $subtype ne "Minimal_Area" ||
             ![regexp {Regular Wire of Net u_core_n_57556[[:space:]]+Actual:[[:space:]]*([0-9.]+)[[:space:]]+Required:[[:space:]]*([0-9.]+)} \
                 $message -> actual required]} {
@@ -1360,21 +1430,51 @@ proc mptdc_ckpt_manual_assert_minarea_marker {
     }
     close $input
 
+    foreach marker_class {Mar MetSpc Short} {
+        if {$observed($marker_class) != $expected($marker_class)} {
+            lappend reasons ${marker_class}_MARKER_COUNT_MISMATCH
+        }
+    }
+    if {[string is integer -strict $total] && $live_count != $total} {
+        lappend reasons LIVE_MARKER_TOTAL_MISMATCH
+    }
+    if {$unmapped_count != 0} {
+        lappend reasons UNMAPPED_GEOMETRY_MARKERS
+    }
+    if {$stale_count != $expected_stale_count} {
+        lappend reasons STALE_MARKER_COUNT_MISMATCH
+    }
+    if {$geometry_count != ($live_count + $stale_count + $unmapped_count)} {
+        lappend reasons RAW_MARKER_ACCOUNTING_MISMATCH
+    }
+    set reconciliation_status [expr {
+        [llength $reasons] == 0 ? "PASS" : "FAIL"
+    }]
+
     set box_matches [expr {[llength $target_box] == 4}]
     if {$box_matches} {
-        foreach actual $target_box expected $expected_box {
-            if {![mptdc_ckpt_manual_close $actual $expected]} {
+        foreach actual_coord $target_box expected_coord $expected_box {
+            if {![mptdc_ckpt_manual_close $actual_coord $expected_coord]} {
                 set box_matches 0
                 break
             }
         }
     }
     set marker_status [expr {
-        $geometry_count == 1 && $target_count == 1 && $box_matches &&
+        $reconciliation_status eq "PASS" &&
+        $target_count == 1 && $box_matches &&
         [mptdc_ckpt_manual_close $target_actual $expected_actual 0.00000001] &&
         [mptdc_ckpt_manual_close $target_required 0.20200000 0.00000001]
     }]
+    puts $fh "${label}_FRESH_DRC_TOTAL=$total"
+    puts $fh "${label}_AUTHORITATIVE_CLASS_COUNTS=$class_counts"
     puts $fh "${label}_GEOMETRY_COUNT=$geometry_count"
+    puts $fh "${label}_LIVE_COUNT=$live_count"
+    puts $fh "${label}_STALE_COUNT=$stale_count"
+    puts $fh "${label}_EXPECTED_STALE_COUNT=$expected_stale_count"
+    puts $fh "${label}_UNMAPPED_COUNT=$unmapped_count"
+    puts $fh "${label}_RECONCILIATION_STATUS=$reconciliation_status"
+    puts $fh "${label}_RECONCILIATION_REASON=[expr {[llength $reasons] ? $reasons : "NONE"}]"
     puts $fh "${label}_REPORT=$marker_rpt"
     puts $fh "${label}_TARGET_COUNT=$target_count"
     puts $fh "${label}_NET=u_core_n_57556"
@@ -1383,7 +1483,7 @@ proc mptdc_ckpt_manual_assert_minarea_marker {
     puts $fh "${label}_REQUIRED=$target_required"
     puts $fh "${label}_STATUS=[expr {$marker_status ? "PASS" : "FAIL"}]"
     if {!$marker_status} {
-        error "$label expected the sole geometry marker to be u_core_n_57556 MET1 minimum area $expected_actual/0.202 at $expected_box"
+        error "$label expected the sole live geometry marker to be u_core_n_57556 MET1 minimum area $expected_actual/0.202 at $expected_box with $expected_stale_count reconciled stale marker(s); reasons=$reasons"
     }
     return $target_box
 }
@@ -1393,9 +1493,11 @@ proc mptdc_ckpt_manual_assert_minarea_01064_marker {fh label snapshot} {
         $fh $label $snapshot {385.37 328.3 385.75 328.58} 0.10640000]
 }
 
-proc mptdc_ckpt_manual_assert_minarea_01777_marker {fh label snapshot} {
+proc mptdc_ckpt_manual_assert_minarea_01777_marker {
+        fh label snapshot {expected_stale_count 0}} {
     return [mptdc_ckpt_manual_assert_minarea_marker \
-        $fh $label $snapshot {385.06 328.29 385.75 328.52} 0.17770000]
+        $fh $label $snapshot {385.06 328.29 385.75 328.52} \
+        0.17770000 $expected_stale_count]
 }
 
 proc mptdc_ckpt_manual_find_canonical_via_side_stub {
@@ -1867,22 +1969,30 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v6r {} {
     return [dict create status PASS report $report]
 }
 
-proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
+proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode {revision V8}} {
     if {$mode ni {trial replay tie1_trial tie1_replay}} {
-        error "minimum-area V8 mode must be trial, replay, tie1_trial, or tie1_replay"
+        error "minimum-area endpoint-extension mode must be trial, replay, tie1_trial, or tie1_replay"
     }
+    if {$revision ni {V8 V9}} {
+        error "minimum-area endpoint-extension revision must be V8 or V9"
+    }
+    if {$revision eq "V9" && $mode ni {tie1_trial tie1_replay}} {
+        error "minimum-area V9 is restricted to tie1 trial and replay"
+    }
+    set revision_lower [string tolower $revision]
     set report_dir [mptdc_signoff_report_dir]
     switch -- $mode {
-        trial { set report_name "min_area_fixed_wire_endext_trial_v8.rpt" }
-        replay { set report_name "min_area_fixed_wire_endext_replay_v8.rpt" }
-        tie1_trial { set report_name "tie1_min_area_fixed_wire_endext_trial_v8.rpt" }
-        tie1_replay { set report_name "tie1_min_area_fixed_wire_endext_replay_v8.rpt" }
+        trial { set report_name "min_area_fixed_wire_endext_trial_${revision_lower}.rpt" }
+        replay { set report_name "min_area_fixed_wire_endext_replay_${revision_lower}.rpt" }
+        tie1_trial { set report_name "tie1_min_area_fixed_wire_endext_trial_${revision_lower}.rpt" }
+        tie1_replay { set report_name "tie1_min_area_fixed_wire_endext_replay_${revision_lower}.rpt" }
     }
     set report [file join $report_dir $report_name]
     set fh [open $report w]
-    puts $fh "# MPTDC Canonical Fixed-Wire Free-End Extension V8"
-    puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V8"
-    puts $fh "V8_STAGE_MODE=$mode"
+    puts $fh "# MPTDC Canonical Fixed-Wire Free-End Extension $revision"
+    puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_$revision"
+    puts $fh "REPAIR_REVISION=$revision"
+    puts $fh "${revision}_STAGE_MODE=$mode"
     puts $fh "TARGET_NET=u_core_n_57556"
     puts $fh "TARGET_MARKER=MET1_MINIMUM_AREA_0.1777_OF_0.202"
     puts $fh "CANONICAL_STUB_PROFILE=FIXED_MET1_WIDTH_0.23_LENGTH_0.385"
@@ -1892,14 +2002,21 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
     puts $fh "PG_EDIT_POLICY=NO_PG_SHAPES_MODIFIED"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
     puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
+    set expected_stale_count [expr {$revision eq "V9" ? 1 : 0}]
+    puts $fh "MARKER_RECONCILIATION_POLICY=FRESH_DRC_CLASS_COUNTS_WITH_EXACT_STALE_COUNT"
+    puts $fh "EXPECTED_STALE_GEOMETRY_MARKER_COUNT=$expected_stale_count"
 
     set body_status [catch {
         if {$mode in {trial tie1_trial tie1_replay}} {
-            set pre_tag [expr {$mode eq "trial" ? "minarea_v8_trial_pre" : "minarea_v8_${mode}_pre"}]
+            set pre_tag [expr {
+                $mode eq "trial" ?
+                    "minarea_${revision_lower}_trial_pre" :
+                    "minarea_${revision_lower}_${mode}_pre"
+            }]
             set baseline [mptdc_ckpt_verify_snapshot $pre_tag]
             mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 1 0 0
             mptdc_ckpt_manual_assert_minarea_01777_marker \
-                $fh PRE_MINAREA_MARKER $baseline
+                $fh PRE_MINAREA_MARKER $baseline $expected_stale_count
         } else {
             set baseline [mptdc_ckpt_verify_snapshot minarea_v8_replay_pre]
             mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 2 0 0
@@ -1932,7 +2049,7 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
         puts $fh "N57556_LANDING_BEFORE_EXTENSION_VIA_NAMES=[join $landing_via_names_pre ,]"
         if {$landing_via_names_pre ne {} &&
             $landing_via_names_pre ne {VIA1_o}} {
-            error "V8 found an unsupported landing-via representation before extension: $landing_via_names_pre"
+            error "$revision found an unsupported landing-via representation before extension: $landing_via_names_pre"
         }
         puts $fh "N57556_LANDING_REPRESENTATION_PRE_STATUS=PASS"
         set target_via_pre [mptdc_ckpt_manual_via_fingerprint \
@@ -1955,6 +2072,7 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
         puts $fh "FIXED_WIRE_EXTENSION_ATTRIBUTE=[dict get $extension free_attribute]"
         puts $fh "FIXED_WIRE_EXTENSION_PRE_UM=[dict get $extension free_pre]"
         puts $fh "FIXED_WIRE_EXTENSION_POST_UM=[dict get $extension free_post]"
+        puts $fh "FIXED_WIRE_EXTENSION_EFFECT_STATUS=PASS"
 
         set target_wire_post [mptdc_ckpt_manual_wire_handles u_core_n_57556]
         set target_pwire_post [mptdc_ckpt_manual_net_route_handles \
@@ -1968,19 +2086,19 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
 
         if {$target_wire_post ne $target_wire_pre} {
             puts $fh "TARGET_WIRE_HANDLE_STATUS=FAIL"
-            error "V8 changed the target net wire-handle set"
+            error "$revision changed the target net wire-handle set"
         }
         puts $fh "TARGET_WIRE_HANDLE_STATUS=UNCHANGED"
         if {$target_pwire_post ne $target_pwire_pre ||
             $target_swire_post ne $target_swire_pre} {
             puts $fh "TARGET_OTHER_ROUTE_OBJECT_STATUS=FAIL"
-            error "V8 changed target pWire/sWire objects"
+            error "$revision changed target pWire/sWire objects"
         }
         puts $fh "TARGET_OTHER_ROUTE_OBJECT_STATUS=UNCHANGED"
         if {$reserved_pwire_post ne $reserved_pwire_pre ||
             $reserved_swire_post ne $reserved_swire_pre} {
             puts $fh "RESERVED_FILL_OBJECT_STATUS=FAIL"
-            error "V8 changed _SADP_FILLS_RESERVED route objects"
+            error "$revision changed _SADP_FILLS_RESERVED route objects"
         }
         puts $fh "RESERVED_FILL_OBJECT_STATUS=UNCHANGED"
         set landing_via_names_post [mptdc_ckpt_manual_via_names_at \
@@ -1988,22 +2106,22 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
         puts $fh "N57556_LANDING_AFTER_EXTENSION_VIA_NAMES=[join $landing_via_names_post ,]"
         if {$landing_via_names_post ne $landing_via_names_pre} {
             puts $fh "N57556_LANDING_REPRESENTATION_STATUS=FAIL"
-            error "V8 changed the landing-via representation from $landing_via_names_pre to $landing_via_names_post"
+            error "$revision changed the landing-via representation from $landing_via_names_pre to $landing_via_names_post"
         }
         puts $fh "N57556_LANDING_REPRESENTATION_STATUS=UNCHANGED"
         set target_via_post [mptdc_ckpt_manual_via_fingerprint \
             $fh TARGET_VIA_POST u_core_n_57556]
         if {$target_via_post ne $target_via_pre} {
             puts $fh "TARGET_VIA_FINGERPRINT_STATUS=FAIL"
-            error "V8 changed the target net via fingerprint"
+            error "$revision changed the target net via fingerprint"
         }
         puts $fh "TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED"
 
         switch -- $mode {
-            trial { set post_tag minarea_v8_trial_post }
-            replay { set post_tag minarea_v8_replay_post }
-            tie1_trial { set post_tag minarea_v8_tie1_trial_post }
-            tie1_replay { set post_tag minarea_v8_tie1_replay_post }
+            trial { set post_tag minarea_${revision_lower}_trial_post }
+            replay { set post_tag minarea_${revision_lower}_replay_post }
+            tie1_trial { set post_tag minarea_${revision_lower}_tie1_trial_post }
+            tie1_replay { set post_tag minarea_${revision_lower}_tie1_replay_post }
         }
         set final [mptdc_ckpt_verify_snapshot $post_tag]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
@@ -2021,7 +2139,7 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
     puts $fh "MANUAL_ECO_STATUS=PASS"
     puts $fh "MANUAL_ECO_REPORT=$report"
     close $fh
-    puts "MPTDC_CKPT_MIN_AREA_END_EXT_V8_REPORT=$report"
+    puts "MPTDC_CKPT_MIN_AREA_END_EXT_${revision}_REPORT=$report"
     return [dict create status PASS report $report mode $mode]
 }
 
@@ -2039,6 +2157,14 @@ proc mptdc_ckpt_tie1_minarea_endext_trial_v8 {} {
 
 proc mptdc_ckpt_tie1_minarea_endext_replay_v8 {} {
     return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_trial_v9 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial V9]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_replay_v9 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay V9]
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {

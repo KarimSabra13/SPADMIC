@@ -90,16 +90,27 @@ final_drc=0
 final_special=1
 final_special_raw=1
 final_route_gate=0
+final_unrouted=UNKNOWN
 dangling=15
 if grep -q 'minarea_endext' "$commands"; then
   initial_drc=1
-  if grep -q '_trial_v8' "$commands"; then
-    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_trial_v8.rpt"
+  if grep -q '_trial_v9' "$commands"; then
+    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_trial_v9.rpt"
   else
-    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_replay_v8.rpt"
+    manual="$run_dir/reports/tie1_min_area_fixed_wire_endext_replay_v9.rpt"
   fi
   cat > "$manual" <<'RPT'
 MANUAL_ECO_STATUS=PASS
+REPAIR_REVISION=V9
+PRE_MINAREA_MARKER_RECONCILIATION_STATUS=PASS
+PRE_MINAREA_MARKER_FRESH_DRC_TOTAL=1
+PRE_MINAREA_MARKER_GEOMETRY_COUNT=2
+PRE_MINAREA_MARKER_LIVE_COUNT=1
+PRE_MINAREA_MARKER_STALE_COUNT=1
+PRE_MINAREA_MARKER_UNMAPPED_COUNT=0
+FIXED_WIRE_EXTENSION_STATUS=PASS
+FIXED_WIRE_EXTENSION_EFFECT_STATUS=PASS
+POST_MINAREA_MARKER_COUNT=0
 FREE_END_EXTENSION_DELTA_UM=0.14
 RPT
 else
@@ -133,6 +144,7 @@ RPT
     final_special=0
     final_special_raw=0
     final_route_gate=1
+    final_unrouted=0
     cat > "$pg" <<'RPT'
 PG_DANGLING_STATUS=PASS_DANGLING_CLEARED
 PG_DANGLING_ELIGIBLE_COUNT=15
@@ -161,6 +173,11 @@ if [[ "$dangling" == 15 ]]; then
 else
   printf 'Verification Complete : 0 Viols. 0 Wrngs.\n' > "$special_report"
 fi
+route_report="$run_dir/reports/final_report_route.rpt"
+cat > "$route_report" <<'RPT'
+#num needed restored net=0
+#need_extraction net=0 (total=16414)
+RPT
 cat > "$run_dir/reports/checkpoint_repair_status.rpt" <<RPT
 INITIAL_DRC=$initial_drc
 FINAL_DRC=$final_drc
@@ -169,9 +186,10 @@ FINAL_REGULAR_CONNECTIVITY_BAD=0
 FINAL_SPECIAL_CONNECTIVITY_BAD=$final_special
 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=$final_special_raw
 FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
-FINAL_UNROUTED_NETS=0
+FINAL_UNROUTED_NETS=$final_unrouted
 FINAL_ROUTE_GATE_PASS=$final_route_gate
 FINAL_SPECIAL_CONNECTIVITY_REPORT=$special_report
+FINAL_REPORT_ROUTE=$route_report
 FINAL_CHECKPOINT_DAT=$final_checkpoint
 FINAL_CHECKPOINT_DAT_EXISTS=1
 COMMAND_1_STATUS=PASS
@@ -234,6 +252,20 @@ grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/minarea_trial.stdout"
 grep -qx 'NEXT_STAGE=TIE1_MINAREA_ENDEXT_REPLAY' "$TMP_ROOT/minarea_trial.stdout"
 grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' \
   "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'REPAIR_REVISION=V9' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'PRE_DRC_MARKER_GEOMETRY_COUNT=2' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'PRE_DRC_MARKER_LIVE_COUNT=1' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'PRE_DRC_MARKER_STALE_COUNT=1' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'FINAL_UNROUTED_NETS_RAW=UNKNOWN' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'FINAL_UNROUTED_NETS_SOURCE=tie1_closure_exact_special_debt_report_route_fallback' \
+  "$WORK/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+grep -qx 'mptdc_ckpt_tie1_minarea_endext_trial_v9' \
+  "$WORK/$TRIAL_RUN/manifests/tie1_closure.commands.tcl"
 
 REPLAY_RUN=minarea_replay
 run_stage tie1-minarea-replay "$REPLAY_RUN" \

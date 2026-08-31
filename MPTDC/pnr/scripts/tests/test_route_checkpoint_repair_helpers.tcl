@@ -766,7 +766,13 @@ proc mptdc_ckpt_verify_snapshot {tag} {
             u_core_n_57556 MET1 {384.51 328.44}]} {
         error "minimum-area V6R post snapshot occurred before the calibrated regular stub materialized"
     }
-    if {$tag in {minarea_v8_trial_post minarea_v8_replay_post}} {
+    if {$tag in {
+            minarea_v8_trial_post
+            minarea_v8_replay_post
+            minarea_v8_tie1_trial_post
+            minarea_v8_tie1_replay_post
+            minarea_v9_tie1_trial_post
+            minarea_v9_tie1_replay_post}} {
         set extended_count 0
         foreach row $::mptdc_test_manual_wires {
             if {[dict get $row net] eq "u_core_n_57556" &&
@@ -778,14 +784,15 @@ proc mptdc_ckpt_verify_snapshot {tag} {
             }
         }
         if {$extended_count != 1} {
-            error "minimum-area V8 post snapshot expected one endpoint-extended canonical stub, found $extended_count"
+            error "minimum-area endpoint-extension post snapshot expected one extended canonical stub, found $extended_count"
         }
     }
     set tuple [dict get $::mptdc_test_manual_snapshot_tuples $tag]
     lassign $tuple drc shorts regular marker_rpt
     set snapshot [dict create \
         total_violations $drc shorts $shorts regular_bad $regular \
-        special_non_ro_failures 0]
+        special_non_ro_failures 0 \
+        drc_class_counts [dict create Mar $drc]]
     if {$marker_rpt ne ""} {
         dict set snapshot marker_rpt $marker_rpt
     }
@@ -1130,6 +1137,14 @@ puts $fh "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"
 puts $fh "1\t0x1\t{385.06 328.29 385.75 328.52}\tMET1\tGeometry\tMinimal_Area\tRegular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000"
 close $fh
 
+set minarea_01777_with_stale_marker [file join \
+    $::mptdc_test_report_dir minarea_01777_with_stale_marker.tsv]
+set fh [open $minarea_01777_with_stale_marker w]
+puts $fh "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"
+puts $fh "1\t0x1\t{364.47 358.235 364.67 358.275}\tMET1\tGeometry\tParallel_Run_Length_Spacing\tRegular Wire of Net u_core_n_69629 & Regular Wire of Net u_core_n_57960 Actual: 0.200000 Required: 0.230000"
+puts $fh "2\t0x2\t{385.06 328.29 385.75 328.52}\tMET1\tGeometry\tMinimal_Area\tRegular Wire of Net u_core_n_57556 Actual: 0.17770000 Required: 0.20200000"
+close $fh
+
 set ::mptdc_test_manual_vias [list \
     [dict create net u_core_n_57556 name VIA2_CH1_so point {385.56 330.12} status routed \
         bot_rects {{{385.42 329.93 386.22 330.31}}} \
@@ -1246,6 +1261,94 @@ foreach tie_mode {tie1_trial tie1_replay} {
     if {[string first "V8_STAGE_MODE=$tie_mode" $tie_text] < 0 ||
         [string first "MANUAL_ECO_STATUS=PASS" $tie_text] < 0} {
         error "minimum-area V8 $tie_mode report is incomplete"
+    }
+}
+
+set strict_probe_report [file join \
+    $::mptdc_test_report_dir minarea_v8_strict_stale_probe.rpt]
+set fh [open $strict_probe_report w]
+set strict_snapshot [dict create \
+    total_violations 1 \
+    drc_class_counts [dict create Mar 1] \
+    marker_rpt $minarea_01777_with_stale_marker]
+set strict_rc [catch {
+    mptdc_ckpt_manual_assert_minarea_01777_marker \
+        $fh V8_STRICT_MARKER $strict_snapshot
+} strict_error]
+close $fh
+if {!$strict_rc ||
+    ![string match "*STALE_MARKER_COUNT_MISMATCH*" $strict_error]} {
+    error "minimum-area V8 marker gate accepted unexpected stale geometry: $strict_error"
+}
+
+foreach tie_mode {tie1_trial tie1_replay} {
+    set ::mptdc_test_manual_vias [list \
+        [dict create net u_core_n_57556 name VIA2_CH1_so point {385.56 330.12} status routed \
+            bot_rects {{{385.42 329.93 386.22 330.31}}} \
+            cut_rects {{{385.43 329.99 385.69 330.25} {385.95 329.99 386.21 330.25}}} \
+            top_rects {{{385.37 329.98 386.27 330.26}}}]]
+    set ::mptdc_test_manual_wires [list \
+        [dict create net u_core_n_57556 layer MET1 \
+            box {385.06 328.29 385.75 328.52} width 0.23 \
+            points {{385.56 328.405} {385.175 328.405}} \
+            status fixed shape 0x0 length 0.385 beginExt 0.115 endExt 0.115]]
+    set ::mptdc_test_manual_pwires [list \
+        [dict create net u_core_n_57556 layer MET1 box {380 320 381 321} \
+            width 0.23 points {{380 320} {381 320}} status fixed] \
+        [dict create net _SADP_FILLS_RESERVED layer MET1 box {10 10 11 11} \
+            width 0.23 points {{10 10} {11 10}} status fixed]]
+    set ::mptdc_test_manual_swires [list \
+        [dict create net u_core_n_57556] \
+        [dict create net _SADP_FILLS_RESERVED]]
+    set ::mptdc_test_manual_command_calls {}
+    set ::mptdc_test_set_db_calls {}
+    set ::mptdc_test_manual_verify_count 0
+    set ::mptdc_test_manual_snapshot_tuples [dict create \
+        minarea_v9_${tie_mode}_pre \
+            [list 1 0 0 $minarea_01777_with_stale_marker] \
+        minarea_v9_${tie_mode}_post {0 0 0}]
+    if {$tie_mode eq "tie1_trial"} {
+        set tie_result [mptdc_ckpt_tie1_minarea_endext_trial_v9]
+    } else {
+        set tie_result [mptdc_ckpt_tie1_minarea_endext_replay_v9]
+    }
+    if {[dict get $tie_result status] ne "PASS" ||
+        [dict get $tie_result mode] ne $tie_mode ||
+        ![file exists [dict get $tie_result report]]} {
+        error "minimum-area V9 $tie_mode entry point did not pass: $tie_result"
+    }
+    if {$::mptdc_test_manual_verify_count != 2 ||
+        $::mptdc_test_set_db_calls ne {{mwire:0 .end_extension 0.255}}} {
+        error "minimum-area V9 $tie_mode changed an unexpected object"
+    }
+    set fh [open [dict get $tie_result report] r]
+    set tie_text [read $fh]
+    close $fh
+    foreach expected [list \
+        {MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V9} \
+        {REPAIR_REVISION=V9} \
+        "V9_STAGE_MODE=$tie_mode" \
+        {EXPECTED_STALE_GEOMETRY_MARKER_COUNT=1} \
+        {PRE_MINAREA_MARKER_FRESH_DRC_TOTAL=1} \
+        {PRE_MINAREA_MARKER_GEOMETRY_COUNT=2} \
+        {PRE_MINAREA_MARKER_LIVE_COUNT=1} \
+        {PRE_MINAREA_MARKER_STALE_COUNT=1} \
+        {PRE_MINAREA_MARKER_EXPECTED_STALE_COUNT=1} \
+        {PRE_MINAREA_MARKER_UNMAPPED_COUNT=0} \
+        {PRE_MINAREA_MARKER_RECONCILIATION_STATUS=PASS} \
+        {PRE_MINAREA_MARKER_STATUS=PASS} \
+        {FIXED_WIRE_EXTENSION_STATUS=PASS} \
+        {FIXED_WIRE_EXTENSION_EFFECT_STATUS=PASS} \
+        {POST_MINAREA_MARKER_COUNT=0} \
+        {MANUAL_ECO_STATUS=PASS}] {
+        if {[string first $expected $tie_text] < 0} {
+            error "minimum-area V9 $tie_mode report is missing $expected"
+        }
+    }
+    foreach call $::mptdc_test_manual_command_calls {
+        if {[lindex $call 0] in {editAddRoute editCommitRoute editDelete editAddVia ecoRoute routeDesign globalDetailRoute detailRoute createRouteBlk editPowerVia}} {
+            error "minimum-area V9 $tie_mode invoked a prohibited routing command: $call"
+        }
     }
 }
 
