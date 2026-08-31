@@ -10,7 +10,23 @@ tapeout readiness.
 
 ## Current Status
 
-The active TC-only digital-PNR state is:
+The active physical-recovery checkpoint is the canonical V13 Tie1 minimum-area
+replay `20260831_175532_mptdc_tie1_minarea_clearance_v13_replay`, published at
+commit `b61dfd1a6c476aa41cab43735a28199fa164bc05`. It restores the immutable Tie1
+checkpoint, reproduces one exact fixed MET1 addition, and ends with fresh
+Innovus DRC `0`, shorts `0`, regular-connectivity failures `0`, and unroutes
+`0`. Raw special connectivity still has 15 VDD/VSS dangling endpoints, and the
+last attributable PVS result is LVS `MISMATCH`; therefore signoff eligibility
+remains `NO`.
+
+The next action is the read-only `tie1-pg-analyze` stage. Its exact command,
+accepted checkpoint SHA-256, repair geometry, V8-V13 failure history, PG
+endpoint inventory, prior PVS mismatch signature, and stop conditions are in
+[`MPTDC_TIE1_DRC_LVS_CLOSURE_HANDOFF.md`](MPTDC_TIE1_DRC_LVS_CLOSURE_HANDOFF.md).
+That handoff is the current execution source of truth. Do not resume from an
+older recovery command embedded in a historical run narrative.
+
+The June 25 TC-only digital-PNR state remains reference evidence:
 
 - Reviewed PNR source HEAD: `010285dc`.
 - Genus handoff run: `20260623_1207_mptdc_axis_core_typical_closed_ba2b2932`.

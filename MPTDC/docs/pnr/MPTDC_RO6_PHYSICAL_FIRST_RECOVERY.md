@@ -1,5 +1,12 @@
 # MPTDC RO6 Physical-First Recovery
 
+> Execution notice, 2026-08-31: this file is the historical experiment record.
+> The accepted continuation checkpoint, current gate matrix, and only active
+> next command are maintained in
+> [`MPTDC_TIE1_DRC_LVS_CLOSURE_HANDOFF.md`](MPTDC_TIE1_DRC_LVS_CLOSURE_HANDOFF.md).
+> Do not execute an older command from this history unless the active handoff
+> explicitly selects it.
+
 ## Starting Point
 
 The design has exactly two buffered debug outputs, `ro_slow_tap0_o` and

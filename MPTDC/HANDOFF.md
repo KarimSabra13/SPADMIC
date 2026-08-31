@@ -24,7 +24,26 @@ measurement crossing, async frontend storage is not accidental latch inference,
 and the context bridge is a static held-bus protocol. Treat these as design
 contracts that need explicit verification/timing evidence, not as cleanup noise.
 
-## Current TC-Only Provisional Baseline
+## Current Physical-Closure Checkpoint
+
+The accepted recovery checkpoint is the V13 canonical Tie1 minimum-area replay
+`20260831_175532_mptdc_tie1_minarea_clearance_v13_replay`. Its evidence commit
+is `b61dfd1a6c476aa41cab43735a28199fa164bc05`, and its candidate checkpoint
+SHA-256 is
+`35fec60377b4fc7c08b83bf550ef457f7bdb3aa69580d8a749feb7a66fa4a7bf`.
+
+Fresh Innovus geometry DRC, shorts, regular connectivity, and route completeness
+pass. Fifteen raw special-PG dangling endpoints remain, the prior PVS base DRC
+contains 136 antenna-only results, and the prior attributable PVS LVS result is
+an explicit mismatch. No antenna repair was attempted, and this state is not
+timing-qualified or signoff-eligible.
+
+Continue with the read-only PG endpoint analysis command in
+`MPTDC/docs/pnr/MPTDC_TIE1_DRC_LVS_CLOSURE_HANDOFF.md`. That document is the
+active source for evidence lineage, accepted geometry, prior failed experiments,
+PVS triage, stop conditions, and the next server command.
+
+## Reference TC-Only Provisional Baseline
 
 | Item | Value |
 | --- | --- |

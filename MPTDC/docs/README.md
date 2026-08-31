@@ -18,6 +18,7 @@ or external work directories, but they are evidence, not owner-facing guidance.
 | Genus profile rationale | [`synthesis/GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md`](synthesis/GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md) |
 | Timing status | [`timing_closure/MPTDC_TIMING_CLOSURE_STATUS.md`](timing_closure/MPTDC_TIMING_CLOSURE_STATUS.md) |
 | PnR flow | [`pnr/MPTDC_PNR_FLOW.md`](pnr/MPTDC_PNR_FLOW.md) |
+| Current Tie1 DRC/LVS closure handoff | [`pnr/MPTDC_TIE1_DRC_LVS_CLOSURE_HANDOFF.md`](pnr/MPTDC_TIE1_DRC_LVS_CLOSURE_HANDOFF.md) |
 | TC-only PnR baseline | [`pnr/MPTDC_TC_CLOSURE_20260625_BASELINE.md`](pnr/MPTDC_TC_CLOSURE_20260625_BASELINE.md) |
 | Calibration | [`calibration/MPTDC_CALIBRATION_FLOW.md`](calibration/MPTDC_CALIBRATION_FLOW.md) |
 | Signoff limits | [`signoff_notes/MPTDC_SIGNOFF_LIMITATIONS.md`](signoff_notes/MPTDC_SIGNOFF_LIMITATIONS.md) |
