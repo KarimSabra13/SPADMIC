@@ -1,0 +1,125 @@
+# MPTDC Server Snapshot
+
+- Kind: `innovus`
+- Run ID: `20260831_mptdc_tie1_filler_ecoroute_trial_111136`
+- Source directory: `/sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_trial_111136`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/docs/server_snapshots/innovus/20260831_mptdc_tie1_filler_ecoroute_trial_111136`
+- Collection branch: `SPADMIC_test`
+- Collection commit: `9f9e7d664e8140e2bd6efec3cf7094216f37e636`
+- Created UTC: `2026-08-31T09:14:49Z`
+
+## Included Files
+- `README.md`
+- `logs/innovus_tie1_insertion_trial.console.log.messages.tail`
+- `logs/innovus_tie1_insertion_trial.log.messages.tail`
+- `manifests/source_failed_trial_action.rpt`
+- `manifests/source_failed_trial_inputs.rpt`
+- `manifests/source_failed_trial_operator_gate.rpt`
+- `manifests/source_failed_trial_status.rpt`
+- `manifests/source_filler_status.rpt`
+- `manifests/source_physical_lvs_contract.rpt`
+- `manifests/source_probe_flagged_term_inventory.tsv`
+- `manifests/source_probe_inputs.rpt`
+- `manifests/source_probe_operator_gate.rpt`
+- `manifests/source_probe_tie_master_inventory.tsv`
+- `manifests/tie1_insertion_trial_inputs.rpt`
+- `manifests/tie1_instance_pin_targets.txt`
+- `reports/addFiller_command.rpt`
+- `reports/addFiller_help.rpt`
+- `reports/addTieHiLo_command.rpt`
+- `reports/addTieHiLo_help.rpt`
+- `reports/addTieHiLo_man.rpt`
+- `reports/deleteFiller_command.rpt`
+- `reports/deleteFiller_help.rpt`
+- `reports/deleteFiller_man.rpt`
+- `reports/filler_status.rpt`
+- `reports/operator_gate_tie1_insertion_trial.rpt`
+- `reports/pg_connectivity_commands.rpt`
+- `reports/post_filler_ecoRoute_fix_drc.rpt`
+- `reports/post_filler_ecoRoute_target.rpt`
+- `reports/row_infra_insertion.rpt`
+- `reports/setFillerMode_help.rpt`
+- `reports/setTieHiLoMode_help.rpt`
+- `reports/source_failed_trial_baseline_check_place.rpt`
+- `reports/tie1_filler_inventory_baseline.tsv`
+- `reports/tie1_filler_inventory_final.tsv`
+- `reports/tie1_filler_inventory_post_delete.tsv`
+- `reports/tie1_flagged_terms_baseline.tsv`
+- `reports/tie1_flagged_terms_final.tsv`
+- `reports/tie1_flagged_terms_post_add.tsv`
+- `reports/tie1_inserted_net_inventory.tsv`
+- `reports/tie1_insertion_trial_action.rpt`
+- `reports/tie1_insertion_trial_status.rpt`
+- `reports/tie1_nonfiller_fingerprint_baseline.tsv`
+- `reports/tie1_nonfiller_fingerprint_final.tsv`
+- `reports/tie1_nonfiller_fingerprint_post_delete.tsv`
+- `reports/tie1_target_readback_final.tsv`
+- `reports/tie1_target_readback_post_add.tsv`
+- `reports/tie1_trial_baseline_check_place.rpt`
+- `reports/tie1_trial_baseline_placement_status.rpt`
+- `reports/tie1_trial_baseline_report_route.rpt`
+- `reports/tie1_trial_baseline_verify_connectivity_regular.rpt`
+- `reports/tie1_trial_baseline_verify_connectivity_special.rpt`
+- `reports/tie1_trial_baseline_verify_connectivity_special_command.rpt`
+- `reports/tie1_trial_baseline_verify_connectivity_special_detailed.console.rpt`
+- `reports/tie1_trial_baseline_verify_connectivity_special_detailed.rpt`
+- `reports/tie1_trial_baseline_verify_drc.rpt`
+- `reports/tie1_trial_baseline_verify_drc_markers.tsv`
+- `reports/tie1_trial_baseline_verify_drc_markers_schema.rpt`
+- `reports/tie1_trial_final_check_place.rpt`
+- `reports/tie1_trial_final_placement_status.rpt`
+- `reports/tie1_trial_final_report_route.rpt`
+- `reports/tie1_trial_final_verify_connectivity_regular.rpt`
+- `reports/tie1_trial_final_verify_connectivity_special.rpt`
+- `reports/tie1_trial_final_verify_connectivity_special_command.rpt`
+- `reports/tie1_trial_final_verify_connectivity_special_detailed.console.rpt`
+- `reports/tie1_trial_final_verify_connectivity_special_detailed.rpt`
+- `reports/tie1_trial_final_verify_drc.rpt`
+- `reports/tie1_trial_final_verify_drc_markers.tsv`
+- `reports/tie1_trial_final_verify_drc_markers_schema.rpt`
+- `reports/tie1_trial_master_inventory.tsv`
+- `reports/tie1_trial_post_filler_fix_drc_report_route.rpt`
+- `reports/tie1_trial_post_filler_fix_drc_verify_connectivity_regular.rpt`
+- `reports/tie1_trial_post_filler_fix_drc_verify_connectivity_special.rpt`
+- `reports/tie1_trial_post_filler_fix_drc_verify_connectivity_special_command.rpt`
+- `reports/tie1_trial_post_filler_fix_drc_verify_connectivity_special_detailed.console.rpt`
+- `reports/tie1_trial_post_filler_fix_drc_verify_connectivity_special_detailed.rpt`
+- `reports/tie1_trial_post_filler_fix_drc_verify_drc.rpt`
+- `reports/tie1_trial_post_filler_fix_drc_verify_drc_markers.tsv`
+- `reports/tie1_trial_post_filler_fix_drc_verify_drc_markers_schema.rpt`
+- `reports/tie1_trial_post_filler_target_report_route.rpt`
+- `reports/tie1_trial_post_filler_target_verify_connectivity_regular.rpt`
+- `reports/tie1_trial_post_filler_target_verify_connectivity_special.rpt`
+- `reports/tie1_trial_post_filler_target_verify_connectivity_special_command.rpt`
+- `reports/tie1_trial_post_filler_target_verify_connectivity_special_detailed.console.rpt`
+- `reports/tie1_trial_post_filler_target_verify_connectivity_special_detailed.rpt`
+- `reports/tie1_trial_post_filler_target_verify_drc.rpt`
+- `reports/tie1_trial_post_filler_target_verify_drc_markers.tsv`
+- `reports/tie1_trial_post_filler_target_verify_drc_markers_schema.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_report_route.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_connectivity_regular.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_connectivity_special.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_connectivity_special_command.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_connectivity_special_detailed.console.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_connectivity_special_detailed.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_drc.rpt`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_drc_markers.tsv`
+- `reports/tie1_trial_post_refill_pre_cleanup_verify_drc_markers_schema.rpt`
+- `reports/tie1_trial_post_selected_route_report_route.rpt`
+- `reports/tie1_trial_post_selected_route_verify_connectivity_regular.rpt`
+- `reports/tie1_trial_post_selected_route_verify_connectivity_special.rpt`
+- `reports/tie1_trial_post_selected_route_verify_connectivity_special_command.rpt`
+- `reports/tie1_trial_post_selected_route_verify_connectivity_special_detailed.console.rpt`
+- `reports/tie1_trial_post_selected_route_verify_connectivity_special_detailed.rpt`
+- `reports/tie1_trial_post_selected_route_verify_drc.rpt`
+- `reports/tie1_trial_post_selected_route_verify_drc_markers.tsv`
+- `reports/tie1_trial_post_selected_route_verify_drc_markers_schema.rpt`
+
+## Excluded By Policy
+
+- Innovus checkpoints and databases;
+- raw GDS/OAS files;
+- full raw logs unless converted to message tails;
+- text files larger than 8388608 bytes;
+- large binary artifacts, except bounded manager images when explicitly requested;
+- server work directories outside this snapshot.
