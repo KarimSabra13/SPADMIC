@@ -1,0 +1,12 @@
+TOP_CELL=mptdc_axis_core
+SOURCE_CHECKPOINT=/sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/checkpoints/repaired_route.enc.dat
+STREAM_MAP=/data/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_1131/pnr_streamout.map
+STD_GDS=/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/gds/xh018_D_CELLS_JIHD.gds
+RO_GDS=/sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_lvs_density_131326/merge_libs/RO_tune6_from_OA.gds
+TOP_ONLY_GDS=/sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_lvs_density_131326/outputs/mptdc_axis_core_top_only.gds
+MERGED_GDS=/sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_lvs_density_131326/outputs/mptdc_axis_core_merged_stdcell_ro6.gds
+LVS_NETLIST=/sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_lvs_density_131326/outputs/mptdc_axis_core_pnr_lvs.v
+DEF_OUT=/sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_lvs_density_131326/def/mptdc_axis_core_repaired_route.def
+STATUS=INTERNAL_DRYGDS_RISK_REVIEW_ONLY
+FINAL_SIGNOFF_READY=NO
+READY_FOR_TAPEOUT=NO
