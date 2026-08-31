@@ -213,7 +213,15 @@ while [[ $# -gt 0 ]]; do
     *) shift ;;
   esac
 done
-if [[ "${EXPECT_DIAGNOSTIC_LVS:-0}" == 1 ]]; then
+if [[ "${EXPECT_COMPOSITIONAL_LVS:-0}" == 1 ]]; then
+  test "$diagnostic" = 1
+  grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF' \
+    "$dir/manifests/pvs_diagnostic_scope.rpt"
+  grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_RAW_LVS' \
+    "$dir/manifests/pvs_diagnostic_scope.rpt"
+  grep -qx 'DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE' \
+    "$dir/manifests/pvs_diagnostic_scope.rpt"
+elif [[ "${EXPECT_DIAGNOSTIC_LVS:-0}" == 1 ]]; then
   test "$diagnostic" = 1
   grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF' \
     "$dir/manifests/pvs_diagnostic_scope.rpt"
@@ -236,7 +244,13 @@ fi
 if [[ -n "${LVS_CALLS:-}" ]]; then printf '%s\n' "$diagnostic" >> "$LVS_CALLS"; fi
 if [[ -n "${STAGE_CALLS:-}" ]]; then printf 'lvs\n' >> "$STAGE_CALLS"; fi
 if [[ "${FAKE_LVS_MISMATCH:-0}" == 1 ]]; then
-  printf 'STATUS=FAIL\nPVS_LVS_STATUS=NOT_PROVEN\nPVS_RC=0\n' > "$dir/reports/pvs_lvs_status.rpt"
+  if [[ "${EXPECT_COMPOSITIONAL_LVS:-0}" == 1 ]]; then
+    grep -qx 'DEFERRED_INNOVUS_DRC_COUNT=0' \
+      "$dir/manifests/pvs_diagnostic_scope.rpt"
+    printf 'STATUS=FAIL\nPVS_LVS_STATUS=MISMATCH\nPVS_RC=0\n' > "$dir/reports/pvs_lvs_status.rpt"
+  else
+    printf 'STATUS=FAIL\nPVS_LVS_STATUS=NOT_PROVEN\nPVS_RC=0\n' > "$dir/reports/pvs_lvs_status.rpt"
+  fi
   exit 8
 fi
 printf 'STATUS=PASS\nPVS_LVS_STATUS=MATCH\nPVS_RC=0\n' > "$dir/reports/pvs_lvs_status.rpt"
@@ -263,7 +277,7 @@ run_driver() {
   fi
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --diagnostic-deferred-minarea|--run-density-after-lvs)
+      --diagnostic-deferred-minarea|--diagnostic-antenna-exception|--diagnostic-ro-compositional|--run-density-after-lvs)
         driver_args+=("$1")
         ;;
       *)
@@ -903,8 +917,283 @@ DECISION=PASS_TIE1_TRIAL_CONTINUE
 NEXT_STAGE=DIAGNOSTIC_PHYSICAL_PVS_FROM_TIE1_TRIAL
 EOF
 
+TIE1_MINAREA_TRIAL_RUN=tie1_minarea_trial_fixture
+TIE1_MINAREA_REPLAY_RUN=tie1_minarea_replay_fixture
+TIE1_MINAREA_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_MINAREA_TRIAL_RUN/reports"
+TIE1_MINAREA_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_MINAREA_REPLAY_RUN/reports"
+TIE1_MINAREA_TRIAL_CKPT="$WORK/$TIE1_MINAREA_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_MINAREA_REPLAY_CKPT="$WORK/$TIE1_MINAREA_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
+mkdir -p "$TIE1_MINAREA_TRIAL_REPORTS" "$TIE1_MINAREA_REPLAY_REPORTS" \
+  "$TIE1_MINAREA_TRIAL_CKPT" "$TIE1_MINAREA_REPLAY_CKPT"
+printf 'tie1 minarea proof trial\n' > "$TIE1_MINAREA_TRIAL_CKPT/design.bin"
+printf 'tie1 minarea canonical replay\n' > "$TIE1_MINAREA_REPLAY_CKPT/design.bin"
+TIE1_MINAREA_TRIAL_SHA="$(tree_hash "$TIE1_MINAREA_TRIAL_CKPT")"
+TIE1_MINAREA_REPLAY_SHA="$(tree_hash "$TIE1_MINAREA_REPLAY_CKPT")"
+
+write_tie1_minarea_gate() {
+  local path="$1" step="$2" source_trial="$3" candidate="$4" candidate_sha="$5"
+  cat > "$path" <<EOF
+STEP=$step
+SOURCE_TIE1_RUN_ID=$TIE1_CANDIDATE_RUN
+SOURCE_MINAREA_TRIAL_RUN_ID=$source_trial
+SOURCE_CHECKPOINT=$TIE1_CANDIDATE_CKPT
+SOURCE_CHECKPOINT_SHA256=$TIE1_CANDIDATE_SHA
+TOOL_RC=0
+COMMAND_1_STATUS=PASS
+MANUAL_ECO_STATUS=PASS
+FREE_END_EXTENSION_DELTA_UM=0.14
+INITIAL_DRC=1
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_DANGLING_COUNT=15
+FINAL_UNROUTED_NETS=0
+TIE_TARGET_COUNT=91
+TIE_NET_COUNT=85
+FILLER_COUNT=24856
+PLACEMENT_SITE_OCCUPIED=907533
+PLACEMENT_SITE_CAPACITY=907533
+PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
+ANTENNA_REPAIR_ATTEMPTED=NO
+TIMING_STATUS=NOT_RUN_BY_DRC_LVS_SCOPE
+CANDIDATE_CHECKPOINT=$candidate
+CANDIDATE_CHECKPOINT_SHA256=$candidate_sha
+CANDIDATE_CHECKPOINT_STATUS=PASS
+SIGNOFF_ELIGIBLE=NO
+DECISION=PASS_CONTINUE
+NEXT_STAGE=TEST_NEXT
+EOF
+}
+write_tie1_minarea_gate \
+  "$TIE1_MINAREA_TRIAL_REPORTS/operator_gate_tie1_minarea_endext_trial.rpt" \
+  TIE1_MINAREA_ENDEXT_TRIAL NONE "$TIE1_MINAREA_TRIAL_CKPT" "$TIE1_MINAREA_TRIAL_SHA"
+write_tie1_minarea_gate \
+  "$TIE1_MINAREA_REPLAY_REPORTS/operator_gate_tie1_minarea_endext_replay.rpt" \
+  TIE1_MINAREA_ENDEXT_REPLAY "$TIE1_MINAREA_TRIAL_RUN" \
+  "$TIE1_MINAREA_REPLAY_CKPT" "$TIE1_MINAREA_REPLAY_SHA"
+
+TIE1_PG_TRIAL_RUN=tie1_pg_trial_fixture
+TIE1_PG_REPLAY_RUN=tie1_pg_replay_fixture
+TIE1_PG_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_TRIAL_RUN/reports"
+TIE1_PG_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_REPLAY_RUN/reports"
+TIE1_PG_TRIAL_CKPT="$WORK/$TIE1_PG_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_PG_REPLAY_CKPT="$WORK/$TIE1_PG_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
+mkdir -p "$TIE1_PG_TRIAL_REPORTS" "$TIE1_PG_REPLAY_REPORTS" \
+  "$TIE1_PG_TRIAL_CKPT" "$TIE1_PG_REPLAY_CKPT"
+printf 'tie1 PG dangling delete trial\n' > "$TIE1_PG_TRIAL_CKPT/design.bin"
+printf 'tie1 PG dangling canonical replay\n' > "$TIE1_PG_REPLAY_CKPT/design.bin"
+TIE1_PG_TRIAL_SHA="$(tree_hash "$TIE1_PG_TRIAL_CKPT")"
+TIE1_PG_REPLAY_SHA="$(tree_hash "$TIE1_PG_REPLAY_CKPT")"
+
+write_tie1_pg_gate() {
+  local path="$1" step="$2" source_pg_trial="$3" candidate="$4" candidate_sha="$5"
+  cat > "$path" <<EOF
+STEP=$step
+SOURCE_TIE1_RUN_ID=$TIE1_CANDIDATE_RUN
+SOURCE_MINAREA_REPLAY_RUN_ID=$TIE1_MINAREA_REPLAY_RUN
+SOURCE_PG_TRIAL_RUN_ID=$source_pg_trial
+SOURCE_CHECKPOINT=$TIE1_MINAREA_REPLAY_CKPT
+SOURCE_CHECKPOINT_SHA256=$TIE1_MINAREA_REPLAY_SHA
+TOOL_RC=0
+COMMAND_1_STATUS=PASS
+PG_DANGLING_STATUS=PASS_DANGLING_CLEARED
+PG_DANGLING_ELIGIBLE_COUNT=15
+PG_DANGLING_ALL_ELIGIBLE_STATUS=PASS
+PG_DANGLING_UNSAFE_LENGTH_COUNT=0
+PG_DANGLING_DUPLICATE_HANDLE_COUNT=0
+PG_DANGLING_MUTATION_ALLOWED=1
+PG_DANGLING_DELETE_ATTEMPTS=15
+PG_DANGLING_DELETE_SUCCESSES=15
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_DANGLING_COUNT=0
+FINAL_UNROUTED_NETS=0
+FINAL_ROUTE_GATE_PASS=1
+PG_DELETE_TRIAL_OUTCOME=PASS_CLEARED
+TIE_TARGET_COUNT=91
+TIE_NET_COUNT=85
+FILLER_COUNT=24856
+PLACEMENT_SITE_OCCUPIED=907533
+PLACEMENT_SITE_CAPACITY=907533
+PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
+ANTENNA_REPAIR_ATTEMPTED=NO
+TIMING_STATUS=NOT_RUN_BY_DRC_LVS_SCOPE
+CANDIDATE_CHECKPOINT=$candidate
+CANDIDATE_CHECKPOINT_SHA256=$candidate_sha
+CANDIDATE_CHECKPOINT_STATUS=PASS
+SIGNOFF_ELIGIBLE=NO
+DECISION=PASS_CONTINUE
+NEXT_STAGE=TEST_NEXT
+EOF
+}
+write_tie1_pg_gate \
+  "$TIE1_PG_TRIAL_REPORTS/operator_gate_tie1_pg_dangling_delete_trial.rpt" \
+  TIE1_PG_DANGLING_DELETE_TRIAL NONE "$TIE1_PG_TRIAL_CKPT" "$TIE1_PG_TRIAL_SHA"
+write_tie1_pg_gate \
+  "$TIE1_PG_REPLAY_REPORTS/operator_gate_tie1_pg_dangling_delete_replay.rpt" \
+  TIE1_PG_DANGLING_DELETE_REPLAY "$TIE1_PG_TRIAL_RUN" \
+  "$TIE1_PG_REPLAY_CKPT" "$TIE1_PG_REPLAY_SHA"
+
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m minarea-replay-fixtures
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
+ANTENNA_ONLY_MODE_CALLS="$TMP_ROOT/antenna_only_mode.calls"
+set +e
+run_driver pvs_antenna_only_mode "$ANTENNA_ONLY_MODE_CALLS" \
+  --test-pnr-run "$TIE1_MINAREA_REPLAY_RUN" \
+  --diagnostic-antenna-exception > "$TMP_ROOT/antenna_only_mode.stdout" 2>&1
+ANTENNA_ONLY_MODE_RC=$?
+set -e
+test "$ANTENNA_ONLY_MODE_RC" -eq 2
+grep -q 'restricted to compositional LVS mode' "$TMP_ROOT/antenna_only_mode.stdout"
+test ! -e "$ANTENNA_ONLY_MODE_CALLS"
+
+COMPOSITIONAL_CALLS="$TMP_ROOT/tie1_compositional.calls"
+COMPOSITIONAL_DRC_CALLS="$TMP_ROOT/tie1_compositional.drc_calls"
+COMPOSITIONAL_LVS_CALLS="$TMP_ROOT/tie1_compositional.lvs_calls"
+run_driver pvs_tie1_compositional "$COMPOSITIONAL_CALLS" \
+  --test-pnr-run "$TIE1_MINAREA_REPLAY_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$TIE1_MINAREA_REPLAY_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base EXPECT_COMPOSITIONAL_LVS=1 \
+  FAKE_LVS_MISMATCH=1 DRC_CALLS="$COMPOSITIONAL_DRC_CALLS" \
+  LVS_CALLS="$COMPOSITIONAL_LVS_CALLS" \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'PNR_CANDIDATE_KIND=TIE1_MINAREA_CLEAN_COMPOSITIONAL' \
+  "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=PASS' "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'CANDIDATE_CHECKPOINT_HASH_STATUS=PASS' "$TMP_ROOT/tie1_compositional.stdout"
+grep -Fxqx "SOURCE_PNR_RUN_ID=$TIE1_CANDIDATE_RUN" \
+  "$TMP_ROOT/tie1_compositional.stdout"
+grep -Fxqx "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$TIE1_MINAREA_REPLAY_SHA" \
+  "$TMP_ROOT/tie1_compositional.stdout"
+grep -Fxqx "CANDIDATE_CHECKPOINT_ACTUAL_SHA256=$TIE1_MINAREA_REPLAY_SHA" \
+  "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'PVS_RECOVERY_STATUS=DIAGNOSTIC_RAW_LVS_COMPLETE' \
+  "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'RAW_FULL_TOP_LVS_STATUS=MISMATCH_PENDING_BOUNDARY_PROOF' \
+  "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'PVS_LVS=MISMATCH' "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'DECISION=DIAGNOSTIC_RAW_MISMATCH_COLLECTED' \
+  "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'NEXT_STAGE=RO6_BOUNDARY_LVS' "$TMP_ROOT/tie1_compositional.stdout"
+grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF' \
+  "$WORK/pvs_tie1_compositional/manifests/pvs_diagnostic_scope.rpt"
+grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_RAW_LVS' \
+  "$WORK/pvs_tie1_compositional/manifests/pvs_diagnostic_scope.rpt"
+grep -qx 'DEFERRED_INNOVUS_DRC_COUNT=0' \
+  "$WORK/pvs_tie1_compositional/manifests/pvs_diagnostic_scope.rpt"
+grep -qx 'STATUS=FAIL' \
+  "$WORK/pvs_tie1_compositional/reports/operator_gate_pvs_lvs.rpt"
+grep -qx 'PVS_LVS_STATUS=MISMATCH' \
+  "$WORK/pvs_tie1_compositional/reports/operator_gate_pvs_lvs.rpt"
+grep -qx 'PVS_RC=0' \
+  "$WORK/pvs_tie1_compositional/reports/operator_gate_pvs_lvs.rpt"
+grep -qx 'SIGNOFF_ELIGIBLE=NO' \
+  "$WORK/pvs_tie1_compositional/reports/operator_gate_pvs_lvs.rpt"
+test "$(wc -l < "$COMPOSITIONAL_CALLS")" -eq 4
+test "$(cat "$COMPOSITIONAL_DRC_CALLS")" = base
+test "$(cat "$COMPOSITIONAL_LVS_CALLS")" = 1
+test ! -e "$WORK/pvs_tie1_compositional/reports/pvs_drc_density_status.rpt"
+
+PG_COMPOSITIONAL_CALLS="$TMP_ROOT/tie1_pg_compositional.calls"
+PG_COMPOSITIONAL_DRC_CALLS="$TMP_ROOT/tie1_pg_compositional.drc_calls"
+PG_COMPOSITIONAL_LVS_CALLS="$TMP_ROOT/tie1_pg_compositional.lvs_calls"
+run_driver pvs_tie1_pg_compositional "$PG_COMPOSITIONAL_CALLS" \
+  --test-pnr-run "$TIE1_PG_REPLAY_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$TIE1_PG_REPLAY_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base EXPECT_COMPOSITIONAL_LVS=1 \
+  FAKE_LVS_MISMATCH=1 DRC_CALLS="$PG_COMPOSITIONAL_DRC_CALLS" \
+  LVS_CALLS="$PG_COMPOSITIONAL_LVS_CALLS" \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -qx 'PNR_CANDIDATE_KIND=TIE1_MINAREA_PG_CLEAN_COMPOSITIONAL' \
+  "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=PASS' "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -qx 'CANDIDATE_CHECKPOINT_HASH_STATUS=PASS' \
+  "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -Fxqx "SOURCE_PNR_RUN_ID=$TIE1_CANDIDATE_RUN" \
+  "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -Fxqx "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$TIE1_PG_REPLAY_SHA" \
+  "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -Fxqx "CANDIDATE_CHECKPOINT_ACTUAL_SHA256=$TIE1_PG_REPLAY_SHA" \
+  "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -qx 'RAW_FULL_TOP_LVS_STATUS=MISMATCH_PENDING_BOUNDARY_PROOF' \
+  "$TMP_ROOT/tie1_pg_compositional.stdout"
+grep -qx 'NEXT_STAGE=RO6_BOUNDARY_LVS' "$TMP_ROOT/tie1_pg_compositional.stdout"
+test "$(wc -l < "$PG_COMPOSITIONAL_CALLS")" -eq 4
+test "$(cat "$PG_COMPOSITIONAL_DRC_CALLS")" = base
+test "$(cat "$PG_COMPOSITIONAL_LVS_CALLS")" = 1
+
+UNEXPECTED_MATCH_CALLS="$TMP_ROOT/tie1_compositional_match.calls"
+set +e
+run_driver pvs_tie1_compositional_match "$UNEXPECTED_MATCH_CALLS" \
+  --test-pnr-run "$TIE1_MINAREA_REPLAY_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$TIE1_MINAREA_REPLAY_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base EXPECT_COMPOSITIONAL_LVS=1 \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/tie1_compositional_match.stdout"
+UNEXPECTED_MATCH_RC=$?
+set -e
+test "$UNEXPECTED_MATCH_RC" -eq 1
+grep -qx 'DECISION=FAIL_UNEXPECTED_COMPOSITIONAL_RAW_LVS_RESULT' \
+  "$TMP_ROOT/tie1_compositional_match.stdout"
+grep -qx 'NEXT_STAGE=REVIEW_RAW_LVS_EVIDENCE_BEFORE_BOUNDARY_PROOF' \
+  "$TMP_ROOT/tie1_compositional_match.stdout"
+test "$(wc -l < "$UNEXPECTED_MATCH_CALLS")" -eq 4
+
+sed -i 's/^FINAL_DRC=0$/FINAL_DRC=1/' \
+  "$TIE1_MINAREA_TRIAL_REPORTS/operator_gate_tie1_minarea_endext_trial.rpt"
+git -C "$REPO" add MPTDC
+git -C "$REPO" commit -q -m broken-tie1-minarea-trial-ancestry
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+BROKEN_TIE1_MINAREA_CALLS="$TMP_ROOT/broken_tie1_minarea.calls"
+set +e
+run_driver pvs_broken_tie1_minarea "$BROKEN_TIE1_MINAREA_CALLS" \
+  --test-pnr-run "$TIE1_MINAREA_REPLAY_RUN" \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/broken_tie1_minarea.stdout"
+BROKEN_TIE1_MINAREA_RC=$?
+set -e
+test "$BROKEN_TIE1_MINAREA_RC" -eq 4
+grep -qx 'CANDIDATE_GATE_STATUS=FAIL' "$TMP_ROOT/broken_tie1_minarea.stdout"
+test ! -e "$BROKEN_TIE1_MINAREA_CALLS"
+sed -i 's/^FINAL_DRC=1$/FINAL_DRC=0/' \
+  "$TIE1_MINAREA_TRIAL_REPORTS/operator_gate_tie1_minarea_endext_trial.rpt"
+git -C "$REPO" add MPTDC
+git -C "$REPO" commit -q -m restore-tie1-minarea-trial-ancestry
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
+sed -i 's/^FINAL_SPECIAL_CONNECTIVITY_BAD=0$/FINAL_SPECIAL_CONNECTIVITY_BAD=1/' \
+  "$TIE1_PG_TRIAL_REPORTS/operator_gate_tie1_pg_dangling_delete_trial.rpt"
+git -C "$REPO" add MPTDC
+git -C "$REPO" commit -q -m broken-tie1-pg-trial-ancestry
+HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+BROKEN_TIE1_PG_CALLS="$TMP_ROOT/broken_tie1_pg.calls"
+set +e
+run_driver pvs_broken_tie1_pg "$BROKEN_TIE1_PG_CALLS" \
+  --test-pnr-run "$TIE1_PG_REPLAY_RUN" \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/broken_tie1_pg.stdout"
+BROKEN_TIE1_PG_RC=$?
+set -e
+test "$BROKEN_TIE1_PG_RC" -eq 4
+grep -qx 'PNR_CANDIDATE_KIND=TIE1_MINAREA_PG_CLEAN_COMPOSITIONAL' \
+  "$TMP_ROOT/broken_tie1_pg.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=FAIL' "$TMP_ROOT/broken_tie1_pg.stdout"
+test ! -e "$BROKEN_TIE1_PG_CALLS"
+sed -i 's/^FINAL_SPECIAL_CONNECTIVITY_BAD=1$/FINAL_SPECIAL_CONNECTIVITY_BAD=0/' \
+  "$TIE1_PG_TRIAL_REPORTS/operator_gate_tie1_pg_dangling_delete_trial.rpt"
+git -C "$REPO" add MPTDC
+git -C "$REPO" commit -q -m restore-tie1-pg-trial-ancestry
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
 FAILED_V6R_NORMAL_CALLS="$TMP_ROOT/failed_v6r_normal.calls"

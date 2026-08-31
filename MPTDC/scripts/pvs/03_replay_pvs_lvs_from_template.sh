@@ -153,19 +153,32 @@ report_value() {
 
 require_diagnostic_scope() {
   local scope="$NEW_BASE/manifests/pvs_diagnostic_scope.rpt"
-  local diagnostic_scope density_status run_density_after_lvs
+  local run_class diagnostic_scope density_status run_density_after_lvs
   mptdc_pvs_require_file "$scope"
-  grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF' "$scope" || \
-    mptdc_pvs_die "diagnostic LVS scope has invalid PVS_RUN_CLASS: $scope"
+  run_class="$(report_value "$scope" PVS_RUN_CLASS)"
   diagnostic_scope="$(report_value "$scope" DIAGNOSTIC_SCOPE)"
   density_status="$(report_value "$scope" DENSITY_DRC_STATUS)"
   run_density_after_lvs="$(report_value "$scope" RUN_DENSITY_AFTER_LVS)"
-  if [[ "$diagnostic_scope" == BASE_DRC_PLUS_LVS ]]; then
+  if [[ "$run_class" == DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF &&
+        "$diagnostic_scope" == BASE_DRC_PLUS_RAW_LVS ]]; then
+    [[ "$density_status" == NOT_RUN_BY_SCOPE ]] || \
+      mptdc_pvs_die "compositional raw LVS scope did not exclude density DRC: $scope"
+    [[ -z "$run_density_after_lvs" || "$run_density_after_lvs" == 0 ]] || \
+      mptdc_pvs_die "compositional raw LVS scope requested inline density DRC: $scope"
+    grep -qx 'DEFERRED_INNOVUS_DRC_COUNT=0' "$scope" || \
+      mptdc_pvs_die "compositional raw LVS scope carries deferred Innovus DRC: $scope"
+    grep -qx 'DEFERRED_INNOVUS_DRC_RULE=NONE' "$scope" || \
+      mptdc_pvs_die "compositional raw LVS scope carries a deferred DRC rule: $scope"
+    grep -qx 'DEFERRED_INNOVUS_DRC_NET=NONE' "$scope" || \
+      mptdc_pvs_die "compositional raw LVS scope carries a deferred DRC net: $scope"
+  elif [[ "$run_class" == DIAGNOSTIC_NOT_SIGNOFF &&
+          "$diagnostic_scope" == BASE_DRC_PLUS_LVS ]]; then
     [[ "$density_status" == NOT_RUN_BY_SCOPE ]] || \
       mptdc_pvs_die "diagnostic LVS scope did not explicitly exclude density DRC: $scope"
     [[ -z "$run_density_after_lvs" || "$run_density_after_lvs" == 0 ]] || \
       mptdc_pvs_die "diagnostic LVS scope has an inconsistent density request: $scope"
-  elif [[ "$diagnostic_scope" == BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY ]]; then
+  elif [[ "$run_class" == DIAGNOSTIC_NOT_SIGNOFF &&
+          "$diagnostic_scope" == BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY ]]; then
     [[ "$run_density_after_lvs" == 1 ]] || \
       mptdc_pvs_die "post-MATCH density scope is missing its explicit request: $scope"
     [[ "$density_status" == PENDING_POST_LVS_MATCH ]] || \
@@ -175,10 +188,12 @@ require_diagnostic_scope() {
   fi
   grep -qx 'SIGNOFF_ELIGIBLE=NO' "$scope" || \
     mptdc_pvs_die "diagnostic LVS scope is not marked ineligible for signoff: $scope"
-  grep -qx 'DEFERRED_INNOVUS_DRC_COUNT=1' "$scope" || \
-    mptdc_pvs_die "diagnostic LVS scope does not carry exactly one deferred Innovus DRC: $scope"
-  grep -qx 'DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA' "$scope" || \
-    mptdc_pvs_die "diagnostic LVS scope has an unexpected deferred rule: $scope"
+  if [[ "$run_class" == DIAGNOSTIC_NOT_SIGNOFF ]]; then
+    grep -qx 'DEFERRED_INNOVUS_DRC_COUNT=1' "$scope" || \
+      mptdc_pvs_die "diagnostic LVS scope does not carry exactly one deferred Innovus DRC: $scope"
+    grep -qx 'DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA' "$scope" || \
+      mptdc_pvs_die "diagnostic LVS scope has an unexpected deferred rule: $scope"
+  fi
 }
 
 require_attributable_base_drc() {

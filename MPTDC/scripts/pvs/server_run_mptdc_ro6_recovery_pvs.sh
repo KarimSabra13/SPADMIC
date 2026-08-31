@@ -19,6 +19,8 @@ PVS_RUN_ID=""
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 RO_GDS="${MPTDC_PVS_RO_GDS:-$DEFAULT_RO_GDS}"
 DIAGNOSTIC_DEFERRED_MINAREA=0
+DIAGNOSTIC_ANTENNA_EXCEPTION=0
+DIAGNOSTIC_RO_COMPOSITIONAL=0
 RUN_DENSITY_AFTER_LVS=0
 
 usage() {
@@ -44,6 +46,12 @@ Options:
   --run-density-after-lvs
                          With --diagnostic-deferred-minarea, run attributable
                          density DRC only after an explicit LVS MATCH.
+  --diagnostic-antenna-exception
+                         Accept only a classified clean or exact four-rule
+                         antenna-only base DRC. Never repairs antenna.
+  --diagnostic-ro-compositional
+                         Collect raw full-top LVS mismatch evidence for a later
+                         RO_tune6 boundary plus standalone compositional proof.
   -h, --help             Show this help.
 
 Normal mode runs preparation, template audit, base DRC, density DRC, and LVS.
@@ -764,6 +772,124 @@ tracked_tie1_filler_recycle_gate_passes() {
     "$failed_gate" "$probe_run_id" "$source_checkpoint" "$target_sha"
 }
 
+tracked_tie1_minarea_replay_gate_passes() {
+  local report="$1" run_id="$2" source_tie1_run_id source_trial_run_id
+  local source_gate source_trial_gate expected_checkpoint expected_source_checkpoint
+  local source_checkpoint source_checkpoint_sha source_tie1_sha
+  local candidate_sha candidate_checkpoint trial_checkpoint trial_sha
+  source_tie1_run_id="$(report_value "$report" SOURCE_TIE1_RUN_ID)"
+  source_trial_run_id="$(report_value "$report" SOURCE_MINAREA_TRIAL_RUN_ID)"
+  source_checkpoint="$(report_value "$report" SOURCE_CHECKPOINT)"
+  source_checkpoint_sha="$(report_value "$report" SOURCE_CHECKPOINT_SHA256)"
+  candidate_checkpoint="$(report_value "$report" CANDIDATE_CHECKPOINT)"
+  candidate_sha="$(report_value "$report" CANDIDATE_CHECKPOINT_SHA256)"
+  expected_checkpoint="$INNOVUS_WORK/$run_id/checkpoints/repaired_route.enc.dat"
+  expected_source_checkpoint="$INNOVUS_WORK/$source_tie1_run_id/checkpoints/repaired_route.enc.dat"
+  [[ "$source_tie1_run_id" =~ ^[A-Za-z0-9._-]+$ &&
+     "$source_trial_run_id" =~ ^[A-Za-z0-9._-]+$ &&
+     "$source_checkpoint_sha" =~ ^[0-9a-f]{64}$ &&
+     "$candidate_sha" =~ ^[0-9a-f]{64}$ ]] || return 1
+  tracked_report_passes "$report" \
+    STEP TIE1_MINAREA_ENDEXT_REPLAY SOURCE_TIE1_RUN_ID "$source_tie1_run_id" \
+    SOURCE_MINAREA_TRIAL_RUN_ID "$source_trial_run_id" \
+    SOURCE_CHECKPOINT "$expected_source_checkpoint" \
+    SOURCE_CHECKPOINT_SHA256 "$source_checkpoint_sha" \
+    TOOL_RC 0 COMMAND_1_STATUS PASS MANUAL_ECO_STATUS PASS \
+    FREE_END_EXTENSION_DELTA_UM 0.14 INITIAL_DRC 1 FINAL_DRC 0 \
+    FINAL_SHORTS 0 FINAL_REGULAR_CONNECTIVITY_BAD 0 \
+    FINAL_SPECIAL_CONNECTIVITY_BAD 1 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 1 \
+    FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 FINAL_SPECIAL_DANGLING_COUNT 15 \
+    FINAL_UNROUTED_NETS 0 TIE_TARGET_COUNT 91 TIE_NET_COUNT 85 \
+    FILLER_COUNT 24856 PLACEMENT_SITE_OCCUPIED 907533 \
+    PLACEMENT_SITE_CAPACITY 907533 PLACEMENT_EDIT_POLICY NO_INSTANCES_MOVED \
+    ANTENNA_REPAIR_ATTEMPTED NO TIMING_STATUS NOT_RUN_BY_DRC_LVS_SCOPE \
+    CANDIDATE_CHECKPOINT "$expected_checkpoint" \
+    CANDIDATE_CHECKPOINT_SHA256 "$candidate_sha" CANDIDATE_CHECKPOINT_STATUS PASS \
+    SIGNOFF_ELIGIBLE NO DECISION PASS_CONTINUE || return 1
+  [[ "$source_checkpoint" == "$expected_source_checkpoint" &&
+     "$candidate_checkpoint" == "$expected_checkpoint" ]] || return 1
+  source_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_tie1_run_id/reports/operator_gate_tie1_insertion_trial.rpt"
+  tracked_tie1_filler_recycle_gate_passes "$source_gate" "$source_tie1_run_id" || return 1
+  tracked_physical_instance_contract_passes "$source_tie1_run_id" || return 1
+  source_tie1_sha="$(report_value "$source_gate" CANDIDATE_CHECKPOINT_SHA256)"
+  [[ "$source_checkpoint_sha" == "$source_tie1_sha" ]] || return 1
+
+  source_trial_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_trial_run_id/reports/operator_gate_tie1_minarea_endext_trial.rpt"
+  trial_checkpoint="$INNOVUS_WORK/$source_trial_run_id/checkpoints/repaired_route.enc.dat"
+  trial_sha="$(report_value "$source_trial_gate" CANDIDATE_CHECKPOINT_SHA256)"
+  [[ "$trial_sha" =~ ^[0-9a-f]{64}$ ]] || return 1
+  tracked_report_passes "$source_trial_gate" \
+    STEP TIE1_MINAREA_ENDEXT_TRIAL SOURCE_TIE1_RUN_ID "$source_tie1_run_id" \
+    SOURCE_MINAREA_TRIAL_RUN_ID NONE SOURCE_CHECKPOINT "$expected_source_checkpoint" \
+    SOURCE_CHECKPOINT_SHA256 "$source_tie1_sha" TOOL_RC 0 \
+    COMMAND_1_STATUS PASS MANUAL_ECO_STATUS PASS FREE_END_EXTENSION_DELTA_UM 0.14 \
+    INITIAL_DRC 1 FINAL_DRC 0 FINAL_SHORTS 0 FINAL_REGULAR_CONNECTIVITY_BAD 0 \
+    FINAL_SPECIAL_CONNECTIVITY_BAD 1 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 1 \
+    FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 FINAL_SPECIAL_DANGLING_COUNT 15 \
+    FINAL_UNROUTED_NETS 0 TIE_TARGET_COUNT 91 TIE_NET_COUNT 85 \
+    FILLER_COUNT 24856 PLACEMENT_SITE_OCCUPIED 907533 \
+    PLACEMENT_SITE_CAPACITY 907533 PLACEMENT_EDIT_POLICY NO_INSTANCES_MOVED \
+    ANTENNA_REPAIR_ATTEMPTED NO TIMING_STATUS NOT_RUN_BY_DRC_LVS_SCOPE \
+    CANDIDATE_CHECKPOINT "$trial_checkpoint" CANDIDATE_CHECKPOINT_SHA256 "$trial_sha" \
+    CANDIDATE_CHECKPOINT_STATUS PASS SIGNOFF_ELIGIBLE NO DECISION PASS_CONTINUE
+}
+
+tracked_tie1_pg_clean_gate_passes() {
+  local report="$1" expected_step="$2" run_id="$3"
+  local source_tie1_run_id="$4" source_minarea_run_id="$5" expected_pg_trial_id="$6"
+  local expected_checkpoint expected_source source_minarea_gate source_sha candidate_sha
+  expected_checkpoint="$INNOVUS_WORK/$run_id/checkpoints/repaired_route.enc.dat"
+  expected_source="$INNOVUS_WORK/$source_minarea_run_id/checkpoints/repaired_route.enc.dat"
+  source_minarea_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_minarea_run_id/reports/operator_gate_tie1_minarea_endext_replay.rpt"
+  source_sha="$(report_value "$source_minarea_gate" CANDIDATE_CHECKPOINT_SHA256)"
+  candidate_sha="$(report_value "$report" CANDIDATE_CHECKPOINT_SHA256)"
+  [[ "$source_sha" =~ ^[0-9a-f]{64}$ && "$candidate_sha" =~ ^[0-9a-f]{64}$ ]] || return 1
+  tracked_report_passes "$report" \
+    STEP "$expected_step" SOURCE_TIE1_RUN_ID "$source_tie1_run_id" \
+    SOURCE_MINAREA_REPLAY_RUN_ID "$source_minarea_run_id" \
+    SOURCE_PG_TRIAL_RUN_ID "$expected_pg_trial_id" \
+    SOURCE_CHECKPOINT "$expected_source" SOURCE_CHECKPOINT_SHA256 "$source_sha" \
+    TOOL_RC 0 COMMAND_1_STATUS PASS PG_DANGLING_STATUS PASS_DANGLING_CLEARED \
+    PG_DANGLING_ELIGIBLE_COUNT 15 PG_DANGLING_ALL_ELIGIBLE_STATUS PASS \
+    PG_DANGLING_UNSAFE_LENGTH_COUNT 0 PG_DANGLING_DUPLICATE_HANDLE_COUNT 0 \
+    PG_DANGLING_MUTATION_ALLOWED 1 PG_DANGLING_DELETE_ATTEMPTS 15 \
+    PG_DANGLING_DELETE_SUCCESSES 15 FINAL_DRC 0 FINAL_SHORTS 0 \
+    FINAL_REGULAR_CONNECTIVITY_BAD 0 FINAL_SPECIAL_CONNECTIVITY_BAD 0 \
+    FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 0 FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 \
+    FINAL_SPECIAL_DANGLING_COUNT 0 FINAL_UNROUTED_NETS 0 FINAL_ROUTE_GATE_PASS 1 \
+    PG_DELETE_TRIAL_OUTCOME PASS_CLEARED TIE_TARGET_COUNT 91 TIE_NET_COUNT 85 \
+    FILLER_COUNT 24856 PLACEMENT_SITE_OCCUPIED 907533 \
+    PLACEMENT_SITE_CAPACITY 907533 PLACEMENT_EDIT_POLICY NO_INSTANCES_MOVED \
+    ANTENNA_REPAIR_ATTEMPTED NO TIMING_STATUS NOT_RUN_BY_DRC_LVS_SCOPE \
+    CANDIDATE_CHECKPOINT "$expected_checkpoint" \
+    CANDIDATE_CHECKPOINT_SHA256 "$candidate_sha" CANDIDATE_CHECKPOINT_STATUS PASS \
+    SIGNOFF_ELIGIBLE NO DECISION PASS_CONTINUE || return 1
+  [[ -d "$expected_checkpoint" &&
+     "$(tree_content_hash "$expected_checkpoint")" == "$candidate_sha" ]]
+}
+
+tracked_tie1_pg_replay_gate_passes() {
+  local report="$1" run_id="$2" source_tie1_run_id source_minarea_run_id
+  local source_pg_trial_run_id source_minarea_gate source_pg_trial_gate
+  source_tie1_run_id="$(report_value "$report" SOURCE_TIE1_RUN_ID)"
+  source_minarea_run_id="$(report_value "$report" SOURCE_MINAREA_REPLAY_RUN_ID)"
+  source_pg_trial_run_id="$(report_value "$report" SOURCE_PG_TRIAL_RUN_ID)"
+  [[ "$source_tie1_run_id" =~ ^[A-Za-z0-9._-]+$ &&
+     "$source_minarea_run_id" =~ ^[A-Za-z0-9._-]+$ &&
+     "$source_pg_trial_run_id" =~ ^[A-Za-z0-9._-]+$ ]] || return 1
+  source_minarea_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_minarea_run_id/reports/operator_gate_tie1_minarea_endext_replay.rpt"
+  tracked_tie1_minarea_replay_gate_passes "$source_minarea_gate" \
+    "$source_minarea_run_id" || return 1
+  [[ "$(report_value "$source_minarea_gate" SOURCE_TIE1_RUN_ID)" == "$source_tie1_run_id" ]] || return 1
+  tracked_tie1_pg_clean_gate_passes "$report" TIE1_PG_DANGLING_DELETE_REPLAY \
+    "$run_id" "$source_tie1_run_id" "$source_minarea_run_id" \
+    "$source_pg_trial_run_id" || return 1
+  source_pg_trial_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_pg_trial_run_id/reports/operator_gate_tie1_pg_dangling_delete_trial.rpt"
+  tracked_tie1_pg_clean_gate_passes "$source_pg_trial_gate" \
+    TIE1_PG_DANGLING_DELETE_TRIAL "$source_pg_trial_run_id" \
+    "$source_tie1_run_id" "$source_minarea_run_id" NONE
+}
+
 publish_stage() {
   local snapshot_id="$1"
   local step_label="$2"
@@ -805,6 +931,8 @@ while [[ $# -gt 0 ]]; do
     --ro-gds) RO_GDS="${2:?missing --ro-gds value}"; shift 2 ;;
     --innovus-work) INNOVUS_WORK="${2:?missing --innovus-work value}"; shift 2 ;;
     --diagnostic-deferred-minarea) DIAGNOSTIC_DEFERRED_MINAREA=1; shift ;;
+    --diagnostic-antenna-exception) DIAGNOSTIC_ANTENNA_EXCEPTION=1; shift ;;
+    --diagnostic-ro-compositional) DIAGNOSTIC_RO_COMPOSITIONAL=1; shift ;;
     --run-density-after-lvs) RUN_DENSITY_AFTER_LVS=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -817,6 +945,26 @@ if [[ "$RUN_DENSITY_AFTER_LVS" == 1 && "$DIAGNOSTIC_DEFERRED_MINAREA" != 1 ]]; t
   echo "ERROR: --run-density-after-lvs requires --diagnostic-deferred-minarea" >&2
   exit 2
 fi
+if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 && "$DIAGNOSTIC_ANTENNA_EXCEPTION" != 1 ]]; then
+  echo "ERROR: --diagnostic-ro-compositional requires --diagnostic-antenna-exception" >&2
+  exit 2
+fi
+if [[ "$DIAGNOSTIC_ANTENNA_EXCEPTION" == 1 && "$DIAGNOSTIC_RO_COMPOSITIONAL" != 1 ]]; then
+  echo "ERROR: --diagnostic-antenna-exception is restricted to compositional LVS mode" >&2
+  exit 2
+fi
+if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && "$DIAGNOSTIC_ANTENNA_EXCEPTION" == 1 ]]; then
+  echo "ERROR: deferred-minarea and antenna-exception modes are mutually exclusive" >&2
+  exit 2
+fi
+if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 && "$RUN_DENSITY_AFTER_LVS" == 1 ]]; then
+  echo "ERROR: compositional mode runs density only in its boundary-gated child stage" >&2
+  exit 2
+fi
+DIAGNOSTIC_BASE_DRC_MODE=0
+if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 || "$DIAGNOSTIC_ANTENNA_EXCEPTION" == 1 ]]; then
+  DIAGNOSTIC_BASE_DRC_MODE=1
+fi
 if [[ -z "$PVS_RUN_ID" ]]; then
   PVS_RUN_ID="${PNR_RUN_ID}_realro_pvs_$(date +%Y%m%d_%H%M%S)"
 fi
@@ -828,6 +976,8 @@ PHYSICAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/report
 MINAREA_REPAIR_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_route_min_area_repair.rpt"
 FAILED_V6R_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_route_min_area_patch_trial.rpt"
 TIE1_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
+TIE1_MINAREA_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_minarea_endext_replay.rpt"
+TIE1_PG_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_dangling_delete_replay.rpt"
 SOURCE_CKPT=UNKNOWN
 SOURCE_PNR_RUN_ID=UNKNOWN
 PNR_CANDIDATE_KIND=UNKNOWN
@@ -847,7 +997,43 @@ TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
 
 MINAREA_REPAIR_GATE_REL="${MINAREA_REPAIR_GATE#"$REPO_ROOT"/}"
 TIE1_TRIAL_GATE_REL="${TIE1_TRIAL_GATE#"$REPO_ROOT"/}"
-if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
+TIE1_PG_REPLAY_GATE_REL="${TIE1_PG_REPLAY_GATE#"$REPO_ROOT"/}"
+if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
+  PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF
+  SOURCE_CKPT="$PNR_DIR/checkpoints/repaired_route.enc.dat"
+  if git -C "$REPO_ROOT" ls-files --error-unmatch "$TIE1_PG_REPLAY_GATE_REL" >/dev/null 2>&1 &&
+     [[ -s "$TIE1_PG_REPLAY_GATE" ]]; then
+    PNR_CANDIDATE_KIND=TIE1_MINAREA_PG_CLEAN_COMPOSITIONAL
+    CANDIDATE_GATE_PATH="$TIE1_PG_REPLAY_GATE"
+    SOURCE_PNR_RUN_ID="$(report_value "$TIE1_PG_REPLAY_GATE" SOURCE_TIE1_RUN_ID)"
+    CANDIDATE_CHECKPOINT_EXPECTED_SHA256="$(report_value "$TIE1_PG_REPLAY_GATE" CANDIDATE_CHECKPOINT_SHA256)"
+    CANDIDATE_CHECKPOINT_ACTUAL_SHA256="$(tree_content_hash "$SOURCE_CKPT")"
+    CANDIDATE_CHECKPOINT_HASH_STATUS=FAIL
+    if [[ "$CANDIDATE_CHECKPOINT_EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ &&
+          "$CANDIDATE_CHECKPOINT_ACTUAL_SHA256" == "$CANDIDATE_CHECKPOINT_EXPECTED_SHA256" ]]; then
+      CANDIDATE_CHECKPOINT_HASH_STATUS=PASS
+    fi
+    if tracked_tie1_pg_replay_gate_passes "$TIE1_PG_REPLAY_GATE" "$PNR_RUN_ID" &&
+       [[ "$CANDIDATE_CHECKPOINT_HASH_STATUS" == PASS ]]; then
+      CANDIDATE_GATE_STATUS=PASS
+    fi
+  else
+    PNR_CANDIDATE_KIND=TIE1_MINAREA_CLEAN_COMPOSITIONAL
+    CANDIDATE_GATE_PATH="$TIE1_MINAREA_REPLAY_GATE"
+    SOURCE_PNR_RUN_ID="$(report_value "$TIE1_MINAREA_REPLAY_GATE" SOURCE_TIE1_RUN_ID)"
+    CANDIDATE_CHECKPOINT_EXPECTED_SHA256="$(report_value "$TIE1_MINAREA_REPLAY_GATE" CANDIDATE_CHECKPOINT_SHA256)"
+    CANDIDATE_CHECKPOINT_ACTUAL_SHA256="$(tree_content_hash "$SOURCE_CKPT")"
+    CANDIDATE_CHECKPOINT_HASH_STATUS=FAIL
+    if [[ "$CANDIDATE_CHECKPOINT_EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ &&
+          "$CANDIDATE_CHECKPOINT_ACTUAL_SHA256" == "$CANDIDATE_CHECKPOINT_EXPECTED_SHA256" ]]; then
+      CANDIDATE_CHECKPOINT_HASH_STATUS=PASS
+    fi
+    if tracked_tie1_minarea_replay_gate_passes "$TIE1_MINAREA_REPLAY_GATE" "$PNR_RUN_ID" &&
+       [[ "$CANDIDATE_CHECKPOINT_HASH_STATUS" == PASS ]]; then
+      CANDIDATE_GATE_STATUS=PASS
+    fi
+  fi
+elif [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
   PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF
   if git -C "$REPO_ROOT" ls-files --error-unmatch "$TIE1_TRIAL_GATE_REL" >/dev/null 2>&1 && \
      [[ -s "$TIE1_TRIAL_GATE" ]]; then
@@ -915,6 +1101,8 @@ echo "SOURCE_CKPT=$SOURCE_CKPT"
 echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
 echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
 echo "DIAGNOSTIC_DEFERRED_MINAREA=$DIAGNOSTIC_DEFERRED_MINAREA"
+echo "DIAGNOSTIC_ANTENNA_EXCEPTION=$DIAGNOSTIC_ANTENNA_EXCEPTION"
+echo "DIAGNOSTIC_RO_COMPOSITIONAL=$DIAGNOSTIC_RO_COMPOSITIONAL"
 echo "RUN_DENSITY_AFTER_LVS=$RUN_DENSITY_AFTER_LVS"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
 echo "PVS_DIR=$PVS_DIR"
@@ -977,17 +1165,28 @@ HASH_PRESENT=0
 [[ -s "$HASH_REPORT" ]] && HASH_PRESENT=1
 DIAGNOSTIC_SCOPE_MANIFEST="$PVS_DIR/manifests/pvs_diagnostic_scope.rpt"
 DIAGNOSTIC_SCOPE_STATUS=NOT_APPLICABLE
-if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && -d "$PVS_DIR" ]]; then
+if [[ "$DIAGNOSTIC_BASE_DRC_MODE" == 1 && -d "$PVS_DIR" ]]; then
   mkdir -p "$PVS_DIR/manifests"
   DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS
   DIAGNOSTIC_DENSITY_STATUS=NOT_RUN_BY_SCOPE
+  DEFERRED_INNOVUS_DRC_COUNT=1
+  DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA
+  DEFERRED_INNOVUS_DRC_NET=u_core_n_57556
+  if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
+    DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_RAW_LVS
+    DEFERRED_INNOVUS_DRC_COUNT=0
+    DEFERRED_INNOVUS_DRC_RULE=NONE
+    DEFERRED_INNOVUS_DRC_NET=NONE
+  fi
   if [[ "$RUN_DENSITY_AFTER_LVS" == 1 ]]; then
     DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY
     DIAGNOSTIC_DENSITY_STATUS=PENDING_POST_LVS_MATCH
   fi
   {
-    echo "PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF"
+    echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
     echo "DIAGNOSTIC_SCOPE=$DIAGNOSTIC_SCOPE"
+    echo "DIAGNOSTIC_ANTENNA_EXCEPTION=$DIAGNOSTIC_ANTENNA_EXCEPTION"
+    echo "DIAGNOSTIC_RO_COMPOSITIONAL=$DIAGNOSTIC_RO_COMPOSITIONAL"
     echo "RUN_DENSITY_AFTER_LVS=$RUN_DENSITY_AFTER_LVS"
     echo "PNR_RUN_ID=$PNR_RUN_ID"
     echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
@@ -997,9 +1196,9 @@ if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && -d "$PVS_DIR" ]]; then
     echo "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$CANDIDATE_CHECKPOINT_EXPECTED_SHA256"
     echo "CANDIDATE_CHECKPOINT_ACTUAL_SHA256=$CANDIDATE_CHECKPOINT_ACTUAL_SHA256"
     echo "CANDIDATE_CHECKPOINT_HASH_STATUS=$CANDIDATE_CHECKPOINT_HASH_STATUS"
-    echo "DEFERRED_INNOVUS_DRC_COUNT=1"
-    echo "DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA"
-    echo "DEFERRED_INNOVUS_DRC_NET=u_core_n_57556"
+    echo "DEFERRED_INNOVUS_DRC_COUNT=$DEFERRED_INNOVUS_DRC_COUNT"
+    echo "DEFERRED_INNOVUS_DRC_RULE=$DEFERRED_INNOVUS_DRC_RULE"
+    echo "DEFERRED_INNOVUS_DRC_NET=$DEFERRED_INNOVUS_DRC_NET"
     echo "DENSITY_DRC_STATUS=$DIAGNOSTIC_DENSITY_STATUS"
     echo "SIGNOFF_ELIGIBLE=NO"
   } > "$DIAGNOSTIC_SCOPE_MANIFEST"
@@ -1008,7 +1207,7 @@ fi
 PREP_DECISION=FAIL_STOP
 if [[ "$PREP_RC" -eq 0 && "$PREP_STATUS" == PASS && "$TAP_STATUS" == PASS && \
       "$TAP_COUNT" == 2 && "$STRICT_ATTRIBUTION" == 1 && "$HASH_PRESENT" == 1 && \
-      ( "$DIAGNOSTIC_DEFERRED_MINAREA" != 1 || "$DIAGNOSTIC_SCOPE_STATUS" == PASS ) ]]; then
+      ( "$DIAGNOSTIC_BASE_DRC_MODE" != 1 || "$DIAGNOSTIC_SCOPE_STATUS" == PASS ) ]]; then
   PREP_DECISION=PASS_CONTINUE
 fi
 PREP_PUBLISH_RC=99
@@ -1021,6 +1220,8 @@ if [[ -d "$PVS_DIR" ]]; then
     echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
     echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
     echo "DIAGNOSTIC_DEFERRED_MINAREA=$DIAGNOSTIC_DEFERRED_MINAREA"
+    echo "DIAGNOSTIC_ANTENNA_EXCEPTION=$DIAGNOSTIC_ANTENNA_EXCEPTION"
+    echo "DIAGNOSTIC_RO_COMPOSITIONAL=$DIAGNOSTIC_RO_COMPOSITIONAL"
     echo "RUN_DENSITY_AFTER_LVS=$RUN_DENSITY_AFTER_LVS"
     echo "DIAGNOSTIC_SCOPE_STATUS=$DIAGNOSTIC_SCOPE_STATUS"
     echo "SOURCE_CHECKPOINT=$SOURCE_CKPT"
@@ -1108,6 +1309,7 @@ run_drc_stage() {
   local rc status gate report_variant pvs_rc primary expanded nonzero
   local rule_report decision evidence_status publish_rc
   local classification_rc classification_status classification non_antenna_rule_count
+  local classification_context
   local classification_report classification_scope classification_log
 
   run_logged "$log" bash "$DRC_SCRIPT" --prepared-dir "$PVS_DIR" \
@@ -1127,13 +1329,17 @@ run_drc_stage() {
   classification_status=NOT_APPLICABLE
   classification=NOT_APPLICABLE
   non_antenna_rule_count=NOT_APPLICABLE
-  if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && "$variant" == base ]] && \
+  classification_context=recovery-deferred-minarea
+  if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
+    classification_context=recovery-antenna-exception
+  fi
+  if [[ "$DIAGNOSTIC_BASE_DRC_MODE" == 1 && "$variant" == base ]] && \
      diagnostic_drc_is_attributable "$report" "$rc" base BASE; then
     classification_report="$PVS_DIR/reports/pvs_recovery_base_drc_classification.rpt"
     classification_scope="$PVS_DIR/manifests/pvs_recovery_base_drc_classification_scope.rpt"
     classification_log="$PVS_DIR/logs/operator_base_drc_classification.log"
     run_logged "$classification_log" python3 "$DRC_CLASSIFIER" \
-      --context recovery-deferred-minarea \
+      --context "$classification_context" \
       --status-report "$report" \
       --rule-report "$rule_report" \
       --out "$classification_report" \
@@ -1216,7 +1422,7 @@ BASE_DRC_EVIDENCE_STATUS="$LAST_DRC_EVIDENCE_STATUS"
 BASE_DRC_CLASSIFICATION="$LAST_DRC_CLASSIFICATION"
 BASE_DRC_NON_ANTENNA_RULE_COUNT="$LAST_DRC_NON_ANTENNA_RULE_COUNT"
 
-if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
+if [[ "$DIAGNOSTIC_BASE_DRC_MODE" == 1 ]]; then
   DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE
   DENSITY_PRE_LVS_DECISION=NOT_RUN_BY_SCOPE
   if [[ "$RUN_DENSITY_AFTER_LVS" == 1 ]]; then
@@ -1228,7 +1434,7 @@ if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
     echo "STEP=PVS_DRC_DENSITY"
     echo "DENSITY_DRC_LAUNCHED=0"
     echo "DENSITY_DRC_STATUS=$DENSITY_DRC_STATUS"
-    echo "PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF"
+    echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
     echo "ANTENNA_REPAIR_ATTEMPTED=NO"
     echo "DECISION=$DENSITY_PRE_LVS_DECISION"
   } > "$PVS_DIR/reports/operator_gate_pvs_drc_density.rpt"
@@ -1244,7 +1450,7 @@ fi
 
 LVS_ARGS=(--prepared-dir "$PVS_DIR" --expected-head "$EXPECTED_HEAD_VALUE")
 LVS_SNAPSHOT_SUFFIX=05_lvs
-if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
+if [[ "$DIAGNOSTIC_BASE_DRC_MODE" == 1 ]]; then
   LVS_ARGS+=(--diagnostic-allow-base-drc-debt)
   LVS_SNAPSHOT_SUFFIX=04_lvs
 fi
@@ -1255,7 +1461,12 @@ LVS_STATUS="$(report_value "$LVS_REPORT" STATUS)"
 LVS_GATE="$(report_value "$LVS_REPORT" PVS_LVS_STATUS)"
 LVS_TOOL_RC="$(report_value "$LVS_REPORT" PVS_RC)"
 LVS_DECISION=FAIL_STOP
-if [[ "$LVS_RC" -eq 0 && "$LVS_STATUS" == PASS && "$LVS_GATE" == MATCH && "$LVS_TOOL_RC" == 0 ]]; then
+RAW_FULL_TOP_LVS_STATUS=NOT_APPLICABLE
+if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 && "$LVS_RC" -eq 8 &&
+      "$LVS_STATUS" == FAIL && "$LVS_GATE" == MISMATCH && "$LVS_TOOL_RC" == 0 ]]; then
+  LVS_DECISION=DIAGNOSTIC_RAW_MISMATCH_COLLECTED
+  RAW_FULL_TOP_LVS_STATUS=MISMATCH_PENDING_BOUNDARY_PROOF
+elif [[ "$LVS_RC" -eq 0 && "$LVS_STATUS" == PASS && "$LVS_GATE" == MATCH && "$LVS_TOOL_RC" == 0 ]]; then
   if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
     LVS_DECISION=DIAGNOSTIC_MATCH
   else
@@ -1266,10 +1477,14 @@ fi
   echo "STEP=PVS_LVS"
   echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
   echo "DIAGNOSTIC_DEFERRED_MINAREA=$DIAGNOSTIC_DEFERRED_MINAREA"
+  echo "DIAGNOSTIC_ANTENNA_EXCEPTION=$DIAGNOSTIC_ANTENNA_EXCEPTION"
+  echo "DIAGNOSTIC_RO_COMPOSITIONAL=$DIAGNOSTIC_RO_COMPOSITIONAL"
   echo "LVS_RC=$LVS_RC"
   echo "STATUS=$LVS_STATUS"
   echo "PVS_LVS_STATUS=$LVS_GATE"
   echo "PVS_RC=$LVS_TOOL_RC"
+  echo "RAW_FULL_TOP_LVS_STATUS=$RAW_FULL_TOP_LVS_STATUS"
+  echo "SIGNOFF_ELIGIBLE=NO"
   echo "DECISION=$LVS_DECISION"
 } | tee "$PVS_DIR/reports/operator_gate_pvs_lvs.rpt"
 
@@ -1322,7 +1537,8 @@ if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
 fi
 publish_stage "${PVS_RUN_ID}_${LVS_SNAPSHOT_SUFFIX}" PVS_LVS
 LVS_PUBLISH_RC=$?
-if [[ ( "$LVS_DECISION" != PASS_CONTINUE && "$LVS_DECISION" != DIAGNOSTIC_MATCH ) || \
+if [[ ( "$LVS_DECISION" != PASS_CONTINUE && "$LVS_DECISION" != DIAGNOSTIC_MATCH && \
+        "$LVS_DECISION" != DIAGNOSTIC_RAW_MISMATCH_COLLECTED ) || \
       "$LVS_PUBLISH_RC" -ne 0 ]]; then
   if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
     if [[ "$LVS_PUBLISH_RC" -ne 0 ]]; then
@@ -1335,6 +1551,31 @@ if [[ ( "$LVS_DECISION" != PASS_CONTINUE && "$LVS_DECISION" != DIAGNOSTIC_MATCH 
   else
     stop_after_stage PVS_LVS "$LVS_DECISION" "$LVS_PUBLISH_RC"
   fi
+  exit 1
+fi
+
+if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
+  if [[ "$LVS_DECISION" == DIAGNOSTIC_RAW_MISMATCH_COLLECTED ]]; then
+    echo "PVS_RECOVERY_STATUS=DIAGNOSTIC_RAW_LVS_COMPLETE"
+    echo "PVS_RUN_ID=$PVS_RUN_ID"
+    echo "PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF"
+    echo "PVS_DRC_BASE=$BASE_DRC_GATE"
+    echo "PVS_DRC_BASE_CLASS=$BASE_DRC_CLASSIFICATION"
+    echo "PVS_DRC_BASE_NON_ANTENNA_RULE_COUNT=$BASE_DRC_NON_ANTENNA_RULE_COUNT"
+    echo "RAW_FULL_TOP_LVS_STATUS=$RAW_FULL_TOP_LVS_STATUS"
+    echo "PVS_LVS=$LVS_GATE"
+    echo "ANTENNA_REPAIR_ATTEMPTED=NO"
+    echo "SIGNOFF_ELIGIBLE=NO"
+    echo "FINAL_SIGNOFF=NO"
+    echo "READY_FOR_TAPEOUT=NO"
+    echo "DECISION=DIAGNOSTIC_RAW_MISMATCH_COLLECTED"
+    echo "PUBLISH_RC=$LVS_PUBLISH_RC"
+    echo "NEXT_EXPECTED_HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null)"
+    echo "NEXT_STAGE=RO6_BOUNDARY_LVS"
+    exit 0
+  fi
+  stop_after_stage PVS_LVS FAIL_UNEXPECTED_COMPOSITIONAL_RAW_LVS_RESULT \
+    "$LVS_PUBLISH_RC" REVIEW_RAW_LVS_EVIDENCE_BEFORE_BOUNDARY_PROOF
   exit 1
 fi
 

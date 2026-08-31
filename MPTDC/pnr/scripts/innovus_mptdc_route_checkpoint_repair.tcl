@@ -1868,15 +1868,17 @@ proc mptdc_ckpt_manual_two_minarea_landing_patch_v6r {} {
 }
 
 proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
-    if {$mode ni {trial replay}} {
-        error "minimum-area V8 mode must be trial or replay"
+    if {$mode ni {trial replay tie1_trial tie1_replay}} {
+        error "minimum-area V8 mode must be trial, replay, tie1_trial, or tie1_replay"
     }
     set report_dir [mptdc_signoff_report_dir]
-    set report [file join $report_dir [expr {
-        $mode eq "trial" ?
-            "min_area_fixed_wire_endext_trial_v8.rpt" :
-            "min_area_fixed_wire_endext_replay_v8.rpt"
-    }]]
+    switch -- $mode {
+        trial { set report_name "min_area_fixed_wire_endext_trial_v8.rpt" }
+        replay { set report_name "min_area_fixed_wire_endext_replay_v8.rpt" }
+        tie1_trial { set report_name "tie1_min_area_fixed_wire_endext_trial_v8.rpt" }
+        tie1_replay { set report_name "tie1_min_area_fixed_wire_endext_replay_v8.rpt" }
+    }
+    set report [file join $report_dir $report_name]
     set fh [open $report w]
     puts $fh "# MPTDC Canonical Fixed-Wire Free-End Extension V8"
     puts $fh "MANUAL_ECO_MODE=CANONICAL_FIXED_MET1_FREE_END_EXTENSION_V8"
@@ -1892,8 +1894,9 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
     puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
 
     set body_status [catch {
-        if {$mode eq "trial"} {
-            set baseline [mptdc_ckpt_verify_snapshot minarea_v8_trial_pre]
+        if {$mode in {trial tie1_trial tie1_replay}} {
+            set pre_tag [expr {$mode eq "trial" ? "minarea_v8_trial_pre" : "minarea_v8_${mode}_pre"}]
+            set baseline [mptdc_ckpt_verify_snapshot $pre_tag]
             mptdc_ckpt_manual_assert_snapshot_tuple $fh PRE $baseline 1 0 0
             mptdc_ckpt_manual_assert_minarea_01777_marker \
                 $fh PRE_MINAREA_MARKER $baseline
@@ -1996,9 +1999,13 @@ proc mptdc_ckpt_manual_minarea_endext_v8_impl {mode} {
         }
         puts $fh "TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED"
 
-        set final [mptdc_ckpt_verify_snapshot [expr {
-            $mode eq "trial" ? "minarea_v8_trial_post" : "minarea_v8_replay_post"
-        }]]
+        switch -- $mode {
+            trial { set post_tag minarea_v8_trial_post }
+            replay { set post_tag minarea_v8_replay_post }
+            tie1_trial { set post_tag minarea_v8_tie1_trial_post }
+            tie1_replay { set post_tag minarea_v8_tie1_replay_post }
+        }
+        set final [mptdc_ckpt_verify_snapshot $post_tag]
         mptdc_ckpt_manual_assert_snapshot_tuple $fh POST $final 0 0 0
         puts $fh "POST_MINAREA_MARKER_COUNT=[dict get $final total_violations]"
     } body_error body_opts]
@@ -2024,6 +2031,14 @@ proc mptdc_ckpt_manual_single_minarea_endext_trial_v8 {} {
 
 proc mptdc_ckpt_manual_two_minarea_landing_patch_v8 {} {
     return [mptdc_ckpt_manual_minarea_endext_v8_impl replay]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_trial_v8 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_trial]
+}
+
+proc mptdc_ckpt_tie1_minarea_endext_replay_v8 {} {
+    return [mptdc_ckpt_manual_minarea_endext_v8_impl tie1_replay]
 }
 
 proc mptdc_ckpt_manual_three_marker_eco_v4 {} {

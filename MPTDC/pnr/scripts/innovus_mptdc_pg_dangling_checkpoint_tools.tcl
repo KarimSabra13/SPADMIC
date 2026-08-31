@@ -342,6 +342,8 @@ proc mptdc_pg_dangling_run {{mode ""}} {
     set near_radius [mptdc_pg_dangling_env_double MPTDC_PG_DANGLING_NEAR_RADIUS_UM 6.0]
     set max_delete_length [mptdc_pg_dangling_env_double MPTDC_PG_DANGLING_MAX_DELETE_LENGTH_UM 10.0]
     set allow_long_delete [mptdc_pg_dangling_env_truthy MPTDC_PG_DANGLING_ALLOW_LONG_DELETE 0]
+    set require_all_eligible [mptdc_pg_dangling_env_truthy MPTDC_PG_DANGLING_REQUIRE_ALL_ELIGIBLE 1]
+    set delete_mode [expr {$mode in {delete_short delete_all delete_all_candidates repair}}]
     set report_dir [mptdc_pg_dangling_report_dir]
     file mkdir $report_dir
 
@@ -358,14 +360,15 @@ proc mptdc_pg_dangling_run {{mode ""}} {
     puts $fh "NEAR_RADIUS_UM=$near_radius"
     puts $fh "MAX_DELETE_LENGTH_UM=$max_delete_length"
     puts $fh "ALLOW_LONG_DELETE=[expr {$allow_long_delete ? 1 : 0}]"
+    puts $fh "REQUIRE_ALL_ELIGIBLE=[expr {$require_all_eligible ? 1 : 0}]"
     puts $fh "MARKER_COUNT=[llength $markers]"
 
-    set delete_attempts 0
-    set delete_successes 0
+    set delete_plan {}
+    set candidate_handle_counts {}
     set blocked_count 0
     set ambiguous_count 0
     set missing_count 0
-    set dirty_abort 0
+    set unsafe_length_count 0
 
     foreach marker $markers {
         set idx [dict get $marker idx]
@@ -417,27 +420,66 @@ proc mptdc_pg_dangling_run {{mode ""}} {
         if {$length ne "UNKNOWN" && [string is double -strict $length] && $length <= $max_delete_length} {
             set length_ok 1
         }
-        set delete_allowed [expr {$mode in {delete_short delete_all delete_all_candidates repair} &&
-                                  ($length_ok || $allow_long_delete)}]
-        if {!$delete_allowed} {
+        if {!$length_ok && !$allow_long_delete} {
             incr blocked_count
-            puts $fh "MARKER_${idx}_ACTION=ANALYZE_ONLY"
-            puts $fh "MARKER_${idx}_DELETE_BLOCKED_REASON=[expr {$mode in {delete_short delete_all delete_all_candidates repair} ? "segment_length_requires_explicit_ALLOW_LONG_DELETE" : "mode_is_analysis"}]"
+            incr unsafe_length_count
+            puts $fh "MARKER_${idx}_ACTION=BLOCKED_UNSAFE_LENGTH"
+            puts $fh "MARKER_${idx}_DELETE_BLOCKED_REASON=segment_length_requires_explicit_ALLOW_LONG_DELETE"
             continue
         }
+        set handle [dict get $rec handle]
+        dict incr candidate_handle_counts $handle
+        lappend delete_plan [dict create idx $idx rec $rec]
+        puts $fh "MARKER_${idx}_ACTION=ELIGIBLE_EXACT_SWIRE"
+    }
 
-        incr delete_attempts
-        puts $fh "MARKER_${idx}_ACTION=DELETE_EXACT_SWIRE"
-        if {[mptdc_pg_dangling_delete_swire $rec $fh "MARKER_${idx}"]} {
-            incr delete_successes
+    set duplicate_handle_count 0
+    dict for {handle count} $candidate_handle_counts {
+        if {$count > 1} {
+            incr duplicate_handle_count
+            puts $fh "DUPLICATE_HANDLE_[mptdc_pg_dangling_report_value $handle]_REFERENCE_COUNT=$count"
         }
-        set snapshot [mptdc_pg_dangling_snapshot_after_delete $fh [format "pg_dangling_after_delete_%02d" $idx]]
-        flush $fh
-        if {![mptdc_pg_dangling_snapshot_is_geometry_regular_clean $snapshot]} {
-            puts $fh "MARKER_${idx}_ABORT_REASON=geometry_or_regular_connectivity_became_dirty"
-            set dirty_abort 1
-            break
+    }
+    set eligible_count [llength $delete_plan]
+    set all_eligible [expr {[llength $markers] > 0 &&
+                            $eligible_count == [llength $markers] &&
+                            $missing_count == 0 && $ambiguous_count == 0 &&
+                            $unsafe_length_count == 0 && $duplicate_handle_count == 0}]
+    puts $fh ""
+    puts $fh "PG_DANGLING_ELIGIBLE_COUNT=$eligible_count"
+    puts $fh "PG_DANGLING_UNSAFE_LENGTH_COUNT=$unsafe_length_count"
+    puts $fh "PG_DANGLING_DUPLICATE_HANDLE_COUNT=$duplicate_handle_count"
+    puts $fh "PG_DANGLING_ALL_ELIGIBLE_STATUS=[expr {$all_eligible ? "PASS" : "FAIL"}]"
+
+    set mutation_allowed [expr {$delete_mode && (!$require_all_eligible || $all_eligible)}]
+    puts $fh "PG_DANGLING_MUTATION_ALLOWED=[expr {$mutation_allowed ? 1 : 0}]"
+    set delete_attempts 0
+    set delete_successes 0
+    set dirty_abort 0
+    if {$mutation_allowed} {
+        foreach plan $delete_plan {
+            set idx [dict get $plan idx]
+            set rec [dict get $plan rec]
+            set handle [dict get $rec handle]
+            if {[dict get $candidate_handle_counts $handle] != 1} {
+                puts $fh "MARKER_${idx}_DELETE_STATUS=SKIPPED_DUPLICATE_HANDLE"
+                continue
+            }
+            incr delete_attempts
+            puts $fh "MARKER_${idx}_ACTION=DELETE_PREFLIGHTED_EXACT_SWIRE"
+            if {[mptdc_pg_dangling_delete_swire $rec $fh "MARKER_${idx}"]} {
+                incr delete_successes
+            }
+            set snapshot [mptdc_pg_dangling_snapshot_after_delete $fh [format "pg_dangling_after_delete_%02d" $idx]]
+            flush $fh
+            if {![mptdc_pg_dangling_snapshot_is_geometry_regular_clean $snapshot]} {
+                puts $fh "MARKER_${idx}_ABORT_REASON=geometry_or_regular_connectivity_became_dirty"
+                set dirty_abort 1
+                break
+            }
         }
+    } elseif {$delete_mode} {
+        puts $fh "PG_DANGLING_MUTATION_BLOCKED_REASON=not_all_candidates_are_unique_short_exact_endpoints"
     }
 
     puts $fh ""
@@ -457,8 +499,10 @@ proc mptdc_pg_dangling_run {{mode ""}} {
     puts $fh "FINAL_DANGLING_MARKER_COUNT=[llength $final_markers]"
     if {$dirty_abort} {
         puts $fh "PG_DANGLING_STATUS=FAIL_GEOMETRY_OR_REGULAR_DIRTY"
-    } elseif {$mode eq "analyze" || $mode eq "analysis" || $delete_attempts == 0} {
+    } elseif {!$delete_mode} {
         puts $fh "PG_DANGLING_STATUS=ANALYSIS_ONLY"
+    } elseif {!$mutation_allowed} {
+        puts $fh "PG_DANGLING_STATUS=REVIEW_REQUIRED_PREFLIGHT_BLOCKED"
     } elseif {[llength $final_markers] == 0} {
         puts $fh "PG_DANGLING_STATUS=PASS_DANGLING_CLEARED"
     } else {

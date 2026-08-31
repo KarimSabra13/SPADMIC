@@ -214,6 +214,30 @@ run_boundary() {
 run_dry "$TMP_ROOT/lvs_valid" > "$TMP_ROOT/valid.stdout"
 grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
 
+cp "$SCOPE" "${SCOPE}.legacy"
+cat > "$SCOPE" <<'EOF'
+PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF
+DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_RAW_LVS
+RUN_DENSITY_AFTER_LVS=0
+DEFERRED_INNOVUS_DRC_COUNT=0
+DEFERRED_INNOVUS_DRC_RULE=NONE
+DEFERRED_INNOVUS_DRC_NET=NONE
+DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE
+SIGNOFF_ELIGIBLE=NO
+EOF
+run_dry "$TMP_ROOT/lvs_compositional_valid" > "$TMP_ROOT/compositional_valid.stdout"
+grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
+sed -i 's/^DEFERRED_INNOVUS_DRC_NET=NONE$/DEFERRED_INNOVUS_DRC_NET=u_core_n_57556/' "$SCOPE"
+set +e
+run_dry "$TMP_ROOT/lvs_compositional_deferred_net" \
+  > "$TMP_ROOT/compositional_deferred_net.stdout" 2>&1
+COMPOSITIONAL_DEFERRED_NET_RC=$?
+set -e
+test "$COMPOSITIONAL_DEFERRED_NET_RC" -ne 0
+grep -Fq 'compositional raw LVS scope carries a deferred DRC net' \
+  "$TMP_ROOT/compositional_deferred_net.stdout"
+mv "${SCOPE}.legacy" "$SCOPE"
+
 sed -i \
   -e 's/^DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS$/DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY/' \
   -e 's/^DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE$/DENSITY_DRC_STATUS=PENDING_POST_LVS_MATCH/' \

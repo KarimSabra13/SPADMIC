@@ -99,6 +99,13 @@ class FreeTrialDrcClassifierTest(unittest.TestCase):
         self.assertIn("rule inventory hash mismatch", text)
         self.assertFalse(scope.exists())
 
+    def test_duplicate_rule_row_is_invalid_evidence(self) -> None:
+        rows = [("R1M2P1", 1, 1), ("R1M2P1", 2, 2)]
+        text, scope, tmp = self.run_case(rows, "INVALID_EVIDENCE", 8)
+        self.addCleanup(tmp.cleanup)
+        self.assertIn("duplicate rule row: R1M2P1", text)
+        self.assertFalse(scope.exists())
+
     def test_recovery_context_uses_recovery_scope(self) -> None:
         text, scope, tmp = self.run_case(
             [("R1M2P1", 1, 1)],
@@ -112,6 +119,24 @@ class FreeTrialDrcClassifierTest(unittest.TestCase):
         self.assertIn("PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF\n", scope.read_text())
         self.assertIn(
             "DIAGNOSTIC_SCOPE=RECOVERY_BASE_DRC_CLASSIFICATION_ONLY\n",
+            scope.read_text(),
+        )
+
+    def test_antenna_exception_context_declares_compositional_scope(self) -> None:
+        text, scope, tmp = self.run_case(
+            [("R1M2P1", 1, 1)],
+            "ANTENNA_ONLY_MANAGER_EXCEPTION",
+            0,
+            context="recovery-antenna-exception",
+        )
+        self.addCleanup(tmp.cleanup)
+        self.assertIn("CLASSIFICATION_CONTEXT=RECOVERY_ANTENNA_EXCEPTION\n", text)
+        self.assertIn(
+            "PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF\n",
+            scope.read_text(),
+        )
+        self.assertIn(
+            "DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_RAW_LVS_FOR_COMPOSITIONAL_PROOF\n",
             scope.read_text(),
         )
 

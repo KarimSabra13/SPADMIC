@@ -22,6 +22,11 @@ CLASSIFICATION_CONTEXTS = {
         "run_class": "DIAGNOSTIC_NOT_SIGNOFF",
         "scope": "RECOVERY_BASE_DRC_CLASSIFICATION_ONLY",
     },
+    "recovery-antenna-exception": {
+        "step": "MPTDC_RECOVERY_BASE_DRC_CLASSIFICATION",
+        "run_class": "DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF",
+        "scope": "BASE_DRC_PLUS_RAW_LVS_FOR_COMPOSITIONAL_PROOF",
+    },
 }
 
 
@@ -58,6 +63,7 @@ def parse_rules(path: Path) -> list[tuple[str, int, int]]:
     if not lines or lines[0] != "rule\tprimary\texpanded":
         raise ClassificationError("nonzero-rule inventory has an invalid header")
     rows: list[tuple[str, int, int]] = []
+    seen: set[str] = set()
     for number, line in enumerate(lines[1:], start=2):
         if not line.strip():
             continue
@@ -65,6 +71,9 @@ def parse_rules(path: Path) -> list[tuple[str, int, int]]:
         if len(fields) != 3:
             raise ClassificationError(f"invalid rule row {number}: {line}")
         name, primary_text, expanded_text = fields
+        if name in seen:
+            raise ClassificationError(f"duplicate rule row: {name}")
+        seen.add(name)
         try:
             primary = int(primary_text)
             expanded = int(expanded_text)
