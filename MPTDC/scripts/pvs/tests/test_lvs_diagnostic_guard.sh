@@ -214,6 +214,30 @@ run_boundary() {
 run_dry "$TMP_ROOT/lvs_valid" > "$TMP_ROOT/valid.stdout"
 grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
 
+sed -i \
+  -e 's/^DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS$/DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY/' \
+  -e 's/^DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE$/DENSITY_DRC_STATUS=PENDING_POST_LVS_MATCH/' \
+  "$SCOPE"
+printf 'RUN_DENSITY_AFTER_LVS=1\n' >> "$SCOPE"
+run_dry "$TMP_ROOT/lvs_post_match_density_pending" \
+  > "$TMP_ROOT/post_match_density_pending.stdout"
+grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
+
+sed -i 's/^DENSITY_DRC_STATUS=PENDING_POST_LVS_MATCH$/DENSITY_DRC_STATUS=PASS/' "$SCOPE"
+set +e
+run_dry "$TMP_ROOT/lvs_post_match_density_too_early" \
+  > "$TMP_ROOT/post_match_density_too_early.stdout" 2>&1
+POST_MATCH_DENSITY_TOO_EARLY_RC=$?
+set -e
+test "$POST_MATCH_DENSITY_TOO_EARLY_RC" -ne 0
+grep -Fq 'density evidence exists before the diagnostic LVS MATCH' \
+  "$TMP_ROOT/post_match_density_too_early.stdout"
+sed -i \
+  -e 's/^DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY$/DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS/' \
+  -e 's/^DENSITY_DRC_STATUS=PASS$/DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE/' \
+  -e '/^RUN_DENSITY_AFTER_LVS=1$/d' \
+  "$SCOPE"
+
 mv "$SCOPE" "${SCOPE}.saved"
 set +e
 run_dry "$TMP_ROOT/lvs_missing_scope" > "$TMP_ROOT/missing_scope.stdout" 2>&1

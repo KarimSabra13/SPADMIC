@@ -10,6 +10,7 @@ PREP_SCRIPT="${MPTDC_RECOVERY_PVS_PREP:-$SCRIPT_DIR/00_prepare_pvs_inputs_from_c
 AUDIT_SCRIPT="${MPTDC_RECOVERY_PVS_AUDIT:-$SCRIPT_DIR/01_audit_pvs_templates.sh}"
 DRC_SCRIPT="${MPTDC_RECOVERY_PVS_DRC:-$SCRIPT_DIR/02_replay_pvs_drc_from_template.sh}"
 LVS_SCRIPT="${MPTDC_RECOVERY_PVS_LVS:-$SCRIPT_DIR/03_replay_pvs_lvs_from_template.sh}"
+DRC_CLASSIFIER="${MPTDC_RECOVERY_PVS_DRC_CLASSIFIER:-$SCRIPT_DIR/07_classify_mptdc_free_trial_drc.py}"
 INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-/sim/ksabra/SPADMIC_work/innovus}"
 DEFAULT_RO_GDS="/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds"
 
@@ -18,6 +19,7 @@ PVS_RUN_ID=""
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 RO_GDS="${MPTDC_PVS_RO_GDS:-$DEFAULT_RO_GDS}"
 DIAGNOSTIC_DEFERRED_MINAREA=0
+RUN_DENSITY_AFTER_LVS=0
 
 usage() {
   cat <<'USAGE'
@@ -38,13 +40,17 @@ Options:
                          Diagnostic-only base DRC plus LVS from the exact
                          failed-V6R one-MET1-minimum-area lineage, using either
                          that checkpoint or its accepted tie1 candidate.
-                         Density is not run and the result is never signoff eligible.
+                         The result is never signoff eligible.
+  --run-density-after-lvs
+                         With --diagnostic-deferred-minarea, run attributable
+                         density DRC only after an explicit LVS MATCH.
   -h, --help             Show this help.
 
 Normal mode runs preparation, template audit, base DRC, density DRC, and LVS.
-Diagnostic mode runs preparation, template audit, attributable base DRC, and
-LVS. Each launched step writes an operator gate and publishes a bounded text
-snapshot. The chain stops at the first unproven gate or failed evidence push.
+Diagnostic mode runs preparation, template audit, classified attributable base
+DRC, and LVS. Density is optional and strictly post-MATCH. Each launched step
+writes an operator gate and publishes a bounded text snapshot. The chain stops
+at the first unproven gate or failed evidence push.
 USAGE
 }
 
@@ -608,6 +614,7 @@ tracked_tie1_filler_recycle_gate_passes() {
   local reports_dir filler failed_gate expected_candidate
   local expected_fillers pg_config_source_status
   local target_decision fix_drc_status fix_drc_snapshot_status
+  local final_marker_raw final_marker_live final_marker_stale final_marker_unmapped
 
   probe_run_id="$(report_value "$report" PROBE_RUN_ID)"
   failed_trial_run_id="$(report_value "$report" SOURCE_FAILED_TRIAL_RUN_ID)"
@@ -676,11 +683,18 @@ tracked_tie1_filler_recycle_gate_passes() {
     PHYSICAL_DEBT_PRESERVATION_STATUS PASS \
     BASELINE_DRC 1 BASELINE_SHORTS 0 BASELINE_REGULAR_CONNECTIVITY_BAD 0 \
     BASELINE_SPECIAL_CONNECTIVITY_BAD 1 BASELINE_UNROUTED_NETS 0 \
-    BASELINE_REPORT_ROUTE_ZERO_STATUS PASS BASELINE_DRC_MARKER_SIGNATURE_COUNT 1 \
+    BASELINE_REPORT_ROUTE_ZERO_STATUS PASS \
+    BASELINE_DRC_MARKER_RECONCILIATION_STATUS PASS \
+    BASELINE_DRC_MARKER_RAW_GEOMETRY_COUNT 1 BASELINE_DRC_MARKER_LIVE_COUNT 1 \
+    BASELINE_DRC_MARKER_STALE_COUNT 0 BASELINE_DRC_MARKER_UNMAPPED_COUNT 0 \
+    BASELINE_DRC_MARKER_SIGNATURE_COUNT 1 \
     FINAL_DRC 1 FINAL_SHORTS 0 FINAL_REGULAR_CONNECTIVITY_BAD 0 \
     FINAL_SPECIAL_CONNECTIVITY_BAD 1 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 1 \
     FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 FINAL_UNROUTED_NETS 0 \
-    FINAL_REPORT_ROUTE_ZERO_STATUS PASS FINAL_DRC_MARKER_SIGNATURE_COUNT 1 \
+    FINAL_REPORT_ROUTE_ZERO_STATUS PASS \
+    FINAL_DRC_MARKER_RECONCILIATION_STATUS PASS FINAL_DRC_MARKER_LIVE_COUNT 1 \
+    FINAL_DRC_MARKER_UNMAPPED_COUNT 0 FINAL_DRC_MARKER_SIGNATURE_COUNT 1 \
+    DRC_MARKER_RECONCILIATION_GATE_STATUS PASS \
     DRC_MARKER_SIGNATURE_MATCH_STATUS PASS CHECKPOINT_SAVE_STATUS PASS \
     SOURCE_CHECKPOINT_HASH_STATUS PASS SAFE_COPY_MATCH_STATUS PASS \
     SAFE_INPUT_READ_ONLY_STATUS PASS PROBE_EVIDENCE_READ_ONLY_STATUS PASS \
@@ -707,6 +721,14 @@ tracked_tie1_filler_recycle_gate_passes() {
 
   pg_config_source_status="$(report_value "$report" PG_CONFIG_SOURCE_STATUS)"
   [[ "$pg_config_source_status" =~ ^(LOADED|ALREADY_LOADED)$ ]] || return 1
+
+  final_marker_raw="$(report_value "$report" FINAL_DRC_MARKER_RAW_GEOMETRY_COUNT)"
+  final_marker_live="$(report_value "$report" FINAL_DRC_MARKER_LIVE_COUNT)"
+  final_marker_stale="$(report_value "$report" FINAL_DRC_MARKER_STALE_COUNT)"
+  final_marker_unmapped="$(report_value "$report" FINAL_DRC_MARKER_UNMAPPED_COUNT)"
+  [[ "$final_marker_raw" =~ ^[0-9]+$ && "$final_marker_live" == 1 && \
+     "$final_marker_stale" =~ ^[0-9]+$ && "$final_marker_unmapped" == 0 ]] || return 1
+  (( final_marker_raw == final_marker_live + final_marker_stale )) || return 1
 
   target_decision="$(report_value "$report" POST_FILLER_TARGET_DECISION)"
   fix_drc_status="$(report_value "$report" POST_FILLER_FIX_DRC_STATUS)"
@@ -783,6 +805,7 @@ while [[ $# -gt 0 ]]; do
     --ro-gds) RO_GDS="${2:?missing --ro-gds value}"; shift 2 ;;
     --innovus-work) INNOVUS_WORK="${2:?missing --innovus-work value}"; shift 2 ;;
     --diagnostic-deferred-minarea) DIAGNOSTIC_DEFERRED_MINAREA=1; shift ;;
+    --run-density-after-lvs) RUN_DENSITY_AFTER_LVS=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -790,6 +813,10 @@ done
 
 [[ -n "$PNR_RUN_ID" ]] || { echo "ERROR: --pnr-run-id is required" >&2; usage >&2; exit 2; }
 [[ "$PNR_RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "ERROR: unsafe PnR run id" >&2; exit 2; }
+if [[ "$RUN_DENSITY_AFTER_LVS" == 1 && "$DIAGNOSTIC_DEFERRED_MINAREA" != 1 ]]; then
+  echo "ERROR: --run-density-after-lvs requires --diagnostic-deferred-minarea" >&2
+  exit 2
+fi
 if [[ -z "$PVS_RUN_ID" ]]; then
   PVS_RUN_ID="${PNR_RUN_ID}_realro_pvs_$(date +%Y%m%d_%H%M%S)"
 fi
@@ -888,6 +915,7 @@ echo "SOURCE_CKPT=$SOURCE_CKPT"
 echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
 echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
 echo "DIAGNOSTIC_DEFERRED_MINAREA=$DIAGNOSTIC_DEFERRED_MINAREA"
+echo "RUN_DENSITY_AFTER_LVS=$RUN_DENSITY_AFTER_LVS"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
 echo "PVS_DIR=$PVS_DIR"
 echo "RO_GDS=$RO_GDS"
@@ -907,7 +935,7 @@ PREFLIGHT=PASS
 [[ -d "$SOURCE_CKPT" ]] || { echo "STOP: accepted route checkpoint missing: $SOURCE_CKPT"; PREFLIGHT=FAIL; }
 [[ -s "$RO_GDS" ]] || { echo "STOP: real RO GDS missing or empty: $RO_GDS"; PREFLIGHT=FAIL; }
 [[ ! -e "$PVS_DIR" ]] || { echo "STOP: PVS result directory already exists: $PVS_DIR"; PREFLIGHT=FAIL; }
-for script in "$PUBLISHER" "$PREP_SCRIPT" "$AUDIT_SCRIPT" "$DRC_SCRIPT" "$LVS_SCRIPT"; do
+for script in "$PUBLISHER" "$PREP_SCRIPT" "$AUDIT_SCRIPT" "$DRC_SCRIPT" "$LVS_SCRIPT" "$DRC_CLASSIFIER"; do
   [[ -f "$script" ]] || { echo "STOP: required script missing: $script"; PREFLIGHT=FAIL; }
 done
 
@@ -951,9 +979,16 @@ DIAGNOSTIC_SCOPE_MANIFEST="$PVS_DIR/manifests/pvs_diagnostic_scope.rpt"
 DIAGNOSTIC_SCOPE_STATUS=NOT_APPLICABLE
 if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && -d "$PVS_DIR" ]]; then
   mkdir -p "$PVS_DIR/manifests"
+  DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS
+  DIAGNOSTIC_DENSITY_STATUS=NOT_RUN_BY_SCOPE
+  if [[ "$RUN_DENSITY_AFTER_LVS" == 1 ]]; then
+    DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY
+    DIAGNOSTIC_DENSITY_STATUS=PENDING_POST_LVS_MATCH
+  fi
   {
     echo "PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF"
-    echo "DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS"
+    echo "DIAGNOSTIC_SCOPE=$DIAGNOSTIC_SCOPE"
+    echo "RUN_DENSITY_AFTER_LVS=$RUN_DENSITY_AFTER_LVS"
     echo "PNR_RUN_ID=$PNR_RUN_ID"
     echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
@@ -965,7 +1000,7 @@ if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && -d "$PVS_DIR" ]]; then
     echo "DEFERRED_INNOVUS_DRC_COUNT=1"
     echo "DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA"
     echo "DEFERRED_INNOVUS_DRC_NET=u_core_n_57556"
-    echo "DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE"
+    echo "DENSITY_DRC_STATUS=$DIAGNOSTIC_DENSITY_STATUS"
     echo "SIGNOFF_ELIGIBLE=NO"
   } > "$DIAGNOSTIC_SCOPE_MANIFEST"
   DIAGNOSTIC_SCOPE_STATUS=PASS
@@ -986,6 +1021,7 @@ if [[ -d "$PVS_DIR" ]]; then
     echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
     echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
     echo "DIAGNOSTIC_DEFERRED_MINAREA=$DIAGNOSTIC_DEFERRED_MINAREA"
+    echo "RUN_DENSITY_AFTER_LVS=$RUN_DENSITY_AFTER_LVS"
     echo "DIAGNOSTIC_SCOPE_STATUS=$DIAGNOSTIC_SCOPE_STATUS"
     echo "SOURCE_CHECKPOINT=$SOURCE_CKPT"
     echo "CANDIDATE_GATE_PATH=$CANDIDATE_GATE_PATH"
@@ -1028,11 +1064,13 @@ if [[ "$AUDIT_DECISION" != PASS_CONTINUE || "$AUDIT_PUBLISH_RC" -ne 0 ]]; then
   exit 1
 fi
 
-diagnostic_base_drc_is_attributable() {
+diagnostic_drc_is_attributable() {
   local report="$1"
   local command_rc="$2"
+  local expected_variant_lower="$3"
+  local expected_variant_upper="$4"
   local status gate variant pvs_rc primary expanded nonzero rule_report rule_hash
-  local expected_rule_report="$PVS_DIR/reports/pvs_drc_base_nonzero_rules.tsv"
+  local expected_rule_report="$PVS_DIR/reports/pvs_drc_${expected_variant_lower}_nonzero_rules.tsv"
   local actual_hash actual_rows
 
   status="$(report_value "$report" STATUS)"
@@ -1045,7 +1083,7 @@ diagnostic_base_drc_is_attributable() {
   rule_report="$(report_value "$report" NONZERO_RULE_REPORT)"
   rule_hash="$(report_value "$report" NONZERO_RULE_REPORT_SHA256)"
 
-  [[ "$variant" == BASE && "$pvs_rc" == 0 ]] || return 1
+  [[ "$variant" == "$expected_variant_upper" && "$pvs_rc" == 0 ]] || return 1
   [[ "$status" == "$gate" && ( "$status" == PASS || "$status" == FAIL ) ]] || return 1
   [[ "$primary" =~ ^[0-9]+$ && "$expanded" =~ ^[0-9]+$ && "$nonzero" =~ ^[0-9]+$ ]] || return 1
   [[ "$rule_report" == "$expected_rule_report" && -s "$expected_rule_report" ]] || return 1
@@ -1069,6 +1107,8 @@ run_drc_stage() {
   local log="$PVS_DIR/logs/operator_drc_${variant}.log"
   local rc status gate report_variant pvs_rc primary expanded nonzero
   local rule_report decision evidence_status publish_rc
+  local classification_rc classification_status classification non_antenna_rule_count
+  local classification_report classification_scope classification_log
 
   run_logged "$log" bash "$DRC_SCRIPT" --prepared-dir "$PVS_DIR" \
     --variant "$variant" --expected-head "$EXPECTED_HEAD_VALUE"
@@ -1083,10 +1123,40 @@ run_drc_stage() {
   rule_report="$(report_value "$report" NONZERO_RULE_REPORT)"
   decision=FAIL_STOP
   evidence_status=NOT_PROVEN
+  classification_rc=NOT_RUN
+  classification_status=NOT_APPLICABLE
+  classification=NOT_APPLICABLE
+  non_antenna_rule_count=NOT_APPLICABLE
   if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && "$variant" == base ]] && \
-     diagnostic_base_drc_is_attributable "$report" "$rc"; then
-    decision=DIAGNOSTIC_CONTINUE
+     diagnostic_drc_is_attributable "$report" "$rc" base BASE; then
+    classification_report="$PVS_DIR/reports/pvs_recovery_base_drc_classification.rpt"
+    classification_scope="$PVS_DIR/manifests/pvs_recovery_base_drc_classification_scope.rpt"
+    classification_log="$PVS_DIR/logs/operator_base_drc_classification.log"
+    run_logged "$classification_log" python3 "$DRC_CLASSIFIER" \
+      --context recovery-deferred-minarea \
+      --status-report "$report" \
+      --rule-report "$rule_report" \
+      --out "$classification_report" \
+      --scope-out "$classification_scope"
+    classification_rc=$?
+    classification_status="$(report_value "$classification_report" CLASSIFICATION_STATUS)"
+    classification="$(report_value "$classification_report" PVS_BASE_DRC_CLASS)"
+    non_antenna_rule_count="$(report_value "$classification_report" NON_ANTENNA_RULE_COUNT)"
+    if [[ "$classification_rc" -eq 0 && "$classification_status" == PASS && \
+          "$classification" =~ ^(CLEAN|ANTENNA_ONLY_MANAGER_EXCEPTION)$ && \
+          "$non_antenna_rule_count" == 0 ]]; then
+      decision=DIAGNOSTIC_CONTINUE
+      evidence_status=ATTRIBUTABLE
+    fi
+  elif [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 && \
+          "$RUN_DENSITY_AFTER_LVS" == 1 && "$variant" == density ]] && \
+       diagnostic_drc_is_attributable "$report" "$rc" density DENSITY; then
     evidence_status=ATTRIBUTABLE
+    if [[ "$status" == PASS ]]; then
+      decision=DIAGNOSTIC_CONTINUE
+    else
+      decision=DIAGNOSTIC_DEBT_RECORDED
+    fi
   elif [[ "$rc" -eq 0 && "$status" == PASS && "$gate" == PASS && \
           "$report_variant" == "$upper" && "$pvs_rc" == 0 && \
           "$primary" == 0 && "$expanded" == 0 && "$nonzero" == 0 ]]; then
@@ -1104,6 +1174,11 @@ run_drc_stage() {
     echo "DRC_TOTAL_EXPANDED=$expanded"
     echo "NONZERO_RULE_COUNT=$nonzero"
     echo "NONZERO_RULE_REPORT=$rule_report"
+    echo "BASE_DRC_CLASSIFICATION_RC=$classification_rc"
+    echo "BASE_DRC_CLASSIFICATION_STATUS=$classification_status"
+    echo "PVS_BASE_DRC_CLASS=$classification"
+    echo "NON_ANTENNA_RULE_COUNT=$non_antenna_rule_count"
+    echo "ANTENNA_REPAIR_ATTEMPTED=NO"
     echo "PVS_DRC_EVIDENCE_STATUS=$evidence_status"
     echo "DECISION=$decision"
   } | tee "$PVS_DIR/reports/operator_gate_pvs_drc_${variant}.rpt"
@@ -1118,7 +1193,10 @@ run_drc_stage() {
   LAST_DRC_EXPANDED="$expanded"
   LAST_DRC_NONZERO_RULE_COUNT="$nonzero"
   LAST_DRC_EVIDENCE_STATUS="$evidence_status"
-  [[ ( "$decision" == PASS_CONTINUE || "$decision" == DIAGNOSTIC_CONTINUE ) && \
+  LAST_DRC_CLASSIFICATION="$classification"
+  LAST_DRC_NON_ANTENNA_RULE_COUNT="$non_antenna_rule_count"
+  [[ ( "$decision" == PASS_CONTINUE || "$decision" == DIAGNOSTIC_CONTINUE || \
+        "$decision" == DIAGNOSTIC_DEBT_RECORDED ) && \
      "$publish_rc" -eq 0 ]]
 }
 
@@ -1135,16 +1213,24 @@ BASE_DRC_PRIMARY="$LAST_DRC_PRIMARY"
 BASE_DRC_EXPANDED="$LAST_DRC_EXPANDED"
 BASE_DRC_NONZERO_RULE_COUNT="$LAST_DRC_NONZERO_RULE_COUNT"
 BASE_DRC_EVIDENCE_STATUS="$LAST_DRC_EVIDENCE_STATUS"
+BASE_DRC_CLASSIFICATION="$LAST_DRC_CLASSIFICATION"
+BASE_DRC_NON_ANTENNA_RULE_COUNT="$LAST_DRC_NON_ANTENNA_RULE_COUNT"
 
 if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
   DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE
+  DENSITY_PRE_LVS_DECISION=NOT_RUN_BY_SCOPE
+  if [[ "$RUN_DENSITY_AFTER_LVS" == 1 ]]; then
+    DENSITY_DRC_STATUS=PENDING_POST_LVS_MATCH
+    DENSITY_PRE_LVS_DECISION=PENDING_LVS_MATCH
+  fi
   DENSITY_CHAIN_RC=0
   {
     echo "STEP=PVS_DRC_DENSITY"
     echo "DENSITY_DRC_LAUNCHED=0"
-    echo "DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE"
+    echo "DENSITY_DRC_STATUS=$DENSITY_DRC_STATUS"
     echo "PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF"
-    echo "DECISION=NOT_RUN_BY_SCOPE"
+    echo "ANTENNA_REPAIR_ATTEMPTED=NO"
+    echo "DECISION=$DENSITY_PRE_LVS_DECISION"
   } > "$PVS_DIR/reports/operator_gate_pvs_drc_density.rpt"
 else
   run_drc_stage density DENSITY 04_drc_density
@@ -1186,34 +1272,53 @@ fi
   echo "PVS_RC=$LVS_TOOL_RC"
   echo "DECISION=$LVS_DECISION"
 } | tee "$PVS_DIR/reports/operator_gate_pvs_lvs.rpt"
-if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
-  DIAGNOSTIC_COLLECTION_STATUS=FAIL
-  DIAGNOSTIC_FINAL_DECISION=DIAGNOSTIC_LVS_NOT_MATCHED
-  DIAGNOSTIC_NEXT_STAGE=LVS_TRIAGE_BEFORE_MANUAL_DRC_REPAIR
-  if [[ "$LVS_DECISION" == DIAGNOSTIC_MATCH ]]; then
-    DIAGNOSTIC_COLLECTION_STATUS=PASS
-    DIAGNOSTIC_FINAL_DECISION=DIAGNOSTIC_BASE_DRC_AND_LVS_COMPLETE_MANUAL_REPAIR_REQUIRED
-    DIAGNOSTIC_NEXT_STAGE=MANUAL_MINAREA_REPAIR_THEN_CANONICAL_SIGNOFF_REPLAY
-  fi
+
+write_diagnostic_summary() {
   {
     echo "STEP=PVS_DIAGNOSTIC_SUMMARY"
     echo "PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF"
     echo "DIAGNOSTIC_COLLECTION_STATUS=$DIAGNOSTIC_COLLECTION_STATUS"
     echo "PVS_DRC_BASE=$BASE_DRC_GATE"
     echo "PVS_DRC_BASE_EVIDENCE_STATUS=$BASE_DRC_EVIDENCE_STATUS"
+    echo "PVS_DRC_BASE_CLASS=$BASE_DRC_CLASSIFICATION"
+    echo "PVS_DRC_BASE_NON_ANTENNA_RULE_COUNT=$BASE_DRC_NON_ANTENNA_RULE_COUNT"
     echo "PVS_DRC_BASE_TOTAL_PRIMARY=$BASE_DRC_PRIMARY"
     echo "PVS_DRC_BASE_TOTAL_EXPANDED=$BASE_DRC_EXPANDED"
     echo "PVS_DRC_BASE_NONZERO_RULE_COUNT=$BASE_DRC_NONZERO_RULE_COUNT"
-    echo "PVS_DRC_DENSITY=NOT_RUN_BY_SCOPE"
+    echo "PVS_DRC_DENSITY=$DENSITY_DRC_GATE"
+    echo "PVS_DRC_DENSITY_EVIDENCE_STATUS=$DENSITY_DRC_EVIDENCE_STATUS"
+    echo "PVS_DRC_DENSITY_TOTAL_PRIMARY=$DENSITY_DRC_PRIMARY"
+    echo "PVS_DRC_DENSITY_TOTAL_EXPANDED=$DENSITY_DRC_EXPANDED"
+    echo "PVS_DRC_DENSITY_NONZERO_RULE_COUNT=$DENSITY_DRC_NONZERO_RULE_COUNT"
     echo "PVS_LVS=$LVS_GATE"
     echo "DEFERRED_INNOVUS_DRC_COUNT=1"
     echo "DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA"
+    echo "ANTENNA_REPAIR_ATTEMPTED=NO"
     echo "MPTDC_TC_PVS_CLOSED=NO"
     echo "FINAL_SIGNOFF=NO"
     echo "READY_FOR_TAPEOUT=NO"
     echo "FINAL_DECISION=$DIAGNOSTIC_FINAL_DECISION"
     echo "NEXT_STAGE=$DIAGNOSTIC_NEXT_STAGE"
   } > "$PVS_DIR/reports/operator_gate_pvs_diagnostic_summary.rpt"
+}
+
+if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
+  DIAGNOSTIC_COLLECTION_STATUS=FAIL
+  DIAGNOSTIC_FINAL_DECISION=DIAGNOSTIC_LVS_NOT_MATCHED
+  DIAGNOSTIC_NEXT_STAGE=LVS_TRIAGE_BEFORE_MANUAL_DRC_REPAIR
+  DENSITY_DRC_GATE=NOT_RUN_BY_SCOPE
+  DENSITY_DRC_EVIDENCE_STATUS=NOT_RUN_BY_SCOPE
+  DENSITY_DRC_PRIMARY=NOT_RUN_BY_SCOPE
+  DENSITY_DRC_EXPANDED=NOT_RUN_BY_SCOPE
+  DENSITY_DRC_NONZERO_RULE_COUNT=NOT_RUN_BY_SCOPE
+  if [[ "$LVS_DECISION" == DIAGNOSTIC_MATCH && "$RUN_DENSITY_AFTER_LVS" != 1 ]]; then
+    DIAGNOSTIC_COLLECTION_STATUS=PASS
+    DIAGNOSTIC_FINAL_DECISION=DIAGNOSTIC_BASE_DRC_AND_LVS_COMPLETE_MANUAL_REPAIR_REQUIRED
+    DIAGNOSTIC_NEXT_STAGE=MANUAL_MINAREA_REPAIR_THEN_CANONICAL_SIGNOFF_REPLAY
+  fi
+  if [[ "$RUN_DENSITY_AFTER_LVS" != 1 || "$LVS_DECISION" != DIAGNOSTIC_MATCH ]]; then
+    write_diagnostic_summary
+  fi
 fi
 publish_stage "${PVS_RUN_ID}_${LVS_SNAPSHOT_SUFFIX}" PVS_LVS
 LVS_PUBLISH_RC=$?
@@ -1234,6 +1339,39 @@ if [[ ( "$LVS_DECISION" != PASS_CONTINUE && "$LVS_DECISION" != DIAGNOSTIC_MATCH 
 fi
 
 if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
+  DIAGNOSTIC_FINAL_PUBLISH_RC="$LVS_PUBLISH_RC"
+  if [[ "$RUN_DENSITY_AFTER_LVS" == 1 ]]; then
+    run_drc_stage density DENSITY 05_drc_density
+    DENSITY_CHAIN_RC=$?
+    if [[ "$DENSITY_CHAIN_RC" -ne 0 ]]; then
+      stop_after_stage PVS_DRC_DENSITY "$LAST_DRC_DECISION" "$LAST_DRC_PUBLISH_RC" \
+        REVIEW_ATTRIBUTION_OR_REPUBLISH_BEFORE_CONTINUING
+      exit 1
+    fi
+    DENSITY_DRC_STATUS="$LAST_DRC_STATUS"
+    DENSITY_DRC_GATE="$LAST_DRC_GATE"
+    DENSITY_DRC_EVIDENCE_STATUS="$LAST_DRC_EVIDENCE_STATUS"
+    DENSITY_DRC_PRIMARY="$LAST_DRC_PRIMARY"
+    DENSITY_DRC_EXPANDED="$LAST_DRC_EXPANDED"
+    DENSITY_DRC_NONZERO_RULE_COUNT="$LAST_DRC_NONZERO_RULE_COUNT"
+    DIAGNOSTIC_COLLECTION_STATUS=PASS
+    if [[ "$DENSITY_DRC_GATE" == PASS ]]; then
+      DIAGNOSTIC_FINAL_DECISION=DIAGNOSTIC_BASE_DRC_LVS_AND_DENSITY_COMPLETE_MANUAL_REPAIR_REQUIRED
+      DIAGNOSTIC_NEXT_STAGE=MANUAL_MINAREA_REPAIR_THEN_CANONICAL_SIGNOFF_REPLAY
+    else
+      DIAGNOSTIC_FINAL_DECISION=DIAGNOSTIC_LVS_MATCH_WITH_DENSITY_DEBT
+      DIAGNOSTIC_NEXT_STAGE=REVIEW_DENSITY_DEBT_THEN_MANUAL_MINAREA_REPAIR
+    fi
+    write_diagnostic_summary
+    publish_stage "${PVS_RUN_ID}_06_diagnostic_summary" PVS_DIAGNOSTIC_SUMMARY
+    DIAGNOSTIC_SUMMARY_PUBLISH_RC=$?
+    DIAGNOSTIC_FINAL_PUBLISH_RC="$DIAGNOSTIC_SUMMARY_PUBLISH_RC"
+    if [[ "$DIAGNOSTIC_SUMMARY_PUBLISH_RC" -ne 0 ]]; then
+      stop_after_stage PVS_DIAGNOSTIC_SUMMARY FAIL_STOP \
+        "$DIAGNOSTIC_SUMMARY_PUBLISH_RC" REPUBLISH_DIAGNOSTIC_SUMMARY
+      exit 1
+    fi
+  fi
   echo "PVS_RECOVERY_STATUS=DIAGNOSTIC_COMPLETE"
   echo "DIAGNOSTIC_COLLECTION_STATUS=$DIAGNOSTIC_COLLECTION_STATUS"
   echo "PVS_RUN_ID=$PVS_RUN_ID"
@@ -1242,20 +1380,27 @@ if [[ "$DIAGNOSTIC_DEFERRED_MINAREA" == 1 ]]; then
   echo "PVS_TEMPLATE_AUDIT=PASS"
   echo "PVS_DRC_BASE=$BASE_DRC_GATE"
   echo "PVS_DRC_BASE_EVIDENCE_STATUS=$BASE_DRC_EVIDENCE_STATUS"
+  echo "PVS_DRC_BASE_CLASS=$BASE_DRC_CLASSIFICATION"
+  echo "PVS_DRC_BASE_NON_ANTENNA_RULE_COUNT=$BASE_DRC_NON_ANTENNA_RULE_COUNT"
   echo "PVS_DRC_BASE_TOTAL_PRIMARY=$BASE_DRC_PRIMARY"
   echo "PVS_DRC_BASE_TOTAL_EXPANDED=$BASE_DRC_EXPANDED"
   echo "PVS_DRC_BASE_NONZERO_RULE_COUNT=$BASE_DRC_NONZERO_RULE_COUNT"
-  echo "PVS_DRC_DENSITY=NOT_RUN_BY_SCOPE"
+  echo "PVS_DRC_DENSITY=$DENSITY_DRC_GATE"
+  echo "PVS_DRC_DENSITY_EVIDENCE_STATUS=$DENSITY_DRC_EVIDENCE_STATUS"
+  echo "PVS_DRC_DENSITY_TOTAL_PRIMARY=$DENSITY_DRC_PRIMARY"
+  echo "PVS_DRC_DENSITY_TOTAL_EXPANDED=$DENSITY_DRC_EXPANDED"
+  echo "PVS_DRC_DENSITY_NONZERO_RULE_COUNT=$DENSITY_DRC_NONZERO_RULE_COUNT"
   echo "PVS_LVS=MATCH"
   echo "DEFERRED_INNOVUS_DRC_COUNT=1"
   echo "DEFERRED_INNOVUS_DRC_RULE=MET1_MINIMUM_AREA"
+  echo "ANTENNA_REPAIR_ATTEMPTED=NO"
   echo "MPTDC_TC_PVS_CLOSED=NO"
   echo "FINAL_DECISION=$DIAGNOSTIC_FINAL_DECISION"
   echo "NOT_MMMC_SIGNOFF=YES"
   echo "FINAL_SIGNOFF=NO"
   echo "READY_FOR_TAPEOUT=NO"
   echo "DECISION=DIAGNOSTIC_COMPLETE"
-  echo "PUBLISH_RC=$LVS_PUBLISH_RC"
+  echo "PUBLISH_RC=$DIAGNOSTIC_FINAL_PUBLISH_RC"
   echo "NEXT_EXPECTED_HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null)"
   echo "NEXT_STAGE=$DIAGNOSTIC_NEXT_STAGE"
   exit 0

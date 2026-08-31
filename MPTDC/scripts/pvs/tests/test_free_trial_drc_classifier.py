@@ -18,6 +18,7 @@ class FreeTrialDrcClassifierTest(unittest.TestCase):
         expected_class: str,
         expected_rc: int,
         corrupt_hash: bool = False,
+        context: str = "free-placement",
     ) -> tuple[str, Path, tempfile.TemporaryDirectory[str]]:
         tmp = tempfile.TemporaryDirectory(prefix="mptdc_free_drc_")
         root = Path(tmp.name)
@@ -59,6 +60,8 @@ class FreeTrialDrcClassifierTest(unittest.TestCase):
                 str(out),
                 "--scope-out",
                 str(scope),
+                "--context",
+                context,
             ],
             check=False,
             text=True,
@@ -95,6 +98,22 @@ class FreeTrialDrcClassifierTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.assertIn("rule inventory hash mismatch", text)
         self.assertFalse(scope.exists())
+
+    def test_recovery_context_uses_recovery_scope(self) -> None:
+        text, scope, tmp = self.run_case(
+            [("R1M2P1", 1, 1)],
+            "ANTENNA_ONLY_MANAGER_EXCEPTION",
+            0,
+            context="recovery-deferred-minarea",
+        )
+        self.addCleanup(tmp.cleanup)
+        self.assertIn("STEP=MPTDC_RECOVERY_BASE_DRC_CLASSIFICATION\n", text)
+        self.assertIn("CLASSIFICATION_CONTEXT=RECOVERY_DEFERRED_MINAREA\n", text)
+        self.assertIn("PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF\n", scope.read_text())
+        self.assertIn(
+            "DIAGNOSTIC_SCOPE=RECOVERY_BASE_DRC_CLASSIFICATION_ONLY\n",
+            scope.read_text(),
+        )
 
 
 if __name__ == "__main__":

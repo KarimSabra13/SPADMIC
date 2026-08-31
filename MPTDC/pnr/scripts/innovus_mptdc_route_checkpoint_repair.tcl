@@ -2344,6 +2344,7 @@ proc mptdc_ckpt_verify_snapshot {tag} {
         marker_rpt $marker_rpt \
         total_violations [dict get $drc_data total_violations] \
         shorts [dict get $drc_data shorts] \
+        drc_class_counts [dict get $drc_data drc_class_counts] \
         drc_status [dict get $drc_data status] \
         regular_bad [lindex $regular_bad 0] \
         regular_bad_lines [lindex $regular_bad 1] \

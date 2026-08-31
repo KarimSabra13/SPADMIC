@@ -153,13 +153,26 @@ report_value() {
 
 require_diagnostic_scope() {
   local scope="$NEW_BASE/manifests/pvs_diagnostic_scope.rpt"
+  local diagnostic_scope density_status run_density_after_lvs
   mptdc_pvs_require_file "$scope"
   grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF' "$scope" || \
     mptdc_pvs_die "diagnostic LVS scope has invalid PVS_RUN_CLASS: $scope"
-  grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS' "$scope" || \
-    mptdc_pvs_die "diagnostic LVS scope is not BASE_DRC_PLUS_LVS: $scope"
-  grep -qx 'DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE' "$scope" || \
-    mptdc_pvs_die "diagnostic LVS scope did not explicitly exclude density DRC: $scope"
+  diagnostic_scope="$(report_value "$scope" DIAGNOSTIC_SCOPE)"
+  density_status="$(report_value "$scope" DENSITY_DRC_STATUS)"
+  run_density_after_lvs="$(report_value "$scope" RUN_DENSITY_AFTER_LVS)"
+  if [[ "$diagnostic_scope" == BASE_DRC_PLUS_LVS ]]; then
+    [[ "$density_status" == NOT_RUN_BY_SCOPE ]] || \
+      mptdc_pvs_die "diagnostic LVS scope did not explicitly exclude density DRC: $scope"
+    [[ -z "$run_density_after_lvs" || "$run_density_after_lvs" == 0 ]] || \
+      mptdc_pvs_die "diagnostic LVS scope has an inconsistent density request: $scope"
+  elif [[ "$diagnostic_scope" == BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY ]]; then
+    [[ "$run_density_after_lvs" == 1 ]] || \
+      mptdc_pvs_die "post-MATCH density scope is missing its explicit request: $scope"
+    [[ "$density_status" == PENDING_POST_LVS_MATCH ]] || \
+      mptdc_pvs_die "density evidence exists before the diagnostic LVS MATCH: $scope"
+  else
+    mptdc_pvs_die "diagnostic LVS scope is unsupported: $diagnostic_scope"
+  fi
   grep -qx 'SIGNOFF_ELIGIBLE=NO' "$scope" || \
     mptdc_pvs_die "diagnostic LVS scope is not marked ineligible for signoff: $scope"
   grep -qx 'DEFERRED_INNOVUS_DRC_COUNT=1' "$scope" || \

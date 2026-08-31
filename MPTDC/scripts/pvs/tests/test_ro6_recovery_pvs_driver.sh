@@ -175,7 +175,13 @@ fi
 rule_report="$dir/reports/pvs_drc_${variant}_nonzero_rules.tsv"
 printf 'rule\tprimary\texpanded\n' > "$rule_report"
 if [[ "$nonzero" == 1 ]]; then
-  printf 'M1.MIN.AREA\t3\t3\n' >> "$rule_report"
+  rule_name="${FAKE_DRC_RULE_NAME:-}"
+  if [[ -z "$rule_name" && "$variant" == base ]]; then
+    rule_name=R1M2P1
+  elif [[ -z "$rule_name" ]]; then
+    rule_name=DENSITY.WINDOW
+  fi
+  printf '%s\t3\t3\n' "$rule_name" >> "$rule_report"
 fi
 rule_hash="$(sha256sum "$rule_report" | awk '{print $1}')"
 cat > "$dir/reports/pvs_drc_${variant}_status.rpt" <<RPT
@@ -188,8 +194,10 @@ DRC_TOTAL_EXPANDED=$total
 NONZERO_RULE_COUNT=$nonzero
 NONZERO_RULE_REPORT=$rule_report
 NONZERO_RULE_REPORT_SHA256=$rule_hash
+LAYOUT_INPUT_SHA256=fixture_layout_sha
 RPT
 if [[ -n "${DRC_CALLS:-}" ]]; then printf '%s\n' "$variant" >> "$DRC_CALLS"; fi
+if [[ -n "${STAGE_CALLS:-}" ]]; then printf 'drc:%s\n' "$variant" >> "$STAGE_CALLS"; fi
 exit "$rc"
 EOF
 
@@ -209,10 +217,24 @@ if [[ "${EXPECT_DIAGNOSTIC_LVS:-0}" == 1 ]]; then
   test "$diagnostic" = 1
   grep -qx 'PVS_RUN_CLASS=DIAGNOSTIC_NOT_SIGNOFF' \
     "$dir/manifests/pvs_diagnostic_scope.rpt"
+  if [[ "${EXPECT_POST_MATCH_DENSITY:-0}" == 1 ]]; then
+    grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY' \
+      "$dir/manifests/pvs_diagnostic_scope.rpt"
+    grep -qx 'RUN_DENSITY_AFTER_LVS=1' "$dir/manifests/pvs_diagnostic_scope.rpt"
+    grep -qx 'DENSITY_DRC_STATUS=PENDING_POST_LVS_MATCH' \
+      "$dir/manifests/pvs_diagnostic_scope.rpt"
+    test ! -e "$dir/reports/pvs_drc_density_status.rpt"
+  else
+    grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS' \
+      "$dir/manifests/pvs_diagnostic_scope.rpt"
+    grep -qx 'DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE' \
+      "$dir/manifests/pvs_diagnostic_scope.rpt"
+  fi
 else
   test "$diagnostic" = 0
 fi
 if [[ -n "${LVS_CALLS:-}" ]]; then printf '%s\n' "$diagnostic" >> "$LVS_CALLS"; fi
+if [[ -n "${STAGE_CALLS:-}" ]]; then printf 'lvs\n' >> "$STAGE_CALLS"; fi
 if [[ "${FAKE_LVS_MISMATCH:-0}" == 1 ]]; then
   printf 'STATUS=FAIL\nPVS_LVS_STATUS=NOT_PROVEN\nPVS_RC=0\n' > "$dir/reports/pvs_lvs_status.rpt"
   exit 8
@@ -241,7 +263,7 @@ run_driver() {
   fi
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --diagnostic-deferred-minarea)
+      --diagnostic-deferred-minarea|--run-density-after-lvs)
         driver_args+=("$1")
         ;;
       *)
@@ -838,6 +860,11 @@ BASELINE_REGULAR_CONNECTIVITY_BAD=0
 BASELINE_SPECIAL_CONNECTIVITY_BAD=1
 BASELINE_UNROUTED_NETS=0
 BASELINE_REPORT_ROUTE_ZERO_STATUS=PASS
+BASELINE_DRC_MARKER_RECONCILIATION_STATUS=PASS
+BASELINE_DRC_MARKER_RAW_GEOMETRY_COUNT=1
+BASELINE_DRC_MARKER_LIVE_COUNT=1
+BASELINE_DRC_MARKER_STALE_COUNT=0
+BASELINE_DRC_MARKER_UNMAPPED_COUNT=0
 BASELINE_DRC_MARKER_SIGNATURE_COUNT=1
 FINAL_DRC=1
 FINAL_SHORTS=0
@@ -847,7 +874,13 @@ FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
 FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
 FINAL_UNROUTED_NETS=0
 FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
+FINAL_DRC_MARKER_RECONCILIATION_STATUS=PASS
+FINAL_DRC_MARKER_RAW_GEOMETRY_COUNT=2
+FINAL_DRC_MARKER_LIVE_COUNT=1
+FINAL_DRC_MARKER_STALE_COUNT=1
+FINAL_DRC_MARKER_UNMAPPED_COUNT=0
 FINAL_DRC_MARKER_SIGNATURE_COUNT=1
+DRC_MARKER_RECONCILIATION_GATE_STATUS=PASS
 DRC_MARKER_SIGNATURE_MATCH_STATUS=PASS
 CHECKPOINT_SAVE_STATUS=PASS
 SOURCE_CHECKPOINT_HASH_STATUS=PASS
@@ -901,6 +934,10 @@ grep -qx 'PVS_RECOVERY_STATUS=DIAGNOSTIC_COMPLETE' "$TMP_ROOT/failed_v6r_diagnos
 grep -qx 'DIAGNOSTIC_COLLECTION_STATUS=PASS' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
 grep -qx 'PVS_DRC_BASE=FAIL' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
 grep -qx 'PVS_DRC_BASE_EVIDENCE_STATUS=ATTRIBUTABLE' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_DRC_BASE_CLASS=ANTENNA_ONLY_MANAGER_EXCEPTION' \
+  "$TMP_ROOT/failed_v6r_diagnostic.stdout"
+grep -qx 'PVS_DRC_BASE_NON_ANTENNA_RULE_COUNT=0' \
+  "$TMP_ROOT/failed_v6r_diagnostic.stdout"
 grep -qx 'PVS_DRC_DENSITY=NOT_RUN_BY_SCOPE' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
 grep -qx 'PVS_LVS=MATCH' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
 grep -qx 'MPTDC_TC_PVS_CLOSED=NO' "$TMP_ROOT/failed_v6r_diagnostic.stdout"
@@ -921,6 +958,26 @@ test "$(wc -l < "$DIAGNOSTIC_CALLS")" -eq 4
 test "$(cat "$DIAGNOSTIC_DRC_CALLS")" = base
 test "$(cat "$DIAGNOSTIC_LVS_CALLS")" = 1
 test ! -e "$WORK/pvs_failed_v6r_diagnostic/reports/pvs_drc_density_status.rpt"
+
+NON_ANTENNA_CALLS="$TMP_ROOT/failed_v6r_non_antenna.calls"
+NON_ANTENNA_LVS_CALLS="$TMP_ROOT/failed_v6r_non_antenna.lvs_calls"
+set +e
+run_driver pvs_failed_v6r_non_antenna "$NON_ANTENNA_CALLS" \
+  --test-pnr-run "$MINAREA_FAILED_V6R_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$MINAREA_FAILED_V6R_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base FAKE_DRC_RULE_NAME=M1.MIN.AREA \
+  EXPECT_DIAGNOSTIC_LVS=1 LVS_CALLS="$NON_ANTENNA_LVS_CALLS" \
+  --diagnostic-deferred-minarea > "$TMP_ROOT/failed_v6r_non_antenna.stdout"
+NON_ANTENNA_RC=$?
+set -e
+test "$NON_ANTENNA_RC" -eq 1
+grep -qx 'PVS_BASE_DRC_CLASS=NON_ANTENNA_DRC' \
+  "$WORK/pvs_failed_v6r_non_antenna/reports/operator_gate_pvs_drc_base.rpt"
+grep -qx 'NON_ANTENNA_RULE_COUNT=1' \
+  "$WORK/pvs_failed_v6r_non_antenna/reports/operator_gate_pvs_drc_base.rpt"
+grep -qx 'DECISION=FAIL_STOP' \
+  "$WORK/pvs_failed_v6r_non_antenna/reports/operator_gate_pvs_drc_base.rpt"
+test ! -e "$NON_ANTENNA_LVS_CALLS"
 
 TIE1_DIAGNOSTIC_CALLS="$TMP_ROOT/tie1_diagnostic.calls"
 TIE1_DIAGNOSTIC_DRC_CALLS="$TMP_ROOT/tie1_diagnostic.drc_calls"
@@ -949,6 +1006,50 @@ grep -qx 'CANDIDATE_CHECKPOINT_HASH_STATUS=PASS' \
 test "$(wc -l < "$TIE1_DIAGNOSTIC_CALLS")" -eq 4
 test "$(cat "$TIE1_DIAGNOSTIC_DRC_CALLS")" = base
 test "$(cat "$TIE1_DIAGNOSTIC_LVS_CALLS")" = 1
+
+TIE1_DENSITY_CALLS="$TMP_ROOT/tie1_density.calls"
+TIE1_DENSITY_DRC_CALLS="$TMP_ROOT/tie1_density.drc_calls"
+TIE1_DENSITY_STAGE_CALLS="$TMP_ROOT/tie1_density.stage_calls"
+run_driver pvs_tie1_density "$TIE1_DENSITY_CALLS" \
+  --test-pnr-run "$TIE1_CANDIDATE_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$TIE1_CANDIDATE_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base EXPECT_DIAGNOSTIC_LVS=1 EXPECT_POST_MATCH_DENSITY=1 \
+  DRC_CALLS="$TIE1_DENSITY_DRC_CALLS" STAGE_CALLS="$TIE1_DENSITY_STAGE_CALLS" \
+  --diagnostic-deferred-minarea --run-density-after-lvs \
+  > "$TMP_ROOT/tie1_density.stdout"
+test "$(wc -l < "$TIE1_DENSITY_CALLS")" -eq 6
+test "$(cat "$TIE1_DENSITY_DRC_CALLS")" = $'base\ndensity'
+test "$(cat "$TIE1_DENSITY_STAGE_CALLS")" = $'drc:base\nlvs\ndrc:density'
+grep -qx 'DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_LVS_PLUS_POST_MATCH_DENSITY' \
+  "$WORK/pvs_tie1_density/manifests/pvs_diagnostic_scope.rpt"
+grep -qx 'PVS_DRC_DENSITY=PASS' "$TMP_ROOT/tie1_density.stdout"
+grep -qx 'PVS_DRC_DENSITY_EVIDENCE_STATUS=ATTRIBUTABLE' \
+  "$TMP_ROOT/tie1_density.stdout"
+grep -qx 'FINAL_DECISION=DIAGNOSTIC_BASE_DRC_LVS_AND_DENSITY_COMPLETE_MANUAL_REPAIR_REQUIRED' \
+  "$TMP_ROOT/tie1_density.stdout"
+grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' \
+  "$WORK/pvs_tie1_density/reports/operator_gate_pvs_diagnostic_summary.rpt"
+
+TIE1_DENSITY_DEBT_CALLS="$TMP_ROOT/tie1_density_debt.calls"
+TIE1_DENSITY_DEBT_STAGE_CALLS="$TMP_ROOT/tie1_density_debt.stage_calls"
+run_driver pvs_tie1_density_debt "$TIE1_DENSITY_DEBT_CALLS" \
+  --test-pnr-run "$TIE1_CANDIDATE_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$TIE1_CANDIDATE_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=density EXPECT_DIAGNOSTIC_LVS=1 EXPECT_POST_MATCH_DENSITY=1 \
+  STAGE_CALLS="$TIE1_DENSITY_DEBT_STAGE_CALLS" \
+  --diagnostic-deferred-minarea --run-density-after-lvs \
+  > "$TMP_ROOT/tie1_density_debt.stdout"
+test "$(wc -l < "$TIE1_DENSITY_DEBT_CALLS")" -eq 6
+test "$(cat "$TIE1_DENSITY_DEBT_STAGE_CALLS")" = $'drc:base\nlvs\ndrc:density'
+grep -qx 'DECISION=DIAGNOSTIC_DEBT_RECORDED' \
+  "$WORK/pvs_tie1_density_debt/reports/operator_gate_pvs_drc_density.rpt"
+grep -qx 'PVS_DRC_DENSITY=FAIL' "$TMP_ROOT/tie1_density_debt.stdout"
+grep -qx 'PVS_DRC_DENSITY_NONZERO_RULE_COUNT=1' \
+  "$TMP_ROOT/tie1_density_debt.stdout"
+grep -qx 'FINAL_DECISION=DIAGNOSTIC_LVS_MATCH_WITH_DENSITY_DEBT' \
+  "$TMP_ROOT/tie1_density_debt.stdout"
+grep -qx 'NEXT_STAGE=REVIEW_DENSITY_DEBT_THEN_MANUAL_MINAREA_REPAIR' \
+  "$TMP_ROOT/tie1_density_debt.stdout"
 
 TIE1_GATE="$TIE1_CANDIDATE_REPORTS/operator_gate_tie1_insertion_trial.rpt"
 TIE1_GATE_REL="${TIE1_GATE#"$REPO"/}"

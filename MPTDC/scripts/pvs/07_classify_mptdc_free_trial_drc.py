@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Classify attributable base DRC for the isolated free-placement trial."""
+"""Classify attributable MPTDC base DRC for a bounded diagnostic context."""
 
 from __future__ import annotations
 
@@ -11,6 +11,18 @@ from typing import Optional
 
 
 ALLOWED_ANTENNA_RULES = ("R1M2P1", "R1M3P1", "R2M2P1", "R2M3P1")
+CLASSIFICATION_CONTEXTS = {
+    "free-placement": {
+        "step": "MPTDC_FREE_TRIAL_BASE_DRC_CLASSIFICATION",
+        "run_class": "DIAGNOSTIC_FREE_PLACEMENT_MANAGER_SCOPE",
+        "scope": "BASE_DRC_PLUS_FULL_LVS",
+    },
+    "recovery-deferred-minarea": {
+        "step": "MPTDC_RECOVERY_BASE_DRC_CLASSIFICATION",
+        "run_class": "DIAGNOSTIC_NOT_SIGNOFF",
+        "scope": "RECOVERY_BASE_DRC_CLASSIFICATION_ONLY",
+    },
+}
 
 
 class ClassificationError(RuntimeError):
@@ -131,13 +143,16 @@ def classify(status_report: Path, rule_report: Path) -> tuple[str, dict[str, str
 def write_reports(
     out: Path,
     scope_out: Path,
+    context: str,
     classification: str,
     details: dict[str, str],
     error: Optional[str] = None,
 ) -> None:
+    context_data = CLASSIFICATION_CONTEXTS[context]
     out.parent.mkdir(parents=True, exist_ok=True)
     lines = [
-        "STEP=MPTDC_FREE_TRIAL_BASE_DRC_CLASSIFICATION",
+        f"STEP={context_data['step']}",
+        f"CLASSIFICATION_CONTEXT={context.upper().replace('-', '_')}",
         f"PVS_BASE_DRC_CLASS={classification}",
         f"ALLOWED_ANTENNA_RULE_SET={','.join(ALLOWED_ANTENNA_RULES)}",
     ]
@@ -164,8 +179,9 @@ def write_reports(
         scope_out.parent.mkdir(parents=True, exist_ok=True)
         exception = "YES" if classification == "ANTENNA_ONLY_MANAGER_EXCEPTION" else "NOT_NEEDED"
         scope_out.write_text(
-            "PVS_RUN_CLASS=DIAGNOSTIC_FREE_PLACEMENT_MANAGER_SCOPE\n"
-            "DIAGNOSTIC_SCOPE=BASE_DRC_PLUS_FULL_LVS\n"
+            f"PVS_RUN_CLASS={context_data['run_class']}\n"
+            f"DIAGNOSTIC_SCOPE={context_data['scope']}\n"
+            f"CLASSIFICATION_CONTEXT={context.upper().replace('-', '_')}\n"
             f"BASE_DRC_CLASS={classification}\n"
             "DENSITY_DRC_STATUS=NOT_RUN_BY_SCOPE\n"
             "ANTENNA_REPAIR_ATTEMPTED=NO\n"
@@ -183,6 +199,11 @@ def main() -> int:
     parser.add_argument("--rule-report", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--scope-out", required=True, type=Path)
+    parser.add_argument(
+        "--context",
+        choices=sorted(CLASSIFICATION_CONTEXTS),
+        default="free-placement",
+    )
     args = parser.parse_args()
 
     out = args.out.expanduser().resolve()
@@ -191,11 +212,11 @@ def main() -> int:
         status_report = require_file(args.status_report, "base DRC status")
         rule_report = require_file(args.rule_report, "base DRC rule inventory")
         classification, details = classify(status_report, rule_report)
-        write_reports(out, scope_out, classification, details)
+        write_reports(out, scope_out, args.context, classification, details)
         print(out.read_text(), end="")
         return 0 if classification in {"CLEAN", "ANTENNA_ONLY_MANAGER_EXCEPTION"} else 10
     except ClassificationError as exc:
-        write_reports(out, scope_out, "INVALID_EVIDENCE", {}, str(exc))
+        write_reports(out, scope_out, args.context, "INVALID_EVIDENCE", {}, str(exc))
         print(out.read_text(), end="")
         return 8
 

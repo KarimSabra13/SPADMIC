@@ -496,27 +496,148 @@ proc mptdc_tie1_trial_write_net_inventory {state high_master report_path} {
         max_observed_fanout $max_observed_fanout]
 }
 
-proc mptdc_tie1_trial_marker_signature {path} {
-    if {![file exists $path] || ![file readable $path]} {
-        return {}
+proc mptdc_tie1_trial_normalize_marker_class {name} {
+    set normalized [string tolower \
+        [string map [list "_" "" "-" "" " " ""] $name]]
+    switch -- $normalized {
+        mar - minarea - minimalarea - minimumarea {
+            return Mar
+        }
+        metspc - metalspacing - parallelrunlengthspacing {
+            return MetSpc
+        }
+        short - metalshort {
+            return Short
+        }
+        default {
+            return UNKNOWN
+        }
     }
-    set fh [open $path r]
+}
+
+proc mptdc_tie1_trial_marker_reconciliation {path total class_counts} {
+    set result [dict create \
+        status FAIL \
+        reason NONE \
+        signature {} \
+        raw_geometry_count 0 \
+        live_count 0 \
+        stale_count 0 \
+        unmapped_count 0 \
+        class_counts $class_counts]
+    if {![string is integer -strict $total] || $total < 0} {
+        dict set result reason INVALID_DRC_TOTAL
+        return $result
+    }
+    if {![file exists $path] || ![file readable $path]} {
+        dict set result reason MARKER_REPORT_MISSING
+        return $result
+    }
+
+    array set expected {Mar 0 MetSpc 0 Short 0}
+    set authoritative_total 0
+    set reasons {}
+    dict for {name count} $class_counts {
+        if {![string is integer -strict $count] || $count < 0} {
+            lappend reasons INVALID_CLASS_COUNT_$name
+            continue
+        }
+        incr authoritative_total $count
+        set marker_class [mptdc_tie1_trial_normalize_marker_class $name]
+        if {$marker_class eq "UNKNOWN"} {
+            if {$count != 0} {
+                lappend reasons UNSUPPORTED_LIVE_CLASS_$name
+            }
+            continue
+        }
+        incr expected($marker_class) $count
+    }
+    if {$authoritative_total != $total} {
+        lappend reasons AUTHORITATIVE_CLASS_TOTAL_MISMATCH
+    }
+
+    array set observed {Mar 0 MetSpc 0 Short 0}
     set signatures {}
-    foreach line [split [read $fh] "\n"] {
+    set raw_geometry_count 0
+    set stale_count 0
+    set unmapped_count 0
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
         if {$line eq "" || [string match "idx\t*" $line]} {
             continue
         }
         set fields [split $line "\t"]
-        if {[llength $fields] < 7} {
+        if {[llength $fields] < 7 ||
+            ![string equal -nocase [lindex $fields 4] Geometry]} {
             continue
         }
-        if {![string equal -nocase [lindex $fields 4] Geometry]} {
+        incr raw_geometry_count
+        set marker_class \
+            [mptdc_tie1_trial_normalize_marker_class [lindex $fields 5]]
+        if {$marker_class eq "UNKNOWN"} {
+            incr unmapped_count
             continue
         }
+        if {$expected($marker_class) == 0} {
+            incr stale_count
+            continue
+        }
+        incr observed($marker_class)
         lappend signatures [join [lrange $fields 2 end] "\t"]
     }
     close $fh
-    return [lsort $signatures]
+
+    foreach marker_class {Mar MetSpc Short} {
+        if {$observed($marker_class) != $expected($marker_class)} {
+            lappend reasons ${marker_class}_MARKER_COUNT_MISMATCH
+        }
+    }
+    set signatures [lsort $signatures]
+    set live_count [llength $signatures]
+    if {$live_count != $total} {
+        lappend reasons LIVE_MARKER_TOTAL_MISMATCH
+    }
+    if {$unmapped_count != 0} {
+        lappend reasons UNMAPPED_GEOMETRY_MARKERS
+    }
+
+    dict set result signature $signatures
+    dict set result raw_geometry_count $raw_geometry_count
+    dict set result live_count $live_count
+    dict set result stale_count $stale_count
+    dict set result unmapped_count $unmapped_count
+    if {[llength $reasons] == 0} {
+        dict set result status PASS
+    } else {
+        dict set result reason $reasons
+    }
+    return $result
+}
+
+proc mptdc_tie1_trial_apply_marker_reconciliation {snapshot} {
+    set reconciliation [mptdc_tie1_trial_marker_reconciliation \
+        [dict get $snapshot marker_rpt] \
+        [dict get $snapshot total_violations] \
+        [dict get $snapshot drc_class_counts]]
+    dict set snapshot marker_signature \
+        [dict get $reconciliation signature]
+    foreach key {status reason raw_geometry_count live_count stale_count unmapped_count class_counts} {
+        dict set snapshot marker_reconciliation_$key \
+            [dict get $reconciliation $key]
+    }
+    return $snapshot
+}
+
+proc mptdc_tie1_trial_write_marker_status {fh prefix snapshot} {
+    puts $fh "${prefix}_DRC_MARKER_RECONCILIATION_STATUS=[dict get $snapshot marker_reconciliation_status]"
+    puts $fh "${prefix}_DRC_MARKER_RECONCILIATION_REASON=[dict get $snapshot marker_reconciliation_reason]"
+    puts $fh "${prefix}_DRC_MARKER_RAW_GEOMETRY_COUNT=[dict get $snapshot marker_reconciliation_raw_geometry_count]"
+    puts $fh "${prefix}_DRC_MARKER_LIVE_COUNT=[dict get $snapshot marker_reconciliation_live_count]"
+    puts $fh "${prefix}_DRC_MARKER_STALE_COUNT=[dict get $snapshot marker_reconciliation_stale_count]"
+    puts $fh "${prefix}_DRC_MARKER_UNMAPPED_COUNT=[dict get $snapshot marker_reconciliation_unmapped_count]"
+    puts $fh "${prefix}_DRC_MARKER_CLASS_COUNTS=[dict get $snapshot marker_reconciliation_class_counts]"
+    puts $fh "${prefix}_DRC_MARKER_SIGNATURE_COUNT=[llength [dict get $snapshot marker_signature]]"
+    puts $fh "${prefix}_DRC_MARKER_SIGNATURE=[dict get $snapshot marker_signature]"
 }
 
 proc mptdc_tie1_trial_report_route_zero {path} {
@@ -561,6 +682,12 @@ proc mptdc_tie1_trial_normalize_snapshot_unrouted {snapshot} {
 }
 
 proc mptdc_tie1_trial_snapshot_equal_debt {baseline final} {
+    foreach snapshot [list $baseline $final] {
+        if {![dict exists $snapshot marker_reconciliation_status] ||
+            [dict get $snapshot marker_reconciliation_status] ne "PASS"} {
+            return 0
+        }
+    }
     foreach key {total_violations shorts regular_bad special_bad special_raw_bad special_non_ro_failures unrouted report_route_zero marker_signature} {
         if {[dict get $baseline $key] ne [dict get $final $key]} {
             return 0
@@ -573,25 +700,33 @@ proc mptdc_tie1_trial_snapshot_equal_debt {baseline final} {
 proc mptdc_tie1_trial_capture_snapshot {phase} {
     set snapshot [mptdc_ckpt_verify_snapshot $phase]
     set snapshot [mptdc_tie1_trial_normalize_snapshot_unrouted $snapshot]
-    dict set snapshot marker_signature \
-        [mptdc_tie1_trial_marker_signature [dict get $snapshot marker_rpt]]
-    return $snapshot
+    return [mptdc_tie1_trial_apply_marker_reconciliation $snapshot]
 }
 
 proc mptdc_tie1_trial_cleanup_decision {baseline candidate} {
-    if {[mptdc_tie1_trial_snapshot_equal_debt $baseline $candidate]} {
-        return BASELINE_PRESERVED
-    }
     set total [dict get $candidate total_violations]
-    if {![string is integer -strict $total]} {
+    set baseline_total [dict get $baseline total_violations]
+    if {![string is integer -strict $total] ||
+        ![string is integer -strict $baseline_total]} {
         return REJECT_INVALID_SNAPSHOT
     }
     if {$total == 0} {
         return REJECT_ZERO_DRC_SCOPE_CHANGE
     }
-    if {$total == [dict get $baseline total_violations] &&
-        [dict get $candidate marker_signature] ne
-            [dict get $baseline marker_signature]} {
+    if {$total != $baseline_total} {
+        return FIX_DRC_REQUIRED
+    }
+    if {![dict exists $baseline marker_reconciliation_status] ||
+        ![dict exists $candidate marker_reconciliation_status] ||
+        [dict get $baseline marker_reconciliation_status] ne "PASS" ||
+        [dict get $candidate marker_reconciliation_status] ne "PASS"} {
+        return REJECT_MARKER_RECONCILIATION
+    }
+    if {[mptdc_tie1_trial_snapshot_equal_debt $baseline $candidate]} {
+        return BASELINE_PRESERVED
+    }
+    if {[dict get $candidate marker_signature] ne
+        [dict get $baseline marker_signature]} {
         return REJECT_MARKER_SCOPE_CHANGE
     }
     return FIX_DRC_REQUIRED
@@ -609,8 +744,7 @@ proc mptdc_tie1_trial_write_stage_snapshot {
         [dict get $snapshot report_route_zero] ? "PASS" : "FAIL"
     }]
     puts $fh "${prefix}_REPORT_ROUTE_ZERO_STATUS=$route_zero_status"
-    puts $fh "${prefix}_DRC_MARKER_SIGNATURE_COUNT=[llength [dict get $snapshot marker_signature]]"
-    puts $fh "${prefix}_DRC_MARKER_SIGNATURE=[dict get $snapshot marker_signature]"
+    mptdc_tie1_trial_write_marker_status $fh $prefix $snapshot
 }
 
 if {[info exists ::env(MPTDC_TIE1_TRIAL_LIBRARY_ONLY)] &&
@@ -726,8 +860,7 @@ if {$restore_status eq "PASS"} {
         set baseline_snapshot_error [mptdc_tie1_trial_report_value $err]
     } else {
         set baseline [mptdc_tie1_trial_normalize_snapshot_unrouted $baseline]
-        dict set baseline marker_signature \
-            [mptdc_tie1_trial_marker_signature [dict get $baseline marker_rpt]]
+        set baseline [mptdc_tie1_trial_apply_marker_reconciliation $baseline]
         set baseline_snapshot_status PASS
     }
     if {[catch {
@@ -807,6 +940,12 @@ if {$baseline_snapshot_status eq "PASS"} {
     if {[dict get $baseline unrouted] ne "0"} { lappend command_precheck_reasons baseline_unrouted_nonzero }
     if {[llength [dict get $baseline marker_signature]] != $expected_drc} {
         lappend command_precheck_reasons baseline_marker_signature_count_mismatch
+    }
+    if {[dict get $baseline marker_reconciliation_status] ne "PASS" ||
+        [dict get $baseline marker_reconciliation_live_count] != $expected_drc ||
+        [dict get $baseline marker_reconciliation_stale_count] != 0 ||
+        [dict get $baseline marker_reconciliation_unmapped_count] != 0} {
+        lappend command_precheck_reasons baseline_marker_reconciliation_failed
     }
     if {[dict get $baseline special_bad] ne "1" || [dict get $baseline special_raw_bad] ne "1" ||
         [dict get $baseline special_non_ro_failures] ne "0"} {
@@ -1151,6 +1290,7 @@ switch -- $post_filler_target_decision {
         }
     }
     REJECT_ZERO_DRC_SCOPE_CHANGE -
+    REJECT_MARKER_RECONCILIATION -
     REJECT_MARKER_SCOPE_CHANGE -
     REJECT_INVALID_SNAPSHOT {
         set post_filler_fix_drc_status NOT_RUN
@@ -1177,8 +1317,7 @@ if {$restore_status eq "PASS"} {
         set final_snapshot_error [mptdc_tie1_trial_report_value $err]
     } else {
         set final [mptdc_tie1_trial_normalize_snapshot_unrouted $final]
-        dict set final marker_signature \
-            [mptdc_tie1_trial_marker_signature [dict get $final marker_rpt]]
+        set final [mptdc_tie1_trial_apply_marker_reconciliation $final]
         set final_snapshot_status PASS
     }
     if {[catch {
@@ -1303,6 +1442,12 @@ if {$unexplained_instance_delta != 0} { lappend trial_reasons unexplained_instan
 if {$debt_status ne "PASS"} { lappend trial_reasons physical_debt_changed }
 if {$final_snapshot_status eq "PASS" && [llength [dict get $final marker_signature]] != $expected_drc} {
     lappend trial_reasons final_marker_signature_count_mismatch
+}
+if {$final_snapshot_status eq "PASS" &&
+    ([dict get $final marker_reconciliation_status] ne "PASS" ||
+     [dict get $final marker_reconciliation_live_count] != $expected_drc ||
+     [dict get $final marker_reconciliation_unmapped_count] != 0)} {
+    lappend trial_reasons final_marker_reconciliation_failed
 }
 if {$::mptdc_tie1_trial_core_query_error_count != 0} { lappend trial_reasons core_query_error }
 
@@ -1608,14 +1753,12 @@ puts $status_fh "PHYSICAL_DEBT_PRESERVATION_STATUS=$debt_status"
 if {$baseline_snapshot_status eq "PASS"} {
     mptdc_ckpt_write_snapshot_status $status_fh BASELINE $baseline
     puts $status_fh "BASELINE_REPORT_ROUTE_ZERO_STATUS=[expr {[dict get $baseline report_route_zero] ? "PASS" : "FAIL"}]"
-    puts $status_fh "BASELINE_DRC_MARKER_SIGNATURE_COUNT=[llength [dict get $baseline marker_signature]]"
-    puts $status_fh "BASELINE_DRC_MARKER_SIGNATURE=[dict get $baseline marker_signature]"
+    mptdc_tie1_trial_write_marker_status $status_fh BASELINE $baseline
 }
 if {$final_snapshot_status eq "PASS"} {
     mptdc_ckpt_write_snapshot_status $status_fh FINAL $final
     puts $status_fh "FINAL_REPORT_ROUTE_ZERO_STATUS=[expr {[dict get $final report_route_zero] ? "PASS" : "FAIL"}]"
-    puts $status_fh "FINAL_DRC_MARKER_SIGNATURE_COUNT=[llength [dict get $final marker_signature]]"
-    puts $status_fh "FINAL_DRC_MARKER_SIGNATURE=[dict get $final marker_signature]"
+    mptdc_tie1_trial_write_marker_status $status_fh FINAL $final
 }
 puts $status_fh "CORE_QUERY_ERROR_COUNT=$::mptdc_tie1_trial_core_query_error_count"
 puts $status_fh "QUERY_ERROR_COUNT=$::mptdc_tie1_trial_query_error_count"
