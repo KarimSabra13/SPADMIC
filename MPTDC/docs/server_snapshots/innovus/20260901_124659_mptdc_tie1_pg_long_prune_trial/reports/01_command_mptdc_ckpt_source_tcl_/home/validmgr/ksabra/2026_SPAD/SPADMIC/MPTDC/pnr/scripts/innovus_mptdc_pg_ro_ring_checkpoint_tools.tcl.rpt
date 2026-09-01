@@ -1,0 +1,4 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_source_tcl {/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/scripts/innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl}
+HELPER_RESULT=/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/scripts/innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl
+REPORT_STATUS=PASS

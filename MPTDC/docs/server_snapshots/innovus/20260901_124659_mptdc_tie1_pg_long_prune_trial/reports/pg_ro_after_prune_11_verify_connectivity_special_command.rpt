@@ -1,0 +1,1 @@
+SPECIAL_CONNECTIVITY_COMMAND=verifyConnectivity -type special -nets {VDD VSS}
