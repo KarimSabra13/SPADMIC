@@ -1,0 +1,6 @@
+LABEL=MPTDC_PVS_LVS_GATE
+STATUS=FAIL
+PVS_LVS_STATUS=NOT_PROVEN
+PVS_RC=0
+ERROR=run.pvs does not reference the run-local LVS control exactly once: [PosixPath('/sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/pvslvsctl')]
+FINAL_PHYSICAL_SIGNOFF_READY=NO

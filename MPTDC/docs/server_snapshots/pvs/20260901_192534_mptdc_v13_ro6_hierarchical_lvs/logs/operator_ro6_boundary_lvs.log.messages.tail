@@ -1,0 +1,11 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/logs/operator_ro6_boundary_lvs.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+[SYSTEM ERROR] Cannot open file "/sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.config.rul" for reading.
+/sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script/pvs_lvs_replay.stdout:91:[SYSTEM ERROR] Cannot open file "/sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.config.rul" for reading.
+STATUS=FAIL
+ERROR=run.pvs does not reference the run-local LVS control exactly once: [PosixPath('/sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/pvslvsctl')]
+LVS_BLACKBOX_RULE_STATUS=FAIL
+LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=FAIL
+LVS_BLACKBOX_APPLICATION_STATUS=FAIL
+RO6_BLACKBOX_CELL_MATCH_STATUS=FAIL

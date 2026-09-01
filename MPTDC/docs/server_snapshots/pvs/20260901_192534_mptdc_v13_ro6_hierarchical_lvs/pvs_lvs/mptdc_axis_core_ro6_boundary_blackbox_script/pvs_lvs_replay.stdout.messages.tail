@@ -1,0 +1,4 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script/pvs_lvs_replay.stdout
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT|match|MATCH|mismatch|MISMATCH)\b)
+# Last 500 matching lines
+[SYSTEM ERROR] Cannot open file "/sim/ksabra/SPADMIC_work/innovus/20260901_192534_mptdc_v13_ro6_hierarchical_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.config.rul" for reading.
