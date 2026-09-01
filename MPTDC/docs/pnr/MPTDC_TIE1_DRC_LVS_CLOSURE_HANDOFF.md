@@ -40,17 +40,25 @@ source remains the V13 replay, never a rejected diagnostic checkpoint. Full
 sWire-handle long-prune trial and replay are retired. A long-prune report or
 checkpoint is not PVS-eligible even if DRC and regular connectivity are zero.
 
-The next action is one read-only endpoint-anchor probe from V13. It inventories
-the retained same-net anchors, opposite-net conflicts, PG vias, and PG terminal
-shapes at both ends of every source object. It classifies each of the 15
-markers as `TRIM_FEASIBLE`, `STITCH_FEASIBLE`, or `BLOCKED`, records every
-predicate and ambiguity, and issues zero PG mutation commands. Its saved
-checkpoint is analysis-only, must remain `NOT_SELECTED`, and must not feed PVS.
+The read-only endpoint-anchor probe has now completed from V13. It preserved
+the exact source hash, all VDD/VSS sWires, and all PG vias, and issued zero PG
+mutation commands. It classified 13 of 15 markers as `TRIM_FEASIBLE`, zero as
+`STITCH_FEASIBLE`, and two as `BLOCKED`. The blocked markers are
+`VSS|MET3|48.000|205.160` and `VSS|MET3|221.750|205.160`; both have
+`NO_RETAINED_ANCHOR`. The saved checkpoint remains analysis-only,
+`NOT_SELECTED`, and must not feed PVS.
+
+For the same-day handoff, further PG mutation is explicitly deferred. The next
+action is attributable diagnostic PVS base DRC and raw full-top LVS directly
+from the exact accepted V13 replay, using the driver's
+`TIE1_MINAREA_CLEAN_COMPOSITIONAL` intake. This is a bounded diagnostic
+exception, not PG closure: the 15 special-PG endpoints remain failed debt and
+the result is always `SIGNOFF_ELIGIBLE=NO`.
 
 The current state label is:
 
 ```text
-MPTDC_TIE1_V13_INNOVUS_DRC_CLEAN_PG15_OPEN_LVS_MISMATCH
+MPTDC_TIE1_V13_INNOVUS_DRC_CLEAN_PG15_OPEN_PVS_V13_PENDING_DIAGNOSTIC_HANDOFF
 ```
 
 This label is intentionally not a signoff claim. Fresh Innovus geometry DRC,
@@ -76,6 +84,7 @@ visible as deferred debt; they are not deleted, waived, or relabelled clean.
 | Long-prune V1 diagnostic | `20260901_124659_mptdc_tie1_pg_long_prune_trial` | evidence commit `a0647b4f9666ead66fb10f89369144490b397c25`; candidate SHA-256 `0ac03ded6be501c21f5e26885d98e3c5f90a0408c8ca652fdcd832875ad766f8`; `NOT_SELECTED` |
 | Long-prune V2 diagnostic | `20260901_131741_mptdc_tie1_pg_long_prune_v2_trial` | evidence commit `2d7cd791ea723b4a215e8422dfb62d7ebf4d0ec3`; candidate SHA-256 `4d2c2b9f19882bae2bec90e92fd6b3bdc4b4d4d2cba17c71797687c90e1daa3f`; `NOT_SELECTED` |
 | Long-prune V3 diagnostic | `20260901_141910_mptdc_tie1_pg_long_prune_v3_trial` | evidence commit `d142b547df8df454476dbd3409d6b72010752783`; candidate SHA-256 `1297f79a2f3e19294074256fb92182aec7c1ad2bce2109b9ec5cd4c885ab97a4`; source prune `13/13`; PG via inventory changed by `-490`; `NOT_SELECTED` |
+| Endpoint-anchor analysis | `20260901_153052_mptdc_tie1_pg_endpoint_anchor_probe` | evidence commit `55c319891be3adbf4a956ee6a391cacee35ca45e`; source SHA-256 unchanged; markers `13 trim / 0 stitch / 2 blocked`; zero mutations; `NOT_SELECTED` |
 | Prior PVS diagnostic | `20260831_mptdc_tie1_lvs_density_131326` | base DRC `136`, antenna-only classification, LVS `MISMATCH`; predates V13 |
 | Historical PG topology witness | `20260825_mptdc_bufftap0_halo10_physical_130313` | identifies the 13 source handles and both exact exposed VSS/MET1 corewires |
 | Proven RO ring primitive | `20260828_mptdc_free_pnr_stripevaluefix_151756_u50` | two RO rings, 16 new `blockRing` sWires, VDD delta `+8`, VSS delta `+8` |
@@ -109,6 +118,9 @@ Primary evidence:
 - [failed V3 long-prune gate](../server_snapshots/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial/reports/operator_gate_tie1_pg_long_prune_trial.rpt)
 - [failed V3 object and inventory audit](../server_snapshots/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial/reports/pg_ro_ring_repair_status.rpt)
 - [failed V3 final endpoints](../server_snapshots/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial/reports/pg_ro_final_verify_special_detailed.rpt)
+- [endpoint-anchor operator gate](../server_snapshots/innovus/20260901_153052_mptdc_tie1_pg_endpoint_anchor_probe/reports/operator_gate_tie1_pg_endpoint_anchor_probe.rpt)
+- [endpoint-anchor object audit](../server_snapshots/innovus/20260901_153052_mptdc_tie1_pg_endpoint_anchor_probe/reports/pg_ro_endpoint_anchor_probe_status.rpt)
+- [endpoint-anchor final special connectivity](../server_snapshots/innovus/20260901_153052_mptdc_tie1_pg_endpoint_anchor_probe/reports/pg_ro_final_verify_special_detailed.rpt)
 - [prior PVS diagnostic summary](../server_snapshots/pvs/20260831_mptdc_tie1_lvs_density_131326_04_lvs/reports/operator_gate_pvs_diagnostic_summary.rpt)
 
 ## Accepted V13 Geometry
@@ -180,12 +192,12 @@ the V13 trial checkpoint as the source of another canonical stage.
 | Long-prune V2 candidate | DRC `0`, shorts `0`, regular `0`; second residual transition exposed | `REJECTED_DIAGNOSTIC` |
 | Long-prune V3 candidate | source prune `13/13`, two residual MET1 endpoints; VDD/VSS vias `4575/4524 -> 4412/4197` | `REJECTED_TOPOLOGY_DESTRUCTIVE` |
 | Full-handle long-prune stages | trial/replay entry points retired; PVS intake explicitly rejects legacy replay gates | `RETIRED` |
-| Endpoint-anchor probe | read-only helper and V3 ancestry gate locally tested; no Cadence result yet | `NOT_RUN` |
+| Endpoint-anchor probe | source hash/sWires/vias unchanged; zero mutations; 13 markers trim-feasible, 2 blocked | `PASS_ANALYSIS_KEEP_V13` |
 | Antenna repair | not attempted by policy | `DEFERRED` |
 | PVS base DRC | prior run: 136, all classified antenna-only | `FAIL_DEFERRED_ANTENNA` |
 | PVS raw full-top LVS | prior attributable run: explicit `MISMATCH` | `FAIL` |
 | Standalone `RO_tune6` LVS | explicit non-blackbox `MATCH`, exact GDS/CDL hashes | `PASS_DIAGNOSTIC` |
-| Digital-top RO-boundary LVS | not rerun from a PG-clean V13 descendant | `NOT_RUN` |
+| Digital-top RO-boundary LVS | not yet run from the exact V13 diagnostic PVS tuple | `NOT_RUN` |
 | PVS density DRC | not run after LVS mismatch | `NOT_RUN` |
 | Timing | not run in this DRC/LVS recovery scope | `NOT_RUN` |
 | Final signoff eligibility | outstanding PG, LVS, density, timing, and export gates | `NO` |
@@ -302,8 +314,8 @@ closed for this V13 source because the corrected probe physically failed. The
 full-handle long-prune branch is also closed: V3 demonstrated a nonlocal PG-via
 loss even though geometry and regular-connectivity checks stayed clean.
 
-The only authorized next stage is
-`tie1-pg-endpoint-anchor-probe`. Its preflight recursively validates:
+The completed analysis stage was
+`tie1-pg-endpoint-anchor-probe`. Its preflight recursively validated:
 
 - the accepted V13 source path and SHA-256;
 - corrected rejected ring probe
@@ -346,11 +358,24 @@ The endpoint-anchor probe contract is:
 affected markers to `BLOCKED`; the analysis snapshot may still be published so
 the missing database attributes are attributable and can be reviewed.
 
+The executed probe reported `ANCHOR_QUERY_COMPLETENESS_STATUS=PASS`, exact
+classification counts `13/0/2`, two exact residual support objects, and
+unchanged source checkpoint, sWire, and via inventories. Unsupported
+exploratory database paths still produced visible `IMPDBTCL-206/204` messages
+for `pin`, `allShapes`, `box`, and `rect`; the supported fallback queries
+completed the contractual inventory. These messages remain log debt and do
+not authorize ignoring a failed report predicate in a future repair trial.
+
 Both `tie1-pg-long-prune-trial` and `tie1-pg-long-prune-replay` are unsupported
 driver stages. The PVS driver excludes long-prune gates from its replay
 selector and explicitly rejects tracked long-prune replay gates as
 `TIE1_PG_LONG_PRUNE_REPLAY_RETIRED`. It also rejects endpoint-anchor gates as
 `TIE1_PG_ENDPOINT_ANCHOR_ANALYSIS_ONLY`. Neither class may launch PVS.
+
+Diagnostic compositional mode separately accepts the exact tracked V13
+minimum-area replay itself as `TIE1_MINAREA_CLEAN_COMPOSITIONAL`. That path is
+the authorized same-day handoff source. It does not consume the anchor run and
+does not convert the V13 special-connectivity failure into a pass.
 
 Never set `MPTDC_PG_DANGLING_ALLOW_LONG_DELETE=1`, delete by area, use a broad
 `sroute`, invoke `ecoRoute`, `routeDesign`, or a global optimizer, or manually
@@ -447,6 +472,29 @@ rectangle parser has since been fixed and unit-tested, but that parser fix does
 not rehabilitate full-handle deletion. It is used only by the read-only anchor
 probe.
 
+The endpoint-anchor probe,
+`20260901_153052_mptdc_tie1_pg_endpoint_anchor_probe`, then restored V13 in a
+fresh process and performed no mutation. Its decision-bearing result is:
+
+```text
+source checkpoint SHA-256: unchanged
+source topology:           15 markers / 13 handles / 2 shared
+marker classification:     13 trim-feasible / 0 stitch-feasible / 2 blocked
+target classification:     11 trim-feasible / 0 stitch-feasible / 2 blocked
+blocked markers:           VSS|MET3|48.000|205.160
+                           VSS|MET3|221.750|205.160
+blocked reason:            NO_RETAINED_ANCHOR
+residual support objects:  2, contract PASS
+PG mutation commands:      0
+source sWires / vias:      unchanged / unchanged
+geometry DRC / shorts / regular bad: 0 / 0 / 0
+special dangling endpoints: 15
+decision:                  PASS_ANALYSIS_KEEP_V13
+```
+
+The candidate checkpoint is `NOT_SELECTED` and `SIGNOFF_ELIGIBLE=NO`. This
+probe closes the read-only PG analysis step, not the PG connectivity gate.
+
 ## Prior PVS Result
 
 The prior PVS run is useful triage evidence but cannot certify the V13 replay
@@ -492,14 +540,14 @@ proves that the RO itself is not an unresolved leaf. Run
 and CDL SHA-256
 `b925af01b36b1bcc80557c3c584aaf02fdb7b75df268ee6dd3c50dce7810039b`.
 
-The implemented post-PG proof is deliberately compositional:
+The implemented diagnostic proof is deliberately compositional:
 
-1. `server_run_mptdc_ro6_recovery_pvs.sh` accepts exactly one tracked passing
-   PG replay gate: legacy bounded short-delete or RO ring-stitch. It verifies
-   replay ancestry, checkpoint content hash, DRC/connectivity tuple, and
-   physical invariants before preparing GDS/source/CDL inputs. Long-prune replay
-   gates are retired, and endpoint-anchor gates are analysis-only; either one
-   forces PVS preflight failure before source preparation.
+1. `server_run_mptdc_ro6_recovery_pvs.sh` accepts either one tracked passing PG
+   replay gate or, in diagnostic compositional mode, the exact tracked V13
+   minimum-area replay as `TIE1_MINAREA_CLEAN_COMPOSITIONAL`. It verifies gate
+   ancestry and checkpoint content hash before preparing GDS/source/CDL inputs.
+   Long-prune and endpoint-anchor run IDs remain ineligible and force PVS
+   preflight failure before source preparation.
 2. Run it with `--diagnostic-antenna-exception` and
    `--diagnostic-ro-compositional`. Base DRC may continue only when all nonzero
    rules classify as the already authorized antenna-only debt. Antenna remains
@@ -514,6 +562,11 @@ The implemented post-PG proof is deliberately compositional:
    digital-top RO-boundary `MATCH` is the accepted compositional LVS proof.
    It is diagnostic closure, not a claim that raw monolithic LVS or final
    signoff is clean. Density remains blocked until this pair passes.
+
+Running this sequence from V13 does not waive its 15 special-PG endpoints. If
+the boundary classifier returns `RO6_PG_OPEN_ONLY` and
+`PASS_PG_REPAIR_REQUIRED`, preserve that attributable result and stop before
+density. Only `NONE_MATCH` plus `PASS_COMPOSITIONAL_LVS` authorizes density.
 
 Do not alter Tie1 insertion, top pins, or the RO schematic merely to make the
 raw reducer flattening agree. A zero PVS process return code, empty error file,
@@ -547,9 +600,9 @@ The following repository changes implement this handoff:
 - `server_run_mptdc_tie1_closure_stage.sh`: isolated probe/trial/replay stages,
   immutable V13/probe/failed-V1/V2/V3 ancestry checks, a zero-mutation anchor
   gate, source-hash preservation, and unsupported long-prune entry points;
-- `server_run_mptdc_ro6_recovery_pvs.sh`: exactly-one eligible replay-gate
-  selection, explicit retired-prune rejection, and explicit anchor-analysis
-  rejection before any PVS invocation;
+- `server_run_mptdc_ro6_recovery_pvs.sh`: exact V13 or exactly-one eligible
+  replay-gate selection in compositional mode, explicit retired-prune
+  rejection, and explicit anchor-analysis rejection before PVS invocation;
 - `test_pg_ro_ring_checkpoint_tools.tcl`, the Tie1 closure-driver test, and the
   PVS recovery-driver test: wrapped rectangle fixtures, anchor ambiguity and
   conflict classification, exact V1/V2/V3 rejected ancestry, retired-stage
@@ -564,115 +617,245 @@ MPTDC_PG_DANGLING_CHECKPOINT_TOOLS_TEST=PASS
 MPTDC_RO_PG_BLOCK_RING_CONTRACT_TEST=PASS
 MPTDC_TIE1_CLOSURE_STAGE_DRIVER_TEST=PASS
 MPTDC_RO6_RECOVERY_PVS_DRIVER_TEST=PASS
+MPTDC_RO6_BOUNDARY_LVS_DRIVER_TEST=PASS
+MPTDC_RO6_DENSITY_AFTER_BOUNDARY_DRIVER_TEST=PASS
 ```
 
-These are static and fixture proofs. They do not substitute for the foreground
-Innovus endpoint-anchor probe and do not change the accepted V13 evidence.
+These are static and fixture proofs. They did not substitute for the foreground
+Innovus endpoint-anchor probe, which independently completed, and they do not
+change the accepted V13 evidence.
 
 ## Exact Next Command
 
-Run only the endpoint-anchor probe next. Use this foreground block on
-`lyoelectrosrv01`; it does not close the login shell on a failed guard.
+Run attributable V13 base DRC and raw LVS next. Use this foreground block on
+`lyoelectrosrv01`. It configures the selected repository-local Git
+identity, does not close the login shell on a failed guard, and never sources
+the endpoint-anchor checkpoint.
 
 ```bash
-cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+set +e
 
-git pull --ff-only origin SPADMIC_test
-PULL_RC=$?
+REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+PNR_RUN=20260831_175532_mptdc_tie1_minarea_clearance_v13_replay
+MPTDC_INNOVUS_WORK=/sim/ksabra/SPADMIC_work/innovus
+SOURCE_CKPT="$MPTDC_INNOVUS_WORK/$PNR_RUN/checkpoints/repaired_route.enc.dat"
+RO_GDS=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds
+EXPECTED_RO_GDS_SHA=9d6f269541d51db0c30c5e7cc81334d70578ca8723558b32f34f9803469ea36a
+PVS_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_pg15_compositional_pvs"
+PVS_DIR="$MPTDC_INNOVUS_WORK/$PVS_RUN"
+DRIVER_LOG="/tmp/${PVS_RUN}.driver.log"
 
-CURRENT_HEAD="$(git rev-parse HEAD 2>/dev/null)"
-ORIGIN_HEAD="$(git rev-parse refs/remotes/origin/SPADMIC_test 2>/dev/null)"
-TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+CD_RC=99
+PULL_RC=99
+CONFIG_NAME_RC=99
+CONFIG_EMAIL_RC=99
+PVS_DRIVER_RC=99
 
-echo "PULL_RC=$PULL_RC"
-echo "CURRENT_HEAD=$CURRENT_HEAD"
-echo "ORIGIN_HEAD=$ORIGIN_HEAD"
-echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
+cd "$REPO"
+CD_RC=$?
+if [[ "$CD_RC" -eq 0 ]]; then
+  git pull --ff-only origin SPADMIC_test
+  PULL_RC=$?
+  git config --local user.name "Karim SABRA"
+  CONFIG_NAME_RC=$?
+  git config --local user.email "ksabra@lyoelectrosrv01.in2p3.fr"
+  CONFIG_EMAIL_RC=$?
 
-if [[ "$PULL_RC" -eq 0 && "$CURRENT_HEAD" == "$ORIGIN_HEAD" && -z "$TRACKED_STATUS" ]]; then
-  ANCHOR_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_tie1_pg_endpoint_anchor_probe"
-  echo "ANCHOR_RUN=$ANCHOR_RUN"
+  EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+  ORIGIN_HEAD="$(git rev-parse refs/remotes/origin/SPADMIC_test 2>/dev/null)"
+  TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
+  RO_GDS_SHA="$(sha256sum "$RO_GDS" 2>/dev/null | awk '{print $1}')"
 
-  bash MPTDC/pnr/scripts/server_run_mptdc_tie1_closure_stage.sh \
-    --stage tie1-pg-endpoint-anchor-probe \
-    --source-tie1-run-id 20260831_mptdc_tie1_filler_ecoroute_reconciled_131006 \
-    --source-minarea-replay-run-id 20260831_175532_mptdc_tie1_minarea_clearance_v13_replay \
-    --source-pg-probe-run-id 20260901_122444_mptdc_tie1_pg_ro_ring_probe_v2 \
-    --source-pg-prior-trial-run-id 20260901_141910_mptdc_tie1_pg_long_prune_v3_trial \
-    --run-id "$ANCHOR_RUN" \
-    --expected-head "$CURRENT_HEAD"
+  echo "CD_RC=$CD_RC"
+  echo "PULL_RC=$PULL_RC"
+  echo "CONFIG_NAME_RC=$CONFIG_NAME_RC"
+  echo "CONFIG_EMAIL_RC=$CONFIG_EMAIL_RC"
+  echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+  echo "ORIGIN_HEAD=$ORIGIN_HEAD"
+  echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
+  echo "SOURCE_CKPT=$SOURCE_CKPT"
+  echo "RO_GDS=$RO_GDS"
+  echo "RO_GDS_SHA=$RO_GDS_SHA"
+  echo "PVS_RUN=$PVS_RUN"
 
-  ANCHOR_RC=$?
-  ANCHOR_DIR="/sim/ksabra/SPADMIC_work/innovus/$ANCHOR_RUN"
-  echo "ANCHOR_RC=$ANCHOR_RC"
-  echo "ANCHOR_RUN=$ANCHOR_RUN"
-  echo "ANCHOR_DIR=$ANCHOR_DIR"
-
-  for report in \
-    operator_gate_tie1_pg_endpoint_anchor_probe.rpt \
-    pg_ro_endpoint_anchor_probe_status.rpt \
-    pg_ro_initial_verify_special_detailed.rpt \
-    pg_ro_final_verify_special_detailed.rpt \
-    01_after_command_verify_drc.rpt \
-    01_after_command_verify_connectivity_regular.rpt \
-    01_after_command_verify_connectivity_special.rpt \
-    01_after_command_report_route.rpt \
-    checkpoint_repair_status.rpt; do
-    echo "===== $report ====="
-    if [[ -s "$ANCHOR_DIR/reports/$report" ]]; then
-      cat "$ANCHOR_DIR/reports/$report"
-    else
-      echo "MISSING=$ANCHOR_DIR/reports/$report"
-    fi
-  done
-
-  for log in tie1_closure_driver.log checkpoint_repair_wrapper.log innovus_route_checkpoint_repair.log; do
-    echo "===== LOG TAIL: $log ====="
-    if [[ -s "$ANCHOR_DIR/logs/$log" ]]; then
-      tail -n 200 "$ANCHOR_DIR/logs/$log"
-    else
-      echo "MISSING=$ANCHOR_DIR/logs/$log"
-    fi
-  done
+  if [[ "$PULL_RC" -eq 0 && "$CONFIG_NAME_RC" -eq 0 &&
+        "$CONFIG_EMAIL_RC" -eq 0 && "$EXPECTED_HEAD" == "$ORIGIN_HEAD" &&
+        -z "$TRACKED_STATUS" && -d "$SOURCE_CKPT" &&
+        "$RO_GDS_SHA" == "$EXPECTED_RO_GDS_SHA" ]]; then
+    bash MPTDC/scripts/pvs/server_run_mptdc_ro6_recovery_pvs.sh \
+      --pnr-run-id "$PNR_RUN" \
+      --run-id "$PVS_RUN" \
+      --expected-head "$EXPECTED_HEAD" \
+      --ro-gds "$RO_GDS" \
+      --diagnostic-antenna-exception \
+      --diagnostic-ro-compositional \
+      2>&1 | tee "$DRIVER_LOG"
+    PVS_DRIVER_RC=${PIPESTATUS[0]}
+  else
+    echo "STOP_HERE_DO_NOT_CONTINUE: sync, identity, source, or RO GDS preflight failed"
+  fi
 else
-  echo "STOP: pull must pass and checkout must be tracked-clean and equal to origin/SPADMIC_test"
+  echo "STOP_HERE_DO_NOT_CONTINUE: repository directory is unavailable"
 fi
 
-echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+echo "===== PVS DRIVER SUMMARY ====="
+echo "PVS_DRIVER_RC=$PVS_DRIVER_RC"
+echo "PVS_RUN=$PVS_RUN"
+echo "PVS_DIR=$PVS_DIR"
+
+for relative in \
+  reports/operator_gate_pvs_prepare.rpt \
+  reports/pvs_prepared_inputs.rpt \
+  reports/tap_pin_contract.rpt \
+  manifests/pvs_input_hashes.rpt \
+  manifests/pvs_diagnostic_scope.rpt \
+  reports/operator_gate_pvs_template_audit.rpt \
+  reports/operator_gate_pvs_drc_base.rpt \
+  reports/pvs_recovery_base_drc_classification.rpt \
+  manifests/pvs_recovery_base_drc_classification_scope.rpt \
+  reports/pvs_drc_base_nonzero_rules.tsv \
+  reports/lvs_source_filter.rpt \
+  reports/pvs_lvs_tool_status.rpt \
+  reports/pvs_lvs_status.rpt \
+  reports/pvs_lvs_result_scan.txt \
+  reports/operator_gate_pvs_lvs.rpt; do
+  echo "===== $relative ====="
+  if [[ -s "$PVS_DIR/$relative" ]]; then
+    cat "$PVS_DIR/$relative"
+  else
+    echo "MISSING=$PVS_DIR/$relative"
+  fi
+done
+
+for log in prepare_pvs_inputs.log operator_template_audit.log \
+           operator_drc_base.log operator_base_drc_classification.log \
+           operator_lvs.log; do
+  echo "===== LOG TAIL: $log ====="
+  if [[ -s "$PVS_DIR/logs/$log" ]]; then
+    tail -n 200 "$PVS_DIR/logs/$log"
+  else
+    echo "MISSING=$PVS_DIR/logs/$log"
+  fi
+done
+
+echo "FINAL_HEAD=$(git -C "$REPO" rev-parse HEAD 2>/dev/null)"
 ```
 
-Return the printed reports in full, including the driver summary above them.
-Do not source a ring or long-prune candidate, do not manually edit the output,
-and do not launch PVS from this run. A zero wrapper return or `INNOVUS_RC=0`
-alone does not decide acceptance; the operator gate and report-level checks do.
+Return the entire printed block. Stage acceptance requires
+`PVS_DRIVER_RC=0`, attributable base classification `PASS` with zero
+non-antenna rules, `PVS_RC=0`, and
+`RAW_FULL_TOP_LVS_STATUS=MISMATCH_PENDING_BOUNDARY_PROOF`. The raw
+`MISMATCH` is expected collection evidence for the RO boundary proof, not an
+LVS pass.
 
 ## Continuation Order
 
-1. Run the endpoint-anchor probe above from the accepted V13 replay. Require
-   zero mutation commands, unchanged source checkpoint hash, unchanged sWire
-   and via inventories, exact source topology `15/13/2`, two exact residual
-   support objects, and final DRC/shorts/regular tuple `0/0/0` with the original
-   15 special endpoints still present.
-2. Review every per-marker candidate set and predicate failure. Do not infer a
-   trim or stitch from marker count alone. A future repair trial must have one
-   bounded, reviewable operation per approved endpoint class and must preserve
-   all retained PG vias.
-3. Implement and locally test that bounded operation only after the probe
-   evidence is reviewed. Run its trial and canonical replay in separate fresh
-   Innovus processes from V13. Neither the anchor checkpoint nor a failed trial
-   is a replay source.
-4. Run attributable PVS base DRC and raw LVS only from a selected PG-clean
-   canonical replay using `--diagnostic-antenna-exception
-   --diagnostic-ro-compositional` and the exact standalone-proven RO GDS. Keep
-   all antenna counts visible.
-5. Run boundary LVS against that exact raw PVS run and standalone run
-   `20260827_mptdc_ro6_standalone_lvs_vddfix_150520`. Require explicit
-   compositional `MATCH`; process RC `0` is insufficient.
-6. Run density DRC through `server_run_mptdc_ro6_density_after_boundary.sh`
-   only after `PASS_COMPOSITIONAL_LVS`. Keep base DRC, density DRC, raw LVS,
-   boundary LVS, and standalone LVS as separate evidence.
-7. Requalify timing, power integrity, and final export separately before any
-   signoff claim.
+1. Preserve the completed anchor run and V13 source unchanged. No PG repair is
+   part of this expedited handoff.
+2. Run the exact PVS block above. Require
+   `PNR_CANDIDATE_KIND=TIE1_MINAREA_CLEAN_COMPOSITIONAL`, candidate/hash
+   gates `PASS`, attributable base DRC with zero non-antenna rules, and
+   the expected raw LVS mismatch collection. Keep every antenna count visible.
+3. After the source run publishes successfully, retain its printed
+   `PVS_RUN` and use the publisher's new repository HEAD. The block below is
+   intended for the same login shell. After a reconnect, first set `PVS_RUN`
+   to the exact ID printed by the source run:
+
+```bash
+set +e
+SOURCE_PVS_RUN="${PVS_RUN:-}"
+STANDALONE_PVS_RUN=20260827_mptdc_ro6_standalone_lvs_vddfix_150520
+BOUNDARY_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_boundary_lvs"
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+BOUNDARY_DRIVER_RC=99
+
+if [[ -n "$SOURCE_PVS_RUN" ]]; then
+  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_boundary_lvs.sh \
+    --source-pvs-run-id "$SOURCE_PVS_RUN" \
+    --standalone-pvs-run-id "$STANDALONE_PVS_RUN" \
+    --run-id "$BOUNDARY_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "/tmp/${BOUNDARY_RUN}.driver.log"
+  BOUNDARY_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP_HERE_DO_NOT_CONTINUE: set PVS_RUN to the published source run ID"
+fi
+
+echo "BOUNDARY_DRIVER_RC=$BOUNDARY_DRIVER_RC"
+echo "SOURCE_PVS_RUN=$SOURCE_PVS_RUN"
+echo "BOUNDARY_RUN=$BOUNDARY_RUN"
+for report in operator_gate_pvs_ro6_boundary_lvs.rpt \
+              pvs_lvs_ro6_boundary_blackbox_status.rpt \
+              pvs_lvs_status.rpt \
+              operator_gate_pvs_compositional_lvs.rpt; do
+  echo "===== $report ====="
+  if [[ -s "/sim/ksabra/SPADMIC_work/innovus/$BOUNDARY_RUN/reports/$report" ]]; then
+    cat "/sim/ksabra/SPADMIC_work/innovus/$BOUNDARY_RUN/reports/$report"
+  else
+    echo "MISSING=/sim/ksabra/SPADMIC_work/innovus/$BOUNDARY_RUN/reports/$report"
+  fi
+done
+echo "===== LOG TAIL ====="
+tail -n 200 "/tmp/${BOUNDARY_RUN}.driver.log" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+4. A boundary driver RC of zero is not enough. Proceed only for explicit
+   `MATCH`, `BOUNDARY_REMAINDER_CLASS=NONE_MATCH`, and
+   `DECISION=PASS_COMPOSITIONAL_LVS`. If it reports
+   `RO6_PG_OPEN_ONLY` / `PASS_PG_REPAIR_REQUIRED`, stop and hand off
+   the PG blocker; do not run density.
+5. Only after compositional LVS passes, run the next block in the same login
+   shell. After a reconnect, first restore `SOURCE_PVS_RUN`, `BOUNDARY_RUN`,
+   and `STANDALONE_PVS_RUN` from the exact printed IDs:
+
+```bash
+set +e
+SOURCE_PVS_RUN="${SOURCE_PVS_RUN:-}"
+BOUNDARY_RUN="${BOUNDARY_RUN:-}"
+STANDALONE_PVS_RUN="${STANDALONE_PVS_RUN:-}"
+DENSITY_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_density"
+EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+DENSITY_DRIVER_RC=99
+
+if [[ -n "$SOURCE_PVS_RUN" && -n "$BOUNDARY_RUN" &&
+      -n "$STANDALONE_PVS_RUN" ]]; then
+  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_density_after_boundary.sh \
+    --source-pvs-run-id "$SOURCE_PVS_RUN" \
+    --source-pvs-evidence-id "${SOURCE_PVS_RUN}_04_lvs" \
+    --boundary-pvs-run-id "$BOUNDARY_RUN" \
+    --standalone-pvs-run-id "$STANDALONE_PVS_RUN" \
+    --run-id "$DENSITY_RUN" \
+    --expected-head "$EXPECTED_HEAD" \
+    2>&1 | tee "/tmp/${DENSITY_RUN}.driver.log"
+  DENSITY_DRIVER_RC=${PIPESTATUS[0]}
+else
+  echo "STOP_HERE_DO_NOT_CONTINUE: restore all three published source run IDs"
+fi
+
+echo "DENSITY_DRIVER_RC=$DENSITY_DRIVER_RC"
+echo "DENSITY_RUN=$DENSITY_RUN"
+for report in operator_gate_pvs_drc_density.rpt \
+              pvs_density_delta_classification.rpt \
+              pvs_drc_density_status.rpt \
+              pvs_drc_density_nonzero_rules.tsv; do
+  echo "===== $report ====="
+  if [[ -s "/sim/ksabra/SPADMIC_work/innovus/$DENSITY_RUN/reports/$report" ]]; then
+    cat "/sim/ksabra/SPADMIC_work/innovus/$DENSITY_RUN/reports/$report"
+  else
+    echo "MISSING=/sim/ksabra/SPADMIC_work/innovus/$DENSITY_RUN/reports/$report"
+  fi
+done
+echo "===== LOG TAIL ====="
+tail -n 200 "/tmp/${DENSITY_RUN}.driver.log" 2>/dev/null
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+```
+
+6. Accept density only as `PASS_NON_ANTENNA_DENSITY_CLEAN`. Any other
+   classification remains published density debt.
+7. Update this gate matrix with the exact PVS run IDs, hashes, report-level
+   outcomes, and remaining owner actions. Timing, power integrity, final export,
+   and PG15 remain separate before any signoff claim.
 
 ## Stop Conditions
 
