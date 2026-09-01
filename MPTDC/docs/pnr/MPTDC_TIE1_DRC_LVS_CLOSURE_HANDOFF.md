@@ -539,6 +539,11 @@ proves that the RO itself is not an unresolved leaf. Run
 `9d6f269541d51db0c30c5e7cc81334d70578ca8723558b32f34f9803469ea36a`,
 and CDL SHA-256
 `b925af01b36b1bcc80557c3c584aaf02fdb7b75df268ee6dd3c50dce7810039b`.
+The matching GDS is the copied standalone input
+`/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/inputs/RO_tune6.fresh.gds`.
+Do not substitute the mutable July merge path: it currently hashes to
+`d73b59df73a243af1845add82a58d6ec50113d21a760902c3dab4b391c82d387`
+and does not match this standalone proof.
 
 The implemented diagnostic proof is deliberately compositional:
 
@@ -632,6 +637,14 @@ Run attributable V13 base DRC and raw LVS next. Use this foreground block on
 identity, does not close the login shell on a failed guard, and never sources
 the endpoint-anchor checkpoint.
 
+The first attempt, run ID
+`20260901_160352_mptdc_v13_pg15_compositional_pvs`, stopped correctly before
+the driver launch (`PVS_DRIVER_RC=99`). Its live July-merge RO GDS hash was
+`d73b59df73a243af1845add82a58d6ec50113d21a760902c3dab4b391c82d387`,
+not the standalone-proven hash. No PVS directory, reports, or evidence snapshot
+were created. The corrected command below sources only the immutable copied
+input from the standalone `MATCH` run.
+
 ```bash
 set +e
 
@@ -639,7 +652,7 @@ REPO=/home/validmgr/ksabra/2026_SPAD/SPADMIC
 PNR_RUN=20260831_175532_mptdc_tie1_minarea_clearance_v13_replay
 MPTDC_INNOVUS_WORK=/sim/ksabra/SPADMIC_work/innovus
 SOURCE_CKPT="$MPTDC_INNOVUS_WORK/$PNR_RUN/checkpoints/repaired_route.enc.dat"
-RO_GDS=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds
+RO_GDS=/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/inputs/RO_tune6.fresh.gds
 EXPECTED_RO_GDS_SHA=9d6f269541d51db0c30c5e7cc81334d70578ca8723558b32f34f9803469ea36a
 PVS_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_pg15_compositional_pvs"
 PVS_DIR="$MPTDC_INNOVUS_WORK/$PVS_RUN"

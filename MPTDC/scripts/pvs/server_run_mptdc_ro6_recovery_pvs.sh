@@ -12,7 +12,7 @@ DRC_SCRIPT="${MPTDC_RECOVERY_PVS_DRC:-$SCRIPT_DIR/02_replay_pvs_drc_from_templat
 LVS_SCRIPT="${MPTDC_RECOVERY_PVS_LVS:-$SCRIPT_DIR/03_replay_pvs_lvs_from_template.sh}"
 DRC_CLASSIFIER="${MPTDC_RECOVERY_PVS_DRC_CLASSIFIER:-$SCRIPT_DIR/07_classify_mptdc_free_trial_drc.py}"
 INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-/sim/ksabra/SPADMIC_work/innovus}"
-DEFAULT_RO_GDS="/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/merge_libs/RO_tune6_from_OA.gds"
+DEFAULT_RO_GDS="/sim/ksabra/SPADMIC_work/innovus/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/inputs/RO_tune6.fresh.gds"
 
 PNR_RUN_ID=""
 PVS_RUN_ID=""
