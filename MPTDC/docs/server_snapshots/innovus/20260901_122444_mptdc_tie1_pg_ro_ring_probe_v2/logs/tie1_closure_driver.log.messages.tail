@@ -1,0 +1,83 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260901_122444_mptdc_tie1_pg_ro_ring_probe_v2/logs/tie1_closure_driver.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+git status --short --untracked-files=no:
+**INFO:  MMMC transition support version v31-84 
+**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+**ERROR: (IMPLF-186):	The property 'CatenaDesignType' is not defined or the object containing the property does not match the object type 'MACRO' in PROPERTYDEFINITIONS section. The property is ignored.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLNP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLN2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[0]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[7]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[0]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[7]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'rstb' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[1]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[2]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[3]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[4]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[5]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-200):	Pin 'code[6]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[2]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[6]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[3]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[1]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[5]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (IMPLF-201):	Pin 'S[4]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_rise' not specified in the library, using .lib default of '20%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_fall' not specified in the library, using .lib default of '20%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_rise' not specified in the library, using .lib default of '80%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_fall' not specified in the library, using .lib default of '80%'. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib, Line 17)
+**WARN: (TECHLIB-302):	No function defined for cell 'RO_tune6'. The cell will only be used for analysis. (File /sim/ksabra/SPADMIC_work/innovus/20260831_mptdc_tie1_filler_ecoroute_reconciled_131006/source_checkpoint_safe/repaired_route.enc.dat/libs/mmmc/RO_tune6_real_layout_shell.lib)
+**WARN: (IMPOPT-3602):	The specified path group name reg2reg is not defined.
+**WARN: (IMPTCM-77):	Option "-drouteStartIteration" for command setNanoRouteMode is obsolete and will be removed in a future release. The obsolete option still works in this release but to avoid this warning and to ensure compatibility with future releases, remove the obsolete option from your script.
+**WARN: (IMPESI-3505):	setDelayCalMode -eng_enablePrePlacedFlow false (default=false) will be obsoleted along with its sgs2set equivalent.  This parameter will continue to be supported in the current release, but will be removed in the next major release of the software.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (IMPCCOPT-2332):	The property locked_originally is deprecated. It still works, but it may be removed in a future release.
+**WARN: (EMS-27):	Message (IMPCCOPT-2332) has exceeded the current message display limit of 20.
+**WARN: (IMPCTE-107):	The following globals have been obsoleted since version . They will be removed in the next release. 
+ERROR     IMPLF-186            1  The property '%s' is not defined or the ...
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (46.40, 157.24) (112.84, 158.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (118.44, 157.24) (223.35, 158.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (200.16, 157.24) (223.35, 158.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (112.44, 157.24) (113.24, 158.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (118.04, 157.24) (118.84, 158.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET2 at (112.44, 157.24) (113.24, 158.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET2 at (118.04, 157.24) (118.84, 158.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (46.40, 233.22) (223.35, 233.64).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (200.16, 234.52) (220.36, 235.22).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (200.16, 234.80) (223.35, 235.22).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (219.96, 234.52) (220.76, 235.22).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (200.16, 646.96) (223.35, 647.76).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (200.16, 647.24) (220.36, 648.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (46.40, 648.36) (220.36, 648.72).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (219.96, 647.24) (220.76, 648.04).
+**WARN: (IMPPP-532):	ViaGen Warning: The top layer and bottom layer have same direction but only orthogonal via is allowed between layer MET3 & MET1 at (219.96, 648.36) (220.76, 648.72).
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
