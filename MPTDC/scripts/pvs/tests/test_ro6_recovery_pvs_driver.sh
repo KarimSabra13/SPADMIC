@@ -1025,6 +1025,7 @@ TIE1_PG_RING_TRIAL_RUN=tie1_pg_ring_trial_fixture
 TIE1_PG_RING_REPLAY_RUN=tie1_pg_ring_replay_fixture
 TIE1_PG_PRUNE_PROBE_RUN=tie1_pg_prune_probe_fixture
 TIE1_PG_PRUNE_PRIOR_RUN=tie1_pg_prune_v1_failed_fixture
+TIE1_PG_PRUNE_PRIOR_V2_RUN=tie1_pg_prune_v2_failed_fixture
 TIE1_PG_PRUNE_TRIAL_RUN=tie1_pg_prune_trial_fixture
 TIE1_PG_PRUNE_REPLAY_RUN=tie1_pg_prune_replay_fixture
 TIE1_PG_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_TRIAL_RUN/reports"
@@ -1032,6 +1033,7 @@ TIE1_PG_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_REPLA
 TIE1_PG_RING_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_RING_TRIAL_RUN/reports"
 TIE1_PG_RING_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_RING_REPLAY_RUN/reports"
 TIE1_PG_PRUNE_PRIOR_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_PRIOR_RUN/reports"
+TIE1_PG_PRUNE_PRIOR_V2_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_PRIOR_V2_RUN/reports"
 TIE1_PG_PRUNE_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_TRIAL_RUN/reports"
 TIE1_PG_PRUNE_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_REPLAY_RUN/reports"
 TIE1_PG_TRIAL_CKPT="$WORK/$TIE1_PG_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
@@ -1039,21 +1041,23 @@ TIE1_PG_REPLAY_CKPT="$WORK/$TIE1_PG_REPLAY_RUN/checkpoints/repaired_route.enc.da
 TIE1_PG_RING_TRIAL_CKPT="$WORK/$TIE1_PG_RING_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_RING_REPLAY_CKPT="$WORK/$TIE1_PG_RING_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_PRUNE_PRIOR_CKPT="$WORK/$TIE1_PG_PRUNE_PRIOR_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_PG_PRUNE_PRIOR_V2_CKPT="$WORK/$TIE1_PG_PRUNE_PRIOR_V2_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_PRUNE_TRIAL_CKPT="$WORK/$TIE1_PG_PRUNE_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_PRUNE_REPLAY_CKPT="$WORK/$TIE1_PG_PRUNE_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
 mkdir -p "$TIE1_PG_TRIAL_REPORTS" "$TIE1_PG_REPLAY_REPORTS" \
   "$TIE1_PG_RING_TRIAL_REPORTS" "$TIE1_PG_RING_REPLAY_REPORTS" \
-  "$TIE1_PG_PRUNE_PRIOR_REPORTS" \
+  "$TIE1_PG_PRUNE_PRIOR_REPORTS" "$TIE1_PG_PRUNE_PRIOR_V2_REPORTS" \
   "$TIE1_PG_PRUNE_TRIAL_REPORTS" "$TIE1_PG_PRUNE_REPLAY_REPORTS" \
   "$TIE1_PG_TRIAL_CKPT" "$TIE1_PG_REPLAY_CKPT" \
   "$TIE1_PG_RING_TRIAL_CKPT" "$TIE1_PG_RING_REPLAY_CKPT" \
-  "$TIE1_PG_PRUNE_PRIOR_CKPT" \
+  "$TIE1_PG_PRUNE_PRIOR_CKPT" "$TIE1_PG_PRUNE_PRIOR_V2_CKPT" \
   "$TIE1_PG_PRUNE_TRIAL_CKPT" "$TIE1_PG_PRUNE_REPLAY_CKPT"
 printf 'tie1 PG dangling delete trial\n' > "$TIE1_PG_TRIAL_CKPT/design.bin"
 printf 'tie1 PG dangling canonical replay\n' > "$TIE1_PG_REPLAY_CKPT/design.bin"
 printf 'tie1 PG RO ring stitch trial\n' > "$TIE1_PG_RING_TRIAL_CKPT/design.bin"
 printf 'tie1 PG RO ring stitch replay\n' > "$TIE1_PG_RING_REPLAY_CKPT/design.bin"
 printf 'tie1 PG long prune V1 rejected evidence\n' > "$TIE1_PG_PRUNE_PRIOR_CKPT/design.bin"
+printf 'tie1 PG long prune V2 rejected evidence\n' > "$TIE1_PG_PRUNE_PRIOR_V2_CKPT/design.bin"
 printf 'tie1 PG long prune trial\n' > "$TIE1_PG_PRUNE_TRIAL_CKPT/design.bin"
 printf 'tie1 PG long prune replay\n' > "$TIE1_PG_PRUNE_REPLAY_CKPT/design.bin"
 TIE1_PG_TRIAL_SHA="$(tree_hash "$TIE1_PG_TRIAL_CKPT")"
@@ -1061,6 +1065,7 @@ TIE1_PG_REPLAY_SHA="$(tree_hash "$TIE1_PG_REPLAY_CKPT")"
 TIE1_PG_RING_TRIAL_SHA="$(tree_hash "$TIE1_PG_RING_TRIAL_CKPT")"
 TIE1_PG_RING_REPLAY_SHA="$(tree_hash "$TIE1_PG_RING_REPLAY_CKPT")"
 TIE1_PG_PRUNE_PRIOR_SHA="$(tree_hash "$TIE1_PG_PRUNE_PRIOR_CKPT")"
+TIE1_PG_PRUNE_PRIOR_V2_SHA="$(tree_hash "$TIE1_PG_PRUNE_PRIOR_V2_CKPT")"
 TIE1_PG_PRUNE_TRIAL_SHA="$(tree_hash "$TIE1_PG_PRUNE_TRIAL_CKPT")"
 TIE1_PG_PRUNE_REPLAY_SHA="$(tree_hash "$TIE1_PG_PRUNE_REPLAY_CKPT")"
 
@@ -1172,32 +1177,127 @@ Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1
 Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP
 EOF
 
+cat > "$TIE1_PG_PRUNE_PRIOR_V2_REPORTS/operator_gate_tie1_pg_long_prune_trial.rpt" <<EOF
+STEP=TIE1_PG_LONG_PRUNE_TRIAL
+SOURCE_TIE1_RUN_ID=$TIE1_CANDIDATE_RUN
+SOURCE_MINAREA_REPLAY_RUN_ID=$TIE1_MINAREA_REPLAY_RUN
+SOURCE_PG_PROBE_RUN_ID=$TIE1_PG_PRUNE_PROBE_RUN
+SOURCE_PG_PRIOR_TRIAL_RUN_ID=$TIE1_PG_PRUNE_PRIOR_RUN
+SOURCE_PG_TRIAL_RUN_ID=NONE
+SOURCE_CHECKPOINT=$TIE1_MINAREA_REPLAY_CKPT
+SOURCE_CHECKPOINT_SHA256=$TIE1_MINAREA_REPLAY_SHA
+TOOL_RC=0
+COMMAND_1_STATUS=PASS
+PG_RO_REPAIR_MODE=long_prune
+PG_RO_REPAIR_STATUS=FAIL_LONG_PRUNE_GATE
+SOURCE_TOPOLOGY_STATUS=PASS
+INITIAL_DANGLING_MARKER_COUNT=15
+SOURCE_UNIQUE_HANDLE_COUNT=13
+SOURCE_SHARED_HANDLE_COUNT=2
+RO_RING_CREATED_COUNT=0
+RING_GEOMETRY_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+MARKER_RING_MAPPING_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+REPLACEMENT_ATTEMPTS=0
+VIA_ATTEMPTS=0
+PRUNE_ATTEMPTS=13
+PRUNE_SUCCESSES=12
+SOURCE_PRUNE_TRANSITION_STATUS=FAIL
+RESIDUAL_PRUNE_POLICY=EXACT_EXPOSED_VSS_MET1_COREWIRE_V2
+RESIDUAL_EXPECTED_MARKER_FINGERPRINT=VSS|MET1|124.160|723.520
+RESIDUAL_PRUNE_CANDIDATE_COUNT=0
+RESIDUAL_PRUNE_ATTEMPTS=0
+RESIDUAL_PRUNE_SUCCESSES=0
+TOTAL_PRUNE_ATTEMPTS=13
+TOTAL_PRUNE_SUCCESSES=12
+LONG_PRUNE_AUTHORIZATION=EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_DANGLING_COUNT=2
+FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
+FINAL_ROUTE_GATE_PASS=0
+PG_REPAIR_TRIAL_OUTCOME=FAIL
+CANDIDATE_CHECKPOINT=$TIE1_PG_PRUNE_PRIOR_V2_CKPT
+CANDIDATE_CHECKPOINT_SHA256=$TIE1_PG_PRUNE_PRIOR_V2_SHA
+CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED
+SIGNOFF_ELIGIBLE=NO
+DECISION=FAIL_STOP
+NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE
+EOF
+cat > "$TIE1_PG_PRUNE_PRIOR_V2_REPORTS/pg_ro_ring_repair_status.rpt" <<'EOF'
+PRUNE_12_STATUS=PASS
+PRUNE_12_RESIDUAL_TRANSITION=EXPECTED_EXPOSED_MET1_TAIL
+PRUNE_13_NET=VSS
+PRUNE_13_LAYER=METTP
+PRUNE_13_POINTS={205.16 13.16} {205.16 158.32}
+PRUNE_13_EXPECTED_DANGLING_COUNT=1
+PRUNE_13_OBSERVED_DANGLING_COUNT=2
+PRUNE_13_EXPECTED_MARKER_FINGERPRINT=VSS|MET1|124.160|723.520
+PRUNE_13_OBSERVED_MARKER_FINGERPRINT=VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080
+PRUNE_13_STATUS=FAIL_INCREMENTAL_GATE
+FINAL_DANGLING_MARKER_COUNT=2
+EOF
+cat > "$TIE1_PG_PRUNE_PRIOR_V2_REPORTS/pg_ro_final_verify_special_detailed.rpt" <<'EOF'
+Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1
+Net VSS: dangling Wire at (204.160, 150.080) (204.160, 150.080) on layer: MET1
+EOF
+
 write_tie1_pg_ro_gate() {
   local path="$1" step="$2" source_pg_trial="$3" candidate="$4"
   local candidate_sha="$5" mode="$6" source_pg_probe="$7"
   local source_pg_prior="$8" replacement_attempts=4 replacement_successes=4
   local prune_attempts=0 prune_successes=0 long_prune_authorization=MISSING
-  local source_prune_transition=MISSING residual_policy=MISSING
-  local residual_fingerprint=MISSING residual_points=MISSING residual_box=MISSING
-  local residual_length=MISSING residual_candidates=0 residual_attempts=0
+  local source_prune_transition=MISSING source_exposed_count=MISSING
+  local source_exposed_set=MISSING residual_policy=MISSING residual_count=MISSING
+  local residual_fingerprint=MISSING residual_1_id=MISSING
+  local residual_1_fingerprint=MISSING residual_1_source_points=MISSING
+  local residual_1_points=MISSING residual_1_box=MISSING residual_1_length=MISSING
+  local residual_2_id=MISSING residual_2_fingerprint=MISSING
+  local residual_2_source_points=MISSING residual_2_points=MISSING
+  local residual_2_box=MISSING residual_2_length=MISSING
+  local residual_candidates=0 residual_attempts=0
   local residual_successes=0 total_prune_attempts=0 total_prune_successes=0
+  local final_vdd_swire_count=MISSING final_vss_swire_count=MISSING
+  local final_vdd_swire_delta=MISSING final_vss_swire_delta=MISSING
+  local swire_inventory_status=MISSING via_handle_status=MISSING
   if [[ "$mode" == long_prune ]]; then
     replacement_attempts=0
     replacement_successes=0
     prune_attempts=13
     prune_successes=13
-    long_prune_authorization=EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
+    long_prune_authorization=EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3
     source_prune_transition=PASS
-    residual_policy=EXACT_EXPOSED_VSS_MET1_COREWIRE_V2
-    residual_fingerprint='VSS|MET1|124.160|723.520'
-    residual_points='{124.16 723.52} {240.8 723.52}'
-    residual_box='124.16 723.12 240.8 723.92'
-    residual_length=116.64
-    residual_candidates=1
-    residual_attempts=1
-    residual_successes=1
-    total_prune_attempts=14
-    total_prune_successes=14
+    source_exposed_count=2
+    source_exposed_set='NORTH SOUTH'
+    residual_policy=EXACT_TWO_EXPOSED_VSS_MET1_COREWIRES_V3
+    residual_count=2
+    residual_fingerprint='VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080'
+    residual_1_id=NORTH
+    residual_1_fingerprint='VSS|MET1|124.160|723.520'
+    residual_1_source_points='{125.16 721.75} {125.16 869.4}'
+    residual_1_points='{124.16 723.52} {240.8 723.52}'
+    residual_1_box='124.16 723.12 240.8 723.92'
+    residual_1_length=116.64
+    residual_2_id=SOUTH
+    residual_2_fingerprint='VSS|MET1|204.160|150.080'
+    residual_2_source_points='{205.16 13.16} {205.16 158.32}'
+    residual_2_points='{204.16 150.08} {240.8 150.08}'
+    residual_2_box='204.16 149.68 240.8 150.48'
+    residual_2_length=36.64
+    residual_candidates=2
+    residual_attempts=2
+    residual_successes=2
+    total_prune_attempts=15
+    total_prune_successes=15
+    final_vdd_swire_count=445
+    final_vss_swire_count=409
+    final_vdd_swire_delta=-5
+    final_vss_swire_delta=-10
+    swire_inventory_status=PASS
+    via_handle_status=UNCHANGED
   fi
   cat > "$path" <<EOF
 STEP=$step
@@ -1239,16 +1339,34 @@ VIA_SUCCESSES=$([[ "$mode" == ring_stitch ]] && echo 15 || echo 0)
 PRUNE_ATTEMPTS=$prune_attempts
 PRUNE_SUCCESSES=$prune_successes
 SOURCE_PRUNE_TRANSITION_STATUS=$source_prune_transition
+SOURCE_PRUNE_EXPOSED_RESIDUAL_COUNT=$source_exposed_count
+SOURCE_PRUNE_EXPOSED_RESIDUAL_SET=$source_exposed_set
 RESIDUAL_PRUNE_POLICY=$residual_policy
+RESIDUAL_EXPECTED_COUNT=$residual_count
 RESIDUAL_EXPECTED_MARKER_FINGERPRINT=$residual_fingerprint
-RESIDUAL_EXPECTED_POINTS=$residual_points
-RESIDUAL_EXPECTED_BOX=$residual_box
-RESIDUAL_EXPECTED_LENGTH_UM=$residual_length
+RESIDUAL_1_ID=$residual_1_id
+RESIDUAL_1_EXPECTED_MARKER_FINGERPRINT=$residual_1_fingerprint
+RESIDUAL_1_EXPECTED_SOURCE_POINTS=$residual_1_source_points
+RESIDUAL_1_EXPECTED_POINTS=$residual_1_points
+RESIDUAL_1_EXPECTED_BOX=$residual_1_box
+RESIDUAL_1_EXPECTED_LENGTH_UM=$residual_1_length
+RESIDUAL_2_ID=$residual_2_id
+RESIDUAL_2_EXPECTED_MARKER_FINGERPRINT=$residual_2_fingerprint
+RESIDUAL_2_EXPECTED_SOURCE_POINTS=$residual_2_source_points
+RESIDUAL_2_EXPECTED_POINTS=$residual_2_points
+RESIDUAL_2_EXPECTED_BOX=$residual_2_box
+RESIDUAL_2_EXPECTED_LENGTH_UM=$residual_2_length
 RESIDUAL_PRUNE_CANDIDATE_COUNT=$residual_candidates
 RESIDUAL_PRUNE_ATTEMPTS=$residual_attempts
 RESIDUAL_PRUNE_SUCCESSES=$residual_successes
 TOTAL_PRUNE_ATTEMPTS=$total_prune_attempts
 TOTAL_PRUNE_SUCCESSES=$total_prune_successes
+FINAL_VDD_SWIRE_INVENTORY_COUNT=$final_vdd_swire_count
+FINAL_VSS_SWIRE_INVENTORY_COUNT=$final_vss_swire_count
+FINAL_VDD_SWIRE_INVENTORY_DELTA=$final_vdd_swire_delta
+FINAL_VSS_SWIRE_INVENTORY_DELTA=$final_vss_swire_delta
+SWIRE_INVENTORY_STATUS=$swire_inventory_status
+PG_VIA_HANDLE_STATUS=$via_handle_status
 LONG_PRUNE_AUTHORIZATION=$long_prune_authorization
 FINAL_DRC=0
 FINAL_SHORTS=0
@@ -1290,12 +1408,12 @@ write_tie1_pg_ro_gate \
   "$TIE1_PG_PRUNE_TRIAL_REPORTS/operator_gate_tie1_pg_long_prune_trial.rpt" \
   TIE1_PG_LONG_PRUNE_TRIAL NONE "$TIE1_PG_PRUNE_TRIAL_CKPT" \
   "$TIE1_PG_PRUNE_TRIAL_SHA" long_prune "$TIE1_PG_PRUNE_PROBE_RUN" \
-  "$TIE1_PG_PRUNE_PRIOR_RUN"
+  "$TIE1_PG_PRUNE_PRIOR_V2_RUN"
 write_tie1_pg_ro_gate \
   "$TIE1_PG_PRUNE_REPLAY_REPORTS/operator_gate_tie1_pg_long_prune_replay.rpt" \
   TIE1_PG_LONG_PRUNE_REPLAY "$TIE1_PG_PRUNE_TRIAL_RUN" \
   "$TIE1_PG_PRUNE_REPLAY_CKPT" "$TIE1_PG_PRUNE_REPLAY_SHA" long_prune \
-  "$TIE1_PG_PRUNE_PROBE_RUN" "$TIE1_PG_PRUNE_PRIOR_RUN"
+  "$TIE1_PG_PRUNE_PROBE_RUN" "$TIE1_PG_PRUNE_PRIOR_V2_RUN"
 
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m minarea-replay-fixtures
@@ -1428,6 +1546,30 @@ for replay_kind in ring prune; do
     "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
   test "$(wc -l < "$replay_calls")" -eq 4
 done
+
+cp -p "$TIE1_PG_PRUNE_PRIOR_V2_CKPT/design.bin" \
+  "$TMP_ROOT/tie1_pg_prune_prior_v2.good.bin"
+printf 'rejected V2 checkpoint drift\n' >> \
+  "$TIE1_PG_PRUNE_PRIOR_V2_CKPT/design.bin"
+PRUNE_V2_HASH_DRIFT_CALLS="$TMP_ROOT/tie1_pg_prune_v2_hash_drift.calls"
+set +e
+run_driver pvs_tie1_pg_prune_v2_hash_drift "$PRUNE_V2_HASH_DRIFT_CALLS" \
+  --test-pnr-run "$TIE1_PG_PRUNE_REPLAY_RUN" \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
+PRUNE_V2_HASH_DRIFT_RC=$?
+set -e
+test "$PRUNE_V2_HASH_DRIFT_RC" -eq 4
+grep -qx 'TIE1_PG_REPLAY_GATE_KIND=LONG_PRUNE' \
+  "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=FAIL' \
+  "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
+grep -qx 'PVS_RECOVERY_PREFLIGHT=FAIL' \
+  "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
+test ! -e "$PRUNE_V2_HASH_DRIFT_CALLS"
+test ! -e "$WORK/pvs_tie1_pg_prune_v2_hash_drift"
+cp -p "$TMP_ROOT/tie1_pg_prune_prior_v2.good.bin" \
+  "$TIE1_PG_PRUNE_PRIOR_V2_CKPT/design.bin"
 
 UNEXPECTED_MATCH_CALLS="$TMP_ROOT/tie1_compositional_match.calls"
 set +e

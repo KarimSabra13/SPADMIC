@@ -963,7 +963,7 @@ tracked_tie1_pg_replay_gate_passes() {
     "$source_tie1_run_id" "$source_minarea_run_id" NONE
 }
 
-tracked_tie1_pg_ro_failed_long_prune_evidence_passes() {
+tracked_tie1_pg_ro_failed_long_prune_v1_evidence_passes() {
   local run_id="$1" source_tie1_run_id="$2" source_minarea_run_id="$3"
   local source_pg_probe_run_id="$4" snapshot gate helper detailed
   local source_minarea_gate source_sha expected_source expected_candidate
@@ -1001,7 +1001,9 @@ tracked_tie1_pg_ro_failed_long_prune_evidence_passes() {
     PG_REPAIR_TRIAL_OUTCOME FAIL CANDIDATE_CHECKPOINT "$expected_candidate" \
     CANDIDATE_CHECKPOINT_STATUS NOT_SELECTED SIGNOFF_ELIGIBLE NO \
     DECISION FAIL_STOP NEXT_STAGE STOP_AND_REVIEW_PUBLISHED_EVIDENCE || return 1
-  [[ "$source_sha" =~ ^[0-9a-f]{64}$ && "$candidate_sha" =~ ^[0-9a-f]{64}$ ]] || return 1
+  [[ "$source_sha" =~ ^[0-9a-f]{64}$ && "$candidate_sha" =~ ^[0-9a-f]{64}$ &&
+     -d "$expected_candidate" &&
+     "$(tree_content_hash "$expected_candidate")" == "$candidate_sha" ]] || return 1
 
   tracked_report_passes "$helper" \
     PRUNE_12_NET VSS PRUNE_12_LAYER METTP \
@@ -1014,6 +1016,75 @@ tracked_tie1_pg_ro_failed_long_prune_evidence_passes() {
   grep -Fqx 'Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1' \
     "$detailed" || return 1
   grep -Fqx 'Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP' \
+    "$detailed"
+}
+
+tracked_tie1_pg_ro_failed_long_prune_v2_evidence_passes() {
+  local run_id="$1" source_tie1_run_id="$2" source_minarea_run_id="$3"
+  local source_pg_probe_run_id="$4" snapshot gate helper detailed
+  local source_minarea_gate source_sha expected_source expected_candidate
+  local candidate_sha marker_lines prior_v1_run
+  snapshot="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$run_id"
+  gate="$snapshot/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
+  helper="$snapshot/reports/pg_ro_ring_repair_status.rpt"
+  detailed="$snapshot/reports/pg_ro_final_verify_special_detailed.rpt"
+  source_minarea_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_minarea_run_id/reports/operator_gate_tie1_minarea_endext_replay.rpt"
+  source_sha="$(report_value "$source_minarea_gate" CANDIDATE_CHECKPOINT_SHA256)"
+  expected_source="$INNOVUS_WORK/$source_minarea_run_id/checkpoints/repaired_route.enc.dat"
+  expected_candidate="$INNOVUS_WORK/$run_id/checkpoints/repaired_route.enc.dat"
+  candidate_sha="$(report_value "$gate" CANDIDATE_CHECKPOINT_SHA256)"
+  prior_v1_run="$(report_value "$gate" SOURCE_PG_PRIOR_TRIAL_RUN_ID)"
+  [[ "$prior_v1_run" =~ ^[A-Za-z0-9._-]+$ ]] || return 1
+  tracked_tie1_pg_ro_failed_long_prune_v1_evidence_passes \
+    "$prior_v1_run" "$source_tie1_run_id" "$source_minarea_run_id" \
+    "$source_pg_probe_run_id" || return 1
+
+  tracked_report_passes "$gate" \
+    STEP TIE1_PG_LONG_PRUNE_TRIAL \
+    SOURCE_TIE1_RUN_ID "$source_tie1_run_id" \
+    SOURCE_MINAREA_REPLAY_RUN_ID "$source_minarea_run_id" \
+    SOURCE_PG_PROBE_RUN_ID "$source_pg_probe_run_id" \
+    SOURCE_PG_PRIOR_TRIAL_RUN_ID "$prior_v1_run" SOURCE_PG_TRIAL_RUN_ID NONE \
+    SOURCE_CHECKPOINT "$expected_source" SOURCE_CHECKPOINT_SHA256 "$source_sha" \
+    TOOL_RC 0 COMMAND_1_STATUS PASS PG_RO_REPAIR_MODE long_prune \
+    PG_RO_REPAIR_STATUS FAIL_LONG_PRUNE_GATE SOURCE_TOPOLOGY_STATUS PASS \
+    INITIAL_DANGLING_MARKER_COUNT 15 SOURCE_UNIQUE_HANDLE_COUNT 13 \
+    SOURCE_SHARED_HANDLE_COUNT 2 RO_RING_CREATED_COUNT 0 \
+    RING_GEOMETRY_STATUS NOT_RUN_BY_LONG_PRUNE_SCOPE \
+    MARKER_RING_MAPPING_STATUS NOT_RUN_BY_LONG_PRUNE_SCOPE \
+    REPLACEMENT_ATTEMPTS 0 VIA_ATTEMPTS 0 PRUNE_ATTEMPTS 13 \
+    PRUNE_SUCCESSES 12 SOURCE_PRUNE_TRANSITION_STATUS FAIL \
+    RESIDUAL_PRUNE_POLICY EXACT_EXPOSED_VSS_MET1_COREWIRE_V2 \
+    RESIDUAL_EXPECTED_MARKER_FINGERPRINT 'VSS|MET1|124.160|723.520' \
+    RESIDUAL_PRUNE_CANDIDATE_COUNT 0 RESIDUAL_PRUNE_ATTEMPTS 0 \
+    RESIDUAL_PRUNE_SUCCESSES 0 TOTAL_PRUNE_ATTEMPTS 13 \
+    TOTAL_PRUNE_SUCCESSES 12 \
+    LONG_PRUNE_AUTHORIZATION EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2 \
+    FINAL_DRC 0 FINAL_SHORTS 0 FINAL_REGULAR_CONNECTIVITY_BAD 0 \
+    FINAL_SPECIAL_CONNECTIVITY_BAD 1 FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 1 \
+    FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 FINAL_SPECIAL_DANGLING_COUNT 2 \
+    FINAL_REPORT_ROUTE_ZERO_STATUS PASS FINAL_ROUTE_GATE_PASS 0 \
+    PG_REPAIR_TRIAL_OUTCOME FAIL CANDIDATE_CHECKPOINT "$expected_candidate" \
+    CANDIDATE_CHECKPOINT_STATUS NOT_SELECTED SIGNOFF_ELIGIBLE NO \
+    DECISION FAIL_STOP NEXT_STAGE STOP_AND_REVIEW_PUBLISHED_EVIDENCE || return 1
+  [[ "$source_sha" =~ ^[0-9a-f]{64}$ && "$candidate_sha" =~ ^[0-9a-f]{64}$ &&
+     -d "$expected_candidate" &&
+     "$(tree_content_hash "$expected_candidate")" == "$candidate_sha" ]] || return 1
+
+  tracked_report_passes "$helper" \
+    PRUNE_12_STATUS PASS PRUNE_12_RESIDUAL_TRANSITION EXPECTED_EXPOSED_MET1_TAIL \
+    PRUNE_13_NET VSS PRUNE_13_LAYER METTP \
+    PRUNE_13_POINTS '{205.16 13.16} {205.16 158.32}' \
+    PRUNE_13_EXPECTED_DANGLING_COUNT 1 PRUNE_13_OBSERVED_DANGLING_COUNT 2 \
+    PRUNE_13_EXPECTED_MARKER_FINGERPRINT 'VSS|MET1|124.160|723.520' \
+    PRUNE_13_OBSERVED_MARKER_FINGERPRINT 'VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080' \
+    PRUNE_13_STATUS FAIL_INCREMENTAL_GATE FINAL_DANGLING_MARKER_COUNT 2 || return 1
+  tracked_report_passes "$detailed" || return 1
+  marker_lines="$(grep -c '^Net ' "$detailed" 2>/dev/null || true)"
+  [[ "$marker_lines" == 2 ]] || return 1
+  grep -Fqx 'Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1' \
+    "$detailed" || return 1
+  grep -Fqx 'Net VSS: dangling Wire at (204.160, 150.080) (204.160, 150.080) on layer: MET1' \
     "$detailed"
 }
 
@@ -1078,7 +1149,7 @@ tracked_tie1_pg_ro_clean_gate_passes() {
   else
     source_pg_prior_trial_run_id="$(report_value "$report" SOURCE_PG_PRIOR_TRIAL_RUN_ID)"
     [[ "$source_pg_prior_trial_run_id" =~ ^[A-Za-z0-9._-]+$ ]] || return 1
-    tracked_tie1_pg_ro_failed_long_prune_evidence_passes \
+    tracked_tie1_pg_ro_failed_long_prune_v2_evidence_passes \
       "$source_pg_prior_trial_run_id" "$source_tie1_run_id" \
       "$source_minarea_run_id" "$expected_pg_probe_id" || return 1
     [[ "$(report_value "$report" RO_INSTANCE_COUNT)" == 2 &&
@@ -1090,17 +1161,35 @@ tracked_tie1_pg_ro_clean_gate_passes() {
        "$(report_value "$report" PRUNE_ATTEMPTS)" == 13 &&
        "$(report_value "$report" PRUNE_SUCCESSES)" == 13 &&
        "$(report_value "$report" SOURCE_PRUNE_TRANSITION_STATUS)" == PASS &&
-       "$(report_value "$report" RESIDUAL_PRUNE_POLICY)" == EXACT_EXPOSED_VSS_MET1_COREWIRE_V2 &&
-       "$(report_value "$report" RESIDUAL_EXPECTED_MARKER_FINGERPRINT)" == 'VSS|MET1|124.160|723.520' &&
-       "$(report_value "$report" RESIDUAL_EXPECTED_POINTS)" == '{124.16 723.52} {240.8 723.52}' &&
-       "$(report_value "$report" RESIDUAL_EXPECTED_BOX)" == '124.16 723.12 240.8 723.92' &&
-       "$(report_value "$report" RESIDUAL_EXPECTED_LENGTH_UM)" == 116.64 &&
-       "$(report_value "$report" RESIDUAL_PRUNE_CANDIDATE_COUNT)" == 1 &&
-       "$(report_value "$report" RESIDUAL_PRUNE_ATTEMPTS)" == 1 &&
-       "$(report_value "$report" RESIDUAL_PRUNE_SUCCESSES)" == 1 &&
-       "$(report_value "$report" TOTAL_PRUNE_ATTEMPTS)" == 14 &&
-       "$(report_value "$report" TOTAL_PRUNE_SUCCESSES)" == 14 &&
-       "$(report_value "$report" LONG_PRUNE_AUTHORIZATION)" == EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2 ]]
+       "$(report_value "$report" SOURCE_PRUNE_EXPOSED_RESIDUAL_COUNT)" == 2 &&
+       "$(report_value "$report" SOURCE_PRUNE_EXPOSED_RESIDUAL_SET)" == 'NORTH SOUTH' &&
+       "$(report_value "$report" RESIDUAL_PRUNE_POLICY)" == EXACT_TWO_EXPOSED_VSS_MET1_COREWIRES_V3 &&
+       "$(report_value "$report" RESIDUAL_EXPECTED_COUNT)" == 2 &&
+       "$(report_value "$report" RESIDUAL_EXPECTED_MARKER_FINGERPRINT)" == 'VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080' &&
+       "$(report_value "$report" RESIDUAL_1_ID)" == NORTH &&
+       "$(report_value "$report" RESIDUAL_1_EXPECTED_MARKER_FINGERPRINT)" == 'VSS|MET1|124.160|723.520' &&
+       "$(report_value "$report" RESIDUAL_1_EXPECTED_SOURCE_POINTS)" == '{125.16 721.75} {125.16 869.4}' &&
+       "$(report_value "$report" RESIDUAL_1_EXPECTED_POINTS)" == '{124.16 723.52} {240.8 723.52}' &&
+       "$(report_value "$report" RESIDUAL_1_EXPECTED_BOX)" == '124.16 723.12 240.8 723.92' &&
+       "$(report_value "$report" RESIDUAL_1_EXPECTED_LENGTH_UM)" == 116.64 &&
+       "$(report_value "$report" RESIDUAL_2_ID)" == SOUTH &&
+       "$(report_value "$report" RESIDUAL_2_EXPECTED_MARKER_FINGERPRINT)" == 'VSS|MET1|204.160|150.080' &&
+       "$(report_value "$report" RESIDUAL_2_EXPECTED_SOURCE_POINTS)" == '{205.16 13.16} {205.16 158.32}' &&
+       "$(report_value "$report" RESIDUAL_2_EXPECTED_POINTS)" == '{204.16 150.08} {240.8 150.08}' &&
+       "$(report_value "$report" RESIDUAL_2_EXPECTED_BOX)" == '204.16 149.68 240.8 150.48' &&
+       "$(report_value "$report" RESIDUAL_2_EXPECTED_LENGTH_UM)" == 36.64 &&
+       "$(report_value "$report" RESIDUAL_PRUNE_CANDIDATE_COUNT)" == 2 &&
+       "$(report_value "$report" RESIDUAL_PRUNE_ATTEMPTS)" == 2 &&
+       "$(report_value "$report" RESIDUAL_PRUNE_SUCCESSES)" == 2 &&
+       "$(report_value "$report" TOTAL_PRUNE_ATTEMPTS)" == 15 &&
+       "$(report_value "$report" TOTAL_PRUNE_SUCCESSES)" == 15 &&
+       "$(report_value "$report" FINAL_VDD_SWIRE_INVENTORY_COUNT)" == 445 &&
+       "$(report_value "$report" FINAL_VSS_SWIRE_INVENTORY_COUNT)" == 409 &&
+       "$(report_value "$report" FINAL_VDD_SWIRE_INVENTORY_DELTA)" == -5 &&
+       "$(report_value "$report" FINAL_VSS_SWIRE_INVENTORY_DELTA)" == -10 &&
+       "$(report_value "$report" SWIRE_INVENTORY_STATUS)" == PASS &&
+       "$(report_value "$report" PG_VIA_HANDLE_STATUS)" == UNCHANGED &&
+       "$(report_value "$report" LONG_PRUNE_AUTHORIZATION)" == EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3 ]]
   fi
 }
 

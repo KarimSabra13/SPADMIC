@@ -160,6 +160,31 @@ proc mptdc_pg_ro_handle_set {net} {
     return $out
 }
 
+proc mptdc_pg_ro_via_handle_set {net} {
+    set out {}
+    foreach nh [mptdc_pg_ro_net_handle_set $net] {
+        foreach property {vias sVias} {
+            foreach handle [mptdc_pg_ro_valid_handles \
+                [mptdc_pg_dangling_dbget "$nh.$property" ""]] {
+                if {[lsearch -exact $out $handle] < 0} {
+                    lappend out $handle
+                }
+            }
+        }
+    }
+    return [lsort -dictionary $out]
+}
+
+proc mptdc_pg_ro_handle_difference {lhs rhs} {
+    set out {}
+    foreach handle $lhs {
+        if {[lsearch -exact $rhs $handle] < 0} {
+            lappend out $handle
+        }
+    }
+    return [lsort -dictionary $out]
+}
+
 proc mptdc_pg_ro_swire_records {net} {
     set out {}
     foreach handle [mptdc_pg_ro_handle_set $net] {
@@ -848,21 +873,44 @@ proc mptdc_pg_ro_remove_marker_keys {current remove} {
     return [dict create status PASS keys [lsort -dictionary $remaining] missing NONE]
 }
 
-proc mptdc_pg_ro_expected_exposed_residual_fingerprint {} {
-    return VSS|MET1|124.160|723.520
+proc mptdc_pg_ro_expected_residual_contracts {} {
+    return [list \
+        [dict create id NORTH \
+            source_points {{125.16 721.75} {125.16 869.4}} \
+            fingerprint VSS|MET1|124.160|723.520 \
+            points {{124.16 723.52} {240.8 723.52}} \
+            rect {124.16 723.12 240.8 723.92} length_um 116.64] \
+        [dict create id SOUTH \
+            source_points {{205.16 13.16} {205.16 158.32}} \
+            fingerprint VSS|MET1|204.160|150.080 \
+            points {{204.16 150.08} {240.8 150.08}} \
+            rect {204.16 149.68 240.8 150.48} length_um 36.64]]
 }
 
-proc mptdc_pg_ro_is_residual_exposing_source {rec eps} {
-    return [expr {
-        [dict get $rec net] eq "VSS" &&
-        [string toupper [dict get $rec layer]] eq "METTP" &&
-        [string tolower [dict get $rec shape]] eq "stripe" &&
-        [string tolower [dict get $rec status]] eq "routed" &&
-        [string tolower [dict get $rec geomType]] eq "pathseg" &&
-        [mptdc_pg_ro_close [dict get $rec width] 2.0 $eps] &&
-        [mptdc_pg_ro_points_match [dict get $rec points] \
-            {{125.16 721.75} {125.16 869.4}} $eps]
-    }]
+proc mptdc_pg_ro_expected_residual_fingerprint {} {
+    set keys {}
+    foreach contract [mptdc_pg_ro_expected_residual_contracts] {
+        lappend keys [dict get $contract fingerprint]
+    }
+    return [lsort -dictionary $keys]
+}
+
+proc mptdc_pg_ro_source_residual_contract {rec eps} {
+    if {[dict get $rec net] ne "VSS" ||
+        [string toupper [dict get $rec layer]] ne "METTP" ||
+        [string tolower [dict get $rec shape]] ne "stripe" ||
+        [string tolower [dict get $rec status]] ne "routed" ||
+        [string tolower [dict get $rec geomType]] ne "pathseg" ||
+        ![mptdc_pg_ro_close [dict get $rec width] 2.0 $eps]} {
+        return {}
+    }
+    foreach contract [mptdc_pg_ro_expected_residual_contracts] {
+        if {[mptdc_pg_ro_points_match [dict get $rec points] \
+            [dict get $contract source_points] $eps]} {
+            return $contract
+        }
+    }
+    return {}
 }
 
 proc mptdc_pg_ro_rect_match {lhs rhs eps} {
@@ -875,11 +923,12 @@ proc mptdc_pg_ro_rect_match {lhs rhs eps} {
     return 1
 }
 
-proc mptdc_pg_ro_residual_contract_candidates {marker eps near} {
+proc mptdc_pg_ro_residual_contract_candidates {marker contract eps near} {
     set found [mptdc_pg_ro_marker_candidates $marker $eps $near]
     set by_handle [dict create]
-    set expected_points {{124.16 723.52} {240.8 723.52}}
-    set expected_rect {124.16 723.12 240.8 723.92}
+    set expected_points [dict get $contract points]
+    set expected_rect [dict get $contract rect]
+    set expected_length [dict get $contract length_um]
     foreach rec [concat [dict get $found exact] [dict get $found nearby]] {
         set handle [dict get $rec handle]
         if {[dict exists $by_handle $handle]} { continue }
@@ -896,7 +945,7 @@ proc mptdc_pg_ro_residual_contract_candidates {marker eps near} {
             ![mptdc_pg_ro_rect_match [dict get $rec rect] $expected_rect $eps] ||
             ![dict get $rec box_match] ||
             ![string is double -strict $length] || $length <= $eps ||
-            ![mptdc_pg_ro_close $length 116.64 $eps]} {
+            ![mptdc_pg_ro_close $length $expected_length $eps]} {
             continue
         }
         dict set rec orientation HORIZONTAL
@@ -912,18 +961,27 @@ proc mptdc_pg_ro_residual_contract_candidates {marker eps near} {
 }
 
 proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
-    set expected_auth EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
+    set expected_auth EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3
     set actual_auth [mptdc_pg_ro_env MPTDC_PG_LONG_PRUNE_AUTHORIZATION NONE]
     set eps [mptdc_pg_ro_env_double MPTDC_PG_RO_MATCH_EPS_UM 0.002]
     set near [mptdc_pg_ro_env_double MPTDC_PG_RO_NEAR_RADIUS_UM 6.0]
-    set residual_key [mptdc_pg_ro_expected_exposed_residual_fingerprint]
+    set residual_contracts [mptdc_pg_ro_expected_residual_contracts]
+    set residual_keys [mptdc_pg_ro_expected_residual_fingerprint]
     puts $fh "LONG_PRUNE_AUTHORIZATION=$actual_auth"
     puts $fh "LONG_PRUNE_REQUIRED_AUTHORIZATION=$expected_auth"
-    puts $fh "RESIDUAL_PRUNE_POLICY=EXACT_EXPOSED_VSS_MET1_COREWIRE_V2"
-    puts $fh "RESIDUAL_EXPECTED_MARKER_FINGERPRINT=$residual_key"
-    puts $fh "RESIDUAL_EXPECTED_POINTS={124.16 723.52} {240.8 723.52}"
-    puts $fh "RESIDUAL_EXPECTED_BOX=124.16 723.12 240.8 723.92"
-    puts $fh "RESIDUAL_EXPECTED_LENGTH_UM=116.64"
+    puts $fh "RESIDUAL_PRUNE_POLICY=EXACT_TWO_EXPOSED_VSS_MET1_COREWIRES_V3"
+    puts $fh "RESIDUAL_EXPECTED_COUNT=[llength $residual_contracts]"
+    puts $fh "RESIDUAL_EXPECTED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $residual_keys]"
+    set residual_index 0
+    foreach contract $residual_contracts {
+        incr residual_index
+        puts $fh "RESIDUAL_${residual_index}_ID=[dict get $contract id]"
+        puts $fh "RESIDUAL_${residual_index}_EXPECTED_MARKER_FINGERPRINT=[dict get $contract fingerprint]"
+        puts $fh "RESIDUAL_${residual_index}_EXPECTED_SOURCE_POINTS=[mptdc_pg_ro_report_value [dict get $contract source_points]]"
+        puts $fh "RESIDUAL_${residual_index}_EXPECTED_POINTS=[mptdc_pg_ro_report_value [dict get $contract points]]"
+        puts $fh "RESIDUAL_${residual_index}_EXPECTED_BOX=[mptdc_pg_ro_report_value [dict get $contract rect]]"
+        puts $fh "RESIDUAL_${residual_index}_EXPECTED_LENGTH_UM=[dict get $contract length_um]"
+    }
     if {$actual_auth ne $expected_auth} {
         puts $fh "PRUNE_ATTEMPTS=0"
         puts $fh "PRUNE_SUCCESSES=0"
@@ -937,19 +995,24 @@ proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
             successes 0 residual_attempts 0 residual_successes 0 \
             total_attempts 0 total_successes 0]
     }
+
     set remaining_keys [mptdc_pg_ro_expected_marker_fingerprint]
+    set last_observed_keys $remaining_keys
     set attempts 0
     set successes 0
     set failures {}
-    set residual_exposed 0
+    set exposed_contract_ids {}
+    set via_before [dict create VDD [mptdc_pg_ro_via_handle_set VDD] \
+        VSS [mptdc_pg_ro_via_handle_set VSS]]
     foreach rec [mptdc_pg_ro_sorted_unique_records $preflight] {
         incr attempts
         set handle [dict get $rec handle]
+        set net [dict get $rec net]
         set refs [dict get [dict get $preflight handle_counts] $handle]
         set source_keys [mptdc_pg_ro_source_marker_keys_for_handle $preflight $handle]
         set prefix "PRUNE_$attempts"
         puts $fh "${prefix}_HANDLE=[mptdc_pg_ro_report_value $handle]"
-        puts $fh "${prefix}_NET=[dict get $rec net]"
+        puts $fh "${prefix}_NET=$net"
         puts $fh "${prefix}_LAYER=[dict get $rec layer]"
         puts $fh "${prefix}_POINTS=[mptdc_pg_ro_report_value [dict get $rec points]]"
         puts $fh "${prefix}_MARKER_REFERENCE_COUNT=$refs"
@@ -962,45 +1025,57 @@ proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
             break
         }
         set expected_keys [dict get $removed keys]
-        set exposes_residual [mptdc_pg_ro_is_residual_exposing_source $rec $eps]
-        if {$exposes_residual} {
-            if {$residual_exposed} {
+        set residual_contract [mptdc_pg_ro_source_residual_contract $rec $eps]
+        set residual_transition NONE
+        if {[llength $residual_contract] > 0} {
+            set residual_transition [dict get $residual_contract id]
+            if {[lsearch -exact $exposed_contract_ids $residual_transition] >= 0} {
                 puts $fh "${prefix}_STATUS=FAIL_DUPLICATE_RESIDUAL_TRANSITION"
                 lappend failures "$handle:duplicate_residual_transition"
                 break
             }
-            lappend expected_keys $residual_key
+            lappend expected_keys [dict get $residual_contract fingerprint]
             set expected_keys [lsort -dictionary $expected_keys]
         }
+        set before_handles [mptdc_pg_ro_handle_set $net]
         if {[catch {uplevel #0 [list dbDeleteObj $handle]} err]} {
             puts $fh "${prefix}_STATUS=FAIL_DELETE"
             puts $fh "${prefix}_ERROR=[mptdc_pg_ro_report_value $err]"
             lappend failures "$handle:delete_failed"
             break
         }
-        if {[lsearch -exact [mptdc_pg_ro_handle_set [dict get $rec net]] $handle] >= 0} {
-            puts $fh "${prefix}_STATUS=FAIL_HANDLE_PERSISTED"
-            lappend failures "$handle:persisted"
-            break
-        }
+        set after_handles [mptdc_pg_ro_handle_set $net]
+        set removed_handles [mptdc_pg_ro_handle_difference $before_handles $after_handles]
+        set added_handles [mptdc_pg_ro_handle_difference $after_handles $before_handles]
+        puts $fh "${prefix}_SWIRE_COUNT_PRE=[llength $before_handles]"
+        puts $fh "${prefix}_SWIRE_COUNT_POST=[llength $after_handles]"
+        puts $fh "${prefix}_REMOVED_HANDLE_COUNT=[llength $removed_handles]"
+        puts $fh "${prefix}_REMOVED_HANDLE_SET=[mptdc_pg_ro_report_value $removed_handles]"
+        puts $fh "${prefix}_ADDED_HANDLE_COUNT=[llength $added_handles]"
+        puts $fh "${prefix}_ADDED_HANDLE_SET=[mptdc_pg_ro_report_value $added_handles]"
         set snapshot [mptdc_pg_ro_snapshot $fh [format "pg_ro_after_prune_%02d" $attempts]]
-        set detailed [file join $report_dir [format "pg_ro_after_prune_%02d_special_detailed.rpt" $attempts]]
+        set detailed [file join $report_dir \
+            [format "pg_ro_after_prune_%02d_special_detailed.rpt" $attempts]]
         mptdc_pg_dangling_capture_verify_special $detailed
         set observed_markers [mptdc_pg_dangling_parse_report $detailed]
         set observed_keys [mptdc_pg_ro_marker_fingerprint $observed_markers]
+        set last_observed_keys $observed_keys
         puts $fh "${prefix}_EXPECTED_DANGLING_COUNT=[llength $expected_keys]"
         puts $fh "${prefix}_OBSERVED_DANGLING_COUNT=[llength $observed_keys]"
         puts $fh "${prefix}_EXPECTED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $expected_keys]"
         puts $fh "${prefix}_OBSERVED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $observed_keys]"
-        puts $fh "${prefix}_RESIDUAL_TRANSITION=[expr {$exposes_residual ? {EXPECTED_EXPOSED_MET1_TAIL} : {NONE}}]"
+        puts $fh "${prefix}_RESIDUAL_TRANSITION=$residual_transition"
         if {![mptdc_pg_ro_geometry_regular_clean $snapshot] ||
+            $removed_handles ne [list $handle] || [llength $added_handles] != 0 ||
             $observed_keys ne $expected_keys} {
             puts $fh "${prefix}_STATUS=FAIL_INCREMENTAL_GATE"
             lappend failures "$handle:incremental_gate_failed"
             break
         }
         set remaining_keys $expected_keys
-        if {$exposes_residual} { set residual_exposed 1 }
+        if {$residual_transition ne "NONE"} {
+            lappend exposed_contract_ids $residual_transition
+        }
         incr successes
         puts $fh "${prefix}_STATUS=PASS"
     }
@@ -1008,10 +1083,13 @@ proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
     puts $fh "PRUNE_SUCCESSES=$successes"
     puts $fh "PRUNE_FAILURES=[mptdc_pg_ro_report_value $failures]"
     set source_pass [expr {[llength $failures] == 0 && $attempts == 13 &&
-        $successes == 13 && $residual_exposed &&
-        $remaining_keys eq [list $residual_key]}]
-    puts $fh "SOURCE_PRUNE_FINAL_EXPECTED_MARKER_FINGERPRINT=$residual_key"
-    puts $fh "SOURCE_PRUNE_FINAL_OBSERVED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $remaining_keys]"
+        $successes == 13 &&
+        [lsort -dictionary $exposed_contract_ids] eq {NORTH SOUTH} &&
+        $remaining_keys eq $residual_keys && $last_observed_keys eq $residual_keys}]
+    puts $fh "SOURCE_PRUNE_EXPOSED_RESIDUAL_COUNT=[llength $exposed_contract_ids]"
+    puts $fh "SOURCE_PRUNE_EXPOSED_RESIDUAL_SET=[mptdc_pg_ro_report_value [lsort -dictionary $exposed_contract_ids]]"
+    puts $fh "SOURCE_PRUNE_FINAL_EXPECTED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $residual_keys]"
+    puts $fh "SOURCE_PRUNE_FINAL_OBSERVED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $last_observed_keys]"
     puts $fh "SOURCE_PRUNE_TRANSITION_STATUS=[expr {$source_pass ? {PASS} : {FAIL}}]"
 
     set residual_attempts 0
@@ -1019,62 +1097,147 @@ proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
     set residual_failures {}
     set residual_candidate_count 0
     if {$source_pass} {
-        set residual_report [file join $report_dir pg_ro_after_source_prune_special_detailed.rpt]
+        set residual_report [file join $report_dir \
+            pg_ro_after_source_prune_special_detailed.rpt]
         mptdc_pg_dangling_capture_verify_special $residual_report
         set residual_markers [mptdc_pg_dangling_parse_report $residual_report]
         set residual_observed [mptdc_pg_ro_marker_fingerprint $residual_markers]
         puts $fh "RESIDUAL_PRUNE_PRE_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $residual_observed]"
-        if {$residual_observed ne [list $residual_key] ||
-            [llength $residual_markers] != 1} {
+        if {$residual_observed ne $residual_keys || [llength $residual_markers] != 2} {
             lappend residual_failures residual_marker_fingerprint_mismatch
         } else {
-            set candidate_data [mptdc_pg_ro_residual_contract_candidates \
-                [lindex $residual_markers 0] $eps $near]
-            set candidates [dict get $candidate_data candidates]
-            set residual_candidate_count [llength $candidates]
-            puts $fh "RESIDUAL_PRUNE_RAW_EXACT_COUNT=[dict get $candidate_data exact_count]"
-            puts $fh "RESIDUAL_PRUNE_RAW_NEARBY_COUNT=[dict get $candidate_data nearby_count]"
-            if {$residual_candidate_count != 1} {
-                lappend residual_failures "residual_candidate_count:$residual_candidate_count"
-            } else {
-                incr residual_attempts
+            set markers_by_key [dict create]
+            foreach marker $residual_markers {
+                set marker_key [lindex \
+                    [mptdc_pg_ro_marker_fingerprint [list $marker]] 0]
+                dict set markers_by_key $marker_key $marker
+            }
+            set residual_plan {}
+            set planned_handles {}
+            set plan_index 0
+            foreach contract $residual_contracts {
+                incr plan_index
+                set key [dict get $contract fingerprint]
+                if {![dict exists $markers_by_key $key]} {
+                    lappend residual_failures "residual_${plan_index}_marker_missing"
+                    continue
+                }
+                set candidate_data [mptdc_pg_ro_residual_contract_candidates \
+                    [dict get $markers_by_key $key] $contract $eps $near]
+                set candidates [dict get $candidate_data candidates]
+                incr residual_candidate_count [llength $candidates]
+                puts $fh "RESIDUAL_PRUNE_${plan_index}_RAW_EXACT_COUNT=[dict get $candidate_data exact_count]"
+                puts $fh "RESIDUAL_PRUNE_${plan_index}_RAW_NEARBY_COUNT=[dict get $candidate_data nearby_count]"
+                puts $fh "RESIDUAL_PRUNE_${plan_index}_CONTRACT_CANDIDATE_COUNT=[llength $candidates]"
+                if {[llength $candidates] != 1} {
+                    lappend residual_failures \
+                        "residual_${plan_index}_candidate_count:[llength $candidates]"
+                    continue
+                }
                 set residual_rec [lindex $candidates 0]
                 set residual_handle [dict get $residual_rec handle]
-                mptdc_pg_dangling_write_swire $fh RESIDUAL_PRUNE_1 $residual_rec
-                puts $fh "RESIDUAL_PRUNE_1_POINT_ENCODING=[dict get $residual_rec point_encoding]"
-                puts $fh "RESIDUAL_PRUNE_1_ORIENTATION=[dict get $residual_rec orientation]"
-                if {[catch {uplevel #0 [list dbDeleteObj $residual_handle]} err]} {
-                    puts $fh "RESIDUAL_PRUNE_1_STATUS=FAIL_DELETE"
-                    puts $fh "RESIDUAL_PRUNE_1_ERROR=[mptdc_pg_ro_report_value $err]"
-                    lappend residual_failures "$residual_handle:delete_failed"
-                } elseif {[lsearch -exact [mptdc_pg_ro_handle_set VSS] \
-                    $residual_handle] >= 0} {
-                    puts $fh "RESIDUAL_PRUNE_1_STATUS=FAIL_HANDLE_PERSISTED"
-                    lappend residual_failures "$residual_handle:persisted"
-                } else {
+                if {[lsearch -exact $planned_handles $residual_handle] >= 0} {
+                    lappend residual_failures \
+                        "residual_${plan_index}_duplicate_handle:$residual_handle"
+                    continue
+                }
+                lappend planned_handles $residual_handle
+                lappend residual_plan [dict create contract $contract rec $residual_rec]
+            }
+            set residual_remaining $residual_keys
+            if {[llength $residual_failures] == 0 &&
+                [llength $residual_plan] == 2 && [llength $planned_handles] == 2} {
+                set delete_index 0
+                foreach item $residual_plan {
+                    incr delete_index
+                    incr residual_attempts
+                    set contract [dict get $item contract]
+                    set residual_rec [dict get $item rec]
+                    set residual_handle [dict get $residual_rec handle]
+                    set residual_prefix "RESIDUAL_PRUNE_$delete_index"
+                    mptdc_pg_dangling_write_swire $fh \
+                        "${residual_prefix}_TARGET" $residual_rec
+                    puts $fh "${residual_prefix}_CONTRACT_ID=[dict get $contract id]"
+                    puts $fh "${residual_prefix}_POINT_ENCODING=[dict get $residual_rec point_encoding]"
+                    puts $fh "${residual_prefix}_ORIENTATION=[dict get $residual_rec orientation]"
+                    set residual_before_handles [mptdc_pg_ro_handle_set VSS]
+                    if {[catch {uplevel #0 [list dbDeleteObj $residual_handle]} err]} {
+                        puts $fh "${residual_prefix}_STATUS=FAIL_DELETE"
+                        puts $fh "${residual_prefix}_ERROR=[mptdc_pg_ro_report_value $err]"
+                        lappend residual_failures "$residual_handle:delete_failed"
+                        break
+                    }
+                    set residual_after_handles [mptdc_pg_ro_handle_set VSS]
+                    set residual_removed_handles [mptdc_pg_ro_handle_difference \
+                        $residual_before_handles $residual_after_handles]
+                    set residual_added_handles [mptdc_pg_ro_handle_difference \
+                        $residual_after_handles $residual_before_handles]
+                    puts $fh "${residual_prefix}_SWIRE_COUNT_PRE=[llength $residual_before_handles]"
+                    puts $fh "${residual_prefix}_SWIRE_COUNT_POST=[llength $residual_after_handles]"
+                    puts $fh "${residual_prefix}_REMOVED_HANDLE_COUNT=[llength $residual_removed_handles]"
+                    puts $fh "${residual_prefix}_REMOVED_HANDLE_SET=[mptdc_pg_ro_report_value $residual_removed_handles]"
+                    puts $fh "${residual_prefix}_ADDED_HANDLE_COUNT=[llength $residual_added_handles]"
+                    puts $fh "${residual_prefix}_ADDED_HANDLE_SET=[mptdc_pg_ro_report_value $residual_added_handles]"
+                    set removed_key [mptdc_pg_ro_remove_marker_keys $residual_remaining \
+                        [list [dict get $contract fingerprint]]]
+                    if {[dict get $removed_key status] ne "PASS"} {
+                        puts $fh "${residual_prefix}_STATUS=FAIL_MARKER_ACCOUNTING"
+                        lappend residual_failures \
+                            "$residual_handle:marker_accounting_failed"
+                        break
+                    }
+                    set expected_post_keys [dict get $removed_key keys]
                     set residual_snapshot [mptdc_pg_ro_snapshot $fh \
-                        pg_ro_after_residual_prune_01]
+                        [format "pg_ro_after_residual_prune_%02d" $delete_index]]
                     set residual_post_report [file join $report_dir \
-                        pg_ro_after_residual_prune_01_special_detailed.rpt]
+                        [format "pg_ro_after_residual_prune_%02d_special_detailed.rpt" \
+                            $delete_index]]
                     mptdc_pg_dangling_capture_verify_special $residual_post_report
                     set residual_post_markers \
                         [mptdc_pg_dangling_parse_report $residual_post_report]
                     set residual_post_keys \
                         [mptdc_pg_ro_marker_fingerprint $residual_post_markers]
-                    puts $fh "RESIDUAL_PRUNE_1_EXPECTED_MARKER_FINGERPRINT=NONE"
-                    puts $fh "RESIDUAL_PRUNE_1_OBSERVED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $residual_post_keys]"
+                    puts $fh "${residual_prefix}_EXPECTED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $expected_post_keys]"
+                    puts $fh "${residual_prefix}_OBSERVED_MARKER_FINGERPRINT=[mptdc_pg_ro_fingerprint_value $residual_post_keys]"
                     if {[mptdc_pg_ro_geometry_regular_clean $residual_snapshot] &&
-                        [llength $residual_post_keys] == 0} {
+                        $residual_removed_handles eq [list $residual_handle] &&
+                        [llength $residual_added_handles] == 0 &&
+                        $residual_post_keys eq $expected_post_keys} {
+                        set residual_remaining $expected_post_keys
                         incr residual_successes
-                        puts $fh "RESIDUAL_PRUNE_1_STATUS=PASS"
+                        puts $fh "${residual_prefix}_STATUS=PASS"
                     } else {
-                        puts $fh "RESIDUAL_PRUNE_1_STATUS=FAIL_INCREMENTAL_GATE"
-                        lappend residual_failures "$residual_handle:incremental_gate_failed"
+                        puts $fh "${residual_prefix}_STATUS=FAIL_INCREMENTAL_GATE"
+                        lappend residual_failures \
+                            "$residual_handle:incremental_gate_failed"
+                        break
                     }
                 }
             }
         }
     }
+
+    set final_vdd_count [llength [mptdc_pg_ro_handle_set VDD]]
+    set final_vss_count [llength [mptdc_pg_ro_handle_set VSS]]
+    set source_vdd_count [dict get [dict get $preflight source_swire_counts] VDD]
+    set source_vss_count [dict get [dict get $preflight source_swire_counts] VSS]
+    set final_vdd_delta [expr {$final_vdd_count - $source_vdd_count}]
+    set final_vss_delta [expr {$final_vss_count - $source_vss_count}]
+    set via_after [dict create VDD [mptdc_pg_ro_via_handle_set VDD] \
+        VSS [mptdc_pg_ro_via_handle_set VSS]]
+    set via_unchanged [expr {[dict get $via_before VDD] eq [dict get $via_after VDD] &&
+        [dict get $via_before VSS] eq [dict get $via_after VSS]}]
+    set swire_inventory_ok [expr {$final_vdd_delta == -5 && $final_vss_delta == -10}]
+    puts $fh "FINAL_VDD_SWIRE_INVENTORY_COUNT=$final_vdd_count"
+    puts $fh "FINAL_VSS_SWIRE_INVENTORY_COUNT=$final_vss_count"
+    puts $fh "FINAL_VDD_SWIRE_INVENTORY_DELTA=$final_vdd_delta"
+    puts $fh "FINAL_VSS_SWIRE_INVENTORY_DELTA=$final_vss_delta"
+    puts $fh "SWIRE_INVENTORY_STATUS=[expr {$swire_inventory_ok ? {PASS} : {FAIL}}]"
+    foreach net {VDD VSS} {
+        puts $fh "${net}_VIA_HANDLE_COUNT_PRE=[llength [dict get $via_before $net]]"
+        puts $fh "${net}_VIA_HANDLE_COUNT_POST=[llength [dict get $via_after $net]]"
+    }
+    puts $fh "PG_VIA_HANDLE_STATUS=[expr {$via_unchanged ? {UNCHANGED} : {FAIL_CHANGED}}]"
     puts $fh "RESIDUAL_PRUNE_CANDIDATE_COUNT=$residual_candidate_count"
     puts $fh "RESIDUAL_PRUNE_ATTEMPTS=$residual_attempts"
     puts $fh "RESIDUAL_PRUNE_SUCCESSES=$residual_successes"
@@ -1084,9 +1247,9 @@ proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
     puts $fh "TOTAL_PRUNE_ATTEMPTS=$total_attempts"
     puts $fh "TOTAL_PRUNE_SUCCESSES=$total_successes"
     set pass [expr {$source_pass && [llength $residual_failures] == 0 &&
-        $residual_candidate_count == 1 && $residual_attempts == 1 &&
-        $residual_successes == 1 && $total_attempts == 14 &&
-        $total_successes == 14}]
+        $residual_candidate_count == 2 && $residual_attempts == 2 &&
+        $residual_successes == 2 && $total_attempts == 15 &&
+        $total_successes == 15 && $swire_inventory_ok && $via_unchanged}]
     return [dict create status [expr {$pass ? {PASS} : {FAIL}}] \
         reason [expr {$pass ? {NONE} : {prune_gate_failed}}] \
         attempts $attempts successes $successes \
@@ -1119,7 +1282,7 @@ proc mptdc_pg_ro_run {{mode ""}} {
     puts $fh "ANTENNA_REPAIR_ATTEMPTED=NO"
     puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
-    puts $fh "PG_MUTATION_SCOPE=[expr {$mode eq {long_prune} ? {EXACT_13_SOURCE_SWIRE_HANDLES_PLUS_ONE_CONTRACTED_EXPOSED_MET1_COREWIRE} : {TWO_RO_BLOCK_RINGS_EXACT_SOURCE_ENDPOINTS_BOUNDED_VIAS}}]"
+    puts $fh "PG_MUTATION_SCOPE=[expr {$mode eq {long_prune} ? {EXACT_13_SOURCE_SWIRE_HANDLES_PLUS_TWO_CONTRACTED_EXPOSED_MET1_COREWIRES} : {TWO_RO_BLOCK_RINGS_EXACT_SOURCE_ENDPOINTS_BOUNDED_VIAS}}]"
 
     set preflight [mptdc_pg_ro_preflight]
     mptdc_pg_ro_write_preflight $fh $preflight

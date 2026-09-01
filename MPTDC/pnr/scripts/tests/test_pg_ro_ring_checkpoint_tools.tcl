@@ -100,12 +100,16 @@ foreach row $fixture_rows {
         dict lappend ::pg_ro_fixture_handles $net $handle
     }
 }
-set ::pg_ro_residual_marker [dict create idx 16 net VSS layer MET1 \
+set ::pg_ro_north_residual_marker [dict create idx 16 net VSS layer MET1 \
     x 124.160 y 723.520 x2 124.160 y2 723.520 \
-    line "fixture exposed MET1 marker"]
-set ::pg_ro_residual_handle vss_met1_exposed_corewire
+    line "fixture exposed north MET1 marker"]
+set ::pg_ro_south_residual_marker [dict create idx 17 net VSS layer MET1 \
+    x 204.160 y 150.080 x2 204.160 y2 150.080 \
+    line "fixture exposed south MET1 marker"]
+set ::pg_ro_north_residual_handle vss_met1_north_exposed_corewire
+set ::pg_ro_south_residual_handle vss_met1_south_exposed_corewire
 dict set ::pg_ro_fixture_records 16 [dict create \
-    handle $::pg_ro_residual_handle net VSS layer MET1 shape corewire \
+    handle $::pg_ro_north_residual_handle net VSS layer MET1 shape corewire \
     status routed width 0.8 geomType pathSeg \
     box {124.16 723.12 240.8 723.92} \
     rect {124.16 723.12 240.8 723.92} \
@@ -113,6 +117,17 @@ dict set ::pg_ro_fixture_records 16 [dict create \
     points {{124.16 723.52} {240.8 723.52}} orientation HORIZONTAL \
     point_encoding NESTED_TWO_POINT length_um 116.64 \
     distance_um 0.0 endpoint_match 1 box_match 1]
+dict set ::pg_ro_fixture_records 17 [dict create \
+    handle $::pg_ro_south_residual_handle net VSS layer MET1 shape corewire \
+    status routed width 0.8 geomType pathSeg \
+    box {204.16 149.68 240.8 150.48} \
+    rect {204.16 149.68 240.8 150.48} \
+    pts {{204.16 150.08} {240.8 150.08}} \
+    points {{204.16 150.08} {240.8 150.08}} orientation HORIZONTAL \
+    point_encoding NESTED_TWO_POINT length_um 36.64 \
+    distance_um 0.0 endpoint_match 1 box_match 1]
+dict lappend ::pg_ro_fixture_handles VSS $::pg_ro_north_residual_handle
+dict lappend ::pg_ro_fixture_handles VSS $::pg_ro_south_residual_handle
 
 rename mptdc_pg_dangling_capture_verify_special mptdc_pg_dangling_capture_verify_special_real
 proc mptdc_pg_dangling_capture_verify_special {path} {
@@ -142,6 +157,30 @@ rename mptdc_pg_ro_net_handle_set mptdc_pg_ro_net_handle_set_real
 proc mptdc_pg_ro_net_handle_set {net} {
     return [list "fixture_net_$net"]
 }
+
+set residual_contracts [mptdc_pg_ro_expected_residual_contracts]
+assert_equal residual_contract_count [llength $residual_contracts] 2
+assert_equal residual_fingerprint \
+    [mptdc_pg_ro_fingerprint_value \
+        [mptdc_pg_ro_expected_residual_fingerprint]] \
+    VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080
+assert_equal north_source_transition \
+    [dict get [mptdc_pg_ro_source_residual_contract \
+        [dict get $::pg_ro_fixture_records 13] 0.002] id] NORTH
+assert_equal south_source_transition \
+    [dict get [mptdc_pg_ro_source_residual_contract \
+        [dict get $::pg_ro_fixture_records 14] 0.002] id] SOUTH
+set north_candidates [mptdc_pg_ro_residual_contract_candidates \
+    $::pg_ro_north_residual_marker [lindex $residual_contracts 0] 0.002 6.0]
+assert_equal north_residual_exact_candidate \
+    [llength [dict get $north_candidates candidates]] 1
+set saved_south_residual [dict get $::pg_ro_fixture_records 17]
+dict set ::pg_ro_fixture_records 17 rect {204.15 149.68 240.8 150.48}
+set wrong_south_candidates [mptdc_pg_ro_residual_contract_candidates \
+    $::pg_ro_south_residual_marker [lindex $residual_contracts 1] 0.002 6.0]
+assert_equal south_residual_rejects_wrong_box \
+    [llength [dict get $wrong_south_candidates candidates]] 0
+dict set ::pg_ro_fixture_records 17 $saved_south_residual
 
 set preflight [mptdc_pg_ro_preflight]
 assert_equal preflight_status [dict get $preflight status] PASS
@@ -199,8 +238,9 @@ proc dbDeleteObj {handle} {
     }
     set ::pg_ro_fixture_markers $kept_markers
     if {$handle eq "vss_mettp_125_top"} {
-        lappend ::pg_ro_fixture_markers $::pg_ro_residual_marker
-        dict lappend ::pg_ro_fixture_handles VSS $::pg_ro_residual_handle
+        lappend ::pg_ro_fixture_markers $::pg_ro_north_residual_marker
+    } elseif {$handle eq "vss_mettp_205_bottom"} {
+        lappend ::pg_ro_fixture_markers $::pg_ro_south_residual_marker
     }
 }
 rename mptdc_pg_ro_snapshot mptdc_pg_ro_snapshot_real
@@ -219,7 +259,7 @@ assert_equal prune_requires_authorization [dict get $missing_auth status] FAIL
 assert_equal prune_missing_auth_attempts [dict get $missing_auth attempts] 0
 
 set ::env(MPTDC_PG_LONG_PRUNE_AUTHORIZATION) \
-    EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
+    EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3
 set prune_report [file join $fixture_dir reports authorized.rpt]
 set prune_fh [open $prune_report w]
 set prune [mptdc_pg_ro_long_prune $prune_fh $preflight \
@@ -228,11 +268,23 @@ close $prune_fh
 assert_equal prune_status [dict get $prune status] PASS
 assert_equal prune_attempts [dict get $prune attempts] 13
 assert_equal prune_successes [dict get $prune successes] 13
-assert_equal residual_prune_attempts [dict get $prune residual_attempts] 1
-assert_equal residual_prune_successes [dict get $prune residual_successes] 1
-assert_equal total_prune_attempts [dict get $prune total_attempts] 14
-assert_equal total_prune_successes [dict get $prune total_successes] 14
+assert_equal residual_prune_attempts [dict get $prune residual_attempts] 2
+assert_equal residual_prune_successes [dict get $prune residual_successes] 2
+assert_equal total_prune_attempts [dict get $prune total_attempts] 15
+assert_equal total_prune_successes [dict get $prune total_successes] 15
 assert_equal prune_final_marker_count [llength $::pg_ro_fixture_markers] 0
+
+set authorized_text [read [set report_fh [open $prune_report r]]]
+close $report_fh
+assert_true source_transition_reports_both_residuals \
+    [expr {[string first "SOURCE_PRUNE_EXPOSED_RESIDUAL_SET=NORTH SOUTH" \
+        $authorized_text] >= 0}]
+assert_true residual_prune_reports_15_of_15 \
+    [expr {[string first "TOTAL_PRUNE_SUCCESSES=15" $authorized_text] >= 0}]
+assert_true swire_inventory_gate_passes \
+    [expr {[string first "SWIRE_INVENTORY_STATUS=PASS" $authorized_text] >= 0}]
+assert_true via_inventory_gate_passes \
+    [expr {[string first "PG_VIA_HANDLE_STATUS=UNCHANGED" $authorized_text] >= 0}]
 
 file delete -force $fixture_dir
 puts "MPTDC_PG_RO_RING_CHECKPOINT_TOOLS_TEST=PASS"

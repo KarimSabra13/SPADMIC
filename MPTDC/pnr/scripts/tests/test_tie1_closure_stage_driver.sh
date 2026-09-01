@@ -165,16 +165,34 @@ elif grep -q 'pg_ro_ring_checkpoint_tools' "$commands"; then
   prune_attempts=0
   prune_successes=0
   source_prune_transition=MISSING
+  source_exposed_count=MISSING
+  source_exposed_set=MISSING
   residual_policy=MISSING
+  residual_count=MISSING
   residual_fingerprint=MISSING
-  residual_points=MISSING
-  residual_box=MISSING
-  residual_length=MISSING
+  residual_1_id=MISSING
+  residual_1_fingerprint=MISSING
+  residual_1_source_points=MISSING
+  residual_1_points=MISSING
+  residual_1_box=MISSING
+  residual_1_length=MISSING
+  residual_2_id=MISSING
+  residual_2_fingerprint=MISSING
+  residual_2_source_points=MISSING
+  residual_2_points=MISSING
+  residual_2_box=MISSING
+  residual_2_length=MISSING
   residual_candidates=0
   residual_attempts=0
   residual_successes=0
   total_prune_attempts=0
   total_prune_successes=0
+  final_vdd_swire_count=MISSING
+  final_vss_swire_count=MISSING
+  final_vdd_swire_delta=MISSING
+  final_vss_swire_delta=MISSING
+  swire_inventory_status=MISSING
+  via_handle_status=MISSING
   long_prune_auth=MISSING
   if [[ "$mode" == ring_probe ]]; then
     rings=2
@@ -212,17 +230,35 @@ elif grep -q 'pg_ro_ring_checkpoint_tools' "$commands"; then
     prune_attempts=13
     prune_successes=13
     source_prune_transition=PASS
-    residual_policy=EXACT_EXPOSED_VSS_MET1_COREWIRE_V2
-    residual_fingerprint='VSS|MET1|124.160|723.520'
-    residual_points='{124.16 723.52} {240.8 723.52}'
-    residual_box='124.16 723.12 240.8 723.92'
-    residual_length=116.64
-    residual_candidates=1
-    residual_attempts=1
-    residual_successes=1
-    total_prune_attempts=14
-    total_prune_successes=14
-    long_prune_auth=EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
+    source_exposed_count=2
+    source_exposed_set='NORTH SOUTH'
+    residual_policy=EXACT_TWO_EXPOSED_VSS_MET1_COREWIRES_V3
+    residual_count=2
+    residual_fingerprint='VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080'
+    residual_1_id=NORTH
+    residual_1_fingerprint='VSS|MET1|124.160|723.520'
+    residual_1_source_points='{125.16 721.75} {125.16 869.4}'
+    residual_1_points='{124.16 723.52} {240.8 723.52}'
+    residual_1_box='124.16 723.12 240.8 723.92'
+    residual_1_length=116.64
+    residual_2_id=SOUTH
+    residual_2_fingerprint='VSS|MET1|204.160|150.080'
+    residual_2_source_points='{205.16 13.16} {205.16 158.32}'
+    residual_2_points='{204.16 150.08} {240.8 150.08}'
+    residual_2_box='204.16 149.68 240.8 150.48'
+    residual_2_length=36.64
+    residual_candidates=2
+    residual_attempts=2
+    residual_successes=2
+    total_prune_attempts=15
+    total_prune_successes=15
+    final_vdd_swire_count=445
+    final_vss_swire_count=409
+    final_vdd_swire_delta=-5
+    final_vss_swire_delta=-10
+    swire_inventory_status=PASS
+    via_handle_status=UNCHANGED
+    long_prune_auth=EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3
     dangling=0
     final_special=0
     final_special_raw=0
@@ -260,16 +296,34 @@ VIA_SUCCESSES=$via_successes
 PRUNE_ATTEMPTS=$prune_attempts
 PRUNE_SUCCESSES=$prune_successes
 SOURCE_PRUNE_TRANSITION_STATUS=$source_prune_transition
+SOURCE_PRUNE_EXPOSED_RESIDUAL_COUNT=$source_exposed_count
+SOURCE_PRUNE_EXPOSED_RESIDUAL_SET=$source_exposed_set
 RESIDUAL_PRUNE_POLICY=$residual_policy
+RESIDUAL_EXPECTED_COUNT=$residual_count
 RESIDUAL_EXPECTED_MARKER_FINGERPRINT=$residual_fingerprint
-RESIDUAL_EXPECTED_POINTS=$residual_points
-RESIDUAL_EXPECTED_BOX=$residual_box
-RESIDUAL_EXPECTED_LENGTH_UM=$residual_length
+RESIDUAL_1_ID=$residual_1_id
+RESIDUAL_1_EXPECTED_MARKER_FINGERPRINT=$residual_1_fingerprint
+RESIDUAL_1_EXPECTED_SOURCE_POINTS=$residual_1_source_points
+RESIDUAL_1_EXPECTED_POINTS=$residual_1_points
+RESIDUAL_1_EXPECTED_BOX=$residual_1_box
+RESIDUAL_1_EXPECTED_LENGTH_UM=$residual_1_length
+RESIDUAL_2_ID=$residual_2_id
+RESIDUAL_2_EXPECTED_MARKER_FINGERPRINT=$residual_2_fingerprint
+RESIDUAL_2_EXPECTED_SOURCE_POINTS=$residual_2_source_points
+RESIDUAL_2_EXPECTED_POINTS=$residual_2_points
+RESIDUAL_2_EXPECTED_BOX=$residual_2_box
+RESIDUAL_2_EXPECTED_LENGTH_UM=$residual_2_length
 RESIDUAL_PRUNE_CANDIDATE_COUNT=$residual_candidates
 RESIDUAL_PRUNE_ATTEMPTS=$residual_attempts
 RESIDUAL_PRUNE_SUCCESSES=$residual_successes
 TOTAL_PRUNE_ATTEMPTS=$total_prune_attempts
 TOTAL_PRUNE_SUCCESSES=$total_prune_successes
+FINAL_VDD_SWIRE_INVENTORY_COUNT=$final_vdd_swire_count
+FINAL_VSS_SWIRE_INVENTORY_COUNT=$final_vss_swire_count
+FINAL_VDD_SWIRE_INVENTORY_DELTA=$final_vdd_swire_delta
+FINAL_VSS_SWIRE_INVENTORY_DELTA=$final_vss_swire_delta
+SWIRE_INVENTORY_STATUS=$swire_inventory_status
+PG_VIA_HANDLE_STATUS=$via_handle_status
 LONG_PRUNE_AUTHORIZATION=$long_prune_auth
 FINAL_DANGLING_MARKER_COUNT=$dangling
 RPT
@@ -633,6 +687,82 @@ EOF
 git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$PRIOR_PRUNE_RUN"
 git -C "$REPO" commit -q -m failed-long-prune-evidence
 
+PRIOR_PRUNE_V2_RUN=pg_long_prune_v2_failed
+PRIOR_PRUNE_V2_CHECKPOINT="$WORK/$PRIOR_PRUNE_V2_RUN/checkpoints/repaired_route.enc.dat"
+PRIOR_PRUNE_V2_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$PRIOR_PRUNE_V2_RUN/reports"
+mkdir -p "$PRIOR_PRUNE_V2_CHECKPOINT" "$PRIOR_PRUNE_V2_REPORTS"
+printf 'failed prune v2 diagnostic\n' > "$PRIOR_PRUNE_V2_CHECKPOINT/design.bin"
+PRIOR_PRUNE_V2_SHA="$(tree_hash "$PRIOR_PRUNE_V2_CHECKPOINT")"
+cat > "$PRIOR_PRUNE_V2_REPORTS/operator_gate_tie1_pg_long_prune_trial.rpt" <<EOF
+STEP=TIE1_PG_LONG_PRUNE_TRIAL
+SOURCE_TIE1_RUN_ID=$TIE1_RUN
+SOURCE_MINAREA_REPLAY_RUN_ID=$REPLAY_RUN
+SOURCE_PG_PROBE_RUN_ID=$RING_REJECTED_RUN
+SOURCE_PG_PRIOR_TRIAL_RUN_ID=$PRIOR_PRUNE_RUN
+SOURCE_PG_TRIAL_RUN_ID=NONE
+SOURCE_CHECKPOINT=$WORK/$REPLAY_RUN/checkpoints/repaired_route.enc.dat
+SOURCE_CHECKPOINT_SHA256=$REPLAY_SHA
+TOOL_RC=0
+COMMAND_1_STATUS=PASS
+PG_RO_REPAIR_MODE=long_prune
+PG_RO_REPAIR_STATUS=FAIL_LONG_PRUNE_GATE
+SOURCE_TOPOLOGY_STATUS=PASS
+INITIAL_DANGLING_MARKER_COUNT=15
+SOURCE_UNIQUE_HANDLE_COUNT=13
+SOURCE_SHARED_HANDLE_COUNT=2
+RO_RING_CREATED_COUNT=0
+RING_GEOMETRY_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+MARKER_RING_MAPPING_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+REPLACEMENT_ATTEMPTS=0
+VIA_ATTEMPTS=0
+PRUNE_ATTEMPTS=13
+PRUNE_SUCCESSES=12
+SOURCE_PRUNE_TRANSITION_STATUS=FAIL
+RESIDUAL_PRUNE_POLICY=EXACT_EXPOSED_VSS_MET1_COREWIRE_V2
+RESIDUAL_EXPECTED_MARKER_FINGERPRINT=VSS|MET1|124.160|723.520
+RESIDUAL_PRUNE_CANDIDATE_COUNT=0
+RESIDUAL_PRUNE_ATTEMPTS=0
+RESIDUAL_PRUNE_SUCCESSES=0
+TOTAL_PRUNE_ATTEMPTS=13
+TOTAL_PRUNE_SUCCESSES=12
+LONG_PRUNE_AUTHORIZATION=EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_DANGLING_COUNT=2
+FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
+FINAL_ROUTE_GATE_PASS=0
+PG_REPAIR_TRIAL_OUTCOME=FAIL
+CANDIDATE_CHECKPOINT=$PRIOR_PRUNE_V2_CHECKPOINT
+CANDIDATE_CHECKPOINT_SHA256=$PRIOR_PRUNE_V2_SHA
+CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED
+SIGNOFF_ELIGIBLE=NO
+DECISION=FAIL_STOP
+NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE
+EOF
+cat > "$PRIOR_PRUNE_V2_REPORTS/pg_ro_ring_repair_status.rpt" <<'EOF'
+PRUNE_12_STATUS=PASS
+PRUNE_12_RESIDUAL_TRANSITION=EXPECTED_EXPOSED_MET1_TAIL
+PRUNE_13_NET=VSS
+PRUNE_13_LAYER=METTP
+PRUNE_13_POINTS={205.16 13.16} {205.16 158.32}
+PRUNE_13_EXPECTED_DANGLING_COUNT=1
+PRUNE_13_OBSERVED_DANGLING_COUNT=2
+PRUNE_13_EXPECTED_MARKER_FINGERPRINT=VSS|MET1|124.160|723.520
+PRUNE_13_OBSERVED_MARKER_FINGERPRINT=VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080
+PRUNE_13_STATUS=FAIL_INCREMENTAL_GATE
+FINAL_DANGLING_MARKER_COUNT=2
+EOF
+cat > "$PRIOR_PRUNE_V2_REPORTS/pg_ro_final_verify_special_detailed.rpt" <<'EOF'
+Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1
+Net VSS: dangling Wire at (204.160, 150.080) (204.160, 150.080) on layer: MET1
+EOF
+git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$PRIOR_PRUNE_V2_RUN"
+git -C "$REPO" commit -q -m failed-long-prune-v2-evidence
+
 MISSING_PRIOR_CALLS_BEFORE="$(wc -l < "$TMP_ROOT/publish.calls")"
 set +e
 run_stage tie1-pg-long-prune-trial pg_long_prune_missing_prior \
@@ -644,20 +774,37 @@ set -e
 test "$MISSING_PRIOR_RC" -eq 2
 test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq "$MISSING_PRIOR_CALLS_BEFORE"
 
+WRONG_GENERATION_CALLS_BEFORE="$(wc -l < "$TMP_ROOT/publish.calls")"
+set +e
+run_stage tie1-pg-long-prune-trial pg_long_prune_wrong_prior_generation \
+  --source-minarea-replay-run-id "$REPLAY_RUN" \
+  --source-pg-probe-run-id "$RING_REJECTED_RUN" \
+  --source-pg-prior-trial-run-id "$PRIOR_PRUNE_RUN" \
+  > "$TMP_ROOT/pg_long_prune_wrong_prior_generation.stdout" 2>&1
+WRONG_GENERATION_RC=$?
+set -e
+test "$WRONG_GENERATION_RC" -eq 4
+grep -qx 'TIE1_CLOSURE_PREFLIGHT=FAIL' \
+  "$TMP_ROOT/pg_long_prune_wrong_prior_generation.stdout"
+test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq \
+  "$WRONG_GENERATION_CALLS_BEFORE"
+
 PRUNE_TRIAL_RUN=pg_long_prune_trial
 run_stage tie1-pg-long-prune-trial "$PRUNE_TRIAL_RUN" \
   --source-minarea-replay-run-id "$REPLAY_RUN" \
   --source-pg-probe-run-id "$RING_REJECTED_RUN" \
-  --source-pg-prior-trial-run-id "$PRIOR_PRUNE_RUN" \
+  --source-pg-prior-trial-run-id "$PRIOR_PRUNE_V2_RUN" \
   > "$TMP_ROOT/pg_long_prune_trial.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_long_prune_trial.stdout"
 grep -qx 'NEXT_STAGE=TIE1_PG_LONG_PRUNE_REPLAY' \
   "$TMP_ROOT/pg_long_prune_trial.stdout"
 grep -qx 'PRUNE_SUCCESSES=13' \
   "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-grep -qx 'RESIDUAL_PRUNE_SUCCESSES=1' \
+grep -qx 'RESIDUAL_PRUNE_SUCCESSES=2' \
   "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-grep -qx 'TOTAL_PRUNE_SUCCESSES=14' \
+grep -qx 'TOTAL_PRUNE_SUCCESSES=15' \
+  "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
+grep -qx 'PG_VIA_HANDLE_STATUS=UNCHANGED' \
   "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
 
 PRUNE_REPLAY_RUN=pg_long_prune_replay
