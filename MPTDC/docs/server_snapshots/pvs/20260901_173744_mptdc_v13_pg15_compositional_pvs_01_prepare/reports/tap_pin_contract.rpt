@@ -1,0 +1,12 @@
+# MPTDC final DEF tap-pin contract
+DEF=/sim/ksabra/SPADMIC_work/innovus/20260901_173744_mptdc_v13_pg15_compositional_pvs/outputs/mptdc_axis_core.def
+RO_TAP_OBSERVABILITY_PIN_COUNT=2
+ro_slow_tap0_o_COUNT=1
+ro_slow_tap0_o_DIRECTION_STATUS=PASS
+ro_slow_tap0_o_LAYER_STATUS=PASS
+ro_slow_tap0_o_DEF_RECORD=- ro_slow_tap0_o + NET ro_slow_tap0_o + DIRECTION OUTPUT + USE SIGNAL   + LAYER MET3 ( -200 0 ) ( 200 800 )   + FIXED ( 1400 0 ) N ;
+ro_fast_tap0_o_COUNT=1
+ro_fast_tap0_o_DIRECTION_STATUS=PASS
+ro_fast_tap0_o_LAYER_STATUS=PASS
+ro_fast_tap0_o_DEF_RECORD=- ro_fast_tap0_o + NET ro_fast_tap0_o + DIRECTION OUTPUT + USE SIGNAL   + LAYER MET3 ( -200 0 ) ( 200 800 )   + FIXED ( 584360 0 ) N ;
+TAP_PIN_CONTRACT_STATUS=PASS
