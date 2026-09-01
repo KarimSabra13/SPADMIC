@@ -1,0 +1,17 @@
+# MPTDC PVS LVS Replay Manifest
+date: 2026-09-01T16:13:04+02:00
+old_lvs_run: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_findshorts
+new_lvs_run: /sim/ksabra/SPADMIC_work/innovus/20260901_160902_mptdc_v13_pg15_compositional_pvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script
+old_base: /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/drygds_oa_20260702_001608
+new_base: /sim/ksabra/SPADMIC_work/innovus/20260901_160902_mptdc_v13_pg15_compositional_pvs
+new_gds: /sim/ksabra/SPADMIC_work/innovus/20260901_160902_mptdc_v13_pg15_compositional_pvs/outputs/mptdc_axis_core_merged_stdcell_ro6.gds
+new_source: /sim/ksabra/SPADMIC_work/innovus/20260901_160902_mptdc_v13_pg15_compositional_pvs/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v
+new_hcell: /sim/ksabra/SPADMIC_work/innovus/20260901_160902_mptdc_v13_pg15_compositional_pvs/outputs/pvs_hcell_ro6.txt
+dcell_cdl: /data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/cdl/xh018_D_CELLS_JIHD.cdl
+diagnostic_allow_base_drc_debt: 1
+diagnostic_ro6_boundary_blackbox: 0
+diagnostic_free_manager_scope: 0
+blackbox_cell: NONE
+ro6_bus_pin_normalization: NONE
+verilog_global_signal_port_policy: DEFAULT
+dry_run: 0
