@@ -1,0 +1,8 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7fa90ae15550	{364.47 358.235 364.67 358.275}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_69629 & Regular Wire of Net u_core_n_57960 Actual: 0.200000 Required: 0.230000 Type: ParallelRunLength Spacing # 200 230 3 2 : 364.6700 358.2750 365.0100 358.6150 1: 364.1850 357.9500 364.4700 358.2350 1
+2	0x7fa8f9710e90	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+3	0x7fa8f9710ef0	{125.16 233.62 125.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+4	0x7fa8f9710f20	{125.16 648.32 125.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+5	0x7fa8f9710f50	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+6	0x7fa8f9710f80	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+7	0x7fa8f9710fb0	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS

@@ -1,0 +1,205 @@
+# MPTDC Server Snapshot
+
+- Kind: `innovus`
+- Run ID: `20260901_141910_mptdc_tie1_pg_long_prune_v3_trial`
+- Source directory: `/sim/ksabra/SPADMIC_work/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/docs/server_snapshots/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial`
+- Collection branch: `SPADMIC_test`
+- Collection commit: `978abc91484148c276ee04bc470a386cc0ebf223`
+- Created UTC: `2026-09-01T12:22:30Z`
+
+## Included Files
+- `README.md`
+- `logs/checkpoint_repair_wrapper.log.messages.tail`
+- `logs/innovus_route_checkpoint_repair.log.messages.tail`
+- `logs/tie1_closure_driver.log.messages.tail`
+- `manifests/run_manifest.txt`
+- `reports/00_initial_report_route.rpt`
+- `reports/00_initial_verify_connectivity_regular.rpt`
+- `reports/00_initial_verify_connectivity_special.rpt`
+- `reports/00_initial_verify_connectivity_special_command.rpt`
+- `reports/00_initial_verify_connectivity_special_detailed.console.rpt`
+- `reports/00_initial_verify_connectivity_special_detailed.rpt`
+- `reports/00_initial_verify_drc.rpt`
+- `reports/00_initial_verify_drc_markers.tsv`
+- `reports/00_initial_verify_drc_markers_schema.rpt`
+- `reports/01_after_command_report_route.rpt`
+- `reports/01_after_command_verify_connectivity_regular.rpt`
+- `reports/01_after_command_verify_connectivity_special.rpt`
+- `reports/01_after_command_verify_connectivity_special_command.rpt`
+- `reports/01_after_command_verify_connectivity_special_detailed.console.rpt`
+- `reports/01_after_command_verify_connectivity_special_detailed.rpt`
+- `reports/01_after_command_verify_drc.rpt`
+- `reports/01_after_command_verify_drc_markers.tsv`
+- `reports/01_after_command_verify_drc_markers_schema.rpt`
+- `reports/01_command_mptdc_ckpt_source_tcl_/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/scripts/innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl.rpt`
+- `reports/checkpoint_repair_status.rpt`
+- `reports/operator_gate_tie1_pg_long_prune_trial.rpt`
+- `reports/pg_ro_after_long_prune_report_route.rpt`
+- `reports/pg_ro_after_long_prune_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_long_prune_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_long_prune_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_long_prune_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_long_prune_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_long_prune_verify_drc.rpt`
+- `reports/pg_ro_after_long_prune_verify_drc_markers.tsv`
+- `reports/pg_ro_after_long_prune_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_01_report_route.rpt`
+- `reports/pg_ro_after_prune_01_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_01_special_detailed.rpt`
+- `reports/pg_ro_after_prune_01_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_01_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_01_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_01_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_01_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_01_verify_drc.rpt`
+- `reports/pg_ro_after_prune_01_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_01_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_02_report_route.rpt`
+- `reports/pg_ro_after_prune_02_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_02_special_detailed.rpt`
+- `reports/pg_ro_after_prune_02_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_02_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_02_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_02_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_02_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_02_verify_drc.rpt`
+- `reports/pg_ro_after_prune_02_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_02_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_03_report_route.rpt`
+- `reports/pg_ro_after_prune_03_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_03_special_detailed.rpt`
+- `reports/pg_ro_after_prune_03_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_03_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_03_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_03_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_03_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_03_verify_drc.rpt`
+- `reports/pg_ro_after_prune_03_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_03_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_04_report_route.rpt`
+- `reports/pg_ro_after_prune_04_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_04_special_detailed.rpt`
+- `reports/pg_ro_after_prune_04_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_04_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_04_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_04_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_04_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_04_verify_drc.rpt`
+- `reports/pg_ro_after_prune_04_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_04_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_05_report_route.rpt`
+- `reports/pg_ro_after_prune_05_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_05_special_detailed.rpt`
+- `reports/pg_ro_after_prune_05_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_05_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_05_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_05_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_05_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_05_verify_drc.rpt`
+- `reports/pg_ro_after_prune_05_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_05_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_06_report_route.rpt`
+- `reports/pg_ro_after_prune_06_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_06_special_detailed.rpt`
+- `reports/pg_ro_after_prune_06_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_06_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_06_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_06_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_06_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_06_verify_drc.rpt`
+- `reports/pg_ro_after_prune_06_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_06_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_07_report_route.rpt`
+- `reports/pg_ro_after_prune_07_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_07_special_detailed.rpt`
+- `reports/pg_ro_after_prune_07_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_07_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_07_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_07_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_07_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_07_verify_drc.rpt`
+- `reports/pg_ro_after_prune_07_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_07_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_08_report_route.rpt`
+- `reports/pg_ro_after_prune_08_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_08_special_detailed.rpt`
+- `reports/pg_ro_after_prune_08_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_08_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_08_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_08_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_08_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_08_verify_drc.rpt`
+- `reports/pg_ro_after_prune_08_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_08_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_09_report_route.rpt`
+- `reports/pg_ro_after_prune_09_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_09_special_detailed.rpt`
+- `reports/pg_ro_after_prune_09_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_09_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_09_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_09_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_09_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_09_verify_drc.rpt`
+- `reports/pg_ro_after_prune_09_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_09_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_10_report_route.rpt`
+- `reports/pg_ro_after_prune_10_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_10_special_detailed.rpt`
+- `reports/pg_ro_after_prune_10_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_10_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_10_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_10_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_10_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_10_verify_drc.rpt`
+- `reports/pg_ro_after_prune_10_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_10_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_11_report_route.rpt`
+- `reports/pg_ro_after_prune_11_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_11_special_detailed.rpt`
+- `reports/pg_ro_after_prune_11_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_11_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_11_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_11_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_11_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_11_verify_drc.rpt`
+- `reports/pg_ro_after_prune_11_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_11_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_12_report_route.rpt`
+- `reports/pg_ro_after_prune_12_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_12_special_detailed.rpt`
+- `reports/pg_ro_after_prune_12_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_12_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_12_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_12_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_12_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_12_verify_drc.rpt`
+- `reports/pg_ro_after_prune_12_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_12_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_prune_13_report_route.rpt`
+- `reports/pg_ro_after_prune_13_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_13_special_detailed.rpt`
+- `reports/pg_ro_after_prune_13_verify_connectivity_regular.rpt`
+- `reports/pg_ro_after_prune_13_verify_connectivity_special.rpt`
+- `reports/pg_ro_after_prune_13_verify_connectivity_special_command.rpt`
+- `reports/pg_ro_after_prune_13_verify_connectivity_special_detailed.console.rpt`
+- `reports/pg_ro_after_prune_13_verify_connectivity_special_detailed.rpt`
+- `reports/pg_ro_after_prune_13_verify_drc.rpt`
+- `reports/pg_ro_after_prune_13_verify_drc_markers.tsv`
+- `reports/pg_ro_after_prune_13_verify_drc_markers_schema.rpt`
+- `reports/pg_ro_after_source_prune_special_detailed.console.rpt`
+- `reports/pg_ro_after_source_prune_special_detailed.rpt`
+- `reports/pg_ro_final_verify_special_detailed.console.rpt`
+- `reports/pg_ro_final_verify_special_detailed.rpt`
+- `reports/pg_ro_initial_verify_special_detailed.console.rpt`
+- `reports/pg_ro_initial_verify_special_detailed.rpt`
+- `reports/pg_ro_ring_repair_status.rpt`
+
+## Excluded By Policy
+
+- Innovus checkpoints and databases;
+- raw GDS/OAS files;
+- full raw logs unless converted to message tails;
+- text files larger than 4194304 bytes;
+- large binary artifacts, except bounded manager images when explicitly requested;
+- server work directories outside this snapshot.

@@ -1,0 +1,14 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7fa90ae15550	{364.47 358.235 364.67 358.275}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_n_69629 & Regular Wire of Net u_core_n_57960 Actual: 0.200000 Required: 0.230000 Type: ParallelRunLength Spacing # 200 230 3 2 : 364.6700 358.2750 365.0100 358.6150 1: 364.1850 357.9500 364.4700 358.2350 1
+2	0x7fa92b341520	{221.75 681.16 221.75 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7fa92b341580	{121.16 233.62 121.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7fa92b3415b0	{121.16 648.32 121.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+5	0x7fa92b3415e0	{221.75 685.16 221.75 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+6	0x7fa92b341610	{221.75 205.16 221.75 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+7	0x7fa92b341640	{48.0 685.16 48.0 685.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+8	0x7fa92b341670	{48.0 205.16 48.0 205.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+9	0x7fa92b3416a0	{125.16 233.62 125.16 233.62}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7fa92b3416d0	{125.16 648.32 125.16 648.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+11	0x7fa92b341700	{125.16 721.75 125.16 721.75}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7fa92b341730	{205.16 158.32 205.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
+13	0x7fa92b341760	{125.16 158.32 125.16 158.32}	METTP	Connectivity	ConnectivityAntenna	Net VSS
