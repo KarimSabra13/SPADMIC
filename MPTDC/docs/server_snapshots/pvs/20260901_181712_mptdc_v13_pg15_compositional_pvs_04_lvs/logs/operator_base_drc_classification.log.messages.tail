@@ -1,0 +1,4 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260901_181712_mptdc_v13_pg15_compositional_pvs/logs/operator_base_drc_classification.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+CLASSIFICATION_STATUS=PASS
