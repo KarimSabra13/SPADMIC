@@ -249,6 +249,27 @@ a.out.write_text(
 )
 PY
 
+RAW_CLASSIFIER="$TMP_ROOT/raw_classifier.py"
+cat > "$RAW_CLASSIFIER" <<'PY'
+#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+
+p = argparse.ArgumentParser()
+p.add_argument("--cls")
+p.add_argument("--out", type=Path, required=True)
+p.add_argument("--expected-ro-instance", action="append")
+a = p.parse_args()
+a.out.write_text(
+    "STATUS=PASS\n"
+    "MISMATCH_ATTRIBUTION=EXACT_TWO_RO6_INTERNALS_ONLY\n"
+    "DIRECT_MONOLITHIC_ELIGIBLE=YES\n"
+    "LAYOUT_ONLY_INSTANCE_COUNT=380\n"
+    "SOURCE_ONLY_INSTANCE_COUNT=2\n"
+)
+print("RAW_LVS_MISMATCH_CLASSIFICATION_STATUS=PASS")
+PY
+
 PUBLISHER="$TMP_ROOT/publisher.sh"
 cat > "$PUBLISHER" <<'EOF'
 #!/usr/bin/env bash
@@ -257,7 +278,7 @@ exit 0
 EOF
 CADENCE_ENV="$TMP_ROOT/cadence.env"
 printf ':\n' > "$CADENCE_ENV"
-chmod +x "$DRIVER" "$GENERATOR" "$PREP" "$GATE" "$PUBLISHER"
+chmod +x "$DRIVER" "$GENERATOR" "$PREP" "$GATE" "$RAW_CLASSIFIER" "$PUBLISHER"
 
 git init -q -b SPADMIC_test "$REPO"
 git -C "$REPO" config user.name 'MPTDC monolithic LVS test'
@@ -270,6 +291,7 @@ MPTDC_MONOLITHIC_LVS_REPO_ROOT="$REPO" \
 MPTDC_MONOLITHIC_LVS_SOURCE_GENERATOR="$GENERATOR" \
 MPTDC_MONOLITHIC_LVS_PREP="$PREP" \
 MPTDC_MONOLITHIC_LVS_GATE="$GATE" \
+MPTDC_MONOLITHIC_LVS_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
 MPTDC_MONOLITHIC_LVS_PUBLISHER="$PUBLISHER" \
 MPTDC_CADENCE_ENV="$CADENCE_ENV" \
 MPTDC_INNOVUS_WORK="$WORK" PUBLISH_ARGS="$TMP_ROOT/publish.args" \
@@ -305,12 +327,42 @@ grep -qx 'ANTENNA_EXCEPTION_EVIDENCE_KIND=AUTO_CLASSIFIED_NOT_INDEPENDENTLY_SIGN
 grep -qx 'INNOVUS_SPECIAL_CONNECTIVITY_STATUS=FAIL_15_DANGLING' \
   "$WORK/$RUN_ID/reports/mptdc_lvs_drc_handoff_status.rpt"
 
+DIRECT_RUN_ID=monolithic_direct_full_top_match
+MPTDC_MONOLITHIC_LVS_REPO_ROOT="$REPO" \
+MPTDC_MONOLITHIC_LVS_SOURCE_GENERATOR="$GENERATOR" \
+MPTDC_MONOLITHIC_LVS_PREP="$PREP" \
+MPTDC_MONOLITHIC_LVS_GATE="$GATE" \
+MPTDC_MONOLITHIC_LVS_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
+MPTDC_MONOLITHIC_LVS_PUBLISHER="$PUBLISHER" \
+MPTDC_CADENCE_ENV="$CADENCE_ENV" \
+MPTDC_INNOVUS_WORK="$WORK" PUBLISH_ARGS="$TMP_ROOT/publish_direct.args" \
+bash "$DRIVER" --source-pvs-run-id "$SOURCE_ID" \
+  --source-pvs-evidence-id "$SOURCE_EVIDENCE_ID" \
+  --direct-full-top \
+  --standalone-pvs-run-id "$STANDALONE_ID" \
+  --run-id "$DIRECT_RUN_ID" --expected-head "$HEAD_SHA" > "$TMP_ROOT/direct.stdout"
+
+grep -qx 'PVS_RO6_MONOLITHIC_PREFLIGHT=PASS' "$TMP_ROOT/direct.stdout"
+grep -qx 'LVS_PREREQUISITE_MODE=DIRECT_FULL_TOP_WITH_STANDALONE_RO_PROOF' \
+  "$TMP_ROOT/direct.stdout"
+grep -qx 'BOUNDARY_PVS_RUN_ID=NOT_USED_DIRECT_FULL_TOP' "$TMP_ROOT/direct.stdout"
+grep -qx 'BOUNDARY_PROOF_STATUS=NOT_REQUIRED_BY_DIRECT_MONOLITHIC_PROOF' \
+  "$TMP_ROOT/direct.stdout"
+grep -qx 'DECISION=PASS_MONOLITHIC_LVS' "$TMP_ROOT/direct.stdout"
+grep -qx 'RAW_MISMATCH_ATTRIBUTION=EXACT_TWO_RO6_INTERNALS_ONLY' \
+  "$WORK/$DIRECT_RUN_ID/reports/operator_gate_pvs_monolithic_lvs.rpt"
+grep -qx 'STATUS=PASS' \
+  "$WORK/$DIRECT_RUN_ID/reports/pvs_ro6_raw_mismatch_attribution.rpt"
+grep -q "pvs $DIRECT_RUN_ID $WORK/$DIRECT_RUN_ID PVS_RO6_MONOLITHIC_LVS" \
+  "$TMP_ROOT/publish_direct.args"
+
 printf '# deliberate live CLS drift\n' >> "$SOURCE_LIVE/pvs_lvs/raw_script/raw.cls"
 set +e
 MPTDC_MONOLITHIC_LVS_REPO_ROOT="$REPO" \
 MPTDC_MONOLITHIC_LVS_SOURCE_GENERATOR="$GENERATOR" \
 MPTDC_MONOLITHIC_LVS_PREP="$PREP" \
 MPTDC_MONOLITHIC_LVS_GATE="$GATE" \
+MPTDC_MONOLITHIC_LVS_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
 MPTDC_MONOLITHIC_LVS_PUBLISHER="$PUBLISHER" \
 MPTDC_CADENCE_ENV="$CADENCE_ENV" \
 MPTDC_INNOVUS_WORK="$WORK" PUBLISH_ARGS="$TMP_ROOT/publish_cls_drift.args" \
@@ -337,6 +389,7 @@ MPTDC_MONOLITHIC_LVS_REPO_ROOT="$REPO" \
 MPTDC_MONOLITHIC_LVS_SOURCE_GENERATOR="$GENERATOR" \
 MPTDC_MONOLITHIC_LVS_PREP="$PREP" \
 MPTDC_MONOLITHIC_LVS_GATE="$GATE" \
+MPTDC_MONOLITHIC_LVS_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
 MPTDC_MONOLITHIC_LVS_PUBLISHER="$PUBLISHER" \
 MPTDC_CADENCE_ENV="$CADENCE_ENV" \
 MPTDC_INNOVUS_WORK="$WORK" PUBLISH_ARGS="$TMP_ROOT/publish_live_drift.args" \
@@ -366,6 +419,7 @@ MPTDC_MONOLITHIC_LVS_REPO_ROOT="$REPO" \
 MPTDC_MONOLITHIC_LVS_SOURCE_GENERATOR="$GENERATOR" \
 MPTDC_MONOLITHIC_LVS_PREP="$PREP" \
 MPTDC_MONOLITHIC_LVS_GATE="$GATE" \
+MPTDC_MONOLITHIC_LVS_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
 MPTDC_MONOLITHIC_LVS_PUBLISHER="$PUBLISHER" \
 MPTDC_CADENCE_ENV="$CADENCE_ENV" \
 MPTDC_INNOVUS_WORK="$WORK" PUBLISH_ARGS="$TMP_ROOT/publish_drift.args" \
@@ -379,7 +433,7 @@ DRIFT_RC=$?
 set -e
 test "$DRIFT_RC" -eq 4
 grep -qx 'PVS_RO6_MONOLITHIC_PREFLIGHT=FAIL' "$TMP_ROOT/drift.stdout"
-grep -Fq 'source, boundary, standalone, or live input hashes disagree' "$TMP_ROOT/drift.stdout"
+grep -Fq 'boundary hashes disagree with source and standalone evidence' "$TMP_ROOT/drift.stdout"
 test ! -e "$WORK/monolithic_hash_drift"
 test ! -e "$TMP_ROOT/publish_drift.args"
 

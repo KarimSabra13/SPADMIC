@@ -54,9 +54,12 @@ replay using the driver's `TIE1_MINAREA_CLEAN_COMPOSITIONAL` intake. Its base
 DRC contains 136 results in exactly four antenna rule classes and zero
 non-antenna rules. Its raw full-top LVS is an explicit mismatch with the exact
 RO abstraction signature: top pins `59:59`, reduced instances `213960:213582`,
-and unmatched reduced instances `380:2`. The next legal action is the RO
-boundary proof, followed by strict monolithic full-top LVS with the
-standalone-matched RO CDL and no HCell or blackbox.
+and unmatched reduced instances `380:2`. The latest raw report further proves
+that all 382 mismatch records are exactly two source-side `RO_tune6` instances
+and 380 layout-side devices split into the two 190-device RO extraction
+clusters, with zero unmatched pins or nets. The next legal action is therefore
+the strict direct monolithic full-top LVS with the standalone-matched RO CDL
+and no HCell or blackbox. Boundary replay is diagnostic fallback only.
 
 The current state label is:
 
@@ -70,7 +73,7 @@ on the accepted source still reports 15 dangling VDD/VSS endpoints. The best
 rejected diagnostic state has two endpoints, but it cannot be promoted. The
 current attributable PVS run uses the V13 streamout, classifies all 136
 base-DRC results as antenna rules with zero non-antenna rules, and records an
-explicit raw LVS mismatch. Boundary, monolithic LVS, density DRC, timing
+explicit raw LVS mismatch. Raw attribution, monolithic LVS, density DRC, timing
 requalification, and final streamout qualification remain separate gates.
 
 Process-antenna repair is outside this closure scope. Antenna results remain
@@ -93,7 +96,7 @@ visible as deferred debt; they are not deleted, waived, or relabelled clean.
 | Historical PG topology witness | `20260825_mptdc_bufftap0_halo10_physical_130313` | identifies the 13 source handles and both exact exposed VSS/MET1 corewires |
 | Proven RO ring primitive | `20260828_mptdc_free_pnr_stripevaluefix_151756_u50` | two RO rings, 16 new `blockRing` sWires, VDD delta `+8`, VSS delta `+8` |
 | Standalone RO LVS proof | `20260827_mptdc_ro6_standalone_lvs_vddfix_150520` | explicit `MATCH`, zero blackboxes, immutable RO GDS/CDL hashes |
-| V13 attributable source PVS | `20260901_160902_mptdc_v13_pg15_compositional_pvs` | merged GDS SHA-256 `7cfbde3a11513445d4e2abf7ea329d3dd17d3e1e0b82e6c5c75c031aa46104a2`; base DRC `136` antenna-only / `0` non-antenna; raw LVS exact `380:2` RO abstraction mismatch |
+| V13 attributable source PVS | `20260901_173744_mptdc_v13_pg15_compositional_pvs` | merged GDS SHA-256 `0746a81ed85f35f5e274a7a10dcf4ef8376562532b6651605a36bd6e463be88b`; base DRC `136` antenna-only / `0` non-antenna; raw LVS exact `380:2`, all 382 records attributable only to the two RO interiors |
 
 The replay restored the original Tie1 source checkpoint, not the trial output,
 then reapplied the exact V13 operation in one fresh Innovus process. This is why
@@ -202,7 +205,8 @@ the V13 trial checkpoint as the source of another canonical stage.
 | PVS base DRC | current V13 source run: 136, all classified antenna-only; zero non-antenna | `FAIL_DEFERRED_ANTENNA` |
 | PVS raw full-top LVS | current V13 source run: explicit exact RO-abstraction `MISMATCH` | `FAIL` |
 | Standalone `RO_tune6` LVS | explicit non-blackbox `MATCH`, exact GDS/CDL hashes | `PASS_DIAGNOSTIC` |
-| Digital-top RO-boundary LVS | not yet run from the exact V13 diagnostic PVS tuple | `NOT_RUN` |
+| Raw LVS mismatch attribution | exact `382` records: 2 source RO instances plus 380 devices in two RO clusters | `PASS_STATIC_CLASSIFICATION` |
+| Digital-top RO-boundary LVS | diagnostic fallback, not required for direct full-top proof | `NOT_REQUIRED_CURRENT_PATH` |
 | Monolithic full-top LVS | not yet run with the standalone-matched external RO CDL | `NOT_RUN` |
 | PVS density DRC | not run after LVS mismatch | `NOT_RUN` |
 | Timing | not run in this DRC/LVS recovery scope | `NOT_RUN` |
@@ -551,7 +555,8 @@ Do not substitute the mutable July merge path: it currently hashes to
 `d73b59df73a243af1845add82a58d6ec50113d21a760902c3dab4b391c82d387`
 and does not match this standalone proof.
 
-The implemented diagnostic proof is deliberately compositional:
+The implemented proof preserves the diagnostic evidence but takes the shortest
+definitive path:
 
 1. `server_run_mptdc_ro6_recovery_pvs.sh` accepts either one tracked passing PG
    replay gate or, in diagnostic compositional mode, the exact tracked V13
@@ -563,29 +568,31 @@ The implemented diagnostic proof is deliberately compositional:
    `--diagnostic-ro-compositional`. Base DRC may continue only when all nonzero
    rules classify as the already authorized antenna-only debt. Antenna remains
    reported and is never repaired or waived.
-3. Preserve the attributable raw full-top mismatch evidence. Then run
-   `server_run_mptdc_ro6_boundary_lvs.sh` using that exact PVS run and the
-   standalone RO run above. The boundary run must apply the RO hcell/blackbox
-   contract, prove zero Tie1 mismatch residue, and end with explicit boundary
-   `MATCH`, `BOUNDARY_REMAINDER_CLASS=NONE_MATCH`, and
-   `DECISION=PASS_COMPOSITIONAL_LVS`.
-4. Treat that pair only as a diagnostic decomposition proof. It advances to
-   `server_run_mptdc_ro6_monolithic_lvs.sh`, which replaces the generated RO
-   wrapper with the exact standalone-matched external RO CDL and runs the real
-   merged GDS against one full-top source. HCell, blackbox, position-based bus
-   mapping, and global-port promotion are forbidden.
+3. Preserve the attributable raw full-top mismatch evidence.
+   `15_classify_ro6_raw_mismatch.py` must prove the exact `mi=382`, `mn=0`,
+   `so=0`, `mp=0` marker tuple: two named source-only `RO_tune6` instances and
+   380 layout-only devices in two 190-device RO extraction clusters, with the
+   exact device-model signature and zero unmatched pins or nets. Any drift
+   stops before a new PVS run.
+4. Run `server_run_mptdc_ro6_monolithic_lvs.sh --direct-full-top`. It replaces
+   the generated RO wrapper with the exact standalone-matched external RO CDL
+   and runs the real merged GDS against one full-top source. HCell, blackbox,
+   position-based bus mapping, and global-port promotion are forbidden. A
+   boundary proof is not required because this is the stronger direct
+   comparison.
 5. Accept LVS at signoff proof level only for explicit monolithic `MATCH`, zero
    blackboxed cells, zero mismatched cells, top `59:59` match, RO `19:19`
    match, no missing instances, and empty short/open evidence. Density remains
    blocked until that result is published.
+6. Use `server_run_mptdc_ro6_boundary_lvs.sh` only if the direct monolithic run
+   publishes a mismatch that needs diagnostic decomposition. Boundary `MATCH`
+   is not signoff and cannot authorize density without a later monolithic
+   full-top `MATCH`.
 
-Running this sequence from V13 does not waive its 15 special-PG endpoints. If
-the boundary classifier returns `RO6_PG_OPEN_ONLY` and
-`PASS_PG_REPAIR_REQUIRED`, preserve that attributable result and stop before
-density. Run only the read-only endpoint probe from a fresh Innovus process;
-do not use an endpoint-anchor or long-prune checkpoint as a source. Only
-`NONE_MATCH` plus `PASS_COMPOSITIONAL_LVS` authorizes monolithic LVS, and only
-the published monolithic `MATCH` authorizes density.
+Running this sequence from V13 does not waive its 15 special-PG endpoints. The
+direct monolithic proof may establish LVS while PG15 remains an independent
+open physical gate. Only the published monolithic `MATCH` authorizes density;
+neither a raw mismatch classification nor a boundary result does.
 
 Do not alter Tie1 insertion, top pins, or the RO schematic merely to make the
 raw reducer flattening agree. A zero PVS process return code, empty error file,
@@ -593,11 +600,11 @@ or stale `matched` marker is never an LVS pass.
 
 Relevant reports:
 
-- [base DRC gate](../server_snapshots/pvs/20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_drc_base.rpt)
-- [base DRC classification](../server_snapshots/pvs/20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/pvs_recovery_base_drc_classification.rpt)
-- [LVS source filter](../server_snapshots/pvs/20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/lvs_source_filter.rpt)
-- [LVS comparison gate](../server_snapshots/pvs/20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_lvs.rpt)
-- [LVS comparison summary](../server_snapshots/pvs/20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum.cls)
+- [base DRC gate](../server_snapshots/pvs/20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_drc_base.rpt)
+- [base DRC classification](../server_snapshots/pvs/20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/pvs_recovery_base_drc_classification.rpt)
+- [LVS source filter](../server_snapshots/pvs/20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/lvs_source_filter.rpt)
+- [LVS comparison gate](../server_snapshots/pvs/20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_lvs.rpt)
+- [LVS comparison summary](../server_snapshots/pvs/20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum.cls)
 - [standalone RO LVS gate](../server_snapshots/pvs/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/reports/operator_gate_pvs_ro6_standalone_lvs.rpt)
 - [standalone RO input hashes](../server_snapshots/pvs/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/manifests/ro6_standalone_lvs_inputs.rpt)
 
@@ -625,12 +632,16 @@ The following repository changes implement this handoff:
 - `01_generate_lvs_source_pg_filtered.py`: default diagnostic wrapper/HCell
   source plus strict external-CDL mode with an exact 19-pin RO contract and no
   generated RO wrapper or HCell entry;
+- `15_classify_ro6_raw_mismatch.py`: exact report-level attribution of all 382
+  raw mismatch records to the two RO interiors, with fail-closed model,
+  hierarchy, coordinate-cluster, pin, net, and marker checks;
 - `13_prepare_ro6_monolithic_lvs.py`, `14_gate_ro6_monolithic_lvs.py`, and
   `server_run_mptdc_ro6_monolithic_lvs.sh`: isolated no-HCell/no-blackbox
-  full-top replay, exact input/hash attribution, and explicit report-level
-  monolithic `MATCH` proof;
+  full-top replay, direct or legacy-boundary prerequisites, exact input/hash
+  attribution, and explicit report-level monolithic `MATCH` proof;
 - `server_run_mptdc_ro6_density_after_boundary.sh`: density continuation only
-  after a published attributable monolithic `MATCH`;
+  after a published attributable monolithic `MATCH`, including direct-mode
+  evidence without a boundary dependency;
 - `test_pg_ro_ring_checkpoint_tools.tcl`, the Tie1 closure-driver test, and the
   PVS recovery-driver test: wrapped rectangle fixtures, anchor ambiguity and
   conflict classification, exact V1/V2/V3 rejected ancestry, retired-stage
@@ -646,6 +657,7 @@ MPTDC_RO_PG_BLOCK_RING_CONTRACT_TEST=PASS
 MPTDC_TIE1_CLOSURE_STAGE_DRIVER_TEST=PASS
 MPTDC_RO6_RECOVERY_PVS_DRIVER_TEST=PASS
 MPTDC_RO6_BOUNDARY_LVS_DRIVER_TEST=PASS
+test_classify_ro6_raw_mismatch.py: 2 tests PASS
 MPTDC_RO6_MONOLITHIC_LVS_DRIVER_TEST=PASS
 MPTDC_RO6_DENSITY_AFTER_BOUNDARY_DRIVER_TEST=PASS
 ```
@@ -657,7 +669,7 @@ change the accepted V13 evidence.
 ## Completed Source PVS Command
 
 The foreground block below is retained for exact reproducibility. It completed
-as run `20260901_160902_mptdc_v13_pg15_compositional_pvs`; do not create a
+as run `20260901_173744_mptdc_v13_pg15_compositional_pvs`; do not create a
 replacement source run unless an input hash or source contract is intentionally
 changed and re-reviewed. It configured the repository-local Git identity, did
 not close the login shell on a failed guard, and never sourced the
@@ -784,8 +796,8 @@ The completed stage met the collection contract:
 `PVS_DRIVER_RC=0`, attributable base classification `PASS` with zero
 non-antenna rules, `PVS_RC=0`, and
 `RAW_FULL_TOP_LVS_STATUS=MISMATCH_PENDING_BOUNDARY_PROOF`. The raw
-`MISMATCH` is expected collection evidence for the RO boundary proof, not an
-LVS pass.
+`MISMATCH` is expected raw collection evidence, not an LVS pass. The strict raw
+classifier must accept it before the direct monolithic comparison can start.
 
 ## Continuation Order
 
@@ -854,93 +866,42 @@ echo "IDENTITY_SYNC_STATUS=$IDENTITY_SYNC_STATUS"
 1. Preserve the completed anchor run and V13 source unchanged. No PG repair is
    part of this expedited handoff.
 2. Reuse exact source run
-   `20260901_160902_mptdc_v13_pg15_compositional_pvs` and tracked snapshot
-   `20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs`. Require
+   `20260901_173744_mptdc_v13_pg15_compositional_pvs` and tracked snapshot
+   `20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs`. Require
    `PNR_CANDIDATE_KIND=TIE1_MINAREA_CLEAN_COMPOSITIONAL`, candidate/hash
    gates `PASS`, attributable base DRC with zero non-antenna rules, and
    the expected raw LVS mismatch collection. Keep every antenna count visible.
-3. Run the boundary proof below only after `IDENTITY_SYNC_STATUS=PASS`:
+3. After `IDENTITY_SYNC_STATUS=PASS`, run the definitive direct monolithic LVS.
+   This is the first closure run, not the old HCell/boundary replay:
 
 ```bash
 set +e
-SOURCE_PVS_RUN=20260901_160902_mptdc_v13_pg15_compositional_pvs
+SOURCE_PVS_RUN=20260901_173744_mptdc_v13_pg15_compositional_pvs
+SOURCE_PVS_EVIDENCE_ID=20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs
 STANDALONE_PVS_RUN=20260827_mptdc_ro6_standalone_lvs_vddfix_150520
-BOUNDARY_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_boundary_lvs"
-EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
-BOUNDARY_DRIVER_RC=99
-
-if [[ -n "$SOURCE_PVS_RUN" ]]; then
-  bash MPTDC/scripts/pvs/server_run_mptdc_ro6_boundary_lvs.sh \
-    --source-pvs-run-id "$SOURCE_PVS_RUN" \
-    --standalone-pvs-run-id "$STANDALONE_PVS_RUN" \
-    --run-id "$BOUNDARY_RUN" \
-    --expected-head "$EXPECTED_HEAD" \
-    2>&1 | tee "/tmp/${BOUNDARY_RUN}.driver.log"
-  BOUNDARY_DRIVER_RC=${PIPESTATUS[0]}
-else
-  echo "STOP_HERE_DO_NOT_CONTINUE: source run ID is missing"
-fi
-
-echo "BOUNDARY_DRIVER_RC=$BOUNDARY_DRIVER_RC"
-echo "SOURCE_PVS_RUN=$SOURCE_PVS_RUN"
-echo "BOUNDARY_RUN=$BOUNDARY_RUN"
-for report in operator_gate_pvs_ro6_boundary_lvs.rpt \
-              pvs_lvs_ro6_boundary_blackbox_status.rpt \
-              pvs_lvs_status.rpt \
-              operator_gate_pvs_compositional_lvs.rpt; do
-  echo "===== $report ====="
-  if [[ -s "/sim/ksabra/SPADMIC_work/innovus/$BOUNDARY_RUN/reports/$report" ]]; then
-    cat "/sim/ksabra/SPADMIC_work/innovus/$BOUNDARY_RUN/reports/$report"
-  else
-    echo "MISSING=/sim/ksabra/SPADMIC_work/innovus/$BOUNDARY_RUN/reports/$report"
-  fi
-done
-echo "===== LOG TAIL ====="
-tail -n 200 "/tmp/${BOUNDARY_RUN}.driver.log" 2>/dev/null
-echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
-```
-
-4. A boundary driver RC of zero is not enough. Proceed only for explicit
-   `MATCH`, `BOUNDARY_REMAINDER_CLASS=NONE_MATCH`,
-   `DECISION=PASS_COMPOSITIONAL_LVS`, and
-   `NEXT_STAGE=PVS_RO6_MONOLITHIC_FULL_TOP_LVS`. If it reports
-   `RO6_PG_OPEN_ONLY` / `PASS_PG_REPAIR_REQUIRED`, stop and run only
-   `server_run_mptdc_ro6_pg_endpoint_probe.sh` from the V13 source in a fresh
-   Innovus process. Do not run monolithic LVS or density and do not promote an
-   endpoint-anchor or long-prune checkpoint.
-5. Only after the exact boundary `MATCH`, run the strict monolithic block in
-   the same login shell. After a reconnect, restore `BOUNDARY_RUN` from its
-   published ID and rerun the identity/synchronization gate first:
-
-```bash
-set +e
-SOURCE_PVS_RUN=20260901_160902_mptdc_v13_pg15_compositional_pvs
-SOURCE_PVS_EVIDENCE_ID=20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs
-BOUNDARY_RUN="${BOUNDARY_RUN:-}"
-STANDALONE_PVS_RUN=20260827_mptdc_ro6_standalone_lvs_vddfix_150520
-MONOLITHIC_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_monolithic_lvs"
+MONOLITHIC_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_direct_monolithic_lvs"
 EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
 MONOLITHIC_DRIVER_RC=99
 
-if [[ -n "$BOUNDARY_RUN" ]]; then
+if [[ "${IDENTITY_SYNC_STATUS:-FAIL}" == PASS ]]; then
   bash MPTDC/scripts/pvs/server_run_mptdc_ro6_monolithic_lvs.sh \
     --source-pvs-run-id "$SOURCE_PVS_RUN" \
     --source-pvs-evidence-id "$SOURCE_PVS_EVIDENCE_ID" \
-    --boundary-pvs-run-id "$BOUNDARY_RUN" \
+    --direct-full-top \
     --standalone-pvs-run-id "$STANDALONE_PVS_RUN" \
     --run-id "$MONOLITHIC_RUN" \
     --expected-head "$EXPECTED_HEAD" \
     2>&1 | tee "/tmp/${MONOLITHIC_RUN}.driver.log"
   MONOLITHIC_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP_HERE_DO_NOT_CONTINUE: restore the published boundary run ID"
+  echo "STOP_HERE_DO_NOT_CONTINUE: identity synchronization gate did not pass"
 fi
 
 echo "MONOLITHIC_DRIVER_RC=$MONOLITHIC_DRIVER_RC"
 echo "SOURCE_PVS_RUN=$SOURCE_PVS_RUN"
-echo "BOUNDARY_RUN=$BOUNDARY_RUN"
 echo "MONOLITHIC_RUN=$MONOLITHIC_RUN"
 for relative in \
+  reports/pvs_ro6_raw_mismatch_attribution.rpt \
   reports/lvs_source_external_ro6.rpt \
   reports/pvs_ro6_monolithic_lvs_status.rpt \
   reports/operator_gate_pvs_monolithic_lvs.rpt \
@@ -960,34 +921,40 @@ tail -n 200 "/sim/ksabra/SPADMIC_work/innovus/$MONOLITHIC_RUN/logs/pvs_ro6_monol
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```
 
-6. A monolithic driver RC of zero is not enough. Accept LVS at signoff proof
+4. A monolithic driver RC of zero is not enough. Accept LVS at signoff proof
    level only for `MONOLITHIC_LVS_STATUS=MATCH`, `CLS_RUN_RESULT=MATCH`,
    `LVS_BLACKBOXED_CELL_COUNT=0`, `LVS_HCELL_STATUS=NOT_USED`,
    `CELLS_WHICH_MISMATCH=0`, `TOP_59_PIN_MATCH_STATUS=PASS`,
    `RO6_19_PIN_MATCH_STATUS=PASS`, `SHORT_OPEN_EVIDENCE_STATUS=PASS`, and
-   `LVS_SIGNOFF_ELIGIBLE=YES`. The block remains
+   `LVS_SIGNOFF_ELIGIBLE=YES`. Also require
+   `LVS_PREREQUISITE_MODE=DIRECT_FULL_TOP_WITH_STANDALONE_RO_PROOF`,
+   `RAW_MISMATCH_ATTRIBUTION=EXACT_TWO_RO6_INTERNALS_ONLY`, and
+   `BOUNDARY_PROOF_STATUS=NOT_REQUIRED_BY_DIRECT_MONOLITHIC_PROOF`. The block remains
    `FINAL_PHYSICAL_SIGNOFF_READY=NO` because PG15 and the accepted antenna
    exception are independent open gates.
-7. Only after the published monolithic `MATCH`, run density in the same login
-   shell. After a reconnect, restore `BOUNDARY_RUN` and `MONOLITHIC_RUN` from
-   their exact published IDs and rerun the identity/synchronization gate:
+5. If direct monolithic LVS does not publish that exact `MATCH`, stop and
+   preserve its evidence. Boundary LVS may then be run only to decompose the
+   mismatch; it cannot authorize density and does not replace the direct
+   full-top result.
+6. Only after the published direct monolithic `MATCH`, run density in the same
+   login shell. After a reconnect, restore `MONOLITHIC_RUN` from its exact
+   published ID and rerun the identity/synchronization gate:
 
 ```bash
 set +e
-SOURCE_PVS_RUN=20260901_160902_mptdc_v13_pg15_compositional_pvs
-SOURCE_PVS_EVIDENCE_ID=20260901_160902_mptdc_v13_pg15_compositional_pvs_04_lvs
-BOUNDARY_RUN="${BOUNDARY_RUN:-}"
+SOURCE_PVS_RUN=20260901_173744_mptdc_v13_pg15_compositional_pvs
+SOURCE_PVS_EVIDENCE_ID=20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs
 STANDALONE_PVS_RUN=20260827_mptdc_ro6_standalone_lvs_vddfix_150520
 MONOLITHIC_RUN="${MONOLITHIC_RUN:-}"
 DENSITY_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_density"
 EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
 DENSITY_DRIVER_RC=99
 
-if [[ -n "$BOUNDARY_RUN" && -n "$MONOLITHIC_RUN" ]]; then
+if [[ "${IDENTITY_SYNC_STATUS:-FAIL}" == PASS && -n "$MONOLITHIC_RUN" ]]; then
   bash MPTDC/scripts/pvs/server_run_mptdc_ro6_density_after_boundary.sh \
     --source-pvs-run-id "$SOURCE_PVS_RUN" \
     --source-pvs-evidence-id "$SOURCE_PVS_EVIDENCE_ID" \
-    --boundary-pvs-run-id "$BOUNDARY_RUN" \
+    --direct-full-top \
     --standalone-pvs-run-id "$STANDALONE_PVS_RUN" \
     --monolithic-pvs-run-id "$MONOLITHIC_RUN" \
     --run-id "$DENSITY_RUN" \
@@ -995,7 +962,7 @@ if [[ -n "$BOUNDARY_RUN" && -n "$MONOLITHIC_RUN" ]]; then
     2>&1 | tee "/tmp/${DENSITY_RUN}.driver.log"
   DENSITY_DRIVER_RC=${PIPESTATUS[0]}
 else
-  echo "STOP_HERE_DO_NOT_CONTINUE: restore boundary and monolithic run IDs"
+  echo "STOP_HERE_DO_NOT_CONTINUE: identity gate or monolithic run ID is missing"
 fi
 
 echo "DENSITY_DRIVER_RC=$DENSITY_DRIVER_RC"
@@ -1017,9 +984,9 @@ tail -n 200 "/tmp/${DENSITY_RUN}.driver.log" 2>/dev/null
 echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```
 
-8. Accept density only as `PASS_NON_ANTENNA_DENSITY_CLEAN`. Any other
+7. Accept density only as `PASS_NON_ANTENNA_DENSITY_CLEAN`. Any other
    classification remains published density debt.
-9. Update this gate matrix with the exact PVS run IDs, hashes, report-level
+8. Update this gate matrix with the exact PVS run IDs, hashes, report-level
    outcomes, and remaining owner actions. Timing, power integrity, final export,
    and PG15 remain separate before any signoff claim.
 
@@ -1032,8 +999,9 @@ echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 | PVS base non-antenna DRC | source PVS run | zero non-antenna rules | `PASS` |
 | PVS antenna | source PVS run | project-owner exception only | `136`, accepted policy exception, not tool-clean |
 | Raw full-top LVS | source PVS run | explicit `MATCH` | exact `380:2` RO abstraction `MISMATCH` |
-| Boundary LVS | next run | explicit boundary `MATCH`, no residue | `PENDING` |
-| Monolithic full-top LVS | after boundary | explicit no-HCell/no-blackbox `MATCH` | `PENDING` |
+| Raw mismatch attribution | latest tracked CLS | all 382 records confined to two RO interiors | `PASS_STATIC_CLASSIFICATION` |
+| Boundary LVS | diagnostic fallback only | cannot replace monolithic `MATCH` | `NOT_REQUIRED_CURRENT_PATH` |
+| Monolithic full-top LVS | next direct run | explicit no-HCell/no-blackbox `MATCH` | `PENDING` |
 | Density DRC | after monolithic | `PASS_NON_ANTENNA_DENSITY_CLEAN` | `PENDING` |
 | Final physical readiness | all applicable gates | all required signoff evidence complete | `NO` |
 
@@ -1075,8 +1043,10 @@ Stop and preserve the accepted V13 replay checkpoint if any of these occurs:
   on an incomplete query but is classified as feasible;
 - an endpoint-anchor or long-prune checkpoint is offered to PVS;
 - PVS evidence is missing exact GDS/source/control hashes;
-- the boundary proof does not publish the exact
-  `PVS_RO6_MONOLITHIC_FULL_TOP_LVS` next stage;
+- the raw classifier finds any marker, model, instance, hierarchy cluster,
+  pin, net, or total-count signature outside the exact two-RO mismatch;
+- direct mode is combined with a boundary run ID or does not report
+  `BOUNDARY_PROOF_STATUS=NOT_REQUIRED_BY_DIRECT_MONOLITHIC_PROOF`;
 - monolithic control contains `-hcell`, `lvs_black_box`, positional bus
   mapping, global-port promotion, any extra schematic/layout path, or any
   source/GDS/CDL hash drift;

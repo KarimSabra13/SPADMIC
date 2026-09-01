@@ -9,6 +9,7 @@ INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-/sim/ksabra/SPADMIC_work/innovus}"
 SOURCE_GENERATOR="${MPTDC_MONOLITHIC_LVS_SOURCE_GENERATOR:-$SCRIPT_DIR/01_generate_lvs_source_pg_filtered.py}"
 PREP_HELPER="${MPTDC_MONOLITHIC_LVS_PREP:-$SCRIPT_DIR/13_prepare_ro6_monolithic_lvs.py}"
 GATE_HELPER="${MPTDC_MONOLITHIC_LVS_GATE:-$SCRIPT_DIR/14_gate_ro6_monolithic_lvs.py}"
+RAW_CLASSIFIER="${MPTDC_MONOLITHIC_LVS_RAW_CLASSIFIER:-$SCRIPT_DIR/15_classify_ro6_raw_mismatch.py}"
 PUBLISHER="${MPTDC_MONOLITHIC_LVS_PUBLISHER:-$REPO_ROOT/MPTDC/ci/publish_mptdc_server_snapshot.sh}"
 CADENCE_ENV="${MPTDC_CADENCE_ENV:-/eda/cadence/eda_2023-2024}"
 
@@ -18,14 +19,21 @@ BOUNDARY_PVS_RUN_ID=""
 STANDALONE_PVS_RUN_ID=""
 PVS_RUN_ID=""
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
+DIRECT_FULL_TOP=0
 CADENCE_ENV_RC=99
 CADENCE_ENV_STATUS=NOT_RUN
+RAW_CLASSIFICATION_TMP=""
+
+cleanup() {
+  [[ -z "$RAW_CLASSIFICATION_TMP" ]] || rm -f "$RAW_CLASSIFICATION_TMP"
+}
+trap cleanup EXIT
 
 usage() {
   cat <<'USAGE'
 Usage:
   server_run_mptdc_ro6_monolithic_lvs.sh \
-    --source-pvs-run-id <id> --boundary-pvs-run-id <id> \
+    --source-pvs-run-id <id> [--boundary-pvs-run-id <id> | --direct-full-top] \
     --standalone-pvs-run-id <id> [options]
 
 Options:
@@ -33,14 +41,18 @@ Options:
                          Published source snapshot; defaults to
                          <source-pvs-run-id>_04_lvs.
   --run-id <id>          New monolithic LVS result directory.
+  --direct-full-top      Run the definitive no-HCell full-top comparison after
+                         strict raw-mismatch attribution and standalone RO MATCH.
   --expected-head <sha>  Require repository HEAD.
   --innovus-work <path>  Innovus/PVS result root.
   -h, --help             Show this help.
 
-The source raw mismatch, boundary MATCH, standalone RO MATCH, exact GDS/CDL
-hashes, antenna-only base DRC, and PG15 source state must all agree. The run
-uses one Verilog source, D-cell CDL, RO_tune6 CDL, and merged GDS. HCell,
-blackbox, positional bus mapping, and global-port promotion are forbidden.
+The source raw mismatch, standalone RO MATCH, exact GDS/CDL hashes,
+antenna-only base DRC, and PG15 source state must all agree. Boundary MATCH is
+required by the legacy mode and intentionally not required by
+--direct-full-top because that mode performs the stronger definitive full-top
+comparison itself. HCell, blackbox, positional bus mapping, and global-port
+promotion are forbidden in both modes.
 USAGE
 }
 
@@ -102,6 +114,7 @@ while [[ $# -gt 0 ]]; do
     --source-pvs-evidence-id) SOURCE_PVS_EVIDENCE_ID="${2:?missing value}"; shift 2 ;;
     --boundary-pvs-run-id) BOUNDARY_PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --standalone-pvs-run-id) STANDALONE_PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
+    --direct-full-top) DIRECT_FULL_TOP=1; shift ;;
     --run-id) PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --expected-head) EXPECTED_HEAD_VALUE="${2:?missing value}"; shift 2 ;;
     --innovus-work) INNOVUS_WORK="${2:?missing value}"; shift 2 ;;
@@ -112,20 +125,39 @@ done
 
 [[ -n "$SOURCE_PVS_EVIDENCE_ID" ]] || SOURCE_PVS_EVIDENCE_ID="${SOURCE_PVS_RUN_ID}_04_lvs"
 [[ -n "$PVS_RUN_ID" ]] || PVS_RUN_ID="$(date +%Y%m%d)_mptdc_ro6_monolithic_lvs_$(date +%H%M%S)"
-for id in "$SOURCE_PVS_RUN_ID" "$SOURCE_PVS_EVIDENCE_ID" "$BOUNDARY_PVS_RUN_ID" \
+for id in "$SOURCE_PVS_RUN_ID" "$SOURCE_PVS_EVIDENCE_ID" \
           "$STANDALONE_PVS_RUN_ID" "$PVS_RUN_ID"; do
   [[ -n "$id" && "$id" =~ ^[A-Za-z0-9._-]+$ ]] || {
     echo "ERROR: missing or unsafe run id: $id" >&2
     exit 2
   }
 done
+if [[ "$DIRECT_FULL_TOP" -eq 1 ]]; then
+  [[ -z "$BOUNDARY_PVS_RUN_ID" ]] || {
+    echo "ERROR: --boundary-pvs-run-id cannot be combined with --direct-full-top" >&2
+    exit 2
+  }
+  LVS_PREREQUISITE_MODE=DIRECT_FULL_TOP_WITH_STANDALONE_RO_PROOF
+  BOUNDARY_PVS_RUN_ID_VALUE=NOT_USED_DIRECT_FULL_TOP
+  BOUNDARY_PROOF_STATUS=NOT_REQUIRED_BY_DIRECT_MONOLITHIC_PROOF
+else
+  [[ -n "$BOUNDARY_PVS_RUN_ID" && "$BOUNDARY_PVS_RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]] || {
+    echo "ERROR: --boundary-pvs-run-id is required unless --direct-full-top is used" >&2
+    exit 2
+  }
+  LVS_PREREQUISITE_MODE=BOUNDARY_MATCH_PLUS_STANDALONE_RO_PROOF
+  BOUNDARY_PVS_RUN_ID_VALUE="$BOUNDARY_PVS_RUN_ID"
+  BOUNDARY_PROOF_STATUS=PASS
+fi
 
 SOURCE_DIR="$INNOVUS_WORK/$SOURCE_PVS_RUN_ID"
-BOUNDARY_DIR="$INNOVUS_WORK/$BOUNDARY_PVS_RUN_ID"
 STANDALONE_DIR="$INNOVUS_WORK/$STANDALONE_PVS_RUN_ID"
 PVS_DIR="$INNOVUS_WORK/$PVS_RUN_ID"
 SOURCE_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$SOURCE_PVS_EVIDENCE_ID"
-BOUNDARY_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$BOUNDARY_PVS_RUN_ID"
+BOUNDARY_SNAPSHOT=""
+if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+  BOUNDARY_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$BOUNDARY_PVS_RUN_ID"
+fi
 STANDALONE_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$STANDALONE_PVS_RUN_ID"
 
 SOURCE_HASHES="$SOURCE_DIR/manifests/pvs_input_hashes.rpt"
@@ -139,8 +171,12 @@ SOURCE_HASHES_TRACKED="$SOURCE_SNAPSHOT/manifests/pvs_input_hashes.rpt"
 SOURCE_FILTER_TRACKED="$SOURCE_SNAPSHOT/reports/lvs_source_filter.rpt"
 SOURCE_LVS_STATUS_TRACKED="$SOURCE_SNAPSHOT/reports/pvs_lvs_status.rpt"
 SOURCE_LVS_TOOL_STATUS_TRACKED="$SOURCE_SNAPSHOT/reports/pvs_lvs_tool_status.rpt"
-BOUNDARY_GATE="$BOUNDARY_SNAPSHOT/reports/operator_gate_pvs_compositional_lvs.rpt"
-BOUNDARY_DETAIL="$BOUNDARY_SNAPSHOT/reports/operator_gate_pvs_ro6_boundary_lvs.rpt"
+BOUNDARY_GATE=""
+BOUNDARY_DETAIL=""
+if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+  BOUNDARY_GATE="$BOUNDARY_SNAPSHOT/reports/operator_gate_pvs_compositional_lvs.rpt"
+  BOUNDARY_DETAIL="$BOUNDARY_SNAPSHOT/reports/operator_gate_pvs_ro6_boundary_lvs.rpt"
+fi
 STANDALONE_GATE="$STANDALONE_SNAPSHOT/reports/operator_gate_pvs_ro6_standalone_lvs.rpt"
 STANDALONE_INPUTS="$STANDALONE_SNAPSHOT/manifests/ro6_standalone_lvs_inputs.rpt"
 STANDALONE_INPUTS_LIVE="$STANDALONE_DIR/manifests/ro6_standalone_lvs_inputs.rpt"
@@ -227,13 +263,21 @@ PREFLIGHT=PASS
 for report in "$SOURCE_BASE_CLASS" "$SOURCE_BASE_RULES" "$SOURCE_SPECIAL" \
               "$SOURCE_HASHES_TRACKED" "$SOURCE_FILTER_TRACKED" \
               "$SOURCE_LVS_STATUS_TRACKED" "$SOURCE_LVS_TOOL_STATUS_TRACKED" \
-              "$BOUNDARY_GATE" "$BOUNDARY_DETAIL" "$STANDALONE_GATE" \
-              "$STANDALONE_INPUTS"; do
+              "$STANDALONE_GATE" "$STANDALONE_INPUTS"; do
   tracked_report "$report" || { echo "STOP: immutable tracked report missing: $report"; PREFLIGHT=FAIL; }
 done
+if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+  for report in "$BOUNDARY_GATE" "$BOUNDARY_DETAIL"; do
+    tracked_report "$report" || {
+      echo "STOP: immutable tracked boundary report missing: $report"
+      PREFLIGHT=FAIL
+    }
+  done
+fi
 for path in "$SOURCE_HASHES" "$SOURCE_FILTER" "$SOURCE_LVS_STATUS" \
             "$SOURCE_LVS_TOOL_STATUS" "$STANDALONE_INPUTS_LIVE" \
-            "$SOURCE_GENERATOR" "$PREP_HELPER" "$GATE_HELPER" "$PUBLISHER"; do
+            "$SOURCE_GENERATOR" "$PREP_HELPER" "$GATE_HELPER" \
+            "$RAW_CLASSIFIER" "$PUBLISHER"; do
   [[ -s "$path" ]] || { echo "STOP: required source or script missing: $path"; PREFLIGHT=FAIL; }
 done
 for path in "$SOURCE_GDS" "$SOURCE_PHYSICAL" "$DCELL_CDL" "$FILLER_REPORT" \
@@ -289,6 +333,40 @@ cmp -s "$SOURCE_CLS" "$SOURCE_CLS_TRACKED" || {
   echo "STOP: source raw LVS is not the exact 380-layout/2-source RO abstraction mismatch"
   PREFLIGHT=FAIL
 }
+RAW_CLASSIFIER_RC=99
+RAW_ATTRIBUTION_STATUS=MISSING
+RAW_MISMATCH_ATTRIBUTION=MISSING
+RAW_DIRECT_ELIGIBLE=MISSING
+RAW_LAYOUT_ONLY_COUNT=MISSING
+RAW_SOURCE_ONLY_COUNT=MISSING
+RAW_CLASSIFIER_SHA=MISSING
+RAW_CLASSIFICATION_SHA=MISSING
+if [[ "$SOURCE_CLS_COUNT" == 1 && -s "$SOURCE_CLS" && -s "$RAW_CLASSIFIER" ]]; then
+  RAW_CLASSIFICATION_TMP="$(mktemp /tmp/mptdc_ro6_raw_mismatch.XXXXXX.rpt)"
+  set +e
+  python3 "$RAW_CLASSIFIER" \
+    --cls "$SOURCE_CLS" \
+    --out "$RAW_CLASSIFICATION_TMP" \
+    --expected-ro-instance u_core_u_osc_fast_u_ro_tune4 \
+    --expected-ro-instance u_core_u_osc_slow_u_ro_tune4
+  RAW_CLASSIFIER_RC=$?
+  set +e
+  RAW_ATTRIBUTION_STATUS="$(report_value "$RAW_CLASSIFICATION_TMP" STATUS)"
+  RAW_MISMATCH_ATTRIBUTION="$(report_value "$RAW_CLASSIFICATION_TMP" MISMATCH_ATTRIBUTION)"
+  RAW_DIRECT_ELIGIBLE="$(report_value "$RAW_CLASSIFICATION_TMP" DIRECT_MONOLITHIC_ELIGIBLE)"
+  RAW_LAYOUT_ONLY_COUNT="$(report_value "$RAW_CLASSIFICATION_TMP" LAYOUT_ONLY_INSTANCE_COUNT)"
+  RAW_SOURCE_ONLY_COUNT="$(report_value "$RAW_CLASSIFICATION_TMP" SOURCE_ONLY_INSTANCE_COUNT)"
+  RAW_CLASSIFIER_SHA="$(sha256sum "$RAW_CLASSIFIER" 2>/dev/null | awk '{print $1}')"
+  RAW_CLASSIFICATION_SHA="$(sha256sum "$RAW_CLASSIFICATION_TMP" 2>/dev/null | awk '{print $1}')"
+fi
+[[ "$RAW_CLASSIFIER_RC" -eq 0 && "$RAW_ATTRIBUTION_STATUS" == PASS && \
+   "$RAW_MISMATCH_ATTRIBUTION" == EXACT_TWO_RO6_INTERNALS_ONLY && \
+   "$RAW_DIRECT_ELIGIBLE" == YES && "$RAW_LAYOUT_ONLY_COUNT" == 380 && \
+   "$RAW_SOURCE_ONLY_COUNT" == 2 && "$RAW_CLASSIFIER_SHA" =~ ^[0-9a-f]{64}$ && \
+   "$RAW_CLASSIFICATION_SHA" =~ ^[0-9a-f]{64}$ ]] || {
+  echo "STOP: raw mismatch is not attributable exclusively to the two RO_tune6 interiors"
+  PREFLIGHT=FAIL
+}
 [[ "$(report_value "$SOURCE_FILTER" LVS_SOURCE_CONTRACT_STATUS)" == PASS && \
    "$(report_value "$SOURCE_FILTER" SOURCE_KIND)" == INNOVUS_SAVE_NETLIST_PHYS_INCLUDE_POWER_GROUND && \
    "$(report_value "$SOURCE_FILTER" PHYSICAL_ONLY_FILLER_REMOVAL_STATUS)" == PASS && \
@@ -316,28 +394,30 @@ cmp -s "$SOURCE_CLS" "$SOURCE_CLS_TRACKED" || {
 [[ "$(grep -Ec '15 Problem\(s\) \(IMPVFC-94\)' "$SOURCE_SPECIAL" || true)" == 1 ]] || {
   echo "STOP: source Innovus special connectivity is not the exact PG15 state"; PREFLIGHT=FAIL;
 }
-[[ "$(report_value "$BOUNDARY_GATE" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" && \
-   "$(report_value "$BOUNDARY_GATE" BOUNDARY_PVS_RUN_ID)" == "$BOUNDARY_PVS_RUN_ID" && \
-   "$(report_value "$BOUNDARY_GATE" STANDALONE_PVS_RUN_ID)" == "$STANDALONE_PVS_RUN_ID" && \
-   "$(report_value "$BOUNDARY_GATE" RAW_FULL_TOP_LVS_STATUS)" == MISMATCH_RO_ABSTRACTION_ONLY && \
-   "$(report_value "$BOUNDARY_GATE" PVS_TOP_BOUNDARY_LVS)" == MATCH && \
-   "$(report_value "$BOUNDARY_GATE" PVS_RO6_STANDALONE_LVS)" == MATCH && \
-   "$(report_value "$BOUNDARY_GATE" COMPOSITIONAL_LVS_STATUS)" == PASS && \
-   "$(report_value "$BOUNDARY_GATE" RAW_FULL_TOP_CLS_SHA256)" == "$SOURCE_CLS_SHA" && \
-   "$(report_value "$BOUNDARY_GATE" NEXT_STAGE)" == PVS_RO6_MONOLITHIC_FULL_TOP_LVS && \
-   "$(report_value "$BOUNDARY_GATE" DECISION)" == PASS_MONOLITHIC_LVS_CONTINUE ]] || {
-  echo "STOP: boundary evidence is not an explicit attributable top MATCH"; PREFLIGHT=FAIL;
-}
-[[ "$(report_value "$BOUNDARY_DETAIL" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" && \
-   "$(report_value "$BOUNDARY_DETAIL" STANDALONE_PVS_RUN_ID)" == "$STANDALONE_PVS_RUN_ID" && \
-   "$(report_value "$BOUNDARY_DETAIL" PVS_LVS_STATUS)" == MATCH && \
-   "$(report_value "$BOUNDARY_DETAIL" BOUNDARY_REMAINDER_CLASS)" == NONE_MATCH && \
-   "$(report_value "$BOUNDARY_DETAIL" SIGNOFF_ELIGIBLE)" == NO && \
-   "$(report_value "$BOUNDARY_DETAIL" DECISION)" == PASS_COMPOSITIONAL_LVS && \
-   "$(report_value "$BOUNDARY_DETAIL" NEXT_STAGE)" == PVS_RO6_MONOLITHIC_FULL_TOP_LVS ]] || {
-  echo "STOP: detailed boundary gate is not the exact no-remainder MATCH"
-  PREFLIGHT=FAIL
-}
+if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+  [[ "$(report_value "$BOUNDARY_GATE" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" && \
+     "$(report_value "$BOUNDARY_GATE" BOUNDARY_PVS_RUN_ID)" == "$BOUNDARY_PVS_RUN_ID" && \
+     "$(report_value "$BOUNDARY_GATE" STANDALONE_PVS_RUN_ID)" == "$STANDALONE_PVS_RUN_ID" && \
+     "$(report_value "$BOUNDARY_GATE" RAW_FULL_TOP_LVS_STATUS)" == MISMATCH_RO_ABSTRACTION_ONLY && \
+     "$(report_value "$BOUNDARY_GATE" PVS_TOP_BOUNDARY_LVS)" == MATCH && \
+     "$(report_value "$BOUNDARY_GATE" PVS_RO6_STANDALONE_LVS)" == MATCH && \
+     "$(report_value "$BOUNDARY_GATE" COMPOSITIONAL_LVS_STATUS)" == PASS && \
+     "$(report_value "$BOUNDARY_GATE" RAW_FULL_TOP_CLS_SHA256)" == "$SOURCE_CLS_SHA" && \
+     "$(report_value "$BOUNDARY_GATE" NEXT_STAGE)" == PVS_RO6_MONOLITHIC_FULL_TOP_LVS && \
+     "$(report_value "$BOUNDARY_GATE" DECISION)" == PASS_MONOLITHIC_LVS_CONTINUE ]] || {
+    echo "STOP: boundary evidence is not an explicit attributable top MATCH"; PREFLIGHT=FAIL;
+  }
+  [[ "$(report_value "$BOUNDARY_DETAIL" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" && \
+     "$(report_value "$BOUNDARY_DETAIL" STANDALONE_PVS_RUN_ID)" == "$STANDALONE_PVS_RUN_ID" && \
+     "$(report_value "$BOUNDARY_DETAIL" PVS_LVS_STATUS)" == MATCH && \
+     "$(report_value "$BOUNDARY_DETAIL" BOUNDARY_REMAINDER_CLASS)" == NONE_MATCH && \
+     "$(report_value "$BOUNDARY_DETAIL" SIGNOFF_ELIGIBLE)" == NO && \
+     "$(report_value "$BOUNDARY_DETAIL" DECISION)" == PASS_COMPOSITIONAL_LVS && \
+     "$(report_value "$BOUNDARY_DETAIL" NEXT_STAGE)" == PVS_RO6_MONOLITHIC_FULL_TOP_LVS ]] || {
+    echo "STOP: detailed boundary gate is not the exact no-remainder MATCH"
+    PREFLIGHT=FAIL
+  }
+fi
 [[ "$(report_value "$STANDALONE_GATE" PVS_LVS)" == MATCH && \
    "$(report_value "$STANDALONE_GATE" CLS_RUN_RESULT)" == MATCH && \
    "$(report_value "$STANDALONE_GATE" BLACKBOXED_CELL_COUNT)" == 0 && \
@@ -354,22 +434,29 @@ FILLER_REPORT_SHA="$(sha256sum "$FILLER_REPORT" 2>/dev/null | awk '{print $1}')"
 ROW_INFRA_REPORT_SHA="$(sha256sum "$ROW_INFRA_REPORT" 2>/dev/null | awk '{print $1}')"
 RO_CDL_SHA="$(sha256sum "$RO_CDL_SOURCE" 2>/dev/null | awk '{print $1}')"
 [[ "$SOURCE_GDS_SHA" =~ ^[0-9a-f]{64}$ && "$SOURCE_GDS_SHA" == "$SOURCE_GDS_EXPECTED_SHA" && \
-   "$SOURCE_GDS_SHA" == "$(report_value "$BOUNDARY_GATE" MERGED_GDS_SHA256)" && \
    "$SOURCE_PHYSICAL_SHA" == "$SOURCE_PHYSICAL_EXPECTED_SHA" && \
    "$DCELL_CDL_SHA" == "$DCELL_CDL_EXPECTED_SHA" && \
    "$FILLER_REPORT_SHA" == "$FILLER_REPORT_EXPECTED_SHA" && \
    "$ROW_INFRA_REPORT_SHA" == "$ROW_INFRA_REPORT_EXPECTED_SHA" && \
    "$SOURCE_RO_GDS_SHA" == "$STANDALONE_RO_GDS_SHA" && \
-   "$SOURCE_RO_GDS_SHA" == "$(report_value "$BOUNDARY_GATE" RO_GDS_SHA256)" && \
-   "$RO_CDL_SHA" == "$STANDALONE_RO_CDL_SHA" && \
-   "$RO_CDL_SHA" == "$(report_value "$BOUNDARY_GATE" RO_CDL_SHA256)" ]] || {
-  echo "STOP: source, boundary, standalone, or live input hashes disagree"; PREFLIGHT=FAIL;
+   "$RO_CDL_SHA" == "$STANDALONE_RO_CDL_SHA" ]] || {
+  echo "STOP: source, standalone, or live input hashes disagree"; PREFLIGHT=FAIL;
 }
+if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+  [[ "$SOURCE_GDS_SHA" == "$(report_value "$BOUNDARY_GATE" MERGED_GDS_SHA256)" && \
+     "$SOURCE_RO_GDS_SHA" == "$(report_value "$BOUNDARY_GATE" RO_GDS_SHA256)" && \
+     "$RO_CDL_SHA" == "$(report_value "$BOUNDARY_GATE" RO_CDL_SHA256)" ]] || {
+    echo "STOP: boundary hashes disagree with source and standalone evidence"
+    PREFLIGHT=FAIL
+  }
+fi
 
 echo "PVS_RO6_MONOLITHIC_PREFLIGHT=$PREFLIGHT"
+echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
 echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
 echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
-echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID"
+echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID_VALUE"
+echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
 echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
 echo "SOURCE_RAW_LVS_SIGNATURE=LAYOUT_213960_SCHEMATIC_213582_UNMATCHED_380_2"
@@ -383,6 +470,7 @@ fi
 
 mkdir -p "$PVS_DIR/inputs" "$PVS_DIR/outputs" "$PVS_DIR/manifests" \
   "$PVS_DIR/reports" "$PVS_DIR/logs" "$PVS_DIR/pvs_lvs"
+cp -p "$RAW_CLASSIFICATION_TMP" "$PVS_DIR/reports/pvs_ro6_raw_mismatch_attribution.rpt"
 LOCAL_RO_CDL="$PVS_DIR/inputs/RO_tune6.standalone_matched.cdl"
 cp -p "$RO_CDL_SOURCE" "$LOCAL_RO_CDL"
 LOCAL_RO_CDL_SHA="$(sha256sum "$LOCAL_RO_CDL" | awk '{print $1}')"
@@ -488,9 +576,14 @@ fi
 EXTERNAL_SOURCE_SHA="$(sha256sum "$EXTERNAL_SOURCE" 2>/dev/null | awk '{print $1}')"
 {
   echo "PVS_RUN_CLASS=MONOLITHIC_FULL_TOP_LVS_PROOF"
+  echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
   echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
   echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
-  echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID"
+  echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID_VALUE"
+  echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
+  echo "RAW_CLS_SHA256=$SOURCE_CLS_SHA"
+  echo "RAW_CLASSIFIER_SHA256=$RAW_CLASSIFIER_SHA"
+  echo "RAW_CLASSIFICATION_REPORT_SHA256=$RAW_CLASSIFICATION_SHA"
   echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
   echo "LVS_TEMPLATE_RUN=$SOURCE_LVS_RUN_TRACKED"
   echo "MERGED_GDS=$SOURCE_GDS"
@@ -516,9 +609,16 @@ EXTERNAL_SOURCE_SHA="$(sha256sum "$EXTERNAL_SOURCE" 2>/dev/null | awk '{print $1
 {
   echo "STEP=PVS_RO6_MONOLITHIC_FULL_TOP_LVS"
   echo "PVS_RUN_CLASS=MONOLITHIC_FULL_TOP_LVS_PROOF"
+  echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
   echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
   echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
-  echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID"
+  echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID_VALUE"
+  echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
+  echo "RAW_MISMATCH_ATTRIBUTION=$RAW_MISMATCH_ATTRIBUTION"
+  echo "RAW_CLASSIFIER_RC=$RAW_CLASSIFIER_RC"
+  echo "RAW_CLS_SHA256=$SOURCE_CLS_SHA"
+  echo "RAW_CLASSIFIER_SHA256=$RAW_CLASSIFIER_SHA"
+  echo "RAW_CLASSIFICATION_REPORT_SHA256=$RAW_CLASSIFICATION_SHA"
   echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
   echo "SOURCE_RC=$SOURCE_RC"
   echo "SOURCE_MODEL_MODE=$SOURCE_MODEL_MODE"
@@ -551,6 +651,8 @@ EXTERNAL_SOURCE_SHA="$(sha256sum "$EXTERNAL_SOURCE" 2>/dev/null | awk '{print $1
 
 {
   echo "STEP=MPTDC_LVS_DRC_HANDOFF"
+  echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
+  echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
   echo "MONOLITHIC_LVS_STATUS=$MONOLITHIC_STATUS"
   echo "LVS_BLACKBOXED_CELL_COUNT=$BLACKBOXED_COUNT"
   echo "LVS_HCELL_STATUS=$HCELL_STATUS"
@@ -580,9 +682,11 @@ if [[ "$PUBLISH_RC" -ne 0 ]]; then
 fi
 
 echo "PVS_RO6_MONOLITHIC_STATUS=$MONOLITHIC_STATUS"
+echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
 echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
-echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID"
+echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID_VALUE"
+echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
 echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
 echo "PVS_RC=$PVS_RC"
 echo "LVS_BLACKBOXED_CELL_COUNT=$BLACKBOXED_COUNT"

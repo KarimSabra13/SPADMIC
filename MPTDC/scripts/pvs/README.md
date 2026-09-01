@@ -149,19 +149,31 @@ still have zero tie mismatch residue. A diagnostic continuation is valid only
 for either an explicit top `MATCH` or the exact four-open `RO6_PG_OPEN_ONLY`
 remainder with zero bus, tie, net, and instance mismatch residue.
 
-An explicit boundary `MATCH` is not the final full-top LVS result. It advances
-only to `server_run_mptdc_ro6_monolithic_lvs.sh`. That driver binds the exact
-raw source run, published boundary proof, standalone RO proof, merged GDS,
-D-cell CDL, and standalone-matched RO CDL. It then runs one full-top LVS with
-exactly three schematic paths and one layout path. `lvs_black_box`, `-hcell`,
-position-based bus mapping, and global-signal port promotion are forbidden.
+An explicit boundary `MATCH` is not the final full-top LVS result. The
+definitive result comes only from `server_run_mptdc_ro6_monolithic_lvs.sh`.
+Its preferred `--direct-full-top` mode first runs
+`15_classify_ro6_raw_mismatch.py` and requires the raw report to contain
+exactly two missing source-side `RO_tune6` instances plus the 380 extracted
+layout devices in the two known RO hierarchy/coordinate clusters, with no
+other pin, net, instance, model, or mismatch-marker residue. It also requires
+the standalone unblackboxed RO `MATCH`, exact merged-GDS/RO-GDS/RO-CDL hashes,
+the antenna-only base-DRC signature, and the PG15 source state. A boundary run
+is therefore not a prerequisite for direct mode; it remains a diagnostic
+fallback and cannot replace the final monolithic comparison.
+
+Legacy mode still binds a published boundary proof as an additional
+prerequisite. Both modes run one full-top LVS with exactly three schematic
+paths and one layout path. `lvs_black_box`, `-hcell`, position-based bus
+mapping, and global-signal port promotion are forbidden.
 The replay template is taken from the tracked source `_04_lvs` snapshot, with
 an empty `.config.rul` and a tracked nonempty `.technology.rul`; mutable live
 run controls are not reused.
 Only an explicit monolithic `MATCH`, zero blackboxed cells, zero mismatched
 cells, exact top `59:59` and RO `19:19` pin matches, no missing instances, and
 an empty shorts report set `LVS_SIGNOFF_ELIGIBLE=YES`. Density remains blocked
-until that published monolithic gate passes.
+until that published monolithic gate passes. The density driver accepts direct
+evidence only with `--direct-full-top` and rechecks the same source,
+standalone-RO, monolithic, and hash tuple before launching PVS DRC.
 
 The monolithic LVS proof does not relabel the whole block as physically ready.
 The current recovery policy records the 136 base-DRC results as the exact four
