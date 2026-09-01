@@ -259,9 +259,11 @@ def main() -> int:
         f"LAYOUT_ONLY_INSTANCE_COUNT={len(layout_only)}",
         f"LAYOUT_ONLY_MODEL_SIGNATURE={model_signature}",
         f"RO_LAYOUT_ROOT_SIGNATURE={root_signature}",
+        f"RO_LAYOUT_CLUSTER_COUNT={len(roots)}",
         f"RO_CLUSTER_COORDINATE_STATUS={'PASS' if cluster_status else 'FAIL'}",
         f"MISMATCH_ATTRIBUTION={attribution}",
         f"DIRECT_MONOLITHIC_ELIGIBLE={eligible}",
+        f"HIERARCHICAL_COMPOSITION_ELIGIBLE={eligible}",
         f"FAILURE_COUNT={len(failures)}",
     ]
     report_lines.extend(f"ERROR_{index}={message}" for index, message in enumerate(failures, 1))
@@ -271,6 +273,7 @@ def main() -> int:
     print(f"RAW_LVS_MISMATCH_CLASSIFICATION_STATUS={status}")
     print(f"MISMATCH_ATTRIBUTION={attribution}")
     print(f"DIRECT_MONOLITHIC_ELIGIBLE={eligible}")
+    print(f"HIERARCHICAL_COMPOSITION_ELIGIBLE={eligible}")
     return 0 if not failures else 10
 
 

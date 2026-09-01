@@ -149,33 +149,35 @@ still have zero tie mismatch residue. A diagnostic continuation is valid only
 for either an explicit top `MATCH` or the exact four-open `RO6_PG_OPEN_ONLY`
 remainder with zero bus, tie, net, and instance mismatch residue.
 
-An explicit boundary `MATCH` is not the final full-top LVS result. The
-definitive result comes only from `server_run_mptdc_ro6_monolithic_lvs.sh`.
-Its preferred `--direct-full-top` mode first runs
-`15_classify_ro6_raw_mismatch.py` and requires the raw report to contain
-exactly two missing source-side `RO_tune6` instances plus the 380 extracted
-layout devices in the two known RO hierarchy/coordinate clusters, with no
-other pin, net, instance, model, or mismatch-marker residue. It also requires
-the standalone unblackboxed RO `MATCH`, exact merged-GDS/RO-GDS/RO-CDL hashes,
-the antenna-only base-DRC signature, and the PG15 source state. A boundary run
-is therefore not a prerequisite for direct mode; it remains a diagnostic
-fallback and cannot replace the final monolithic comparison.
+The selected final LVS method is hierarchical composition. Invoke
+`server_run_mptdc_ro6_boundary_lvs.sh --hierarchical-lvs-signoff`. The driver
+first requires `15_classify_ro6_raw_mismatch.py` to prove that the raw report
+contains exactly two missing source-side `RO_tune6` instances plus the 380
+extracted layout devices in the two known RO hierarchy/coordinate clusters,
+with no other pin, net, instance, model, or mismatch-marker residue. It then
+requires an explicit top-level boundary `MATCH` with exactly one blackboxed
+cell type (`RO_tune6`), exact `19:19` boundary pins, and zero remaining opens,
+shorts, mismatched nets, or mismatched instances. Finally it binds the exact
+same RO GDS hash to the tracked standalone unblackboxed RO `MATCH`, zero
+standalone blackboxes, exact `19:19` pins, and the immutable RO CDL hash.
 
-Legacy mode still binds a published boundary proof as an additional
-prerequisite. Both modes run one full-top LVS with exactly three schematic
-paths and one layout path. `lvs_black_box`, `-hcell`, position-based bus
-mapping, and global-signal port promotion are forbidden.
-The replay template is taken from the tracked source `_04_lvs` snapshot, with
-an empty `.config.rul` and a tracked nonempty `.technology.rul`; mutable live
-run controls are not reused.
-Only an explicit monolithic `MATCH`, zero blackboxed cells, zero mismatched
-cells, exact top `59:59` and RO `19:19` pin matches, no missing instances, and
-an empty shorts report set `LVS_SIGNOFF_ELIGIBLE=YES`. Density remains blocked
-until that published monolithic gate passes. The density driver accepts direct
-evidence only with `--direct-full-top` and rechecks the same source,
-standalone-RO, monolithic, and hash tuple before launching PVS DRC.
+The raw source reports and CLS, standalone reports and CLS, and both control
+sets must match their tracked snapshots. Only the combined
+`operator_gate_pvs_hierarchical_lvs.rpt` may set
+`PVS_HIERARCHICAL_LVS_STATUS=MATCH`, `BLOCK_LVS_CLOSED=YES`, and
+`LVS_SIGNOFF_ELIGIBLE=YES`. The boundary detail and old compositional reports
+remain diagnostic and retain `SIGNOFF_ELIGIBLE=NO`; neither authorizes density
+alone.
 
-The monolithic LVS proof does not relabel the whole block as physically ready.
+`server_run_mptdc_ro6_monolithic_lvs.sh --direct-full-top` remains the fallback
+proof method. It forbids HCell, blackbox, position-based bus mapping, and
+global-signal port promotion and requires one explicit no-blackbox full-top
+`MATCH`. Density accepts either the published hierarchical gate with
+`--hierarchical-lvs` or the published monolithic gate with the existing direct
+or legacy options. It rejects mixed prerequisite modes and rechecks the exact
+source, standalone RO, and GDS/CDL hash tuple before launching PVS DRC.
+
+An LVS proof does not relabel the whole block as physically ready.
 The current recovery policy records the 136 base-DRC results as the exact four
 accepted antenna rule classes with zero non-antenna rules, but this is an
 auto-classified project-policy exception, not an independently signed or

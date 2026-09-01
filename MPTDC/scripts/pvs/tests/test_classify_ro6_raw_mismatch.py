@@ -16,7 +16,7 @@ class RawMismatchClassifierTest(unittest.TestCase):
         cls.raw_cls = (
             cls.repo
             / "MPTDC/docs/server_snapshots/pvs"
-            / "20260901_173744_mptdc_v13_pg15_compositional_pvs_04_lvs"
+            / "20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs"
             / "pvs_lvs"
             / "mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script"
             / "mptdc_axis_core_lvs.sum.cls"
@@ -39,9 +39,11 @@ class RawMismatchClassifierTest(unittest.TestCase):
             self.assertIn("STATUS=PASS\n", values)
             self.assertIn("MISMATCH_ATTRIBUTION=EXACT_TWO_RO6_INTERNALS_ONLY\n", values)
             self.assertIn("DIRECT_MONOLITHIC_ELIGIBLE=YES\n", values)
+            self.assertIn("HIERARCHICAL_COMPOSITION_ELIGIBLE=YES\n", values)
             self.assertIn("SOURCE_ONLY_INSTANCE_COUNT=2\n", values)
             self.assertIn("LAYOUT_ONLY_INSTANCE_COUNT=380\n", values)
             self.assertIn("RO_LAYOUT_ROOT_SIGNATURE=X0/X0:190,X3/X5127:190\n", values)
+            self.assertIn("RO_LAYOUT_CLUSTER_COUNT=2\n", values)
 
     def test_device_signature_drift_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -59,6 +61,7 @@ class RawMismatchClassifierTest(unittest.TestCase):
             self.assertIn("STATUS=FAIL\n", values)
             self.assertIn("MISMATCH_ATTRIBUTION=REJECTED\n", values)
             self.assertIn("DIRECT_MONOLITHIC_ELIGIBLE=NO\n", values)
+            self.assertIn("HIERARCHICAL_COMPOSITION_ELIGIBLE=NO\n", values)
 
 
 if __name__ == "__main__":

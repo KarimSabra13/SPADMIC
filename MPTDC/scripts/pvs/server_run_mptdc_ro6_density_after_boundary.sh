@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run density DRC only after attributable monolithic full-top LVS proof.
+# Run density DRC only after an attributable final LVS proof.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,30 +18,32 @@ MONOLITHIC_PVS_RUN_ID=""
 PVS_RUN_ID=""
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 DIRECT_FULL_TOP=0
+HIERARCHICAL_LVS=0
 
 usage() {
   cat <<'USAGE'
 Usage:
   server_run_mptdc_ro6_density_after_boundary.sh \
     --source-pvs-run-id <id> --source-pvs-evidence-id <id> \
-    [--boundary-pvs-run-id <id> | --direct-full-top] \
+    [--boundary-pvs-run-id <id> [--hierarchical-lvs] | --direct-full-top] \
     --standalone-pvs-run-id <id> \
-    --monolithic-pvs-run-id <id> [options]
+    [--monolithic-pvs-run-id <id>] [options]
 
 Options:
   --run-id <id>          New density-only result directory.
   --direct-full-top      Accept a monolithic proof produced by the direct
                          no-HCell full-top path, without a boundary run.
+  --hierarchical-lvs     Accept the final top RO black-box MATCH plus exact-hash
+                         standalone unblackboxed RO MATCH. A monolithic run id
+                         is forbidden in this mode.
   --source-pvs-evidence-id <id>
                          Published final source snapshot. Defaults to
                          <source-pvs-run-id>_04_lvs.
   --expected-head <sha>  Require repository HEAD.
   --innovus-work <path>  Innovus/PVS result root.
 
-The source base DRC, standalone RO LVS, monolithic full-top LVS, GDS/CDL
-hashes, and antenna signature must all agree. Boundary LVS is mandatory only
-for legacy-mode monolithic evidence. This stage never attempts antenna or
-density repair.
+The source base DRC, selected final LVS proof, GDS/CDL hashes, and antenna
+signature must all agree. This stage never attempts antenna or density repair.
 USAGE
 }
 
@@ -64,6 +66,7 @@ while [[ $# -gt 0 ]]; do
     --standalone-pvs-run-id) STANDALONE_PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --monolithic-pvs-run-id) MONOLITHIC_PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --direct-full-top) DIRECT_FULL_TOP=1; shift ;;
+    --hierarchical-lvs) HIERARCHICAL_LVS=1; shift ;;
     --run-id) PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --expected-head) EXPECTED_HEAD_VALUE="${2:?missing value}"; shift 2 ;;
     --innovus-work) INNOVUS_WORK="${2:?missing value}"; shift 2 ;;
@@ -77,27 +80,76 @@ for id in "$SOURCE_PVS_RUN_ID" "$SOURCE_PVS_EVIDENCE_ID" "$BOUNDARY_PVS_RUN_ID" 
           "$STANDALONE_PVS_RUN_ID" "$MONOLITHIC_PVS_RUN_ID" "$PVS_RUN_ID"; do
   [[ -z "$id" || "$id" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "ERROR: unsafe run id: $id" >&2; exit 2; }
 done
-[[ -n "$SOURCE_PVS_RUN_ID" && -n "$STANDALONE_PVS_RUN_ID" && \
-   -n "$MONOLITHIC_PVS_RUN_ID" ]] || {
-  echo "ERROR: source, standalone, and monolithic run ids are required" >&2
+[[ -n "$SOURCE_PVS_RUN_ID" && -n "$STANDALONE_PVS_RUN_ID" ]] || {
+  echo "ERROR: source and standalone run ids are required" >&2
   exit 2
 }
-if [[ "$DIRECT_FULL_TOP" -eq 1 ]]; then
+if [[ "$HIERARCHICAL_LVS" -eq 1 ]]; then
+  [[ "$DIRECT_FULL_TOP" -eq 0 ]] || {
+    echo "ERROR: --hierarchical-lvs cannot be combined with --direct-full-top" >&2
+    exit 2
+  }
+  [[ -n "$BOUNDARY_PVS_RUN_ID" ]] || {
+    echo "ERROR: --boundary-pvs-run-id is required with --hierarchical-lvs" >&2
+    exit 2
+  }
+  [[ -z "$MONOLITHIC_PVS_RUN_ID" ]] || {
+    echo "ERROR: --monolithic-pvs-run-id is forbidden with --hierarchical-lvs" >&2
+    exit 2
+  }
+  LVS_PREREQUISITE_MODE=HIERARCHICAL_TOP_BLACKBOX_PLUS_STANDALONE_RO
+  LVS_PROOF_METHOD=HIERARCHICAL_TOP_BLACKBOX_PLUS_STANDALONE_RO
+  BOUNDARY_PVS_RUN_ID_VALUE="$BOUNDARY_PVS_RUN_ID"
+  BOUNDARY_PROOF_STATUS=PASS
+  MONOLITHIC_PVS_RUN_ID_VALUE=NOT_REQUIRED_BY_HIERARCHICAL_METHOD
+  LVS_PROOF_RUN_ID="$BOUNDARY_PVS_RUN_ID"
+elif [[ "$DIRECT_FULL_TOP" -eq 1 ]]; then
+  [[ -n "$MONOLITHIC_PVS_RUN_ID" ]] || {
+    echo "ERROR: --monolithic-pvs-run-id is required with --direct-full-top" >&2
+    exit 2
+  }
   [[ -z "$BOUNDARY_PVS_RUN_ID" ]] || {
     echo "ERROR: --boundary-pvs-run-id cannot be combined with --direct-full-top" >&2
     exit 2
   }
   LVS_PREREQUISITE_MODE=DIRECT_FULL_TOP_WITH_STANDALONE_RO_PROOF
+  LVS_PROOF_METHOD=MONOLITHIC_FULL_TOP_LVS
   BOUNDARY_PVS_RUN_ID_VALUE=NOT_USED_DIRECT_FULL_TOP
   BOUNDARY_PROOF_STATUS=NOT_REQUIRED_BY_DIRECT_MONOLITHIC_PROOF
+  MONOLITHIC_PVS_RUN_ID_VALUE="$MONOLITHIC_PVS_RUN_ID"
+  LVS_PROOF_RUN_ID="$MONOLITHIC_PVS_RUN_ID"
 else
+  [[ -n "$MONOLITHIC_PVS_RUN_ID" ]] || {
+    echo "ERROR: --monolithic-pvs-run-id is required in legacy boundary mode" >&2
+    exit 2
+  }
   [[ -n "$BOUNDARY_PVS_RUN_ID" ]] || {
     echo "ERROR: --boundary-pvs-run-id is required unless --direct-full-top is used" >&2
     exit 2
   }
   LVS_PREREQUISITE_MODE=BOUNDARY_MATCH_PLUS_STANDALONE_RO_PROOF
+  LVS_PROOF_METHOD=MONOLITHIC_FULL_TOP_LVS
   BOUNDARY_PVS_RUN_ID_VALUE="$BOUNDARY_PVS_RUN_ID"
   BOUNDARY_PROOF_STATUS=PASS
+  MONOLITHIC_PVS_RUN_ID_VALUE="$MONOLITHIC_PVS_RUN_ID"
+  LVS_PROOF_RUN_ID="$MONOLITHIC_PVS_RUN_ID"
+fi
+if [[ "$HIERARCHICAL_LVS" -eq 1 ]]; then
+  DENSITY_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_HIERARCHICAL_LVS
+  DENSITY_STEP=PVS_DRC_DENSITY_AFTER_HIERARCHICAL_LVS
+  MONOLITHIC_LVS_STATUS_VALUE=NOT_REQUIRED_BY_HIERARCHICAL_METHOD
+  TOP_BOUNDARY_BLACKBOXED_CELL_COUNT=1
+  STANDALONE_BLACKBOXED_CELL_COUNT=0
+  LVS_BLACKBOXED_CELL_COUNT_VALUE=COMPOSED_BOUNDARY_1_STANDALONE_0
+  LVS_HCELL_STATUS_VALUE=RO_TUNE6_BOUNDARY_ONLY
+else
+  DENSITY_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_MONOLITHIC_LVS
+  DENSITY_STEP=PVS_DRC_DENSITY_AFTER_MONOLITHIC_LVS
+  MONOLITHIC_LVS_STATUS_VALUE=MATCH
+  TOP_BOUNDARY_BLACKBOXED_CELL_COUNT=NOT_APPLICABLE_TO_MONOLITHIC_PROOF
+  STANDALONE_BLACKBOXED_CELL_COUNT=0
+  LVS_BLACKBOXED_CELL_COUNT_VALUE=0
+  LVS_HCELL_STATUS_VALUE=NOT_USED
 fi
 [[ -n "$PVS_RUN_ID" ]] || PVS_RUN_ID="$(date +%Y%m%d)_mptdc_ro6_density_$(date +%H%M%S)"
 
@@ -118,7 +170,10 @@ SOURCE_DIAGNOSTIC_SCOPE="$SOURCE_SNAPSHOT/manifests/pvs_diagnostic_scope.rpt"
 SOURCE_LVS_GATE="$SOURCE_SNAPSHOT/reports/operator_gate_pvs_lvs.rpt"
 SOURCE_README="$SOURCE_SNAPSHOT/README.md"
 BOUNDARY_GATE=""
-if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+HIERARCHICAL_GATE=""
+if [[ "$HIERARCHICAL_LVS" -eq 1 ]]; then
+  HIERARCHICAL_GATE="$BOUNDARY_SNAPSHOT/reports/operator_gate_pvs_hierarchical_lvs.rpt"
+elif [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
   BOUNDARY_GATE="$BOUNDARY_SNAPSHOT/reports/operator_gate_pvs_compositional_lvs.rpt"
 fi
 STANDALONE_GATE="$STANDALONE_SNAPSHOT/reports/operator_gate_pvs_ro6_standalone_lvs.rpt"
@@ -141,11 +196,17 @@ PREFLIGHT=PASS
 [[ -z "$(git status --short --untracked-files=no 2>/dev/null)" ]] || PREFLIGHT=FAIL
 for path in "$BASE_CLASS" "$BASE_CLASS_SCOPE" "$SOURCE_DIAGNOSTIC_SCOPE" \
             "$SOURCE_LVS_GATE" "$SOURCE_README" \
-            "$STANDALONE_GATE" "$STANDALONE_INPUTS" "$MONOLITHIC_GATE" \
-            "$MONOLITHIC_HANDOFF" "$MONOLITHIC_INPUTS"; do
+            "$STANDALONE_GATE" "$STANDALONE_INPUTS"; do
   tracked_report "$path" || PREFLIGHT=FAIL
 done
-if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+if [[ "$HIERARCHICAL_LVS" -eq 1 ]]; then
+  tracked_report "$HIERARCHICAL_GATE" || PREFLIGHT=FAIL
+else
+  for path in "$MONOLITHIC_GATE" "$MONOLITHIC_HANDOFF" "$MONOLITHIC_INPUTS"; do
+    tracked_report "$path" || PREFLIGHT=FAIL
+  done
+fi
+if [[ "$HIERARCHICAL_LVS" -eq 0 && "$DIRECT_FULL_TOP" -eq 0 ]]; then
   tracked_report "$BOUNDARY_GATE" || PREFLIGHT=FAIL
 fi
 for path in "$SOURCE_HASHES" "$SOURCE_BASE_STATUS" "$SOURCE_BASE_RULES" "$SOURCE_GDS" \
@@ -163,10 +224,22 @@ BASE_CLASS_RULE_SHA="$(report_value "$BASE_CLASS" RULE_REPORT_SHA256)"
 BASE_SCOPE_LAYOUT_SHA="$(report_value "$BASE_CLASS_SCOPE" BASE_DRC_LAYOUT_SHA256)"
 BASE_SCOPE_RULE_SHA="$(report_value "$BASE_CLASS_SCOPE" BASE_DRC_RULE_REPORT_SHA256)"
 SOURCE_RO_GDS_SHA="$(report_value "$SOURCE_HASHES" RO_GDS_SHA256)"
+SOURCE_LVS_SOURCE_SHA="$(report_value "$SOURCE_HASHES" LVS_SOURCE_FILTERED_SHA256)"
+SOURCE_LVS_HCELL_SHA="$(report_value "$SOURCE_HASHES" LVS_HCELL_SHA256)"
 BOUNDARY_GDS_SHA=MISSING
 BOUNDARY_RO_GDS_SHA=MISSING
 BOUNDARY_RO_CDL_SHA=MISSING
-if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+BOUNDARY_LVS_SOURCE_SHA=MISSING
+BOUNDARY_LVS_HCELL_SHA=MISSING
+HIERARCHICAL_LVS_STATUS=NOT_USED
+if [[ "$HIERARCHICAL_LVS" -eq 1 ]]; then
+  BOUNDARY_GDS_SHA="$(report_value "$HIERARCHICAL_GATE" MERGED_GDS_SHA256)"
+  BOUNDARY_LVS_SOURCE_SHA="$(report_value "$HIERARCHICAL_GATE" LVS_SOURCE_SHA256)"
+  BOUNDARY_LVS_HCELL_SHA="$(report_value "$HIERARCHICAL_GATE" LVS_HCELL_SHA256)"
+  BOUNDARY_RO_GDS_SHA="$(report_value "$HIERARCHICAL_GATE" RO_GDS_SHA256)"
+  BOUNDARY_RO_CDL_SHA="$(report_value "$HIERARCHICAL_GATE" RO_CDL_SHA256)"
+  HIERARCHICAL_LVS_STATUS="$(report_value "$HIERARCHICAL_GATE" PVS_HIERARCHICAL_LVS_STATUS)"
+elif [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
   BOUNDARY_GDS_SHA="$(report_value "$BOUNDARY_GATE" MERGED_GDS_SHA256)"
   BOUNDARY_RO_GDS_SHA="$(report_value "$BOUNDARY_GATE" RO_GDS_SHA256)"
   BOUNDARY_RO_CDL_SHA="$(report_value "$BOUNDARY_GATE" RO_CDL_SHA256)"
@@ -215,7 +288,49 @@ MONOLITHIC_INPUT_RO_CDL_SHA="$(report_value "$MONOLITHIC_INPUTS" RO_CDL_SHA256)"
    "$(report_value "$SOURCE_LVS_GATE" DECISION)" == DIAGNOSTIC_RAW_MISMATCH_COLLECTED ]] || PREFLIGHT=FAIL
 grep -Fqx -- "- Run ID: \`$SOURCE_PVS_EVIDENCE_ID\`" "$SOURCE_README" || PREFLIGHT=FAIL
 grep -Fqx -- "- Source directory: \`$SOURCE_DIR\`" "$SOURCE_README" || PREFLIGHT=FAIL
-if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+if [[ "$HIERARCHICAL_LVS" -eq 1 ]]; then
+  [[ "$(report_value "$HIERARCHICAL_GATE" STEP)" == PVS_HIERARCHICAL_LVS &&
+     "$(report_value "$HIERARCHICAL_GATE" PVS_RUN_CLASS)" == SIGNOFF_HIERARCHICAL_LVS_COMPOSITION &&
+     "$(report_value "$HIERARCHICAL_GATE" LVS_PROOF_METHOD)" == HIERARCHICAL_TOP_BLACKBOX_PLUS_STANDALONE_RO &&
+     "$(report_value "$HIERARCHICAL_GATE" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" &&
+     "$(report_value "$HIERARCHICAL_GATE" SOURCE_PVS_EVIDENCE_ID)" == "$SOURCE_PVS_EVIDENCE_ID" &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_PVS_RUN_ID)" == "$BOUNDARY_PVS_RUN_ID" &&
+     "$(report_value "$HIERARCHICAL_GATE" STANDALONE_PVS_RUN_ID)" == "$STANDALONE_PVS_RUN_ID" &&
+     "$(report_value "$HIERARCHICAL_GATE" RAW_MISMATCH_ATTRIBUTION)" == EXACT_TWO_RO6_INTERNALS_ONLY &&
+     "$(report_value "$HIERARCHICAL_GATE" RAW_HIERARCHICAL_ELIGIBLE)" == YES &&
+     "$(report_value "$HIERARCHICAL_GATE" RAW_CLS_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" RAW_CLASSIFIED_CLS_SHA256)" == "$(report_value "$HIERARCHICAL_GATE" RAW_CLS_SHA256)" &&
+     "$(report_value "$HIERARCHICAL_GATE" RAW_CLASSIFIER_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" RAW_CLASSIFICATION_REPORT_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" PVS_TOP_BOUNDARY_LVS)" == MATCH &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_CLS_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_CLS_PATH_STATUS)" == PASS &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_TOP_INITIAL_PINS)" == 59:59 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_TOP_COMPARE_PINS)" == 59:59 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_TOP_CELL_STATUS)" == match &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_LAYOUT_TOP_ARGUMENT_COUNT)" == 1 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_SOURCE_TOP_ARGUMENT_COUNT)" == 1 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_RUN_PVS_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_LVS_CONTROL_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_CONFIG_RUL_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_TECHNOLOGY_RUL_SHA256)" =~ ^[0-9a-f]{64}$ &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_BLACKBOX_CELL)" == RO_tune6 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_BLACKBOXED_CELL_COUNT)" == 1 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_RO6_INITIAL_PINS)" == 19:19 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_RO6_COMPARE_PINS)" == 19:19 &&
+     "$(report_value "$HIERARCHICAL_GATE" BOUNDARY_REMAINDER_CLASS)" == NONE_MATCH &&
+     "$(report_value "$HIERARCHICAL_GATE" PVS_RO6_STANDALONE_LVS)" == MATCH &&
+     "$(report_value "$HIERARCHICAL_GATE" STANDALONE_BLACKBOXED_CELL_COUNT)" == 0 &&
+     "$(report_value "$HIERARCHICAL_GATE" STANDALONE_RO6_PIN_MATCH_COUNT)" == 1 &&
+     "$(report_value "$HIERARCHICAL_GATE" STATUS)" == PASS &&
+     "$(report_value "$HIERARCHICAL_GATE" PVS_HIERARCHICAL_LVS_STATUS)" == MATCH &&
+     "$(report_value "$HIERARCHICAL_GATE" BLOCK_LVS_CLOSED)" == YES &&
+     "$(report_value "$HIERARCHICAL_GATE" LVS_SIGNOFF_ELIGIBLE)" == YES &&
+     "$(report_value "$HIERARCHICAL_GATE" MONOLITHIC_LVS_REQUIRED)" == NO_BY_SELECTED_METHOD &&
+     "$(report_value "$HIERARCHICAL_GATE" FINAL_PHYSICAL_SIGNOFF_READY)" == NO &&
+     "$(report_value "$HIERARCHICAL_GATE" DECISION)" == PASS_HIERARCHICAL_LVS &&
+     "$(report_value "$HIERARCHICAL_GATE" NEXT_STAGE)" == PVS_DENSITY_DRC ]] || PREFLIGHT=FAIL
+elif [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
   [[ "$(report_value "$BOUNDARY_GATE" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" &&
      "$(report_value "$BOUNDARY_GATE" PVS_RUN_CLASS)" == DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF &&
      "$(report_value "$BOUNDARY_GATE" BOUNDARY_PVS_RUN_ID)" == "$BOUNDARY_PVS_RUN_ID" &&
@@ -236,6 +351,7 @@ fi
    "$(report_value "$STANDALONE_GATE" OA_READ_ONLY_STATUS)" == PASS &&
    "$(report_value "$STANDALONE_GATE" RO6_CDL_PIN_CONTRACT_STATUS)" == PASS &&
    "$(report_value "$STANDALONE_GATE" SIGNOFF_ELIGIBLE)" == NO ]] || PREFLIGHT=FAIL
+if [[ "$HIERARCHICAL_LVS" -eq 0 ]]; then
 [[ "$(report_value "$MONOLITHIC_GATE" STEP)" == PVS_RO6_MONOLITHIC_FULL_TOP_LVS &&
    "$(report_value "$MONOLITHIC_GATE" PVS_RUN_CLASS)" == MONOLITHIC_FULL_TOP_LVS_PROOF &&
    "$(report_value "$MONOLITHIC_GATE" LVS_PREREQUISITE_MODE)" == "$LVS_PREREQUISITE_MODE" &&
@@ -275,24 +391,36 @@ fi
    "$(report_value "$MONOLITHIC_INPUTS" LVS_HCELL_STATUS)" == NOT_USED &&
    "$(report_value "$MONOLITHIC_INPUTS" LVS_BLACKBOX_STATUS)" == NOT_USED &&
    "$(report_value "$MONOLITHIC_INPUTS" LVS_POSITION_BUS_MAPPING_STATUS)" == NOT_USED ]] || PREFLIGHT=FAIL
+fi
 [[ "$SOURCE_GDS_SHA" =~ ^[0-9a-f]{64}$ && "$SOURCE_GDS_SHA" == "$MANIFEST_GDS_SHA" &&
    "$SOURCE_GDS_SHA" == "$BASE_LAYOUT_SHA" && "$SOURCE_GDS_SHA" == "$BASE_CLASS_LAYOUT_SHA" &&
-   "$SOURCE_GDS_SHA" == "$BASE_SCOPE_LAYOUT_SHA" && "$SOURCE_GDS_SHA" == "$MONOLITHIC_GDS_SHA" &&
-   "$SOURCE_GDS_SHA" == "$MONOLITHIC_INPUT_GDS_SHA" &&
+   "$SOURCE_GDS_SHA" == "$BASE_SCOPE_LAYOUT_SHA" &&
    "$SOURCE_BASE_RULE_SHA" =~ ^[0-9a-f]{64}$ &&
    "$SOURCE_BASE_RULE_SHA" == "$BASE_CLASS_RULE_SHA" &&
    "$SOURCE_BASE_RULE_SHA" == "$BASE_SCOPE_RULE_SHA" &&
    "$SOURCE_RO_GDS_SHA" =~ ^[0-9a-f]{64}$ &&
    "$SOURCE_RO_GDS_SHA" == "$STANDALONE_RO_GDS_SHA" &&
-   "$SOURCE_RO_GDS_SHA" == "$MONOLITHIC_RO_GDS_SHA" &&
-   "$SOURCE_RO_GDS_SHA" == "$MONOLITHIC_INPUT_RO_GDS_SHA" &&
-   "$STANDALONE_RO_CDL_SHA" =~ ^[0-9a-f]{64}$ &&
-   "$STANDALONE_RO_CDL_SHA" == "$MONOLITHIC_RO_CDL_SHA" &&
-   "$STANDALONE_RO_CDL_SHA" == "$MONOLITHIC_INPUT_RO_CDL_SHA" ]] || PREFLIGHT=FAIL
-if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+   "$STANDALONE_RO_CDL_SHA" =~ ^[0-9a-f]{64}$ ]] || PREFLIGHT=FAIL
+if [[ "$HIERARCHICAL_LVS" -eq 1 ]]; then
   [[ "$SOURCE_GDS_SHA" == "$BOUNDARY_GDS_SHA" &&
+     "$SOURCE_LVS_SOURCE_SHA" =~ ^[0-9a-f]{64}$ &&
+     "$SOURCE_LVS_SOURCE_SHA" == "$BOUNDARY_LVS_SOURCE_SHA" &&
+     "$SOURCE_LVS_HCELL_SHA" =~ ^[0-9a-f]{64}$ &&
+     "$SOURCE_LVS_HCELL_SHA" == "$BOUNDARY_LVS_HCELL_SHA" &&
      "$SOURCE_RO_GDS_SHA" == "$BOUNDARY_RO_GDS_SHA" &&
      "$STANDALONE_RO_CDL_SHA" == "$BOUNDARY_RO_CDL_SHA" ]] || PREFLIGHT=FAIL
+else
+  [[ "$SOURCE_GDS_SHA" == "$MONOLITHIC_GDS_SHA" &&
+     "$SOURCE_GDS_SHA" == "$MONOLITHIC_INPUT_GDS_SHA" &&
+     "$SOURCE_RO_GDS_SHA" == "$MONOLITHIC_RO_GDS_SHA" &&
+     "$SOURCE_RO_GDS_SHA" == "$MONOLITHIC_INPUT_RO_GDS_SHA" &&
+     "$STANDALONE_RO_CDL_SHA" == "$MONOLITHIC_RO_CDL_SHA" &&
+     "$STANDALONE_RO_CDL_SHA" == "$MONOLITHIC_INPUT_RO_CDL_SHA" ]] || PREFLIGHT=FAIL
+  if [[ "$DIRECT_FULL_TOP" -eq 0 ]]; then
+    [[ "$SOURCE_GDS_SHA" == "$BOUNDARY_GDS_SHA" &&
+       "$SOURCE_RO_GDS_SHA" == "$BOUNDARY_RO_GDS_SHA" &&
+       "$STANDALONE_RO_CDL_SHA" == "$BOUNDARY_RO_CDL_SHA" ]] || PREFLIGHT=FAIL
+  fi
 fi
 
 mapfile -t BASE_DRC_RUNS < <(find "$SOURCE_DIR/pvs_drc" -mindepth 1 -maxdepth 1 -type d \
@@ -302,12 +430,16 @@ BASE_DRC_TEMPLATE="${BASE_DRC_RUNS[0]:-MISSING}"
 
 echo "PVS_DENSITY_PREFLIGHT=$PREFLIGHT"
 echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
+echo "LVS_PROOF_METHOD=$LVS_PROOF_METHOD"
+echo "LVS_PROOF_RUN_ID=$LVS_PROOF_RUN_ID"
+echo "LVS_PROOF_STATUS=MATCH"
 echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
 echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
 echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID_VALUE"
 echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
 echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
-echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
+echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID_VALUE"
+echo "PVS_HIERARCHICAL_LVS_STATUS=$HIERARCHICAL_LVS_STATUS"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
 echo "SOURCE_GDS_SHA256=$SOURCE_GDS_SHA"
 echo "BASE_DRC_TEMPLATE=$BASE_DRC_TEMPLATE"
@@ -322,17 +454,23 @@ sed "s|$SOURCE_DIR|$PVS_DIR|g" "$SOURCE_HASHES" > "$PVS_DIR/manifests/pvs_input_
 cp -p "$SOURCE_BASE_RULES" "$PVS_DIR/reports/pvs_drc_base_nonzero_rules.tsv"
 sed "s|$SOURCE_DIR|$PVS_DIR|g" "$SOURCE_BASE_STATUS" > "$PVS_DIR/reports/pvs_drc_base_status.rpt"
 {
-  echo "PVS_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_MONOLITHIC_LVS"
+  echo "PVS_RUN_CLASS=$DENSITY_RUN_CLASS"
   echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
+  echo "LVS_PROOF_METHOD=$LVS_PROOF_METHOD"
+  echo "LVS_PROOF_RUN_ID=$LVS_PROOF_RUN_ID"
+  echo "LVS_PROOF_STATUS=MATCH"
   echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
   echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
   echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID_VALUE"
   echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
   echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
-  echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
-  echo "MONOLITHIC_LVS_STATUS=MATCH"
-  echo "LVS_BLACKBOXED_CELL_COUNT=0"
-  echo "LVS_HCELL_STATUS=NOT_USED"
+  echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID_VALUE"
+  echo "MONOLITHIC_LVS_STATUS=$MONOLITHIC_LVS_STATUS_VALUE"
+  echo "PVS_HIERARCHICAL_LVS_STATUS=$HIERARCHICAL_LVS_STATUS"
+  echo "TOP_BOUNDARY_BLACKBOXED_CELL_COUNT=$TOP_BOUNDARY_BLACKBOXED_CELL_COUNT"
+  echo "STANDALONE_BLACKBOXED_CELL_COUNT=$STANDALONE_BLACKBOXED_CELL_COUNT"
+  echo "LVS_BLACKBOXED_CELL_COUNT=$LVS_BLACKBOXED_CELL_COUNT_VALUE"
+  echo "LVS_HCELL_STATUS=$LVS_HCELL_STATUS_VALUE"
   echo "MERGED_GDS_SHA256=$SOURCE_GDS_SHA"
   echo "RO_GDS_SHA256=$SOURCE_RO_GDS_SHA"
   echo "ANTENNA_REPAIR_ATTEMPTED=NO"
@@ -383,18 +521,24 @@ elif [[ "$DENSITY_RAW_STATUS" == FAIL && "$DRC_RC" -eq 9 &&
   NEXT_STAGE=REVIEW_ATTRIBUTABLE_DENSITY_DEBT
 fi
 {
-  echo "STEP=PVS_DRC_DENSITY_AFTER_MONOLITHIC_LVS"
-  echo "PVS_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_MONOLITHIC_LVS"
+  echo "STEP=$DENSITY_STEP"
+  echo "PVS_RUN_CLASS=$DENSITY_RUN_CLASS"
   echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
+  echo "LVS_PROOF_METHOD=$LVS_PROOF_METHOD"
+  echo "LVS_PROOF_RUN_ID=$LVS_PROOF_RUN_ID"
+  echo "LVS_PROOF_STATUS=MATCH"
   echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
   echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
   echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID_VALUE"
   echo "BOUNDARY_PROOF_STATUS=$BOUNDARY_PROOF_STATUS"
   echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
-  echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
-  echo "MONOLITHIC_LVS_STATUS=MATCH"
-  echo "LVS_BLACKBOXED_CELL_COUNT=0"
-  echo "LVS_HCELL_STATUS=NOT_USED"
+  echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID_VALUE"
+  echo "MONOLITHIC_LVS_STATUS=$MONOLITHIC_LVS_STATUS_VALUE"
+  echo "PVS_HIERARCHICAL_LVS_STATUS=$HIERARCHICAL_LVS_STATUS"
+  echo "TOP_BOUNDARY_BLACKBOXED_CELL_COUNT=$TOP_BOUNDARY_BLACKBOXED_CELL_COUNT"
+  echo "STANDALONE_BLACKBOXED_CELL_COUNT=$STANDALONE_BLACKBOXED_CELL_COUNT"
+  echo "LVS_BLACKBOXED_CELL_COUNT=$LVS_BLACKBOXED_CELL_COUNT_VALUE"
+  echo "LVS_HCELL_STATUS=$LVS_HCELL_STATUS_VALUE"
   echo "DRC_REPLAY_RC=$DRC_RC"
   echo "DENSITY_CLASSIFICATION_RC=$CLASSIFICATION_RC"
   echo "DENSITY_CLASSIFICATION_STATUS=$CLASSIFICATION_STATUS"
@@ -422,9 +566,13 @@ MPTDC_SNAPSHOT_MAX_TEXT_BYTES=4194304 bash "$PUBLISHER" pvs "$PVS_RUN_ID" "$PVS_
 PUBLISH_RC=$?
 echo "PVS_DENSITY_STATUS=$CLASSIFICATION_STATUS"
 echo "LVS_PREREQUISITE_MODE=$LVS_PREREQUISITE_MODE"
+echo "LVS_PROOF_METHOD=$LVS_PROOF_METHOD"
+echo "LVS_PROOF_RUN_ID=$LVS_PROOF_RUN_ID"
+echo "LVS_PROOF_STATUS=MATCH"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
-echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
-echo "MONOLITHIC_LVS_STATUS=MATCH"
+echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID_VALUE"
+echo "MONOLITHIC_LVS_STATUS=$MONOLITHIC_LVS_STATUS_VALUE"
+echo "PVS_HIERARCHICAL_LVS_STATUS=$HIERARCHICAL_LVS_STATUS"
 echo "DECISION=$DECISION"
 echo "PUBLISH_RC=$PUBLISH_RC"
 echo "NEXT_EXPECTED_HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null)"

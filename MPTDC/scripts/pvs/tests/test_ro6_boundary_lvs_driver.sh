@@ -9,6 +9,7 @@ trap 'rm -rf "$TMP_ROOT"' EXIT
 REPO="$TMP_ROOT/repo"
 WORK="$TMP_ROOT/work"
 SOURCE_ID=source_pvs_mismatch
+SOURCE_EVIDENCE_ID=${SOURCE_ID}_04_lvs
 STANDALONE_ID=ro6_standalone_match
 SOURCE_BASE="$WORK/$SOURCE_ID"
 STANDALONE_BASE="$WORK/$STANDALONE_ID"
@@ -16,10 +17,17 @@ SOURCE_LVS="$SOURCE_BASE/pvs_lvs/source_lvs_script"
 DRIVER="$REPO/MPTDC/scripts/pvs/server_run_mptdc_ro6_boundary_lvs.sh"
 REPLAY="$TMP_ROOT/replay_stub.sh"
 PUBLISHER="$TMP_ROOT/publisher_stub.sh"
+RAW_CLASSIFIER="$TMP_ROOT/raw_classifier_stub.py"
+SOURCE_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/pvs/$SOURCE_EVIDENCE_ID"
+STANDALONE_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/pvs/$STANDALONE_ID"
 
 mkdir -p "$REPO/MPTDC/scripts/pvs" "$SOURCE_LVS/svdb" "$SOURCE_BASE/outputs" \
   "$SOURCE_BASE/manifests" "$SOURCE_BASE/reports" \
-  "$STANDALONE_BASE/manifests" "$STANDALONE_BASE/reports"
+  "$STANDALONE_BASE/inputs" "$STANDALONE_BASE/manifests" "$STANDALONE_BASE/reports" \
+  "$SOURCE_SNAPSHOT/manifests" "$SOURCE_SNAPSHOT/reports" \
+  "$SOURCE_SNAPSHOT/pvs_lvs/source_lvs_script" \
+  "$STANDALONE_SNAPSHOT/manifests" "$STANDALONE_SNAPSHOT/reports" \
+  "$STANDALONE_SNAPSHOT/pvs_lvs/RO_tune6_standalone_script"
 cp -p "$PVS_DIR/server_run_mptdc_ro6_boundary_lvs.sh" "$DRIVER"
 
 printf 'merged gds\n' > "$SOURCE_BASE/outputs/mptdc_axis_core_merged_stdcell_ro6.gds"
@@ -65,10 +73,16 @@ STEP=PVS_RO6_STANDALONE_LVS
 OA_READ_ONLY_STATUS=PASS
 RO6_CDL_PIN_CONTRACT_STATUS=PASS
 PVS_LVS=MATCH
+CLS_RUN_RESULT=MATCH
+BLACKBOXED_CELL_COUNT=0
 SIGNOFF_ELIGIBLE=NO
 DECISION=PASS_CONTINUE
 EOF
+printf 'merged gds\n' > "$STANDALONE_BASE/inputs/RO_tune6.fresh.gds"
+printf 'RO CDL fixture\n' > "$STANDALONE_BASE/inputs/RO_tune6.fresh.cdl"
 cat > "$STANDALONE_BASE/manifests/ro6_standalone_lvs_inputs.rpt" <<EOF
+LOCAL_RO_GDS=$STANDALONE_BASE/inputs/RO_tune6.fresh.gds
+LOCAL_RO_CDL=$STANDALONE_BASE/inputs/RO_tune6.fresh.cdl
 RO_GDS_SHA256=$(sha256sum "$SOURCE_BASE/outputs/mptdc_axis_core_merged_stdcell_ro6.gds" | awk '{print $1}')
 RO_CDL_SHA256=$(printf 'RO CDL fixture\n' | sha256sum | awk '{print $1}')
 EOF
@@ -85,25 +99,98 @@ Cells that have been blackboxed              |         0
  (-, RO_tune6())         |        *0 :        2 |        *0 :        2
 EOF
 printf 'mismatch\n' > "$SOURCE_LVS/svdb/mismatched"
+cat > "$SOURCE_BASE/reports/operator_gate_pvs_lvs.rpt" <<'EOF'
+STEP=PVS_LVS
+PVS_LVS_STATUS=MISMATCH
+PVS_RC=0
+EOF
+
+cp -p "$SOURCE_BASE/manifests/pvs_input_hashes.rpt" "$SOURCE_SNAPSHOT/manifests/"
+cp -p "$SOURCE_BASE/reports/lvs_source_filter.rpt" "$SOURCE_SNAPSHOT/reports/"
+cp -p "$SOURCE_BASE/reports/pvs_lvs_status.rpt" "$SOURCE_SNAPSHOT/reports/"
+cp -p "$SOURCE_BASE/reports/pvs_lvs_tool_status.rpt" "$SOURCE_SNAPSHOT/reports/"
+cp -p "$SOURCE_BASE/reports/operator_gate_pvs_lvs.rpt" "$SOURCE_SNAPSHOT/reports/"
+cp -p "$SOURCE_LVS/source.cls" "$SOURCE_SNAPSHOT/pvs_lvs/source_lvs_script/"
+printf '#!/bin/sh\n' > "$SOURCE_SNAPSHOT/pvs_lvs/source_lvs_script/run.pvs"
+printf 'lvs_report_file "source.sum";\n' > "$SOURCE_SNAPSHOT/pvs_lvs/source_lvs_script/pvslvsctl"
+: > "$SOURCE_SNAPSHOT/pvs_lvs/source_lvs_script/.config.rul"
+printf 'technology fixture\n' > "$SOURCE_SNAPSHOT/pvs_lvs/source_lvs_script/.technology.rul"
+
+cp -p "$STANDALONE_BASE/reports/operator_gate_pvs_ro6_standalone_lvs.rpt" \
+  "$STANDALONE_SNAPSHOT/reports/"
+cp -p "$STANDALONE_BASE/manifests/ro6_standalone_lvs_inputs.rpt" \
+  "$STANDALONE_SNAPSHOT/manifests/"
+cat > "$STANDALONE_SNAPSHOT/pvs_lvs/RO_tune6_standalone_script/RO_tune6_lvs.sum.cls" <<'EOF'
+#####  Run Result                    :   MATCH
+Cells which mismatch                         |         0
+Cells that have been blackboxed              |         0
+RO_tune6     |       19 :        19 |       19 :        19 | match      |
+EOF
+printf '#!/bin/sh\n' > "$STANDALONE_SNAPSHOT/pvs_lvs/RO_tune6_standalone_script/run.pvs"
+printf 'lvs_report_file "RO_tune6_lvs.sum";\n' > "$STANDALONE_SNAPSHOT/pvs_lvs/RO_tune6_standalone_script/pvslvsctl"
+: > "$STANDALONE_SNAPSHOT/pvs_lvs/RO_tune6_standalone_script/.config.rul"
+printf 'technology fixture\n' > "$STANDALONE_SNAPSHOT/pvs_lvs/RO_tune6_standalone_script/.technology.rul"
+
+cat > "$RAW_CLASSIFIER" <<'PY'
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import os
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--cls", type=Path, required=True)
+parser.add_argument("--out", type=Path, required=True)
+parser.add_argument("--expected-ro-instance", action="append")
+args = parser.parse_args()
+passed = os.environ.get("MPTDC_TEST_RAW_CLASSIFIER_STATUS", "pass") == "pass"
+raw = args.cls.read_bytes()
+lines = [
+    "STATUS=" + ("PASS" if passed else "FAIL"),
+    "CLS_SHA256=" + hashlib.sha256(raw).hexdigest(),
+    "MISMATCH_ATTRIBUTION=" + ("EXACT_TWO_RO6_INTERNALS_ONLY" if passed else "REJECTED"),
+    "HIERARCHICAL_COMPOSITION_ELIGIBLE=" + ("YES" if passed else "NO"),
+    "SOURCE_ONLY_INSTANCE_COUNT=2",
+    "LAYOUT_ONLY_INSTANCE_COUNT=380",
+    "RO_LAYOUT_CLUSTER_COUNT=2",
+]
+args.out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+raise SystemExit(0 if passed else 10)
+PY
 
 cat > "$REPLAY" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 prepared=""
 new_run=""
+template_run=""
 boundary=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --prepared-dir) prepared="$2"; shift 2 ;;
     --new-run-dir) new_run="$2"; shift 2 ;;
+    --template-run) template_run="$2"; shift 2 ;;
     --diagnostic-ro6-boundary-blackbox) boundary=1; shift ;;
-    --template-run|--old-base|--old-gds|--old-source|--old-hcell|--expected-head) shift 2 ;;
+    --old-base|--old-gds|--old-source|--old-hcell|--expected-head) shift 2 ;;
     *) echo "unexpected replay option: $1" >&2; exit 8 ;;
   esac
 done
-[[ "$boundary" == 1 && -n "$prepared" && -n "$new_run" ]]
+[[ "$boundary" == 1 && -n "$prepared" && -n "$new_run" && -n "$template_run" ]]
 mkdir -p "$new_run" "$prepared/reports"
-printf 'run\n' > "$new_run/run.pvs"
+cat > "$new_run/run.pvs" <<'RUN'
+#!/bin/sh -f
+pvs \
+  -lvs \
+  -top_cell mptdc_axis_core \
+  -source_top_cell mptdc_axis_core \
+  -control pvslvsctl \
+  .config.rul \
+  .technology.rul
+RUN
+printf 'lvs_black_box RO_tune6;\n' > "$new_run/pvslvsctl"
+: > "$new_run/.config.rul"
+printf 'technology fixture\n' > "$new_run/.technology.rul"
+printf 'TEMPLATE_RUN=%s\n' "$template_run" > "$prepared/reports/replay_template.rpt"
 if [[ "${MPTDC_TEST_BOUNDARY_RESULT:-match}" == pg_open ]]; then
   cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
 STATUS=FAIL
@@ -111,6 +198,11 @@ PVS_LVS_STATUS=MISMATCH
 PVS_RC=0
 RPT
   replay_rc=8
+  layout_open_count=4
+  shorts_opens_count=2
+  vdd_open_count=1
+  vss_open_count=1
+  cls_result=MISMATCH
 else
   cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
 STATUS=PASS
@@ -118,26 +210,42 @@ PVS_LVS_STATUS=MATCH
 PVS_RC=0
 RPT
   replay_rc=0
+  layout_open_count=0
+  shorts_opens_count=0
+  vdd_open_count=0
+  vss_open_count=0
+  cls_result=MATCH
 fi
-cat > "$prepared/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt" <<'RPT'
+cat > "$new_run/boundary.cls" <<RPT
+#####  Run Result                    :   $cls_result
+Cells that have been blackboxed              |         1
+mptdc_axis_core     |       59 :        59 |       59 :        59 | match      |
+RO_tune6     |       19 :        19 |       19 :        19 | match      |
+RPT
+cat > "$prepared/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt" <<RPT
+LVS_BLACKBOX_CLS_FILE_COUNT=1
+LVS_BLACKBOX_CLS_FILE=$new_run/boundary.cls
 LVS_BLACKBOX_RULE_STATUS=PASS
 LVS_BLACKBOX_APPLICATION_STATUS=PASS
 LVS_BLACKBOXED_CELL_COUNT=1
 LVS_BUS_PIN_MAP_EFFECTIVE_VALUE=NO
 LVS_BUS_PIN_MAP_RULE_STATUS=NOT_USED_EXACT_SCALAR_SOURCE
 LVS_GLOBAL_SIGNAL_PORT_RULE_STATUS=PASS
+RO6_BLACKBOX_INITIAL_PINS=19:19
+RO6_BLACKBOX_COMPARE_PINS=19:19
+RO6_BLACKBOX_CELL_STATUS=match
 RO6_BLACKBOX_CELL_MATCH_STATUS=PASS
 RO6_ANGLE_BUS_MISSING_PIN_COUNT=0
 RO6_SQUARE_BUS_MISSING_PIN_COUNT=0
 TIE1_UNMATCHED_PIN_COUNT=0
 TIE1_MISMATCHED_NET_COUNT=0
 TIE1_MISMATCHED_INSTANCE_CASCADE_COUNT=0
-LAYOUT_OPEN_NET_COUNT=4
-SHORTS_OPENS_RECORD_COUNT=2
+LAYOUT_OPEN_NET_COUNT=$layout_open_count
+SHORTS_OPENS_RECORD_COUNT=$shorts_opens_count
 MISMATCHED_NET_RECORD_COUNT=0
 MISMATCHED_INSTANCE_RECORD_COUNT=0
-VDD_OPEN_SECTION_COUNT=1
-VSS_OPEN_SECTION_COUNT=1
+VDD_OPEN_SECTION_COUNT=$vdd_open_count
+VSS_OPEN_SECTION_COUNT=$vss_open_count
 RO6_STANDALONE_LVS_REQUIRED=YES
 SIGNOFF_ELIGIBLE=NO
 RPT
@@ -157,6 +265,93 @@ git -C "$REPO" config user.email 'mptdc-ro6-boundary@example.invalid'
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
+HIERARCHICAL_RUN_ID=boundary_lvs_hierarchical_match
+MPTDC_BOUNDARY_LVS_REPO_ROOT="$REPO" \
+MPTDC_BOUNDARY_LVS_REPLAY="$REPLAY" \
+MPTDC_BOUNDARY_LVS_PUBLISHER="$PUBLISHER" \
+MPTDC_BOUNDARY_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
+MPTDC_BOUNDARY_ALLOW_TEST_OVERRIDES=1 \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/publish_hierarchical.args" \
+bash "$DRIVER" \
+  --source-pvs-run-id "$SOURCE_ID" \
+  --source-pvs-evidence-id "$SOURCE_EVIDENCE_ID" \
+  --standalone-pvs-run-id "$STANDALONE_ID" \
+  --hierarchical-lvs-signoff \
+  --run-id "$HIERARCHICAL_RUN_ID" \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/hierarchical.stdout"
+
+HIERARCHICAL_GATE="$WORK/$HIERARCHICAL_RUN_ID/reports/operator_gate_pvs_hierarchical_lvs.rpt"
+grep -qx 'PVS_BOUNDARY_RECOVERY_STATUS=PASS' "$TMP_ROOT/hierarchical.stdout"
+grep -qx 'PVS_HIERARCHICAL_LVS_STATUS=MATCH' "$TMP_ROOT/hierarchical.stdout"
+grep -qx 'LVS_PROOF_METHOD=HIERARCHICAL_TOP_BLACKBOX_PLUS_STANDALONE_RO' \
+  "$TMP_ROOT/hierarchical.stdout"
+grep -qx 'DECISION=PASS_HIERARCHICAL_LVS' "$TMP_ROOT/hierarchical.stdout"
+grep -qx 'NEXT_STAGE=PVS_DENSITY_DRC' "$TMP_ROOT/hierarchical.stdout"
+grep -qx 'PVS_RUN_CLASS=SIGNOFF_HIERARCHICAL_LVS_COMPOSITION' "$HIERARCHICAL_GATE"
+grep -qx 'BOUNDARY_TOP_INITIAL_PINS=59:59' "$HIERARCHICAL_GATE"
+grep -qx 'BOUNDARY_TOP_COMPARE_PINS=59:59' "$HIERARCHICAL_GATE"
+grep -qx 'BOUNDARY_TOP_CELL_STATUS=match' "$HIERARCHICAL_GATE"
+grep -Eq '^BOUNDARY_RUN_PVS_SHA256=[0-9a-f]{64}$' "$HIERARCHICAL_GATE"
+grep -Eq '^BOUNDARY_LVS_CONTROL_SHA256=[0-9a-f]{64}$' "$HIERARCHICAL_GATE"
+grep -qx "TEMPLATE_RUN=$SOURCE_SNAPSHOT/pvs_lvs/source_lvs_script" \
+  "$WORK/$HIERARCHICAL_RUN_ID/reports/replay_template.rpt"
+grep -qx 'LVS_TEMPLATE_SOURCE=TRACKED_SOURCE_SNAPSHOT' \
+  "$WORK/$HIERARCHICAL_RUN_ID/manifests/pvs_ro6_boundary_blackbox_scope.rpt"
+grep -qx 'RAW_MISMATCH_ATTRIBUTION=EXACT_TWO_RO6_INTERNALS_ONLY' "$HIERARCHICAL_GATE"
+grep -qx 'PVS_TOP_BOUNDARY_LVS=MATCH' "$HIERARCHICAL_GATE"
+grep -qx 'PVS_RO6_STANDALONE_LVS=MATCH' "$HIERARCHICAL_GATE"
+grep -qx 'BOUNDARY_BLACKBOXED_CELL_COUNT=1' "$HIERARCHICAL_GATE"
+grep -qx 'STANDALONE_BLACKBOXED_CELL_COUNT=0' "$HIERARCHICAL_GATE"
+grep -qx 'BLOCK_LVS_CLOSED=YES' "$HIERARCHICAL_GATE"
+grep -qx 'LVS_SIGNOFF_ELIGIBLE=YES' "$HIERARCHICAL_GATE"
+grep -qx 'MONOLITHIC_LVS_REQUIRED=NO_BY_SELECTED_METHOD' "$HIERARCHICAL_GATE"
+grep -qx 'FINAL_PHYSICAL_SIGNOFF_READY=NO' "$HIERARCHICAL_GATE"
+
+set +e
+MPTDC_BOUNDARY_LVS_REPO_ROOT="$REPO" \
+MPTDC_BOUNDARY_LVS_REPLAY="$REPLAY" \
+MPTDC_BOUNDARY_LVS_PUBLISHER="$PUBLISHER" \
+MPTDC_BOUNDARY_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/publish_override_rejected.args" \
+bash "$DRIVER" \
+  --source-pvs-run-id "$SOURCE_ID" \
+  --source-pvs-evidence-id "$SOURCE_EVIDENCE_ID" \
+  --standalone-pvs-run-id "$STANDALONE_ID" \
+  --hierarchical-lvs-signoff \
+  --run-id boundary_lvs_hierarchical_override_rejected \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/hierarchical_override_rejected.stdout" 2>&1
+HIERARCHICAL_OVERRIDE_RC=$?
+set -e
+test "$HIERARCHICAL_OVERRIDE_RC" -eq 4
+grep -Fq 'hierarchical signoff forbids classifier, replay, or publisher overrides' \
+  "$TMP_ROOT/hierarchical_override_rejected.stdout"
+test ! -e "$WORK/boundary_lvs_hierarchical_override_rejected"
+
+set +e
+MPTDC_TEST_RAW_CLASSIFIER_STATUS=fail \
+MPTDC_BOUNDARY_LVS_REPO_ROOT="$REPO" \
+MPTDC_BOUNDARY_LVS_REPLAY="$REPLAY" \
+MPTDC_BOUNDARY_LVS_PUBLISHER="$PUBLISHER" \
+MPTDC_BOUNDARY_RAW_CLASSIFIER="$RAW_CLASSIFIER" \
+MPTDC_BOUNDARY_ALLOW_TEST_OVERRIDES=1 \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/publish_bad_raw.args" \
+bash "$DRIVER" \
+  --source-pvs-run-id "$SOURCE_ID" \
+  --source-pvs-evidence-id "$SOURCE_EVIDENCE_ID" \
+  --standalone-pvs-run-id "$STANDALONE_ID" \
+  --hierarchical-lvs-signoff \
+  --run-id boundary_lvs_hierarchical_bad_raw \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/hierarchical_bad_raw.stdout" 2>&1
+HIERARCHICAL_BAD_RAW_RC=$?
+set -e
+test "$HIERARCHICAL_BAD_RAW_RC" -eq 4
+grep -Fq 'raw mismatch is not exactly attributable to the two RO_tune6 interiors' \
+  "$TMP_ROOT/hierarchical_bad_raw.stdout"
+grep -qx 'DECISION=FAIL_STOP' "$TMP_ROOT/hierarchical_bad_raw.stdout"
 
 RUN_ID=boundary_lvs_pass
 MPTDC_BOUNDARY_LVS_REPO_ROOT="$REPO" \
