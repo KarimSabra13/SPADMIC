@@ -14,10 +14,12 @@ SOURCE_ID=source_compositional
 SOURCE_EVIDENCE_ID=source_compositional_04_lvs
 BOUNDARY_ID=boundary_match
 STANDALONE_ID=ro6_standalone_match
+MONOLITHIC_ID=monolithic_full_top_match
 SOURCE_LIVE="$WORK/$SOURCE_ID"
 SOURCE_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/pvs/$SOURCE_EVIDENCE_ID"
 BOUNDARY_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/pvs/$BOUNDARY_ID"
 STANDALONE_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/pvs/$STANDALONE_ID"
+MONOLITHIC_SNAPSHOT="$REPO/MPTDC/docs/server_snapshots/pvs/$MONOLITHIC_ID"
 DRIVER="$REPO/MPTDC/scripts/pvs/server_run_mptdc_ro6_density_after_boundary.sh"
 CLASSIFIER="$REPO/MPTDC/scripts/pvs/12_classify_mptdc_density_delta.py"
 
@@ -27,6 +29,8 @@ mkdir -p "$REPO/MPTDC/scripts/pvs" \
   "$BOUNDARY_SNAPSHOT/reports" \
   "$STANDALONE_SNAPSHOT/reports" \
   "$STANDALONE_SNAPSHOT/manifests" \
+  "$MONOLITHIC_SNAPSHOT/reports" \
+  "$MONOLITHIC_SNAPSHOT/manifests" \
   "$SOURCE_LIVE/outputs" "$SOURCE_LIVE/manifests" "$SOURCE_LIVE/reports" \
   "$SOURCE_LIVE/pvs_drc/base_script"
 cp "$DRIVER_SOURCE" "$DRIVER"
@@ -129,8 +133,8 @@ ANTENNA_REPAIR_ATTEMPTED=NO
 SIGNOFF_ELIGIBLE=NO
 FINAL_SIGNOFF=NO
 READY_FOR_TAPEOUT=NO
-DECISION=PASS_DENSITY_CONTINUE
-NEXT_STAGE=PVS_DRC_DENSITY
+DECISION=PASS_MONOLITHIC_LVS_CONTINUE
+NEXT_STAGE=PVS_RO6_MONOLITHIC_FULL_TOP_LVS
 EOF
 cat > "$STANDALONE_SNAPSHOT/reports/operator_gate_pvs_ro6_standalone_lvs.rpt" <<'EOF'
 PVS_LVS=MATCH
@@ -140,6 +144,51 @@ RO6_CDL_PIN_CONTRACT_STATUS=PASS
 SIGNOFF_ELIGIBLE=NO
 EOF
 cat > "$STANDALONE_SNAPSHOT/manifests/ro6_standalone_lvs_inputs.rpt" <<EOF
+RO_GDS_SHA256=$RO_SHA
+RO_CDL_SHA256=$RO_CDL_SHA
+EOF
+cat > "$MONOLITHIC_SNAPSHOT/reports/operator_gate_pvs_monolithic_lvs.rpt" <<EOF
+STEP=PVS_RO6_MONOLITHIC_FULL_TOP_LVS
+PVS_RUN_CLASS=MONOLITHIC_FULL_TOP_LVS_PROOF
+SOURCE_PVS_RUN_ID=$SOURCE_ID
+SOURCE_PVS_EVIDENCE_ID=$SOURCE_EVIDENCE_ID
+BOUNDARY_PVS_RUN_ID=$BOUNDARY_ID
+STANDALONE_PVS_RUN_ID=$STANDALONE_ID
+MONOLITHIC_LVS_STATUS=MATCH
+LVS_BLACKBOXED_CELL_COUNT=0
+LVS_HCELL_STATUS=NOT_USED
+CLS_RUN_RESULT=MATCH
+CELLS_WHICH_MISMATCH=0
+TOP_59_PIN_MATCH_STATUS=PASS
+RO6_19_PIN_MATCH_STATUS=PASS
+MISSING_INSTANCE_EVIDENCE_COUNT=0
+SHORT_OPEN_EVIDENCE_STATUS=PASS
+LVS_SIGNOFF_ELIGIBLE=YES
+MERGED_GDS_SHA256=$GDS_SHA
+RO_GDS_SHA256=$RO_SHA
+RO_CDL_SHA256=$RO_CDL_SHA
+FINAL_PHYSICAL_SIGNOFF_READY=NO
+DECISION=PASS_MONOLITHIC_LVS
+EOF
+cat > "$MONOLITHIC_SNAPSHOT/reports/mptdc_lvs_drc_handoff_status.rpt" <<'EOF'
+MONOLITHIC_LVS_STATUS=MATCH
+NON_ANTENNA_DRC_STATUS=PASS
+ANTENNA_EXCEPTION_STATUS=ACCEPTED_PROJECT_POLICY
+ANTENNA_EXCEPTION_EVIDENCE_KIND=AUTO_CLASSIFIED_NOT_INDEPENDENTLY_SIGNED
+TOOL_CLEAN_DRC=NO
+INNOVUS_SPECIAL_CONNECTIVITY_STATUS=FAIL_15_DANGLING
+FINAL_PHYSICAL_SIGNOFF_READY=NO
+EOF
+cat > "$MONOLITHIC_SNAPSHOT/manifests/pvs_ro6_monolithic_lvs_inputs.rpt" <<EOF
+PVS_RUN_CLASS=MONOLITHIC_FULL_TOP_LVS_PROOF
+SOURCE_PVS_RUN_ID=$SOURCE_ID
+BOUNDARY_PVS_RUN_ID=$BOUNDARY_ID
+STANDALONE_PVS_RUN_ID=$STANDALONE_ID
+RO_MODEL_MODE=EXTERNAL_CDL
+LVS_HCELL_STATUS=NOT_USED
+LVS_BLACKBOX_STATUS=NOT_USED
+LVS_POSITION_BUS_MAPPING_STATUS=NOT_USED
+MERGED_GDS_SHA256=$GDS_SHA
 RO_GDS_SHA256=$RO_SHA
 RO_CDL_SHA256=$RO_CDL_SHA
 EOF
@@ -208,6 +257,20 @@ git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
+set +e
+MPTDC_DENSITY_REPO_ROOT="$REPO" MPTDC_INNOVUS_WORK="$WORK" \
+bash "$DRIVER" --source-pvs-run-id "$SOURCE_ID" \
+  --source-pvs-evidence-id "$SOURCE_EVIDENCE_ID" \
+  --boundary-pvs-run-id "$BOUNDARY_ID" \
+  --standalone-pvs-run-id "$STANDALONE_ID" \
+  --run-id density_without_monolithic --expected-head "$HEAD_SHA" \
+  > "$TMP_ROOT/missing_monolithic.stdout" 2>&1
+MISSING_MONOLITHIC_RC=$?
+set -e
+test "$MISSING_MONOLITHIC_RC" -eq 2
+grep -Fq 'monolithic run ids are required' "$TMP_ROOT/missing_monolithic.stdout"
+test ! -e "$WORK/density_without_monolithic"
+
 run_density() {
   local run_id="$1" drc_calls="$2" publish_calls="$3"
   shift 3
@@ -222,6 +285,7 @@ run_density() {
       --source-pvs-evidence-id "$SOURCE_EVIDENCE_ID" \
       --boundary-pvs-run-id "$BOUNDARY_ID" \
       --standalone-pvs-run-id "$STANDALONE_ID" \
+      --monolithic-pvs-run-id "$MONOLITHIC_ID" \
       --run-id "$run_id" --expected-head "$HEAD_SHA"
 }
 
@@ -237,6 +301,14 @@ grep -qx 'DENSITY_NON_ANTENNA_RULE_COUNT=0' \
 grep -qx 'DECISION=PASS_NON_ANTENNA_DENSITY_CLEAN' \
   "$WORK/density_clean/reports/operator_gate_pvs_drc_density.rpt"
 grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' \
+  "$WORK/density_clean/reports/operator_gate_pvs_drc_density.rpt"
+grep -qx 'MONOLITHIC_LVS_STATUS=MATCH' \
+  "$WORK/density_clean/reports/operator_gate_pvs_drc_density.rpt"
+grep -qx 'ANTENNA_EXCEPTION_STATUS=ACCEPTED_PROJECT_POLICY' \
+  "$WORK/density_clean/reports/operator_gate_pvs_drc_density.rpt"
+grep -qx 'TOOL_CLEAN_DRC=NO' \
+  "$WORK/density_clean/reports/operator_gate_pvs_drc_density.rpt"
+grep -qx 'FINAL_PHYSICAL_SIGNOFF_READY=NO' \
   "$WORK/density_clean/reports/operator_gate_pvs_drc_density.rpt"
 test "$(cat "$CLEAN_DRC_CALLS")" = density
 test "$(wc -l < "$CLEAN_PUBLISH_CALLS")" -eq 1

@@ -11,6 +11,14 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "01_generate_lvs_source_pg_filtered.py"
 
+RO6_CDL = (
+    ".SUBCKT RO_tune6 VDD VSS rstb "
+    + " ".join(f"code<{bit}>" for bit in range(8))
+    + " "
+    + " ".join(f"S<{bit}>" for bit in range(8))
+    + "\n.ENDS RO_tune6\n"
+)
+
 
 PHYSICAL_NETLIST = r"""
 // module COMMENTED_OUT (A); endmodule
@@ -74,6 +82,8 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
         source: str = PHYSICAL_NETLIST,
         filler_count: int = 3,
         row_fillers: str = "FEED1JIHD FEED2JIHD",
+        ro_model: str = "wrapper-hcell",
+        ro_cdl: str = RO6_CDL,
     ) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path, tempfile.TemporaryDirectory[str]]:
         temp = tempfile.TemporaryDirectory(prefix="mptdc_lvs_source_contract.")
         root = Path(temp.name)
@@ -84,6 +94,7 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
         cdl_path = root / "cells.cdl"
         filler_report = root / "filler_status.rpt"
         row_infra_report = root / "row_infra_insertion.rpt"
+        ro_cdl_path = root / "RO_tune6.cdl"
         input_path.write_text(source)
         cdl_path.write_text(
             ".SUBCKT BUJIHDX1 A Y VDD VSS\n.ENDS BUJIHDX1\n"
@@ -103,19 +114,24 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
             "TIE_HIGH_CANDIDATES=LOGIC1DJIHD\n"
             "TIE_LOW_CANDIDATES=LOGIC0DJIHD\n"
         )
+        ro_cdl_path.write_text(ro_cdl)
+        command = [
+            str(SCRIPT),
+            "--input", str(input_path),
+            "--output", str(output_path),
+            "--hcell", str(hcell_path),
+            "--report", str(report_path),
+            "--cdl", str(cdl_path),
+            "--filler-report", str(filler_report),
+            "--row-infra-report", str(row_infra_report),
+            "--ro-model", ro_model,
+            "--expected-ro-instance", "u_core_u_osc_fast_u_ro_tune4",
+            "--expected-ro-instance", "u_core_u_osc_slow_u_ro_tune4",
+        ]
+        if ro_model == "external-cdl":
+            command.extend(["--ro-cdl", str(ro_cdl_path)])
         result = subprocess.run(
-            [
-                str(SCRIPT),
-                "--input", str(input_path),
-                "--output", str(output_path),
-                "--hcell", str(hcell_path),
-                "--report", str(report_path),
-                "--cdl", str(cdl_path),
-                "--filler-report", str(filler_report),
-                "--row-infra-report", str(row_infra_report),
-                "--expected-ro-instance", "u_core_u_osc_fast_u_ro_tune4",
-                "--expected-ro-instance", "u_core_u_osc_slow_u_ro_tune4",
-            ],
+            command,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -158,6 +174,48 @@ class PhysicalLvsSourceContractTest(unittest.TestCase):
         self.assertIn("PHYSICAL_TIE_MASTER=LOGIC1DJIHD:1", report)
         self.assertIn("PHYSICAL_TIE_PRESERVATION_STATUS=PASS", report)
         self.assertIn("UNRESOLVED_ACTIVE_MASTER_COUNT=0", report)
+
+    def test_external_cdl_mode_omits_wrapper_and_hcell(self) -> None:
+        result, output_path, hcell_path, report_path, temp = self.run_contract(
+            ro_model="external-cdl"
+        )
+        self.addCleanup(temp.cleanup)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        output = output_path.read_text()
+        report = report_path.read_text()
+        self.assertNotIn("module RO_tune6", output)
+        self.assertEqual(output.count("RO_tune6 u_"), 2)
+        self.assertFalse(hcell_path.exists())
+        self.assertIn("RO_MODEL_MODE=EXTERNAL_CDL", report)
+        self.assertIn("RO_EXTERNAL_CDL_PIN_COUNT=19", report)
+        self.assertIn("RO_EXTERNAL_CDL_PIN_STATUS=PASS", report)
+        self.assertIn("RO_TUNE6_WRAPPER_MODULE_COUNT=0", report)
+        self.assertIn("LVS_HCELL_STATUS=NOT_USED", report)
+        self.assertIn("LVS_HCELL_ENTRY_COUNT=0", report)
+        self.assertIn("UNRESOLVED_ACTIVE_MASTER_COUNT=0", report)
+
+    def test_external_cdl_missing_pin_fails_closed(self) -> None:
+        result, output_path, hcell_path, report_path, temp = self.run_contract(
+            ro_model="external-cdl",
+            ro_cdl=RO6_CDL.replace(" S<7>", ""),
+        )
+        self.addCleanup(temp.cleanup)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(output_path.exists())
+        self.assertFalse(hcell_path.exists())
+        self.assertIn("RO_tune6 CDL pin contract mismatch", report_path.read_text())
+        self.assertIn("S<7>", report_path.read_text())
+
+    def test_external_cdl_duplicate_pin_fails_closed(self) -> None:
+        result, output_path, hcell_path, report_path, temp = self.run_contract(
+            ro_model="external-cdl",
+            ro_cdl=RO6_CDL.replace(" S<7>", " S<7> S<7>"),
+        )
+        self.addCleanup(temp.cleanup)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(output_path.exists())
+        self.assertFalse(hcell_path.exists())
+        self.assertIn("CDL pin list contains duplicates", report_path.read_text())
 
     def test_unresolved_master_fails_closed(self) -> None:
         source = PHYSICAL_NETLIST.replace(

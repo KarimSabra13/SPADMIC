@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run density DRC only after attributable compositional LVS proof.
+# Run density DRC only after attributable monolithic full-top LVS proof.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,6 +14,7 @@ SOURCE_PVS_RUN_ID=""
 SOURCE_PVS_EVIDENCE_ID=""
 BOUNDARY_PVS_RUN_ID=""
 STANDALONE_PVS_RUN_ID=""
+MONOLITHIC_PVS_RUN_ID=""
 PVS_RUN_ID=""
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 
@@ -23,7 +24,8 @@ Usage:
   server_run_mptdc_ro6_density_after_boundary.sh \
     --source-pvs-run-id <id> --source-pvs-evidence-id <id> \
     --boundary-pvs-run-id <id> \
-    --standalone-pvs-run-id <id> [options]
+    --standalone-pvs-run-id <id> \
+    --monolithic-pvs-run-id <id> [options]
 
 Options:
   --run-id <id>          New density-only result directory.
@@ -33,8 +35,9 @@ Options:
   --expected-head <sha>  Require repository HEAD.
   --innovus-work <path>  Innovus/PVS result root.
 
-The source base DRC, boundary LVS, standalone RO LVS, GDS hash, and antenna
-signature must all agree. This stage never attempts antenna or density repair.
+The source base DRC, boundary LVS, standalone RO LVS, monolithic full-top LVS,
+GDS/CDL hashes, and antenna signature must all agree. This stage never
+attempts antenna or density repair.
 USAGE
 }
 
@@ -55,6 +58,7 @@ while [[ $# -gt 0 ]]; do
     --source-pvs-evidence-id) SOURCE_PVS_EVIDENCE_ID="${2:?missing value}"; shift 2 ;;
     --boundary-pvs-run-id) BOUNDARY_PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --standalone-pvs-run-id) STANDALONE_PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
+    --monolithic-pvs-run-id) MONOLITHIC_PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --run-id) PVS_RUN_ID="${2:?missing value}"; shift 2 ;;
     --expected-head) EXPECTED_HEAD_VALUE="${2:?missing value}"; shift 2 ;;
     --innovus-work) INNOVUS_WORK="${2:?missing value}"; shift 2 ;;
@@ -65,11 +69,12 @@ done
 
 [[ -n "$SOURCE_PVS_EVIDENCE_ID" ]] || SOURCE_PVS_EVIDENCE_ID="${SOURCE_PVS_RUN_ID}_04_lvs"
 for id in "$SOURCE_PVS_RUN_ID" "$SOURCE_PVS_EVIDENCE_ID" "$BOUNDARY_PVS_RUN_ID" \
-          "$STANDALONE_PVS_RUN_ID" "$PVS_RUN_ID"; do
+          "$STANDALONE_PVS_RUN_ID" "$MONOLITHIC_PVS_RUN_ID" "$PVS_RUN_ID"; do
   [[ -z "$id" || "$id" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "ERROR: unsafe run id: $id" >&2; exit 2; }
 done
-[[ -n "$SOURCE_PVS_RUN_ID" && -n "$BOUNDARY_PVS_RUN_ID" && -n "$STANDALONE_PVS_RUN_ID" ]] || {
-  echo "ERROR: source, boundary, and standalone run ids are required" >&2
+[[ -n "$SOURCE_PVS_RUN_ID" && -n "$BOUNDARY_PVS_RUN_ID" && \
+   -n "$STANDALONE_PVS_RUN_ID" && -n "$MONOLITHIC_PVS_RUN_ID" ]] || {
+  echo "ERROR: source, boundary, standalone, and monolithic run ids are required" >&2
   exit 2
 }
 [[ -n "$PVS_RUN_ID" ]] || PVS_RUN_ID="$(date +%Y%m%d)_mptdc_ro6_density_$(date +%H%M%S)"
@@ -77,10 +82,12 @@ done
 SOURCE_DIR="$INNOVUS_WORK/$SOURCE_PVS_RUN_ID"
 BOUNDARY_DIR="$INNOVUS_WORK/$BOUNDARY_PVS_RUN_ID"
 STANDALONE_DIR="$INNOVUS_WORK/$STANDALONE_PVS_RUN_ID"
+MONOLITHIC_DIR="$INNOVUS_WORK/$MONOLITHIC_PVS_RUN_ID"
 PVS_DIR="$INNOVUS_WORK/$PVS_RUN_ID"
 SOURCE_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$SOURCE_PVS_EVIDENCE_ID"
 BOUNDARY_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$BOUNDARY_PVS_RUN_ID"
 STANDALONE_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$STANDALONE_PVS_RUN_ID"
+MONOLITHIC_SNAPSHOT="$REPO_ROOT/MPTDC/docs/server_snapshots/pvs/$MONOLITHIC_PVS_RUN_ID"
 BASE_CLASS="$SOURCE_SNAPSHOT/reports/pvs_recovery_base_drc_classification.rpt"
 BASE_CLASS_SCOPE="$SOURCE_SNAPSHOT/manifests/pvs_recovery_base_drc_classification_scope.rpt"
 SOURCE_DIAGNOSTIC_SCOPE="$SOURCE_SNAPSHOT/manifests/pvs_diagnostic_scope.rpt"
@@ -89,6 +96,9 @@ SOURCE_README="$SOURCE_SNAPSHOT/README.md"
 BOUNDARY_GATE="$BOUNDARY_SNAPSHOT/reports/operator_gate_pvs_compositional_lvs.rpt"
 STANDALONE_GATE="$STANDALONE_SNAPSHOT/reports/operator_gate_pvs_ro6_standalone_lvs.rpt"
 STANDALONE_INPUTS="$STANDALONE_SNAPSHOT/manifests/ro6_standalone_lvs_inputs.rpt"
+MONOLITHIC_GATE="$MONOLITHIC_SNAPSHOT/reports/operator_gate_pvs_monolithic_lvs.rpt"
+MONOLITHIC_HANDOFF="$MONOLITHIC_SNAPSHOT/reports/mptdc_lvs_drc_handoff_status.rpt"
+MONOLITHIC_INPUTS="$MONOLITHIC_SNAPSHOT/manifests/pvs_ro6_monolithic_lvs_inputs.rpt"
 SOURCE_HASHES="$SOURCE_DIR/manifests/pvs_input_hashes.rpt"
 SOURCE_BASE_STATUS="$SOURCE_DIR/reports/pvs_drc_base_status.rpt"
 SOURCE_BASE_RULES="$SOURCE_DIR/reports/pvs_drc_base_nonzero_rules.tsv"
@@ -104,7 +114,8 @@ PREFLIGHT=PASS
 [[ -z "$(git status --short --untracked-files=no 2>/dev/null)" ]] || PREFLIGHT=FAIL
 for path in "$BASE_CLASS" "$BASE_CLASS_SCOPE" "$SOURCE_DIAGNOSTIC_SCOPE" \
             "$SOURCE_LVS_GATE" "$SOURCE_README" "$BOUNDARY_GATE" \
-            "$STANDALONE_GATE" "$STANDALONE_INPUTS"; do
+            "$STANDALONE_GATE" "$STANDALONE_INPUTS" "$MONOLITHIC_GATE" \
+            "$MONOLITHIC_HANDOFF" "$MONOLITHIC_INPUTS"; do
   tracked_report "$path" || PREFLIGHT=FAIL
 done
 for path in "$SOURCE_HASHES" "$SOURCE_BASE_STATUS" "$SOURCE_BASE_RULES" "$SOURCE_GDS" \
@@ -126,6 +137,9 @@ BOUNDARY_RO_GDS_SHA="$(report_value "$BOUNDARY_GATE" RO_GDS_SHA256)"
 BOUNDARY_RO_CDL_SHA="$(report_value "$BOUNDARY_GATE" RO_CDL_SHA256)"
 STANDALONE_RO_GDS_SHA="$(report_value "$STANDALONE_INPUTS" RO_GDS_SHA256)"
 STANDALONE_RO_CDL_SHA="$(report_value "$STANDALONE_INPUTS" RO_CDL_SHA256)"
+MONOLITHIC_GDS_SHA="$(report_value "$MONOLITHIC_GATE" MERGED_GDS_SHA256)"
+MONOLITHIC_RO_GDS_SHA="$(report_value "$MONOLITHIC_GATE" RO_GDS_SHA256)"
+MONOLITHIC_RO_CDL_SHA="$(report_value "$MONOLITHIC_GATE" RO_CDL_SHA256)"
 [[ "$(report_value "$BASE_CLASS" STEP)" == MPTDC_RECOVERY_BASE_DRC_CLASSIFICATION &&
    "$(report_value "$BASE_CLASS" CLASSIFICATION_CONTEXT)" == RECOVERY_ANTENNA_EXCEPTION &&
    "$(report_value "$BASE_CLASS" CLASSIFICATION_STATUS)" == PASS &&
@@ -174,23 +188,59 @@ grep -Fqx -- "- Source directory: \`$SOURCE_DIR\`" "$SOURCE_README" || PREFLIGHT
    "$(report_value "$BOUNDARY_GATE" SIGNOFF_ELIGIBLE)" == NO &&
    "$(report_value "$BOUNDARY_GATE" FINAL_SIGNOFF)" == NO &&
    "$(report_value "$BOUNDARY_GATE" READY_FOR_TAPEOUT)" == NO &&
-   "$(report_value "$BOUNDARY_GATE" NEXT_STAGE)" == PVS_DRC_DENSITY &&
-   "$(report_value "$BOUNDARY_GATE" DECISION)" == PASS_DENSITY_CONTINUE ]] || PREFLIGHT=FAIL
+   "$(report_value "$BOUNDARY_GATE" NEXT_STAGE)" == PVS_RO6_MONOLITHIC_FULL_TOP_LVS &&
+   "$(report_value "$BOUNDARY_GATE" DECISION)" == PASS_MONOLITHIC_LVS_CONTINUE ]] || PREFLIGHT=FAIL
 [[ "$(report_value "$STANDALONE_GATE" PVS_LVS)" == MATCH &&
    "$(report_value "$STANDALONE_GATE" DECISION)" == PASS_CONTINUE &&
    "$(report_value "$STANDALONE_GATE" OA_READ_ONLY_STATUS)" == PASS &&
    "$(report_value "$STANDALONE_GATE" RO6_CDL_PIN_CONTRACT_STATUS)" == PASS &&
    "$(report_value "$STANDALONE_GATE" SIGNOFF_ELIGIBLE)" == NO ]] || PREFLIGHT=FAIL
+[[ "$(report_value "$MONOLITHIC_GATE" STEP)" == PVS_RO6_MONOLITHIC_FULL_TOP_LVS &&
+   "$(report_value "$MONOLITHIC_GATE" PVS_RUN_CLASS)" == MONOLITHIC_FULL_TOP_LVS_PROOF &&
+   "$(report_value "$MONOLITHIC_GATE" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" &&
+   "$(report_value "$MONOLITHIC_GATE" SOURCE_PVS_EVIDENCE_ID)" == "$SOURCE_PVS_EVIDENCE_ID" &&
+   "$(report_value "$MONOLITHIC_GATE" BOUNDARY_PVS_RUN_ID)" == "$BOUNDARY_PVS_RUN_ID" &&
+   "$(report_value "$MONOLITHIC_GATE" STANDALONE_PVS_RUN_ID)" == "$STANDALONE_PVS_RUN_ID" &&
+   "$(report_value "$MONOLITHIC_GATE" MONOLITHIC_LVS_STATUS)" == MATCH &&
+   "$(report_value "$MONOLITHIC_GATE" LVS_BLACKBOXED_CELL_COUNT)" == 0 &&
+   "$(report_value "$MONOLITHIC_GATE" LVS_HCELL_STATUS)" == NOT_USED &&
+   "$(report_value "$MONOLITHIC_GATE" CLS_RUN_RESULT)" == MATCH &&
+   "$(report_value "$MONOLITHIC_GATE" CELLS_WHICH_MISMATCH)" == 0 &&
+   "$(report_value "$MONOLITHIC_GATE" TOP_59_PIN_MATCH_STATUS)" == PASS &&
+   "$(report_value "$MONOLITHIC_GATE" RO6_19_PIN_MATCH_STATUS)" == PASS &&
+   "$(report_value "$MONOLITHIC_GATE" MISSING_INSTANCE_EVIDENCE_COUNT)" == 0 &&
+   "$(report_value "$MONOLITHIC_GATE" SHORT_OPEN_EVIDENCE_STATUS)" == PASS &&
+   "$(report_value "$MONOLITHIC_GATE" LVS_SIGNOFF_ELIGIBLE)" == YES &&
+   "$(report_value "$MONOLITHIC_GATE" FINAL_PHYSICAL_SIGNOFF_READY)" == NO &&
+   "$(report_value "$MONOLITHIC_GATE" DECISION)" == PASS_MONOLITHIC_LVS ]] || PREFLIGHT=FAIL
+[[ "$(report_value "$MONOLITHIC_HANDOFF" MONOLITHIC_LVS_STATUS)" == MATCH &&
+   "$(report_value "$MONOLITHIC_HANDOFF" NON_ANTENNA_DRC_STATUS)" == PASS &&
+   "$(report_value "$MONOLITHIC_HANDOFF" ANTENNA_EXCEPTION_STATUS)" == ACCEPTED_PROJECT_POLICY &&
+   "$(report_value "$MONOLITHIC_HANDOFF" ANTENNA_EXCEPTION_EVIDENCE_KIND)" == AUTO_CLASSIFIED_NOT_INDEPENDENTLY_SIGNED &&
+   "$(report_value "$MONOLITHIC_HANDOFF" TOOL_CLEAN_DRC)" == NO &&
+   "$(report_value "$MONOLITHIC_HANDOFF" INNOVUS_SPECIAL_CONNECTIVITY_STATUS)" == FAIL_15_DANGLING &&
+   "$(report_value "$MONOLITHIC_HANDOFF" FINAL_PHYSICAL_SIGNOFF_READY)" == NO ]] || PREFLIGHT=FAIL
+[[ "$(report_value "$MONOLITHIC_INPUTS" PVS_RUN_CLASS)" == MONOLITHIC_FULL_TOP_LVS_PROOF &&
+   "$(report_value "$MONOLITHIC_INPUTS" SOURCE_PVS_RUN_ID)" == "$SOURCE_PVS_RUN_ID" &&
+   "$(report_value "$MONOLITHIC_INPUTS" BOUNDARY_PVS_RUN_ID)" == "$BOUNDARY_PVS_RUN_ID" &&
+   "$(report_value "$MONOLITHIC_INPUTS" STANDALONE_PVS_RUN_ID)" == "$STANDALONE_PVS_RUN_ID" &&
+   "$(report_value "$MONOLITHIC_INPUTS" RO_MODEL_MODE)" == EXTERNAL_CDL &&
+   "$(report_value "$MONOLITHIC_INPUTS" LVS_HCELL_STATUS)" == NOT_USED &&
+   "$(report_value "$MONOLITHIC_INPUTS" LVS_BLACKBOX_STATUS)" == NOT_USED &&
+   "$(report_value "$MONOLITHIC_INPUTS" LVS_POSITION_BUS_MAPPING_STATUS)" == NOT_USED ]] || PREFLIGHT=FAIL
 [[ "$SOURCE_GDS_SHA" =~ ^[0-9a-f]{64}$ && "$SOURCE_GDS_SHA" == "$MANIFEST_GDS_SHA" &&
    "$SOURCE_GDS_SHA" == "$BASE_LAYOUT_SHA" && "$SOURCE_GDS_SHA" == "$BASE_CLASS_LAYOUT_SHA" &&
    "$SOURCE_GDS_SHA" == "$BASE_SCOPE_LAYOUT_SHA" && "$SOURCE_GDS_SHA" == "$BOUNDARY_GDS_SHA" &&
+   "$SOURCE_GDS_SHA" == "$MONOLITHIC_GDS_SHA" &&
    "$SOURCE_BASE_RULE_SHA" =~ ^[0-9a-f]{64}$ &&
    "$SOURCE_BASE_RULE_SHA" == "$BASE_CLASS_RULE_SHA" &&
    "$SOURCE_BASE_RULE_SHA" == "$BASE_SCOPE_RULE_SHA" &&
    "$BOUNDARY_RO_GDS_SHA" =~ ^[0-9a-f]{64}$ &&
    "$BOUNDARY_RO_GDS_SHA" == "$STANDALONE_RO_GDS_SHA" &&
+   "$BOUNDARY_RO_GDS_SHA" == "$MONOLITHIC_RO_GDS_SHA" &&
    "$BOUNDARY_RO_CDL_SHA" =~ ^[0-9a-f]{64}$ &&
-   "$BOUNDARY_RO_CDL_SHA" == "$STANDALONE_RO_CDL_SHA" ]] || PREFLIGHT=FAIL
+   "$BOUNDARY_RO_CDL_SHA" == "$STANDALONE_RO_CDL_SHA" &&
+   "$BOUNDARY_RO_CDL_SHA" == "$MONOLITHIC_RO_CDL_SHA" ]] || PREFLIGHT=FAIL
 
 mapfile -t BASE_DRC_RUNS < <(find "$SOURCE_DIR/pvs_drc" -mindepth 1 -maxdepth 1 -type d \
   -exec test -s '{}/run.pvs' ';' -print 2>/dev/null)
@@ -202,6 +252,7 @@ echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
 echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
 echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID"
 echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
+echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
 echo "SOURCE_GDS_SHA256=$SOURCE_GDS_SHA"
 echo "BASE_DRC_TEMPLATE=$BASE_DRC_TEMPLATE"
@@ -216,11 +267,15 @@ sed "s|$SOURCE_DIR|$PVS_DIR|g" "$SOURCE_HASHES" > "$PVS_DIR/manifests/pvs_input_
 cp -p "$SOURCE_BASE_RULES" "$PVS_DIR/reports/pvs_drc_base_nonzero_rules.tsv"
 sed "s|$SOURCE_DIR|$PVS_DIR|g" "$SOURCE_BASE_STATUS" > "$PVS_DIR/reports/pvs_drc_base_status.rpt"
 {
-  echo "PVS_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_COMPOSITIONAL_LVS"
+  echo "PVS_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_MONOLITHIC_LVS"
   echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
   echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
   echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID"
   echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
+  echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
+  echo "MONOLITHIC_LVS_STATUS=MATCH"
+  echo "LVS_BLACKBOXED_CELL_COUNT=0"
+  echo "LVS_HCELL_STATUS=NOT_USED"
   echo "MERGED_GDS_SHA256=$SOURCE_GDS_SHA"
   echo "RO_GDS_SHA256=$BOUNDARY_RO_GDS_SHA"
   echo "ANTENNA_REPAIR_ATTEMPTED=NO"
@@ -271,12 +326,16 @@ elif [[ "$DENSITY_RAW_STATUS" == FAIL && "$DRC_RC" -eq 9 &&
   NEXT_STAGE=REVIEW_ATTRIBUTABLE_DENSITY_DEBT
 fi
 {
-  echo "STEP=PVS_DRC_DENSITY_AFTER_COMPOSITIONAL_LVS"
-  echo "PVS_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_COMPOSITIONAL_LVS"
+  echo "STEP=PVS_DRC_DENSITY_AFTER_MONOLITHIC_LVS"
+  echo "PVS_RUN_CLASS=DIAGNOSTIC_DENSITY_AFTER_MONOLITHIC_LVS"
   echo "SOURCE_PVS_RUN_ID=$SOURCE_PVS_RUN_ID"
   echo "SOURCE_PVS_EVIDENCE_ID=$SOURCE_PVS_EVIDENCE_ID"
   echo "BOUNDARY_PVS_RUN_ID=$BOUNDARY_PVS_RUN_ID"
   echo "STANDALONE_PVS_RUN_ID=$STANDALONE_PVS_RUN_ID"
+  echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
+  echo "MONOLITHIC_LVS_STATUS=MATCH"
+  echo "LVS_BLACKBOXED_CELL_COUNT=0"
+  echo "LVS_HCELL_STATUS=NOT_USED"
   echo "DRC_REPLAY_RC=$DRC_RC"
   echo "DENSITY_CLASSIFICATION_RC=$CLASSIFICATION_RC"
   echo "DENSITY_CLASSIFICATION_STATUS=$CLASSIFICATION_STATUS"
@@ -285,11 +344,17 @@ fi
   echo "DENSITY_NON_ANTENNA_RULE_COUNT=$NON_ANTENNA_COUNT"
   echo "DENSITY_NON_ANTENNA_RULE_SET=$NON_ANTENNA_SET"
   echo "PVS_DRC_DENSITY_NON_ANTENNA_STATUS=$NON_ANTENNA_STATUS"
+  echo "NON_ANTENNA_DRC_STATUS=$NON_ANTENNA_STATUS"
+  echo "ANTENNA_EXCEPTION_STATUS=ACCEPTED_PROJECT_POLICY"
+  echo "ANTENNA_EXCEPTION_EVIDENCE_KIND=AUTO_CLASSIFIED_NOT_INDEPENDENTLY_SIGNED"
+  echo "TOOL_CLEAN_DRC=NO"
+  echo "INNOVUS_SPECIAL_CONNECTIVITY_STATUS=FAIL_15_DANGLING"
   echo "ANTENNA_REPAIR_ATTEMPTED=NO"
   echo "DENSITY_REPAIR_ATTEMPTED=NO"
   echo "SIGNOFF_ELIGIBLE=NO"
   echo "FINAL_SIGNOFF=NO"
   echo "READY_FOR_TAPEOUT=NO"
+  echo "FINAL_PHYSICAL_SIGNOFF_READY=NO"
   echo "DECISION=$DECISION"
   echo "NEXT_STAGE=$NEXT_STAGE"
 } | tee "$PVS_DIR/reports/operator_gate_pvs_drc_density.rpt"
@@ -298,10 +363,13 @@ MPTDC_SNAPSHOT_MAX_TEXT_BYTES=4194304 bash "$PUBLISHER" pvs "$PVS_RUN_ID" "$PVS_
 PUBLISH_RC=$?
 echo "PVS_DENSITY_STATUS=$CLASSIFICATION_STATUS"
 echo "PVS_RUN_ID=$PVS_RUN_ID"
+echo "MONOLITHIC_PVS_RUN_ID=$MONOLITHIC_PVS_RUN_ID"
+echo "MONOLITHIC_LVS_STATUS=MATCH"
 echo "DECISION=$DECISION"
 echo "PUBLISH_RC=$PUBLISH_RC"
 echo "NEXT_EXPECTED_HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null)"
 echo "NEXT_STAGE=$NEXT_STAGE"
+echo "FINAL_PHYSICAL_SIGNOFF_READY=NO"
 if [[ "$DECISION" == PASS_NON_ANTENNA_DENSITY_CLEAN && "$PUBLISH_RC" -eq 0 ]]; then
   exit 0
 fi

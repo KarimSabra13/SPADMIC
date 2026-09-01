@@ -6,8 +6,11 @@ Foundry module definitions are removed only when the exact module name exists
 as a canonical CDL ``.SUBCKT``. Device-empty filler instances are removed only
 when their exact masters and total count are bound to tracked Innovus reports;
 all other physical instances remain in the top module. The two RO_tune6
-instances and wrapper are rewritten to scalar angle-bracket pins so PVS
-compares the same logical pin index on layout and schematic.
+instances are rewritten to scalar angle-bracket pins so PVS compares the same
+logical pin index on layout and schematic. The default mode retains the
+historical empty-wrapper/HCell diagnostic contract. The opt-in
+``external-cdl`` mode omits both and resolves RO_tune6 only through an exact
+19-pin CDL supplied by the caller.
 """
 
 from __future__ import annotations
@@ -36,6 +39,14 @@ INSTANCE_KEYWORDS = {
     "nand", "nor", "not", "or", "output", "primitive", "pullup", "pulldown",
     "reg", "release", "repeat", "task", "tran", "tri", "wait", "wand",
     "wire", "wor", "xnor", "xor",
+}
+
+EXPECTED_RO6_CDL_PINS = {
+    "VDD",
+    "VSS",
+    "rstb",
+    *(f"code<{bit}>" for bit in range(8)),
+    *(f"S<{bit}>" for bit in range(8)),
 }
 
 
@@ -88,6 +99,53 @@ def read_cdl_subckts(paths: Sequence[Path]) -> set[str]:
     if not names:
         raise ValueError("canonical CDL set contains no .SUBCKT definitions")
     return names
+
+
+def logical_cdl_lines(path: Path) -> list[str]:
+    if not path.is_file():
+        raise ValueError(f"RO_tune6 CDL does not exist: {path}")
+    logical: list[str] = []
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("*"):
+            continue
+        if stripped.startswith("+"):
+            if not logical:
+                raise ValueError(f"orphan CDL continuation in {path}: {raw}")
+            logical[-1] += " " + stripped[1:].strip()
+        else:
+            logical.append(stripped)
+    return logical
+
+
+def validate_ro6_cdl(path: Path) -> list[str]:
+    definitions: list[list[str]] = []
+    for line in logical_cdl_lines(path):
+        tokens = line.split()
+        if len(tokens) < 2 or tokens[0].upper() != ".SUBCKT" or tokens[1] != "RO_tune6":
+            continue
+        pins: list[str] = []
+        for token in tokens[2:]:
+            if token.upper() == "PARAMS:" or "=" in token:
+                break
+            pins.append(token.lstrip("\\"))
+        definitions.append(pins)
+    if len(definitions) != 1:
+        raise ValueError(
+            f"expected one .SUBCKT RO_tune6 in {path}, found {len(definitions)}"
+        )
+    pins = definitions[0]
+    if len(pins) != len(set(pins)):
+        raise ValueError(f"RO_tune6 CDL pin list contains duplicates: {pins}")
+    actual = set(pins)
+    if actual != EXPECTED_RO6_CDL_PINS:
+        missing = sorted(EXPECTED_RO6_CDL_PINS - actual)
+        extra = sorted(actual - EXPECTED_RO6_CDL_PINS)
+        raise ValueError(
+            "RO_tune6 CDL pin contract mismatch: "
+            f"missing={missing or 'NONE'} extra={extra or 'NONE'}"
+        )
+    return pins
 
 
 def read_key_value_report(path: Path, keys: set[str]) -> dict[str, str]:
@@ -539,6 +597,17 @@ def main() -> int:
         help="Tracked Innovus row_infra_insertion.rpt for filler/tie master sets",
     )
     parser.add_argument("--top", default="mptdc_axis_core")
+    parser.add_argument(
+        "--ro-model",
+        choices=("wrapper-hcell", "external-cdl"),
+        default="wrapper-hcell",
+        help="RO_tune6 source model; default preserves the diagnostic wrapper/HCell",
+    )
+    parser.add_argument(
+        "--ro-cdl",
+        type=Path,
+        help="Exact 19-pin RO_tune6 CDL required by --ro-model external-cdl",
+    )
     parser.add_argument("--expected-ro-instance-count", type=int, default=2)
     parser.add_argument(
         "--expected-ro-instance",
@@ -555,6 +624,17 @@ def main() -> int:
             raise ValueError("input filename must identify saveNetlist -phys -includePowerGround")
         source = args.input.read_text(encoding="utf-8", errors="replace")
         cdl_names = read_cdl_subckts(args.cdl)
+        ro_cdl_pins: list[str] = []
+        if args.ro_model == "external-cdl":
+            if args.ro_cdl is None:
+                raise ValueError("--ro-cdl is required by --ro-model external-cdl")
+            if args.hcell.exists():
+                raise ValueError(
+                    f"external-CDL mode refuses a pre-existing HCell output: {args.hcell}"
+                )
+            ro_cdl_pins = validate_ro6_cdl(args.ro_cdl)
+        elif args.ro_cdl is not None:
+            raise ValueError("--ro-cdl is valid only with --ro-model external-cdl")
         filler_names, expected_filler_count, tie_candidates = read_physical_instance_contract(
             args.filler_report, args.row_infra_report
         )
@@ -603,12 +683,17 @@ def main() -> int:
                 "physical-only filler removal count mismatch: "
                 f"expected={expected_filler_count} removed={len(removed_filler_instances)}"
             )
-        filtered = normalize_blank_lines(filtered) + ro_wrapper()
+        filtered = normalize_blank_lines(filtered)
+        if args.ro_model == "wrapper-hcell":
+            filtered += ro_wrapper()
 
         retained_modules = {block.name for block in module_blocks(filtered)}
         top_block = find_top_block(filtered, args.top)
         masters = instance_masters(top_block.text)
-        unresolved = sorted(set(masters) - retained_modules - cdl_names)
+        external_cdl_names = {"RO_tune6"} if args.ro_model == "external-cdl" else set()
+        unresolved = sorted(
+            set(masters) - retained_modules - cdl_names - external_cdl_names
+        )
         if unresolved:
             raise ValueError(
                 "active instance masters lack Verilog or canonical CDL definitions: "
@@ -634,7 +719,15 @@ def main() -> int:
 
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(filtered, encoding="utf-8")
-        write_lines(args.hcell, ["RO_tune6 RO_tune6"])
+        if args.ro_model == "wrapper-hcell":
+            write_lines(args.hcell, ["RO_tune6 RO_tune6"])
+
+        ro_model_mode = (
+            "EXTERNAL_CDL" if args.ro_model == "external-cdl" else "WRAPPER_HCELL"
+        )
+        hcell_status = "NOT_USED" if args.ro_model == "external-cdl" else "EMITTED"
+        hcell_entries = 0 if args.ro_model == "external-cdl" else 1
+        wrapper_modules = 0 if args.ro_model == "external-cdl" else 1
 
         report_lines = [
             "# MPTDC Physical PVS LVS Source Contract",
@@ -644,8 +737,18 @@ def main() -> int:
             f"INPUT_SHA256={sha256(args.input)}",
             f"OUTPUT={args.output}",
             f"OUTPUT_SHA256={sha256(args.output)}",
-            f"HCELL={args.hcell}",
+            f"HCELL={args.hcell if args.ro_model == 'wrapper-hcell' else 'NOT_USED'}",
             f"TOP={args.top}",
+            f"RO_MODEL_MODE={ro_model_mode}",
+            f"RO_EXTERNAL_CDL={args.ro_cdl if args.ro_cdl is not None else 'NOT_USED'}",
+            "RO_EXTERNAL_CDL_SHA256="
+            f"{sha256(args.ro_cdl) if args.ro_cdl is not None else 'NOT_USED'}",
+            f"RO_EXTERNAL_CDL_PIN_COUNT={len(ro_cdl_pins)}",
+            "RO_EXTERNAL_CDL_PIN_STATUS="
+            f"{'PASS' if args.ro_model == 'external-cdl' else 'NOT_USED'}",
+            f"RO_TUNE6_WRAPPER_MODULE_COUNT={wrapper_modules}",
+            f"LVS_HCELL_STATUS={hcell_status}",
+            f"LVS_HCELL_ENTRY_COUNT={hcell_entries}",
             "MODULE_REMOVAL_POLICY=EXACT_CANONICAL_CDL_MEMBERSHIP",
             "PHYSICAL_ONLY_INSTANCE_REMOVAL_POLICY=EXACT_TRACKED_FILLER_REPORT_MASTER_SET",
             f"FILLER_REPORT={args.filler_report}",

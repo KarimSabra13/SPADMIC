@@ -184,7 +184,7 @@ grep -qx 'RO6_BLACKBOX_CELL_MATCH_STATUS=PASS' "$TMP_ROOT/pass.stdout"
 grep -qx 'BOUNDARY_REMAINDER_CLASS=NONE_MATCH' "$TMP_ROOT/pass.stdout"
 grep -qx 'DECISION=PASS_COMPOSITIONAL_LVS' "$TMP_ROOT/pass.stdout"
 grep -qx 'PUBLISH_RC=0' "$TMP_ROOT/pass.stdout"
-grep -qx 'NEXT_STAGE=PVS_DRC_DENSITY' "$TMP_ROOT/pass.stdout"
+grep -qx 'NEXT_STAGE=PVS_RO6_MONOLITHIC_FULL_TOP_LVS' "$TMP_ROOT/pass.stdout"
 grep -q "pvs $RUN_ID $WORK/$RUN_ID PVS_RO6_BOUNDARY_LVS" "$TMP_ROOT/publish.args"
 test -L "$WORK/$RUN_ID/outputs"
 grep -qx 'SIGNOFF_ELIGIBLE=NO' "$WORK/$RUN_ID/reports/operator_gate_pvs_ro6_boundary_lvs.rpt"
@@ -192,7 +192,9 @@ grep -qx 'RAW_FULL_TOP_LVS_STATUS=MISMATCH_RO_ABSTRACTION_ONLY' \
   "$WORK/$RUN_ID/reports/operator_gate_pvs_compositional_lvs.rpt"
 grep -qx 'COMPOSITIONAL_LVS_STATUS=PASS' \
   "$WORK/$RUN_ID/reports/operator_gate_pvs_compositional_lvs.rpt"
-grep -qx 'DECISION=PASS_DENSITY_CONTINUE' \
+grep -qx 'DECISION=PASS_MONOLITHIC_LVS_CONTINUE' \
+  "$WORK/$RUN_ID/reports/operator_gate_pvs_compositional_lvs.rpt"
+grep -qx 'NEXT_STAGE=PVS_RO6_MONOLITHIC_FULL_TOP_LVS' \
   "$WORK/$RUN_ID/reports/operator_gate_pvs_compositional_lvs.rpt"
 
 set +e
@@ -281,6 +283,6 @@ test "$NO_TIES_RC" -eq 0
 grep -qx 'SOURCE_PHYSICAL_TIE_INSTANCE_COUNT=0' "$TMP_ROOT/no_ties.stdout"
 grep -qx 'PVS_BOUNDARY_RECOVERY_STATUS=PASS' "$TMP_ROOT/no_ties.stdout"
 grep -qx 'DECISION=PASS_COMPOSITIONAL_LVS' "$TMP_ROOT/no_ties.stdout"
-grep -qx 'NEXT_STAGE=PVS_DRC_DENSITY' "$TMP_ROOT/no_ties.stdout"
+grep -qx 'NEXT_STAGE=PVS_RO6_MONOLITHIC_FULL_TOP_LVS' "$TMP_ROOT/no_ties.stdout"
 
 echo "MPTDC_RO6_BOUNDARY_LVS_DRIVER_TEST=PASS"

@@ -121,7 +121,8 @@ Input preparation now builds LVS source only from Innovus
 `saveNetlist -phys -includePowerGround` output. The contract:
 
 - removes module definitions only for exact masters present in the selected
-  canonical CDL set, plus the protected `RO_tune6` wrapper;
+  canonical CDL set; RO handling is selected explicitly as either the default
+  diagnostic wrapper/HCell mode or strict external-CDL mode;
 - removes top-level filler instances only for the exact master list and total
   count jointly bound by the tracked `filler_status.rpt` and
   `row_infra_insertion.rpt` from the checkpoint lineage;
@@ -132,8 +133,12 @@ Input preparation now builds LVS source only from Innovus
 - scalarizes only `u_core_u_osc_fast_u_ro_tune4` and
   `u_core_u_osc_slow_u_ro_tune4` to exact same-index escaped pins `code<0>`
   through `code<7>` and `S<0>` through `S<7>`;
-- emits a matching 19-pin scalar `RO_tune6` wrapper and rejects positional RO
-  instances.
+- in default `wrapper-hcell` mode, emits a matching 19-pin scalar `RO_tune6`
+  wrapper and HCell entry while rejecting positional RO instances;
+- in `external-cdl` mode, requires exactly one external `.SUBCKT RO_tune6`
+  with the unique 19-pin set `VDD`, `VSS`, `rstb`, `code<0..7>`, and
+  `S<0..7>`, emits no wrapper or HCell entry, and rejects any pre-existing
+  HCell path.
 
 The boundary replay does not use position-based bus mapping and does not hide
 `tie1`. PVS may still list its effective default as
@@ -143,6 +148,28 @@ physical tie instances is not a waiver: the boundary result must
 still have zero tie mismatch residue. A diagnostic continuation is valid only
 for either an explicit top `MATCH` or the exact four-open `RO6_PG_OPEN_ONLY`
 remainder with zero bus, tie, net, and instance mismatch residue.
+
+An explicit boundary `MATCH` is not the final full-top LVS result. It advances
+only to `server_run_mptdc_ro6_monolithic_lvs.sh`. That driver binds the exact
+raw source run, published boundary proof, standalone RO proof, merged GDS,
+D-cell CDL, and standalone-matched RO CDL. It then runs one full-top LVS with
+exactly three schematic paths and one layout path. `lvs_black_box`, `-hcell`,
+position-based bus mapping, and global-signal port promotion are forbidden.
+The replay template is taken from the tracked source `_04_lvs` snapshot, with
+an empty `.config.rul` and a tracked nonempty `.technology.rul`; mutable live
+run controls are not reused.
+Only an explicit monolithic `MATCH`, zero blackboxed cells, zero mismatched
+cells, exact top `59:59` and RO `19:19` pin matches, no missing instances, and
+an empty shorts report set `LVS_SIGNOFF_ELIGIBLE=YES`. Density remains blocked
+until that published monolithic gate passes.
+
+The monolithic LVS proof does not relabel the whole block as physically ready.
+The current recovery policy records the 136 base-DRC results as the exact four
+accepted antenna rule classes with zero non-antenna rules, but this is an
+auto-classified project-policy exception, not an independently signed or
+tool-clean DRC result. The V13 source also retains 15 Innovus special-PG
+dangling endpoints. Both facts remain visible as
+`FINAL_PHYSICAL_SIGNOFF_READY=NO`.
 
 The separately reviewed Step 5R `TOP_CONNECTIVITY_MISMATCH` signature has one
 allowed follow-up before any physical edit:
