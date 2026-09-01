@@ -19,13 +19,18 @@ Innovus DRC `0`, shorts `0`, regular-connectivity failures `0`, and unroutes
 last attributable PVS result is LVS `MISMATCH`; therefore signoff eligibility
 remains `NO`.
 
-The next action is the disposable `tie1-pg-ro-ring-probe` stage. Local
-implementation and fixture tests are complete, but no server probe result is
-yet accepted. The stage proves the exact 15-marker/13-handle PG topology,
-creates two temporary RO rings, maps every endpoint, reruns DRC and regular
-connectivity, and never selects its candidate. A clean probe authorizes one
-ring-stitch trial; a rejected probe authorizes the exact 13-handle long-prune
-fallback. Both branches require canonical replay from V13 before PVS.
+The next action remains a disposable `tie1-pg-ro-ring-probe` stage. The first
+server attempt, `20260901_115029_mptdc_tie1_pg_ro_ring_probe`, preserved the
+exact V13 physical tuple but stopped before ring creation because the source
+matcher returned zero exact candidates for all 15 endpoints. Its checkpoint is
+not selected. Review found a code-level point canonicalization and length
+calculation defect consistent with that result; the first report did not retain
+enough raw DB evidence to prove it was the sole server-side cause. The corrected
+probe now exercises flat and nested point encodings and publishes detailed
+object-inventory diagnostics. A clean probe authorizes one ring-stitch trial;
+an explicitly rejected physical probe authorizes the exact 13-handle long-prune
+fallback. A topology-preflight tool failure authorizes neither branch. Both
+mutating branches require canonical replay from V13 before PVS.
 
 The exact command, accepted checkpoint SHA-256, repair geometry, V8-V13
 failure history, PG endpoint inventory, compositional LVS contract, and stop conditions are in

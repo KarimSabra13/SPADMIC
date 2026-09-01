@@ -22,6 +22,26 @@ assert_equal expected_ro_instance_set \
     [join [mptdc_pg_ro_expected_instance_set] ,] \
     u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4
 
+set flat_marker [dict create idx 99 net VDD layer MET3 \
+    x 221.750 y 681.160 x2 221.750 y2 681.160]
+set flat_record [dict create handle flat_source net VDD layer met3 \
+    shape stripe status routed width 2.0 geomType pathSeg \
+    box {221.75 680.16 1152.56 682.16} \
+    rect {221.75 680.16 1152.56 682.16} \
+    pts {221.75 681.16 1152.56 681.16} length_um 930.81]
+set flat_classified [mptdc_pg_ro_classify_source_record \
+    $flat_marker $flat_record 0.002 6.0]
+assert_equal flat_point_encoding \
+    [dict get $flat_classified point_encoding] FLAT_FOUR_COORD
+assert_equal flat_point_canonicalization \
+    [dict get $flat_classified points] {{221.75 681.16} {1152.56 681.16}}
+assert_equal flat_point_length [dict get $flat_classified length_um] 930.81
+assert_equal flat_endpoint_match [dict get $flat_classified endpoint_match] 1
+assert_equal invalid_scalar_points [mptdc_pg_ro_two_points UNKNOWN] {}
+assert_equal invalid_scalar_encoding [mptdc_pg_ro_point_encoding UNKNOWN] INVALID
+assert_equal wrapped_handle_flattening \
+    [mptdc_pg_ro_valid_handles [list [list 0xa 0xb] 0xa 0x0]] {0xa 0xb}
+
 set source_rec [dict create handle source_1 net VDD layer MET3 \
     points {{0.0 0.0} {100.0 0.0}} orientation HORIZONTAL]
 set marker [dict create idx 1 net VDD layer MET3 x 0.0 y 0.0]
@@ -71,6 +91,7 @@ foreach row $fixture_rows {
     set rec [dict create handle $handle net $net layer $layer shape stripe \
         status routed width 2.0 geomType pathSeg box {} rect {} pts $points \
         points $points orientation $orientation \
+        point_encoding NESTED_TWO_POINT \
         length_um [mptdc_pg_dangling_path_length $points {}] \
         distance_um 0.0 endpoint_match 1 box_match 1]
     dict set ::pg_ro_fixture_records $idx $rec
@@ -92,10 +113,21 @@ rename mptdc_pg_dangling_parse_report mptdc_pg_dangling_parse_report_real
 proc mptdc_pg_dangling_parse_report {path} {
     return $::pg_ro_fixture_markers
 }
-rename mptdc_pg_dangling_marker_candidates mptdc_pg_dangling_marker_candidates_real
-proc mptdc_pg_dangling_marker_candidates {marker eps near} {
+rename mptdc_pg_ro_marker_candidates mptdc_pg_ro_marker_candidates_real
+proc mptdc_pg_ro_marker_candidates {marker eps near {records {}} \
+    {net_handle_count 1}} {
     set rec [dict get $::pg_ro_fixture_records [dict get $marker idx]]
-    return [dict create exact [list $rec] nearby {} net_handle fixture_net]
+    return [dict create exact [list $rec] nearby {} source_count \
+        [llength [dict get $::pg_ro_fixture_handles [dict get $marker net]]] \
+        net_handle_count $net_handle_count]
+}
+rename mptdc_pg_ro_handle_set mptdc_pg_ro_handle_set_real
+proc mptdc_pg_ro_handle_set {net} {
+    return [dict get $::pg_ro_fixture_handles $net]
+}
+rename mptdc_pg_ro_net_handle_set mptdc_pg_ro_net_handle_set_real
+proc mptdc_pg_ro_net_handle_set {net} {
+    return [list "fixture_net_$net"]
 }
 
 set preflight [mptdc_pg_ro_preflight]
@@ -130,10 +162,6 @@ set wrong_width [mptdc_pg_ro_preflight]
 assert_equal preflight_rejects_wrong_width [dict get $wrong_width status] FAIL
 dict set ::pg_ro_fixture_records 1 $saved_record
 
-rename mptdc_pg_ro_handle_set mptdc_pg_ro_handle_set_real
-proc mptdc_pg_ro_handle_set {net} {
-    return [dict get $::pg_ro_fixture_handles $net]
-}
 proc dbDeleteObj {handle} {
     set rec {}
     dict for {idx candidate} $::pg_ro_fixture_records {

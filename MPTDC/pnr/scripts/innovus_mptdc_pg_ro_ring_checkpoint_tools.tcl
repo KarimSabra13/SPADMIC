@@ -48,11 +48,24 @@ proc mptdc_pg_ro_report_value {value} {
 proc mptdc_pg_ro_valid_handles {value} {
     set out {}
     foreach handle $value {
+        # Restored databases can return an object list wrapped in one Tcl list
+        # element.  Flatten that representation before issuing per-object dbGet
+        # queries.
+        if {[llength $handle] > 1} {
+            foreach nested [mptdc_pg_ro_valid_handles $handle] {
+                if {[lsearch -exact $out $nested] < 0} {
+                    lappend out $nested
+                }
+            }
+            continue
+        }
         if {$handle eq "" || $handle eq "0x0" || $handle eq "NULL" ||
             $handle eq "UNKNOWN"} {
             continue
         }
-        lappend out $handle
+        if {[lsearch -exact $out $handle] < 0} {
+            lappend out $handle
+        }
     }
     return $out
 }
@@ -64,7 +77,11 @@ proc mptdc_pg_ro_two_points {raw} {
     } elseif {[llength $raw] == 4} {
         set points [list [lrange $raw 0 1] [lrange $raw 2 3]]
     } elseif {[llength $raw] == 1} {
-        return [mptdc_pg_ro_two_points [lindex $raw 0]]
+        set inner [lindex $raw 0]
+        if {$inner eq $raw} {
+            return {}
+        }
+        return [mptdc_pg_ro_two_points $inner]
     } else {
         return {}
     }
@@ -107,13 +124,40 @@ proc mptdc_pg_ro_orientation {points {eps 0.002}} {
     return INVALID
 }
 
-proc mptdc_pg_ro_handle_set {net} {
-    set nh [mptdc_pg_dangling_dbget "top.nets.name $net -p" ""]
-    if {$nh eq "" || $nh eq "UNKNOWN"} {
-        return {}
+proc mptdc_pg_ro_point_encoding {raw} {
+    if {[llength $raw] == 2 && [llength [lindex $raw 0]] == 2 &&
+        [llength [lindex $raw 1]] == 2} {
+        return NESTED_TWO_POINT
     }
+    if {[llength $raw] == 4} {
+        return FLAT_FOUR_COORD
+    }
+    if {[llength $raw] == 1} {
+        set inner [lindex $raw 0]
+        if {$inner eq $raw} {
+            return INVALID
+        }
+        return "WRAPPED_[mptdc_pg_ro_point_encoding $inner]"
+    }
+    return INVALID
+}
+
+proc mptdc_pg_ro_net_handle_set {net} {
     return [mptdc_pg_ro_valid_handles \
-        [mptdc_pg_dangling_dbget "$nh.sWires" ""]]
+        [mptdc_pg_dangling_dbget "top.nets.name $net -p" ""]]
+}
+
+proc mptdc_pg_ro_handle_set {net} {
+    set out {}
+    foreach nh [mptdc_pg_ro_net_handle_set $net] {
+        foreach handle [mptdc_pg_ro_valid_handles \
+            [mptdc_pg_dangling_dbget "$nh.sWires" ""]] {
+            if {[lsearch -exact $out $handle] < 0} {
+                lappend out $handle
+            }
+        }
+    }
+    return $out
 }
 
 proc mptdc_pg_ro_swire_records {net} {
@@ -122,6 +166,56 @@ proc mptdc_pg_ro_swire_records {net} {
         lappend out [mptdc_pg_dangling_swire_record $handle $net]
     }
     return $out
+}
+
+proc mptdc_pg_ro_classify_source_record {marker rec eps near_radius} {
+    set x [dict get $marker x]
+    set y [dict get $marker y]
+    set marker_layer [string toupper [dict get $marker layer]]
+    set rec_layer [string toupper [dict get $rec layer]]
+    set raw_points [dict get $rec pts]
+    set points [mptdc_pg_ro_two_points $raw_points]
+    set rect [dict get $rec rect]
+    set distance [mptdc_pg_dangling_point_distance_to_rect $x $y $rect]
+    set endpoint_match [expr {$rec_layer eq $marker_layer &&
+        [llength $points] == 2 &&
+        [mptdc_pg_dangling_endpoint_match $points $x $y $eps]}]
+    set box_match [expr {$rec_layer eq $marker_layer &&
+        [mptdc_pg_dangling_point_in_rect $x $y $rect $eps]}]
+    dict set rec layer $rec_layer
+    dict set rec points $points
+    dict set rec point_encoding [mptdc_pg_ro_point_encoding $raw_points]
+    dict set rec length_um [mptdc_pg_dangling_path_length $points $rect]
+    dict set rec distance_um $distance
+    dict set rec endpoint_match $endpoint_match
+    dict set rec box_match $box_match
+    dict set rec near_match [expr {!$endpoint_match && $distance <= $near_radius}]
+    return $rec
+}
+
+proc mptdc_pg_ro_marker_candidates {marker eps near_radius \
+    {records __MPTDC_QUERY__} {net_handle_count __MPTDC_QUERY__}} {
+    set exact {}
+    set nearby {}
+    set net [dict get $marker net]
+    if {$records eq "__MPTDC_QUERY__"} {
+        set records [mptdc_pg_ro_swire_records $net]
+    }
+    if {$net_handle_count eq "__MPTDC_QUERY__"} {
+        set net_handle_count [llength [mptdc_pg_ro_net_handle_set $net]]
+    }
+    foreach raw_rec $records {
+        set rec [mptdc_pg_ro_classify_source_record \
+            $marker $raw_rec $eps $near_radius]
+        if {[dict get $rec endpoint_match]} {
+            lappend exact $rec
+        } elseif {[dict get $rec near_match]} {
+            lappend nearby $rec
+        }
+    }
+    return [dict create exact $exact nearby $nearby \
+        source_count [llength $records] \
+        net_handle_count $net_handle_count]
 }
 
 proc mptdc_pg_ro_sorted_unique_records {preflight} {
@@ -187,6 +281,32 @@ proc mptdc_pg_ro_preflight {} {
     set reasons {}
     set net_counts [dict create VDD 0 VSS 0]
     set layer_counts [dict create MET3 0 METTP 0]
+    set source_net_handle_counts [dict create \
+        VDD [llength [mptdc_pg_ro_net_handle_set VDD]] \
+        VSS [llength [mptdc_pg_ro_net_handle_set VSS]]]
+    set source_records_by_net [dict create \
+        VDD [mptdc_pg_ro_swire_records VDD] \
+        VSS [mptdc_pg_ro_swire_records VSS]]
+    set source_swire_counts [dict create \
+        VDD [llength [dict get $source_records_by_net VDD]] \
+        VSS [llength [dict get $source_records_by_net VSS]]]
+    set source_point_encoding_counts [dict create]
+    foreach net {VDD VSS} {
+        foreach rec [dict get $source_records_by_net $net] {
+            set encoding [mptdc_pg_ro_point_encoding [dict get $rec pts]]
+            dict incr source_point_encoding_counts "${net}|${encoding}"
+        }
+    }
+    set marker_diagnostics {}
+
+    foreach net {VDD VSS} {
+        if {[dict get $source_net_handle_counts $net] == 0} {
+            lappend reasons "[string tolower $net]_net_handle_count:0"
+        }
+        if {[dict get $source_swire_counts $net] == 0} {
+            lappend reasons "[string tolower $net]_swire_inventory_count:0"
+        }
+    }
 
     if {[mptdc_pg_ro_marker_fingerprint $markers] ne \
         [mptdc_pg_ro_expected_marker_fingerprint]} {
@@ -211,14 +331,21 @@ proc mptdc_pg_ro_preflight {} {
             lappend reasons "marker_[dict get $marker idx]_not_point_endpoint"
             continue
         }
-        set found [mptdc_pg_dangling_marker_candidates $marker $eps $near]
+        set found [mptdc_pg_ro_marker_candidates $marker $eps $near \
+            [dict get $source_records_by_net $net] \
+            [dict get $source_net_handle_counts $net]]
         set exact [dict get $found exact]
+        set nearby [dict get $found nearby]
+        lappend marker_diagnostics [dict create idx [dict get $marker idx] \
+            exact_count [llength $exact] nearby_count [llength $nearby] \
+            source_count [dict get $found source_count] \
+            net_handle_count [dict get $found net_handle_count]]
         if {[llength $exact] != 1} {
             lappend reasons "marker_[dict get $marker idx]_exact_count:[llength $exact]"
             continue
         }
         set rec [lindex $exact 0]
-        set points [mptdc_pg_ro_two_points [dict get $rec pts]]
+        set points [dict get $rec points]
         set orientation [mptdc_pg_ro_orientation $points $eps]
         set length [dict get $rec length_um]
         set width [dict get $rec width]
@@ -280,7 +407,11 @@ proc mptdc_pg_ro_preflight {} {
         markers $markers entries $entries records $records \
         handle_counts $handle_counts marker_count [llength $markers] \
         unique_handle_count [dict size $records] shared_handle_count $shared \
-        net_counts $net_counts layer_counts $layer_counts]
+        net_counts $net_counts layer_counts $layer_counts \
+        source_swire_counts $source_swire_counts \
+        source_net_handle_counts $source_net_handle_counts \
+        source_point_encoding_counts $source_point_encoding_counts \
+        marker_diagnostics $marker_diagnostics]
 }
 
 proc mptdc_pg_ro_write_preflight {fh preflight} {
@@ -292,8 +423,24 @@ proc mptdc_pg_ro_write_preflight {fh preflight} {
     puts $fh "SOURCE_VSS_MARKER_COUNT=[dict get [dict get $preflight net_counts] VSS]"
     puts $fh "SOURCE_MET3_MARKER_COUNT=[dict get [dict get $preflight layer_counts] MET3]"
     puts $fh "SOURCE_METTP_MARKER_COUNT=[dict get [dict get $preflight layer_counts] METTP]"
+    puts $fh "SOURCE_VDD_NET_HANDLE_COUNT=[dict get [dict get $preflight source_net_handle_counts] VDD]"
+    puts $fh "SOURCE_VSS_NET_HANDLE_COUNT=[dict get [dict get $preflight source_net_handle_counts] VSS]"
+    puts $fh "SOURCE_VDD_SWIRE_INVENTORY_COUNT=[dict get [dict get $preflight source_swire_counts] VDD]"
+    puts $fh "SOURCE_VSS_SWIRE_INVENTORY_COUNT=[dict get [dict get $preflight source_swire_counts] VSS]"
+    foreach key [lsort -dictionary \
+        [dict keys [dict get $preflight source_point_encoding_counts]]] {
+        set report_key [string map {| _} $key]
+        puts $fh "SOURCE_${report_key}_COUNT=[dict get [dict get $preflight source_point_encoding_counts] $key]"
+    }
     puts $fh "SOURCE_TOPOLOGY_STATUS=[dict get $preflight status]"
     puts $fh "SOURCE_TOPOLOGY_FAILURES=[mptdc_pg_ro_report_value [dict get $preflight reasons]]"
+    foreach diagnostic [dict get $preflight marker_diagnostics] {
+        set marker_idx [dict get $diagnostic idx]
+        puts $fh "SOURCE_MARKER_${marker_idx}_EXACT_COUNT=[dict get $diagnostic exact_count]"
+        puts $fh "SOURCE_MARKER_${marker_idx}_NEARBY_COUNT=[dict get $diagnostic nearby_count]"
+        puts $fh "SOURCE_MARKER_${marker_idx}_SWIRE_INVENTORY_COUNT=[dict get $diagnostic source_count]"
+        puts $fh "SOURCE_MARKER_${marker_idx}_NET_HANDLE_COUNT=[dict get $diagnostic net_handle_count]"
+    }
     set idx 0
     foreach rec [mptdc_pg_ro_sorted_unique_records $preflight] {
         incr idx
@@ -304,6 +451,7 @@ proc mptdc_pg_ro_write_preflight {fh preflight} {
         puts $fh "SOURCE_HANDLE_${idx}_LAYER=[dict get $rec layer]"
         puts $fh "SOURCE_HANDLE_${idx}_WIDTH=[dict get $rec width]"
         puts $fh "SOURCE_HANDLE_${idx}_POINTS=[mptdc_pg_ro_report_value [dict get $rec points]]"
+        puts $fh "SOURCE_HANDLE_${idx}_POINT_ENCODING=[dict get $rec point_encoding]"
         puts $fh "SOURCE_HANDLE_${idx}_LENGTH_UM=[dict get $rec length_um]"
         puts $fh "SOURCE_HANDLE_${idx}_MARKER_REFERENCE_COUNT=$refs"
     }

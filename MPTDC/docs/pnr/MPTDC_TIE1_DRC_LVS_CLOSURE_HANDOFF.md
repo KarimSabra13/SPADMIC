@@ -253,6 +253,40 @@ Never set `MPTDC_PG_DANGLING_ALLOW_LONG_DELETE=1`, delete by area, use a broad
 `sroute`, or invoke `ecoRoute`, `routeDesign`, or any global optimizer in this
 ladder. No stage repairs or suppresses antenna results.
 
+### First Ring-Probe Result
+
+The first server probe,
+`20260901_115029_mptdc_tie1_pg_ro_ring_probe`, is immutable evidence at commit
+`aa67bbcf4ba93baed225bd405634429f04b7cccd`. It restored the exact accepted V13
+checkpoint hash `35fec60377b4fc7c08b83bf550ef457f7bdb3aa69580d8a749feb7a66fa4a7bf`
+and reproduced the expected source tuple: geometry DRC `0`, shorts `0`, regular
+connectivity `0`, route debt `0`, and the exact 15 VDD/VSS dangling markers.
+No source replacement, power-via insertion, pruning, ring creation, or antenna
+repair was attempted. The saved probe checkpoint is `NOT_SELECTED` and must
+never be used as a source candidate.
+
+The probe stopped in source-topology preflight because every marker returned
+`exact_count:0`. This is an infrastructure rejection, not a physical rejection
+of the ring topology. Code review found that the legacy matcher compared marker
+coordinates directly against the raw restored-checkpoint `.pts` value, while
+the ring tool's parser that accepts both nested `{{x y} {x y}}` and flat
+`{x y x y}` encodings was applied only after a candidate had already matched.
+The inherited path-length calculation also mishandled flat point lists. These
+are confirmed code defects consistent with the all-zero result, but the first
+probe did not report raw point encodings or source-object inventory, so their
+server-side attribution remains pending the corrected probe. The local
+regression had also mocked the candidate lookup, so it did not exercise this
+boundary.
+
+The corrective patch canonicalizes point lists and recomputes length before
+endpoint comparison,
+flattens wrapped DB object lists, supports multiple same-name net handles
+without broadening the net scope, and records per-net inventory counts,
+per-marker exact/nearby counts, and each accepted handle's point encoding. The
+next action is therefore another disposable `tie1-pg-ro-ring-probe` from the
+same immutable V13 replay. Do not run ring stitching or long pruning until that
+new probe publishes one of the two explicitly accepted probe outcomes.
+
 ## Prior PVS Result
 
 The prior PVS run is useful triage evidence but cannot certify the V13 replay
