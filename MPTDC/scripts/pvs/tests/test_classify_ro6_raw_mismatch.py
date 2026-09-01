@@ -16,7 +16,7 @@ class RawMismatchClassifierTest(unittest.TestCase):
         cls.raw_cls = (
             cls.repo
             / "MPTDC/docs/server_snapshots/pvs"
-            / "20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs"
+            / "20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs"
             / "pvs_lvs"
             / "mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script"
             / "mptdc_axis_core_lvs.sum.cls"

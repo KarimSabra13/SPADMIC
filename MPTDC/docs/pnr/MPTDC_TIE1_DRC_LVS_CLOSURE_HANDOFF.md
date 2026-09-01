@@ -99,7 +99,7 @@ visible as deferred debt; they are not deleted, waived, or relabelled clean.
 | Historical PG topology witness | `20260825_mptdc_bufftap0_halo10_physical_130313` | identifies the 13 source handles and both exact exposed VSS/MET1 corewires |
 | Proven RO ring primitive | `20260828_mptdc_free_pnr_stripevaluefix_151756_u50` | two RO rings, 16 new `blockRing` sWires, VDD delta `+8`, VSS delta `+8` |
 | Standalone RO LVS proof | `20260827_mptdc_ro6_standalone_lvs_vddfix_150520` | explicit `MATCH`, zero blackboxes, immutable RO GDS/CDL hashes |
-| Final V13 attributable source PVS | `20260901_181712_mptdc_v13_pg15_compositional_pvs` | tracked snapshot `20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs`; merged GDS SHA-256 `941df7a439d0afa4eb5cc5be3d19c46c6d361c1910359f48d4cbb72c5f2b90d6`; base DRC `136` antenna-only / `0` non-antenna; raw LVS exact `380:2`, all 382 records attributable only to the two RO interiors |
+| Final V13 attributable source PVS | `20260901_191119_mptdc_v13_pg15_compositional_pvs` | tracked snapshot `20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs`; merged GDS SHA-256 `5420191274e657c0c02a019fc56d90f034ab48b76134692a5ff7918e53d7363d`; base DRC `136` antenna-only / `0` non-antenna; raw LVS exact `380:2`, all 382 records attributable only to the two RO interiors |
 
 The replay restored the original Tie1 source checkpoint, not the trial output,
 then reapplied the exact V13 operation in one fresh Innovus process. This is why
@@ -205,7 +205,7 @@ the V13 trial checkpoint as the source of another canonical stage.
 | Full-handle long-prune stages | trial/replay entry points retired; PVS intake explicitly rejects legacy replay gates | `RETIRED` |
 | Endpoint-anchor probe | source hash/sWires/vias unchanged; zero mutations; 13 markers trim-feasible, 2 blocked | `PASS_ANALYSIS_KEEP_V13` |
 | Antenna repair | not attempted by policy | `DEFERRED` |
-| PVS base DRC | final V13 source run `20260901_181712...`: 136, all classified antenna-only; zero non-antenna | `FAIL_DEFERRED_ANTENNA` |
+| PVS base DRC | final V13 source run `20260901_191119...`: 136, all classified antenna-only; zero non-antenna | `FAIL_DEFERRED_ANTENNA` |
 | PVS raw full-top LVS | final V13 source run: explicit exact RO-abstraction `MISMATCH` | `FAIL_EXPECTED_RAW_ABSTRACTION` |
 | Standalone `RO_tune6` LVS | explicit non-blackbox `MATCH`, exact GDS/CDL hashes, RO `19:19` | `PASS_LEAF_LVS_PROOF` |
 | Raw LVS mismatch attribution | exact `382` records: 2 source RO instances plus 380 devices in two RO clusters | `PASS_STATIC_CLASSIFICATION` |
@@ -608,11 +608,11 @@ or stale `matched` marker is never an LVS pass.
 
 Relevant reports:
 
-- [base DRC gate](../server_snapshots/pvs/20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_drc_base.rpt)
-- [base DRC classification](../server_snapshots/pvs/20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/pvs_recovery_base_drc_classification.rpt)
-- [LVS source filter](../server_snapshots/pvs/20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/lvs_source_filter.rpt)
-- [LVS comparison gate](../server_snapshots/pvs/20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_lvs.rpt)
-- [LVS comparison summary](../server_snapshots/pvs/20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum.cls)
+- [base DRC gate](../server_snapshots/pvs/20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_drc_base.rpt)
+- [base DRC classification](../server_snapshots/pvs/20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/pvs_recovery_base_drc_classification.rpt)
+- [LVS source filter](../server_snapshots/pvs/20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/lvs_source_filter.rpt)
+- [LVS comparison gate](../server_snapshots/pvs/20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs/reports/operator_gate_pvs_lvs.rpt)
+- [LVS comparison summary](../server_snapshots/pvs/20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum.cls)
 - [standalone RO LVS gate](../server_snapshots/pvs/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/reports/operator_gate_pvs_ro6_standalone_lvs.rpt)
 - [standalone RO input hashes](../server_snapshots/pvs/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/manifests/ro6_standalone_lvs_inputs.rpt)
 
@@ -680,9 +680,9 @@ change the accepted V13 evidence.
 ## Completed Source PVS Command
 
 The foreground block below is retained for exact reproducibility. Its final
-accepted result is run `20260901_181712_mptdc_v13_pg15_compositional_pvs` and
+accepted result is run `20260901_191119_mptdc_v13_pg15_compositional_pvs` and
 tracked snapshot
-`20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs`; do not create a
+`20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs`; do not create a
 replacement source run unless an input hash or source contract is intentionally
 changed and re-reviewed. It configured the repository-local Git identity, did
 not close the login shell on a failed guard, and never sourced the
@@ -880,8 +880,8 @@ echo "IDENTITY_SYNC_STATUS=$IDENTITY_SYNC_STATUS"
 1. Preserve the completed anchor run and V13 source unchanged. No PG repair is
    part of this expedited handoff.
 2. Reuse exact source run
-   `20260901_181712_mptdc_v13_pg15_compositional_pvs` and tracked snapshot
-   `20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs`. Require
+   `20260901_191119_mptdc_v13_pg15_compositional_pvs` and tracked snapshot
+   `20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs`. Require
    `PNR_CANDIDATE_KIND=TIE1_MINAREA_CLEAN_COMPOSITIONAL`, candidate/hash
    gates `PASS`, attributable base DRC with zero non-antenna rules, and
    the expected raw LVS mismatch collection. Keep every antenna count visible.
@@ -891,8 +891,8 @@ echo "IDENTITY_SYNC_STATUS=$IDENTITY_SYNC_STATUS"
 
 ```bash
 set +e
-SOURCE_PVS_RUN=20260901_181712_mptdc_v13_pg15_compositional_pvs
-SOURCE_PVS_EVIDENCE_ID=20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs
+SOURCE_PVS_RUN=20260901_191119_mptdc_v13_pg15_compositional_pvs
+SOURCE_PVS_EVIDENCE_ID=20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs
 STANDALONE_PVS_RUN=20260827_mptdc_ro6_standalone_lvs_vddfix_150520
 HIERARCHICAL_LVS_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_hierarchical_lvs"
 EXPECTED_HEAD="$(git rev-parse HEAD 2>/dev/null)"
@@ -957,8 +957,8 @@ echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 
 ```bash
 set +e
-SOURCE_PVS_RUN=20260901_181712_mptdc_v13_pg15_compositional_pvs
-SOURCE_PVS_EVIDENCE_ID=20260901_181712_mptdc_v13_pg15_compositional_pvs_04_lvs
+SOURCE_PVS_RUN=20260901_191119_mptdc_v13_pg15_compositional_pvs
+SOURCE_PVS_EVIDENCE_ID=20260901_191119_mptdc_v13_pg15_compositional_pvs_04_lvs
 STANDALONE_PVS_RUN=20260827_mptdc_ro6_standalone_lvs_vddfix_150520
 HIERARCHICAL_LVS_RUN="${HIERARCHICAL_LVS_RUN:-}"
 DENSITY_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_v13_ro6_density"
@@ -1013,7 +1013,7 @@ echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 | Innovus special PG | V13 replay | zero dangling VDD/VSS endpoints | `FAIL_15_DANGLING` |
 | PVS base non-antenna DRC | source PVS run | zero non-antenna rules | `PASS` |
 | PVS antenna | source PVS run | project-owner exception only | `136`, accepted policy exception, not tool-clean |
-| Raw full-top LVS | final `181712` source PVS run | collection plus exact attribution | exact `380:2` RO abstraction `MISMATCH` |
+| Raw full-top LVS | final `191119` source PVS run | collection plus exact attribution | exact `380:2` RO abstraction `MISMATCH` |
 | Raw mismatch attribution | latest tracked CLS | all 382 records confined to two RO interiors | `PASS_STATIC_CLASSIFICATION` |
 | Standalone RO LVS | tracked standalone run | explicit unblackboxed `MATCH`, exact GDS/CDL hashes, RO `19:19` | `PASS_LEAF_LVS_PROOF` |
 | Top RO-boundary LVS | next hierarchical run | explicit top `MATCH`, one RO blackbox class, top/RO pin parity, zero residue | `PENDING` |
@@ -1065,7 +1065,7 @@ Stop and preserve the accepted V13 replay checkpoint if any of these occurs:
 - the raw classifier finds any marker, model, instance, hierarchy cluster,
   pin, net, or total-count signature outside the exact two-RO mismatch;
 - final hierarchical mode cannot bind the live source reports byte-for-byte to
-  the tracked `181712..._04_lvs` evidence or cannot bind the standalone gate and
+  the tracked `191119..._04_lvs` evidence or cannot bind the standalone gate and
   manifest to the tracked standalone snapshot;
 - final hierarchical mode sees an overridden or untracked classifier, LVS
   replay, or snapshot publisher outside the temporary fixture test harness;
