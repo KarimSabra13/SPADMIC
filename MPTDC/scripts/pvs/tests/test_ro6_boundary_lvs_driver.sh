@@ -191,7 +191,8 @@ printf 'lvs_black_box RO_tune6;\n' > "$new_run/pvslvsctl"
 : > "$new_run/.config.rul"
 printf 'technology fixture\n' > "$new_run/.technology.rul"
 printf 'TEMPLATE_RUN=%s\n' "$template_run" > "$prepared/reports/replay_template.rpt"
-if [[ "${MPTDC_TEST_BOUNDARY_RESULT:-match}" == pg_open ]]; then
+case "${MPTDC_TEST_BOUNDARY_RESULT:-match}" in
+pg_open)
   cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
 STATUS=FAIL
 PVS_LVS_STATUS=MISMATCH
@@ -203,7 +204,23 @@ RPT
   vdd_open_count=1
   vss_open_count=1
   cls_result=MISMATCH
-else
+  top_status=mismatch
+  ;;
+vss_open)
+  cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
+STATUS=FAIL
+PVS_LVS_STATUS=MISMATCH
+PVS_RC=0
+RPT
+  replay_rc=8
+  layout_open_count=2
+  shorts_opens_count=1
+  vdd_open_count=0
+  vss_open_count=1
+  cls_result=MISMATCH
+  top_status=mismatch
+  ;;
+match)
   cat > "$prepared/reports/pvs_lvs_status.rpt" <<'RPT'
 STATUS=PASS
 PVS_LVS_STATUS=MATCH
@@ -215,12 +232,19 @@ RPT
   vdd_open_count=0
   vss_open_count=0
   cls_result=MATCH
-fi
+  top_status=match
+  ;;
+*)
+  echo "unexpected MPTDC_TEST_BOUNDARY_RESULT" >&2
+  exit 8
+  ;;
+esac
 cat > "$new_run/boundary.cls" <<RPT
 #####  Run Result                    :   $cls_result
 Cells that have been blackboxed              |         1
-mptdc_axis_core     |       59 :        59 |       59 :        59 | match      |
+mptdc_axis_core     |       59 :        59 |       59 :        59 | $top_status      |
 RO_tune6     |       19 :        19 |       19 :        19 | match      |
+Total                |   218,008 :  213,961 |    217,889 :   213,961 |    213,582 :   213,582 |     0 :      0
 RPT
 cat > "$prepared/reports/pvs_lvs_ro6_boundary_blackbox_status.rpt" <<RPT
 LVS_BLACKBOX_CLS_FILE_COUNT=1
@@ -412,6 +436,30 @@ grep -qx 'PVS_LVS=MISMATCH' "$TMP_ROOT/pg_open.stdout"
 grep -qx 'BOUNDARY_REMAINDER_CLASS=RO6_PG_OPEN_ONLY' "$TMP_ROOT/pg_open.stdout"
 grep -qx 'DECISION=PASS_PG_REPAIR_REQUIRED' "$TMP_ROOT/pg_open.stdout"
 grep -qx 'NEXT_STAGE=RO6_PG_ENDPOINT_PROBE' "$TMP_ROOT/pg_open.stdout"
+
+set +e
+MPTDC_TEST_BOUNDARY_RESULT=vss_open \
+MPTDC_BOUNDARY_LVS_REPO_ROOT="$REPO" \
+MPTDC_BOUNDARY_LVS_REPLAY="$REPLAY" \
+MPTDC_BOUNDARY_LVS_PUBLISHER="$PUBLISHER" \
+MPTDC_INNOVUS_WORK="$WORK" \
+MPTDC_TEST_PUBLISH_ARGS="$TMP_ROOT/publish_vss_open.args" \
+bash "$DRIVER" \
+  --source-pvs-run-id "$SOURCE_ID" \
+  --standalone-pvs-run-id "$STANDALONE_ID" \
+  --run-id boundary_lvs_vss_open \
+  --expected-head "$HEAD_SHA" > "$TMP_ROOT/vss_open.stdout" 2>&1
+VSS_OPEN_RC=$?
+set -e
+test "$VSS_OPEN_RC" -eq 0
+grep -qx 'PVS_BOUNDARY_RECOVERY_STATUS=PASS' "$TMP_ROOT/vss_open.stdout"
+grep -qx 'PVS_LVS=MISMATCH' "$TMP_ROOT/vss_open.stdout"
+grep -qx 'BOUNDARY_REMAINDER_CLASS=RO6_VSS_OPEN_ONLY' "$TMP_ROOT/vss_open.stdout"
+grep -qx 'TOP_REDUCED_LAYOUT_INSTANCE_COUNT=213582' "$TMP_ROOT/vss_open.stdout"
+grep -qx 'TOP_REDUCED_SCHEMATIC_INSTANCE_COUNT=213582' "$TMP_ROOT/vss_open.stdout"
+grep -qx 'LAYOUT_OPEN_NET_COUNT=2' "$TMP_ROOT/vss_open.stdout"
+grep -qx 'DECISION=PASS_PG_REPAIR_REQUIRED' "$TMP_ROOT/vss_open.stdout"
+grep -qx 'NEXT_STAGE=RO6_VSS_VIA_TRIAL' "$TMP_ROOT/vss_open.stdout"
 
 cat > "$SOURCE_LVS/source.cls" <<'EOF'
 #####  Run Result                    :     MISMATCH
