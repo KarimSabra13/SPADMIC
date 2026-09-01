@@ -963,6 +963,115 @@ tracked_tie1_pg_replay_gate_passes() {
     "$source_tie1_run_id" "$source_minarea_run_id" NONE
 }
 
+tracked_tie1_pg_ro_clean_gate_passes() {
+  local report="$1" expected_step="$2" run_id="$3"
+  local source_tie1_run_id="$4" source_minarea_run_id="$5"
+  local expected_pg_trial_id="$6" expected_mode="$7" expected_pg_probe_id="$8"
+  local expected_checkpoint expected_source source_minarea_gate source_sha candidate_sha
+  local replacement_attempts replacement_successes
+  expected_checkpoint="$INNOVUS_WORK/$run_id/checkpoints/repaired_route.enc.dat"
+  expected_source="$INNOVUS_WORK/$source_minarea_run_id/checkpoints/repaired_route.enc.dat"
+  source_minarea_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_minarea_run_id/reports/operator_gate_tie1_minarea_endext_replay.rpt"
+  source_sha="$(report_value "$source_minarea_gate" CANDIDATE_CHECKPOINT_SHA256)"
+  candidate_sha="$(report_value "$report" CANDIDATE_CHECKPOINT_SHA256)"
+  [[ "$source_sha" =~ ^[0-9a-f]{64}$ && "$candidate_sha" =~ ^[0-9a-f]{64}$ ]] || return 1
+  tracked_report_passes "$report" \
+    STEP "$expected_step" SOURCE_TIE1_RUN_ID "$source_tie1_run_id" \
+    SOURCE_MINAREA_REPLAY_RUN_ID "$source_minarea_run_id" \
+    SOURCE_PG_PROBE_RUN_ID "$expected_pg_probe_id" \
+    SOURCE_PG_TRIAL_RUN_ID "$expected_pg_trial_id" \
+    SOURCE_CHECKPOINT "$expected_source" SOURCE_CHECKPOINT_SHA256 "$source_sha" \
+    TOOL_RC 0 COMMAND_1_STATUS PASS PG_RO_REPAIR_MODE "$expected_mode" \
+    PG_RO_REPAIR_STATUS PASS_DANGLING_CLEARED SOURCE_TOPOLOGY_STATUS PASS \
+    INITIAL_DANGLING_MARKER_COUNT 15 SOURCE_UNIQUE_HANDLE_COUNT 13 \
+    SOURCE_SHARED_HANDLE_COUNT 2 RO_INSTANCE_COUNT 2 \
+    RO_INSTANCE_SET u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4 \
+    MATCH_EPS_UM 0.002 EXPECTED_MIN_SOURCE_LENGTH_UM 10.0 \
+    RING_MAX_TAIL_UM 20.0 VIA_AREA_HALF_UM 0.400 \
+    RO_BLOCK_RING_WIDTH_UM 2.0 RO_BLOCK_RING_SPACING_UM 1.0 \
+    RO_BLOCK_RING_OFFSET_UM 2.0 FINAL_DRC 0 FINAL_SHORTS 0 \
+    FINAL_REGULAR_CONNECTIVITY_BAD 0 FINAL_SPECIAL_CONNECTIVITY_BAD 0 \
+    FINAL_SPECIAL_CONNECTIVITY_RAW_BAD 0 FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES 0 \
+    FINAL_SPECIAL_DANGLING_COUNT 0 FINAL_UNROUTED_NETS 0 \
+    FINAL_REPORT_ROUTE_ZERO_STATUS PASS FINAL_ROUTE_GATE_PASS 1 \
+    PG_REPAIR_TRIAL_OUTCOME PASS_CLEARED TIE_TARGET_COUNT 91 TIE_NET_COUNT 85 \
+    FILLER_COUNT 24856 PLACEMENT_SITE_OCCUPIED 907533 \
+    PLACEMENT_SITE_CAPACITY 907533 PLACEMENT_EDIT_POLICY NO_INSTANCES_MOVED \
+    ANTENNA_REPAIR_ATTEMPTED NO TIMING_STATUS NOT_RUN_BY_DRC_LVS_SCOPE \
+    CANDIDATE_CHECKPOINT "$expected_checkpoint" \
+    CANDIDATE_CHECKPOINT_SHA256 "$candidate_sha" CANDIDATE_CHECKPOINT_STATUS PASS \
+    SIGNOFF_ELIGIBLE NO DECISION PASS_CONTINUE || return 1
+  [[ -d "$expected_checkpoint" &&
+     "$(tree_content_hash "$expected_checkpoint")" == "$candidate_sha" ]] || return 1
+
+  if [[ "$expected_mode" == ring_stitch ]]; then
+    replacement_attempts="$(report_value "$report" REPLACEMENT_ATTEMPTS)"
+    replacement_successes="$(report_value "$report" REPLACEMENT_SUCCESSES)"
+    [[ "$replacement_attempts" =~ ^[0-9]+$ &&
+       "$replacement_successes" == "$replacement_attempts" &&
+       "$(report_value "$report" RO_INSTANCE_COUNT)" == 2 &&
+       "$(report_value "$report" RO_RING_CREATED_COUNT)" == 2 &&
+       "$(report_value "$report" RO_RING_SWIRE_DELTA_VDD)" == 8 &&
+       "$(report_value "$report" RO_RING_SWIRE_DELTA_VSS)" == 8 &&
+       "$(report_value "$report" RING_GEOMETRY_STATUS)" == PASS &&
+       "$(report_value "$report" RING_POST_GEOMETRY_REGULAR_STATUS)" == PASS &&
+       "$(report_value "$report" MARKER_RING_MAPPING_STATUS)" == PASS &&
+       "$(report_value "$report" MAPPED_MARKER_COUNT)" == 15 &&
+       "$(report_value "$report" VIA_ATTEMPTS)" == 15 &&
+       "$(report_value "$report" VIA_SUCCESSES)" == 15 &&
+       "$(report_value "$report" PRUNE_ATTEMPTS)" == 0 ]]
+  else
+    [[ "$(report_value "$report" RO_INSTANCE_COUNT)" == 2 &&
+       "$(report_value "$report" RO_RING_CREATED_COUNT)" == 0 &&
+       "$(report_value "$report" RING_GEOMETRY_STATUS)" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+       "$(report_value "$report" MARKER_RING_MAPPING_STATUS)" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+       "$(report_value "$report" REPLACEMENT_ATTEMPTS)" == 0 &&
+       "$(report_value "$report" VIA_ATTEMPTS)" == 0 &&
+       "$(report_value "$report" PRUNE_ATTEMPTS)" == 13 &&
+       "$(report_value "$report" PRUNE_SUCCESSES)" == 13 &&
+       "$(report_value "$report" LONG_PRUNE_AUTHORIZATION)" == EXACT_V13_PG15_13_HANDLE_LONG_PRUNE ]]
+  fi
+}
+
+tracked_tie1_pg_ro_replay_gate_passes() {
+  local report="$1" run_id="$2" source_tie1_run_id source_minarea_run_id
+  local source_pg_probe_run_id source_pg_trial_run_id source_minarea_gate
+  local source_pg_trial_gate step mode trial_step
+  source_tie1_run_id="$(report_value "$report" SOURCE_TIE1_RUN_ID)"
+  source_minarea_run_id="$(report_value "$report" SOURCE_MINAREA_REPLAY_RUN_ID)"
+  source_pg_probe_run_id="$(report_value "$report" SOURCE_PG_PROBE_RUN_ID)"
+  source_pg_trial_run_id="$(report_value "$report" SOURCE_PG_TRIAL_RUN_ID)"
+  step="$(report_value "$report" STEP)"
+  [[ "$source_tie1_run_id" =~ ^[A-Za-z0-9._-]+$ &&
+     "$source_minarea_run_id" =~ ^[A-Za-z0-9._-]+$ &&
+     "$source_pg_probe_run_id" =~ ^[A-Za-z0-9._-]+$ &&
+     "$source_pg_trial_run_id" =~ ^[A-Za-z0-9._-]+$ ]] || return 1
+  source_minarea_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_minarea_run_id/reports/operator_gate_tie1_minarea_endext_replay.rpt"
+  tracked_tie1_minarea_replay_gate_passes "$source_minarea_gate" \
+    "$source_minarea_run_id" || return 1
+  [[ "$(report_value "$source_minarea_gate" SOURCE_TIE1_RUN_ID)" == "$source_tie1_run_id" ]] || return 1
+
+  case "$step" in
+    TIE1_PG_RO_RING_STITCH_REPLAY)
+      mode=ring_stitch
+      trial_step=TIE1_PG_RO_RING_STITCH_TRIAL
+      source_pg_trial_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_pg_trial_run_id/reports/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt"
+      ;;
+    TIE1_PG_LONG_PRUNE_REPLAY)
+      mode=long_prune
+      trial_step=TIE1_PG_LONG_PRUNE_TRIAL
+      source_pg_trial_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_pg_trial_run_id/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
+      ;;
+    *) return 1 ;;
+  esac
+  tracked_tie1_pg_ro_clean_gate_passes "$report" "$step" "$run_id" \
+    "$source_tie1_run_id" "$source_minarea_run_id" "$source_pg_trial_run_id" \
+    "$mode" "$source_pg_probe_run_id" || return 1
+  tracked_tie1_pg_ro_clean_gate_passes "$source_pg_trial_gate" "$trial_step" \
+    "$source_pg_trial_run_id" "$source_tie1_run_id" "$source_minarea_run_id" \
+    NONE "$mode" "$source_pg_probe_run_id"
+}
+
 publish_stage() {
   local snapshot_id="$1"
   local step_label="$2"
@@ -1050,7 +1159,11 @@ MINAREA_REPAIR_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/
 FAILED_V6R_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_route_min_area_patch_trial.rpt"
 TIE1_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_insertion_trial.rpt"
 TIE1_MINAREA_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_minarea_endext_replay.rpt"
-TIE1_PG_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_dangling_delete_replay.rpt"
+TIE1_PG_DELETE_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_dangling_delete_replay.rpt"
+TIE1_PG_RING_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_stitch_replay.rpt"
+TIE1_PG_PRUNE_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_long_prune_replay.rpt"
+TIE1_PG_REPLAY_GATE=""
+TIE1_PG_REPLAY_GATE_KIND=NONE
 SOURCE_CKPT=UNKNOWN
 SOURCE_PNR_RUN_ID=UNKNOWN
 PNR_CANDIDATE_KIND=UNKNOWN
@@ -1070,12 +1183,29 @@ TRACKED_STATUS="$(git status --short --untracked-files=no 2>/dev/null)"
 
 MINAREA_REPAIR_GATE_REL="${MINAREA_REPAIR_GATE#"$REPO_ROOT"/}"
 TIE1_TRIAL_GATE_REL="${TIE1_TRIAL_GATE#"$REPO_ROOT"/}"
-TIE1_PG_REPLAY_GATE_REL="${TIE1_PG_REPLAY_GATE#"$REPO_ROOT"/}"
+TIE1_PG_REPLAY_GATE_COUNT=0
+for pg_gate_spec in \
+  "DELETE|$TIE1_PG_DELETE_REPLAY_GATE" \
+  "RING_STITCH|$TIE1_PG_RING_REPLAY_GATE" \
+  "LONG_PRUNE|$TIE1_PG_PRUNE_REPLAY_GATE"; do
+  pg_gate_kind="${pg_gate_spec%%|*}"
+  pg_gate_path="${pg_gate_spec#*|}"
+  pg_gate_rel="${pg_gate_path#"$REPO_ROOT"/}"
+  if git -C "$REPO_ROOT" ls-files --error-unmatch "$pg_gate_rel" >/dev/null 2>&1 &&
+     [[ -s "$pg_gate_path" ]]; then
+    TIE1_PG_REPLAY_GATE_COUNT=$((TIE1_PG_REPLAY_GATE_COUNT + 1))
+    TIE1_PG_REPLAY_GATE="$pg_gate_path"
+    TIE1_PG_REPLAY_GATE_KIND="$pg_gate_kind"
+  fi
+done
+if [[ "$TIE1_PG_REPLAY_GATE_COUNT" -ne 1 ]]; then
+  TIE1_PG_REPLAY_GATE=""
+  TIE1_PG_REPLAY_GATE_KIND=NONE
+fi
 if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
   PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF
   SOURCE_CKPT="$PNR_DIR/checkpoints/repaired_route.enc.dat"
-  if git -C "$REPO_ROOT" ls-files --error-unmatch "$TIE1_PG_REPLAY_GATE_REL" >/dev/null 2>&1 &&
-     [[ -s "$TIE1_PG_REPLAY_GATE" ]]; then
+  if [[ -n "$TIE1_PG_REPLAY_GATE" ]]; then
     PNR_CANDIDATE_KIND=TIE1_MINAREA_PG_CLEAN_COMPOSITIONAL
     CANDIDATE_GATE_PATH="$TIE1_PG_REPLAY_GATE"
     SOURCE_PNR_RUN_ID="$(report_value "$TIE1_PG_REPLAY_GATE" SOURCE_TIE1_RUN_ID)"
@@ -1086,8 +1216,11 @@ if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
           "$CANDIDATE_CHECKPOINT_ACTUAL_SHA256" == "$CANDIDATE_CHECKPOINT_EXPECTED_SHA256" ]]; then
       CANDIDATE_CHECKPOINT_HASH_STATUS=PASS
     fi
-    if tracked_tie1_pg_replay_gate_passes "$TIE1_PG_REPLAY_GATE" "$PNR_RUN_ID" &&
-       [[ "$CANDIDATE_CHECKPOINT_HASH_STATUS" == PASS ]]; then
+    if [[ "$CANDIDATE_CHECKPOINT_HASH_STATUS" == PASS ]] &&
+       { { [[ "$TIE1_PG_REPLAY_GATE_KIND" == DELETE ]] &&
+           tracked_tie1_pg_replay_gate_passes "$TIE1_PG_REPLAY_GATE" "$PNR_RUN_ID"; } ||
+         { [[ "$TIE1_PG_REPLAY_GATE_KIND" =~ ^(RING_STITCH|LONG_PRUNE)$ ]] &&
+           tracked_tie1_pg_ro_replay_gate_passes "$TIE1_PG_REPLAY_GATE" "$PNR_RUN_ID"; }; }; then
       CANDIDATE_GATE_STATUS=PASS
     fi
   else
@@ -1165,6 +1298,8 @@ ROW_INFRA_REPORT="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PNR_RUN
 echo "PNR_RUN_ID=$PNR_RUN_ID"
 echo "PNR_DIR=$PNR_DIR"
 echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
+echo "TIE1_PG_REPLAY_GATE_COUNT=$TIE1_PG_REPLAY_GATE_COUNT"
+echo "TIE1_PG_REPLAY_GATE_KIND=$TIE1_PG_REPLAY_GATE_KIND"
 echo "CANDIDATE_GATE_STATUS=$CANDIDATE_GATE_STATUS"
 echo "CANDIDATE_GATE_PATH=$CANDIDATE_GATE_PATH"
 echo "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$CANDIDATE_CHECKPOINT_EXPECTED_SHA256"
@@ -1263,6 +1398,8 @@ if [[ "$DIAGNOSTIC_BASE_DRC_MODE" == 1 && -d "$PVS_DIR" ]]; then
     echo "RUN_DENSITY_AFTER_LVS=$RUN_DENSITY_AFTER_LVS"
     echo "PNR_RUN_ID=$PNR_RUN_ID"
     echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
+    echo "TIE1_PG_REPLAY_GATE_COUNT=$TIE1_PG_REPLAY_GATE_COUNT"
+    echo "TIE1_PG_REPLAY_GATE_KIND=$TIE1_PG_REPLAY_GATE_KIND"
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "SOURCE_CHECKPOINT=$SOURCE_CKPT"
     echo "CANDIDATE_GATE_PATH=$CANDIDATE_GATE_PATH"
@@ -1291,6 +1428,8 @@ if [[ -d "$PVS_DIR" ]]; then
     echo "PNR_RUN_ID=$PNR_RUN_ID"
     echo "SOURCE_PNR_RUN_ID=$SOURCE_PNR_RUN_ID"
     echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
+    echo "TIE1_PG_REPLAY_GATE_COUNT=$TIE1_PG_REPLAY_GATE_COUNT"
+    echo "TIE1_PG_REPLAY_GATE_KIND=$TIE1_PG_REPLAY_GATE_KIND"
     echo "PVS_RUN_CLASS=$PVS_RUN_CLASS"
     echo "DIAGNOSTIC_DEFERRED_MINAREA=$DIAGNOSTIC_DEFERRED_MINAREA"
     echo "DIAGNOSTIC_ANTENNA_EXCEPTION=$DIAGNOSTIC_ANTENNA_EXCEPTION"

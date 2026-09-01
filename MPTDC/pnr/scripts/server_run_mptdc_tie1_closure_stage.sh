@@ -9,12 +9,14 @@ INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-/sim/ksabra/SPADMIC_work/innovus}"
 LAUNCHER="${MPTDC_TIE1_CLOSURE_LAUNCHER:-$SCRIPT_DIR/server_repair_mptdc_route_checkpoint.sh}"
 PUBLISHER="${MPTDC_TIE1_CLOSURE_PUBLISHER:-$REPO_ROOT/MPTDC/ci/publish_mptdc_server_snapshot.sh}"
 PG_HELPER="$REPO_ROOT/MPTDC/pnr/scripts/innovus_mptdc_pg_dangling_checkpoint_tools.tcl"
+PG_RO_HELPER="$REPO_ROOT/MPTDC/pnr/scripts/innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl"
 
 STAGE=""
 RUN_ID=""
 SOURCE_TIE1_RUN_ID=""
 SOURCE_MINAREA_TRIAL_RUN_ID=""
 SOURCE_MINAREA_REPLAY_RUN_ID=""
+SOURCE_PG_PROBE_RUN_ID=""
 SOURCE_PG_TRIAL_RUN_ID=""
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 
@@ -30,11 +32,21 @@ Stages:
   tie1-pg-analyze         Map all special-wire dangling endpoints without edits.
   tie1-pg-delete-trial    Delete only if every endpoint passes full preflight.
   tie1-pg-delete-replay   Replay a passing deletion trial from minarea replay.
+  tie1-pg-ro-ring-probe   Add two disposable RO block rings and map all 15 endpoints.
+  tie1-pg-ro-ring-stitch-trial
+                           Stitch exact source handles to clean probe rings.
+  tie1-pg-ro-ring-stitch-replay
+                           Replay a passing ring-stitch trial from V13.
+  tie1-pg-long-prune-trial
+                           Delete the exact 13 long source handles as fallback.
+  tie1-pg-long-prune-replay
+                           Replay a passing long-prune trial from V13.
 
 Options:
   --source-minarea-trial-run-id <id>  Required by minarea replay.
   --source-minarea-replay-run-id <id> Required by all PG stages.
-  --source-pg-trial-run-id <id>       Required by PG deletion replay.
+  --source-pg-probe-run-id <id>       Required by RO stitch/prune trials.
+  --source-pg-trial-run-id <id>       Required by every mutating PG replay.
   --run-id <id>                       Explicit result directory name.
   --expected-head <sha>               Require repository HEAD.
   --innovus-work <path>               Innovus result root.
@@ -243,6 +255,165 @@ pg_trial_gate_passes() {
      "$(report_value "$gate" DECISION)" == PASS_CONTINUE ]]
 }
 
+pg_ro_probe_gate_passes() {
+  local gate="$1" probe_run_id="$2" expected_outcome="$3"
+  local expected_checkpoint expected_source candidate_sha source_sha status
+  expected_checkpoint="$INNOVUS_WORK/$probe_run_id/checkpoints/repaired_route.enc.dat"
+  expected_source="$INNOVUS_WORK/$SOURCE_MINAREA_REPLAY_RUN_ID/checkpoints/repaired_route.enc.dat"
+  candidate_sha="$(report_value "$gate" CANDIDATE_CHECKPOINT_SHA256)"
+  source_sha="$(report_value "$SOURCE_PROOF_GATE" CANDIDATE_CHECKPOINT_SHA256)"
+  status="$(report_value "$gate" PG_RO_REPAIR_STATUS)"
+  tracked_report "$gate" || return 1
+  [[ "$(report_value "$gate" STEP)" == TIE1_PG_RO_RING_PROBE &&
+     "$(report_value "$gate" SOURCE_TIE1_RUN_ID)" == "$SOURCE_TIE1_RUN_ID" &&
+     "$(report_value "$gate" SOURCE_MINAREA_REPLAY_RUN_ID)" == "$SOURCE_MINAREA_REPLAY_RUN_ID" &&
+     "$(report_value "$gate" SOURCE_PG_PROBE_RUN_ID)" == NONE &&
+     "$(report_value "$gate" SOURCE_PG_TRIAL_RUN_ID)" == NONE &&
+     "$(report_value "$gate" SOURCE_CHECKPOINT)" == "$expected_source" &&
+     "$(report_value "$gate" SOURCE_CHECKPOINT_SHA256)" == "$source_sha" &&
+     "$(report_value "$gate" TOOL_RC)" == 0 &&
+     "$(report_value "$gate" COMMAND_1_STATUS)" == PASS &&
+     "$(report_value "$gate" PG_RO_REPAIR_MODE)" == ring_probe &&
+     "$(report_value "$gate" SOURCE_TOPOLOGY_STATUS)" == PASS &&
+     "$(report_value "$gate" INITIAL_DANGLING_MARKER_COUNT)" == 15 &&
+     "$(report_value "$gate" SOURCE_UNIQUE_HANDLE_COUNT)" == 13 &&
+     "$(report_value "$gate" SOURCE_SHARED_HANDLE_COUNT)" == 2 &&
+     "$(report_value "$gate" RO_INSTANCE_COUNT)" == 2 &&
+     "$(report_value "$gate" RO_INSTANCE_SET)" == u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4 &&
+     "$(report_value "$gate" MATCH_EPS_UM)" == 0.002 &&
+     "$(report_value "$gate" EXPECTED_MIN_SOURCE_LENGTH_UM)" == 10.0 &&
+     "$(report_value "$gate" RING_MAX_TAIL_UM)" == 20.0 &&
+     "$(report_value "$gate" VIA_AREA_HALF_UM)" == 0.400 &&
+     "$(report_value "$gate" RO_BLOCK_RING_WIDTH_UM)" == 2.0 &&
+     "$(report_value "$gate" RO_BLOCK_RING_SPACING_UM)" == 1.0 &&
+     "$(report_value "$gate" RO_BLOCK_RING_OFFSET_UM)" == 2.0 &&
+     "$(report_value "$gate" REPLACEMENT_ATTEMPTS)" == 0 &&
+     "$(report_value "$gate" VIA_ATTEMPTS)" == 0 &&
+     "$(report_value "$gate" PRUNE_ATTEMPTS)" == 0 &&
+     "$(report_value "$gate" CANDIDATE_CHECKPOINT)" == "$expected_checkpoint" &&
+     "$candidate_sha" =~ ^[0-9a-f]{64}$ &&
+     -d "$expected_checkpoint" && "$(tree_hash "$expected_checkpoint")" == "$candidate_sha" &&
+     "$(report_value "$gate" CANDIDATE_CHECKPOINT_STATUS)" == NOT_SELECTED &&
+     "$(report_value "$gate" SIGNOFF_ELIGIBLE)" == NO &&
+     "$(report_value "$gate" DECISION)" == PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE ]] || return 1
+
+  if [[ "$expected_outcome" == RING_PROBE_READY ]]; then
+    [[ "$status" == PASS_PROBE_READY &&
+       "$(report_value "$gate" RO_RING_CREATED_COUNT)" == 2 &&
+       "$(report_value "$gate" RO_RING_SWIRE_DELTA_VDD)" == 8 &&
+       "$(report_value "$gate" RO_RING_SWIRE_DELTA_VSS)" == 8 &&
+       "$(report_value "$gate" RING_GEOMETRY_STATUS)" == PASS &&
+       "$(report_value "$gate" RING_POST_GEOMETRY_REGULAR_STATUS)" == PASS &&
+       "$(report_value "$gate" MARKER_RING_MAPPING_STATUS)" == PASS &&
+       "$(report_value "$gate" MAPPED_MARKER_COUNT)" == 15 &&
+       "$(report_value "$gate" FINAL_DRC)" == 0 &&
+       "$(report_value "$gate" FINAL_SHORTS)" == 0 &&
+       "$(report_value "$gate" FINAL_REGULAR_CONNECTIVITY_BAD)" == 0 &&
+       "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_BAD)" == 1 &&
+       "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_RAW_BAD)" == 1 &&
+       "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES)" == 0 &&
+       "$(report_value "$gate" FINAL_SPECIAL_DANGLING_COUNT)" == 15 &&
+       "$(report_value "$gate" PG_REPAIR_TRIAL_OUTCOME)" == RING_PROBE_READY &&
+       "$(report_value "$gate" NEXT_STAGE)" == TIE1_PG_RO_RING_STITCH_TRIAL ]]
+  else
+    [[ "$status" =~ ^REVIEW_RING_(GEOMETRY_DIRTY|MAPPING_BLOCKED|CREATION_BLOCKED)$ &&
+       "$(report_value "$gate" PG_REPAIR_TRIAL_OUTCOME)" == RING_PROBE_REJECTED_NO_SOURCE_MUTATION &&
+       "$(report_value "$gate" NEXT_STAGE)" == TIE1_PG_LONG_PRUNE_TRIAL ]]
+  fi
+}
+
+pg_ro_trial_gate_passes() {
+  local gate="$1" expected_step="$2" expected_mode="$3"
+  local expected_checkpoint expected_source candidate_sha source_sha probe_run_id probe_gate probe_outcome
+  expected_checkpoint="$INNOVUS_WORK/$SOURCE_PG_TRIAL_RUN_ID/checkpoints/repaired_route.enc.dat"
+  expected_source="$INNOVUS_WORK/$SOURCE_MINAREA_REPLAY_RUN_ID/checkpoints/repaired_route.enc.dat"
+  candidate_sha="$(report_value "$gate" CANDIDATE_CHECKPOINT_SHA256)"
+  source_sha="$(report_value "$SOURCE_PROOF_GATE" CANDIDATE_CHECKPOINT_SHA256)"
+  tracked_report "$gate" || return 1
+  [[ "$(report_value "$gate" STEP)" == "$expected_step" &&
+     "$(report_value "$gate" SOURCE_TIE1_RUN_ID)" == "$SOURCE_TIE1_RUN_ID" &&
+     "$(report_value "$gate" SOURCE_MINAREA_REPLAY_RUN_ID)" == "$SOURCE_MINAREA_REPLAY_RUN_ID" &&
+     "$(report_value "$gate" SOURCE_PG_PROBE_RUN_ID)" =~ ^[A-Za-z0-9._-]+$ &&
+     "$(report_value "$gate" SOURCE_PG_TRIAL_RUN_ID)" == NONE &&
+     "$(report_value "$gate" SOURCE_CHECKPOINT)" == "$expected_source" &&
+     "$(report_value "$gate" SOURCE_CHECKPOINT_SHA256)" == "$source_sha" &&
+     "$(report_value "$gate" TOOL_RC)" == 0 &&
+     "$(report_value "$gate" COMMAND_1_STATUS)" == PASS &&
+     "$(report_value "$gate" PG_RO_REPAIR_MODE)" == "$expected_mode" &&
+     "$(report_value "$gate" SOURCE_TOPOLOGY_STATUS)" == PASS &&
+     "$(report_value "$gate" INITIAL_DANGLING_MARKER_COUNT)" == 15 &&
+     "$(report_value "$gate" SOURCE_UNIQUE_HANDLE_COUNT)" == 13 &&
+     "$(report_value "$gate" SOURCE_SHARED_HANDLE_COUNT)" == 2 &&
+     "$(report_value "$gate" RO_INSTANCE_COUNT)" == 2 &&
+     "$(report_value "$gate" RO_INSTANCE_SET)" == u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4 &&
+     "$(report_value "$gate" MATCH_EPS_UM)" == 0.002 &&
+     "$(report_value "$gate" EXPECTED_MIN_SOURCE_LENGTH_UM)" == 10.0 &&
+     "$(report_value "$gate" RING_MAX_TAIL_UM)" == 20.0 &&
+     "$(report_value "$gate" VIA_AREA_HALF_UM)" == 0.400 &&
+     "$(report_value "$gate" RO_BLOCK_RING_WIDTH_UM)" == 2.0 &&
+     "$(report_value "$gate" RO_BLOCK_RING_SPACING_UM)" == 1.0 &&
+     "$(report_value "$gate" RO_BLOCK_RING_OFFSET_UM)" == 2.0 &&
+     "$(report_value "$gate" PG_RO_REPAIR_STATUS)" == PASS_DANGLING_CLEARED &&
+     "$(report_value "$gate" FINAL_DRC)" == 0 &&
+     "$(report_value "$gate" FINAL_SHORTS)" == 0 &&
+     "$(report_value "$gate" FINAL_REGULAR_CONNECTIVITY_BAD)" == 0 &&
+     "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_BAD)" == 0 &&
+     "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_RAW_BAD)" == 0 &&
+     "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES)" == 0 &&
+     "$(report_value "$gate" FINAL_SPECIAL_DANGLING_COUNT)" == 0 &&
+     "$(report_value "$gate" FINAL_UNROUTED_NETS)" == 0 &&
+     "$(report_value "$gate" FINAL_ROUTE_GATE_PASS)" == 1 &&
+     "$(report_value "$gate" PG_REPAIR_TRIAL_OUTCOME)" == PASS_CLEARED &&
+     "$(report_value "$gate" TIE_TARGET_COUNT)" == 91 &&
+     "$(report_value "$gate" TIE_NET_COUNT)" == 85 &&
+     "$(report_value "$gate" FILLER_COUNT)" == 24856 &&
+     "$(report_value "$gate" PLACEMENT_SITE_OCCUPIED)" == 907533 &&
+     "$(report_value "$gate" PLACEMENT_SITE_CAPACITY)" == 907533 &&
+     "$(report_value "$gate" PLACEMENT_EDIT_POLICY)" == NO_INSTANCES_MOVED &&
+     "$(report_value "$gate" ANTENNA_REPAIR_ATTEMPTED)" == NO &&
+     "$(report_value "$gate" TIMING_STATUS)" == NOT_RUN_BY_DRC_LVS_SCOPE &&
+     "$(report_value "$gate" CANDIDATE_CHECKPOINT)" == "$expected_checkpoint" &&
+     "$candidate_sha" =~ ^[0-9a-f]{64}$ &&
+     -d "$expected_checkpoint" && "$(tree_hash "$expected_checkpoint")" == "$candidate_sha" &&
+     "$(report_value "$gate" CANDIDATE_CHECKPOINT_STATUS)" == PASS &&
+     "$(report_value "$gate" SIGNOFF_ELIGIBLE)" == NO &&
+     "$(report_value "$gate" DECISION)" == PASS_CONTINUE ]] || return 1
+
+  probe_run_id="$(report_value "$gate" SOURCE_PG_PROBE_RUN_ID)"
+  probe_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$probe_run_id/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
+  if [[ "$expected_mode" == ring_stitch ]]; then
+    probe_outcome=RING_PROBE_READY
+  else
+    probe_outcome=RING_PROBE_REJECTED_NO_SOURCE_MUTATION
+  fi
+  pg_ro_probe_gate_passes "$probe_gate" "$probe_run_id" "$probe_outcome" || return 1
+
+  if [[ "$expected_mode" == ring_stitch ]]; then
+    [[ "$(report_value "$gate" RO_INSTANCE_COUNT)" == 2 &&
+       "$(report_value "$gate" RO_RING_CREATED_COUNT)" == 2 &&
+       "$(report_value "$gate" RO_RING_SWIRE_DELTA_VDD)" == 8 &&
+       "$(report_value "$gate" RO_RING_SWIRE_DELTA_VSS)" == 8 &&
+       "$(report_value "$gate" RING_GEOMETRY_STATUS)" == PASS &&
+       "$(report_value "$gate" RING_POST_GEOMETRY_REGULAR_STATUS)" == PASS &&
+       "$(report_value "$gate" MARKER_RING_MAPPING_STATUS)" == PASS &&
+       "$(report_value "$gate" MAPPED_MARKER_COUNT)" == 15 &&
+       "$(report_value "$gate" REPLACEMENT_ATTEMPTS)" =~ ^[0-9]+$ &&
+       "$(report_value "$gate" REPLACEMENT_SUCCESSES)" == "$(report_value "$gate" REPLACEMENT_ATTEMPTS)" &&
+       "$(report_value "$gate" VIA_ATTEMPTS)" == 15 &&
+       "$(report_value "$gate" VIA_SUCCESSES)" == 15 &&
+       "$(report_value "$gate" PRUNE_ATTEMPTS)" == 0 ]]
+  else
+    [[ "$(report_value "$gate" RO_RING_CREATED_COUNT)" == 0 &&
+       "$(report_value "$gate" RING_GEOMETRY_STATUS)" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+       "$(report_value "$gate" MARKER_RING_MAPPING_STATUS)" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+       "$(report_value "$gate" REPLACEMENT_ATTEMPTS)" == 0 &&
+       "$(report_value "$gate" PRUNE_ATTEMPTS)" == 13 &&
+       "$(report_value "$gate" PRUNE_SUCCESSES)" == 13 &&
+       "$(report_value "$gate" VIA_ATTEMPTS)" == 0 &&
+       "$(report_value "$gate" LONG_PRUNE_AUTHORIZATION)" == EXACT_V13_PG15_13_HANDLE_LONG_PRUNE ]]
+  fi
+}
+
 special_dangling_count() {
   local report="$1" value
   value="$(sed -nE 's/^[[:space:]]*([0-9]+) Problem\(s\) \(IMPVFC-94\):.*/\1/p' "$report" 2>/dev/null | tail -1)"
@@ -271,6 +442,7 @@ while [[ $# -gt 0 ]]; do
     --source-tie1-run-id) SOURCE_TIE1_RUN_ID="${2:?missing value}"; shift 2 ;;
     --source-minarea-trial-run-id) SOURCE_MINAREA_TRIAL_RUN_ID="${2:?missing value}"; shift 2 ;;
     --source-minarea-replay-run-id) SOURCE_MINAREA_REPLAY_RUN_ID="${2:?missing value}"; shift 2 ;;
+    --source-pg-probe-run-id) SOURCE_PG_PROBE_RUN_ID="${2:?missing value}"; shift 2 ;;
     --source-pg-trial-run-id) SOURCE_PG_TRIAL_RUN_ID="${2:?missing value}"; shift 2 ;;
     --expected-head) EXPECTED_HEAD_VALUE="${2:?missing value}"; shift 2 ;;
     --innovus-work) INNOVUS_WORK="${2:?missing value}"; shift 2 ;;
@@ -280,11 +452,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$STAGE" in
-  tie1-minarea-trial|tie1-minarea-replay|tie1-pg-analyze|tie1-pg-delete-trial|tie1-pg-delete-replay) ;;
+  tie1-minarea-trial|tie1-minarea-replay|tie1-pg-analyze|tie1-pg-delete-trial|tie1-pg-delete-replay|tie1-pg-ro-ring-probe|tie1-pg-ro-ring-stitch-trial|tie1-pg-ro-ring-stitch-replay|tie1-pg-long-prune-trial|tie1-pg-long-prune-replay) ;;
   *) echo "ERROR: unsupported --stage: $STAGE" >&2; usage >&2; exit 2 ;;
 esac
 for id in "$SOURCE_TIE1_RUN_ID" "$RUN_ID" "$SOURCE_MINAREA_TRIAL_RUN_ID" \
-          "$SOURCE_MINAREA_REPLAY_RUN_ID" "$SOURCE_PG_TRIAL_RUN_ID"; do
+          "$SOURCE_MINAREA_REPLAY_RUN_ID" "$SOURCE_PG_PROBE_RUN_ID" \
+          "$SOURCE_PG_TRIAL_RUN_ID"; do
   [[ -z "$id" || "$id" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "ERROR: unsafe run id: $id" >&2; exit 2; }
 done
 [[ -n "$SOURCE_TIE1_RUN_ID" ]] || { echo "ERROR: --source-tie1-run-id is required" >&2; exit 2; }
@@ -297,8 +470,17 @@ case "$STAGE" in
     [[ -n "$SOURCE_MINAREA_REPLAY_RUN_ID" ]] || { echo "ERROR: --source-minarea-replay-run-id is required" >&2; exit 2; }
     ;;
 esac
-if [[ "$STAGE" == tie1-pg-delete-replay && -z "$SOURCE_PG_TRIAL_RUN_ID" ]]; then
+if [[ "$STAGE" == tie1-pg-delete-replay ||
+      "$STAGE" == tie1-pg-ro-ring-stitch-replay ||
+      "$STAGE" == tie1-pg-long-prune-replay ]] &&
+   [[ -z "$SOURCE_PG_TRIAL_RUN_ID" ]]; then
   echo "ERROR: --source-pg-trial-run-id is required" >&2
+  exit 2
+fi
+if [[ "$STAGE" == tie1-pg-ro-ring-stitch-trial ||
+      "$STAGE" == tie1-pg-long-prune-trial ]] &&
+   [[ -z "$SOURCE_PG_PROBE_RUN_ID" ]]; then
+  echo "ERROR: --source-pg-probe-run-id is required" >&2
   exit 2
 fi
 
@@ -336,10 +518,29 @@ elif [[ "$STAGE" == tie1-pg-* ]]; then
     "$SOURCE_MINAREA_REPLAY_RUN_ID" || PREFLIGHT=FAIL
   [[ -d "$SOURCE_CHECKPOINT" && "$(tree_hash "$SOURCE_CHECKPOINT")" == "$(report_value "$SOURCE_PROOF_GATE" CANDIDATE_CHECKPOINT_SHA256)" ]] || PREFLIGHT=FAIL
   [[ -s "$PG_HELPER" ]] || PREFLIGHT=FAIL
+  if [[ "$STAGE" == tie1-pg-ro-* || "$STAGE" == tie1-pg-long-prune-* ]]; then
+    [[ -s "$PG_RO_HELPER" ]] || PREFLIGHT=FAIL
+  fi
 fi
 if [[ "$STAGE" == tie1-pg-delete-replay ]]; then
   PG_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_TRIAL_RUN_ID/reports/operator_gate_tie1_pg_dangling_delete_trial.rpt"
   pg_trial_gate_passes "$PG_TRIAL_GATE" || PREFLIGHT=FAIL
+elif [[ "$STAGE" == tie1-pg-ro-ring-stitch-trial ]]; then
+  PG_PROBE_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_PROBE_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
+  pg_ro_probe_gate_passes "$PG_PROBE_GATE" "$SOURCE_PG_PROBE_RUN_ID" \
+    RING_PROBE_READY || PREFLIGHT=FAIL
+elif [[ "$STAGE" == tie1-pg-long-prune-trial ]]; then
+  PG_PROBE_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_PROBE_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
+  pg_ro_probe_gate_passes "$PG_PROBE_GATE" "$SOURCE_PG_PROBE_RUN_ID" \
+    RING_PROBE_REJECTED_NO_SOURCE_MUTATION || PREFLIGHT=FAIL
+elif [[ "$STAGE" == tie1-pg-ro-ring-stitch-replay ]]; then
+  PG_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_TRIAL_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt"
+  pg_ro_trial_gate_passes "$PG_TRIAL_GATE" TIE1_PG_RO_RING_STITCH_TRIAL ring_stitch || PREFLIGHT=FAIL
+  SOURCE_PG_PROBE_RUN_ID="$(report_value "$PG_TRIAL_GATE" SOURCE_PG_PROBE_RUN_ID)"
+elif [[ "$STAGE" == tie1-pg-long-prune-replay ]]; then
+  PG_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_TRIAL_RUN_ID/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
+  pg_ro_trial_gate_passes "$PG_TRIAL_GATE" TIE1_PG_LONG_PRUNE_TRIAL long_prune || PREFLIGHT=FAIL
+  SOURCE_PG_PROBE_RUN_ID="$(report_value "$PG_TRIAL_GATE" SOURCE_PG_PROBE_RUN_ID)"
 fi
 
 echo "TIE1_CLOSURE_PREFLIGHT=$PREFLIGHT"
@@ -387,9 +588,54 @@ case "$STAGE" in
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_dangling_delete_replay.rpt"
     STEP=TIE1_PG_DANGLING_DELETE_REPLAY
     ;;
+  tie1-pg-ro-ring-probe)
+    printf 'mptdc_ckpt_source_tcl {%s}\n' "$PG_RO_HELPER" > "$COMMANDS_FILE"
+    export MPTDC_PG_RO_MODE=ring_probe
+    export MPTDC_ENABLE_RO_BLOCK_RINGS=1
+    GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
+    STEP=TIE1_PG_RO_RING_PROBE
+    ;;
+  tie1-pg-ro-ring-stitch-trial)
+    printf 'mptdc_ckpt_source_tcl {%s}\n' "$PG_RO_HELPER" > "$COMMANDS_FILE"
+    export MPTDC_PG_RO_MODE=ring_stitch
+    export MPTDC_ENABLE_RO_BLOCK_RINGS=1
+    GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt"
+    STEP=TIE1_PG_RO_RING_STITCH_TRIAL
+    ;;
+  tie1-pg-ro-ring-stitch-replay)
+    printf 'mptdc_ckpt_source_tcl {%s}\n' "$PG_RO_HELPER" > "$COMMANDS_FILE"
+    export MPTDC_PG_RO_MODE=ring_stitch
+    export MPTDC_ENABLE_RO_BLOCK_RINGS=1
+    GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_ro_ring_stitch_replay.rpt"
+    STEP=TIE1_PG_RO_RING_STITCH_REPLAY
+    ;;
+  tie1-pg-long-prune-trial)
+    printf 'mptdc_ckpt_source_tcl {%s}\n' "$PG_RO_HELPER" > "$COMMANDS_FILE"
+    export MPTDC_PG_RO_MODE=long_prune
+    export MPTDC_ENABLE_RO_BLOCK_RINGS=0
+    export MPTDC_PG_LONG_PRUNE_AUTHORIZATION=EXACT_V13_PG15_13_HANDLE_LONG_PRUNE
+    GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
+    STEP=TIE1_PG_LONG_PRUNE_TRIAL
+    ;;
+  tie1-pg-long-prune-replay)
+    printf 'mptdc_ckpt_source_tcl {%s}\n' "$PG_RO_HELPER" > "$COMMANDS_FILE"
+    export MPTDC_PG_RO_MODE=long_prune
+    export MPTDC_ENABLE_RO_BLOCK_RINGS=0
+    export MPTDC_PG_LONG_PRUNE_AUTHORIZATION=EXACT_V13_PG15_13_HANDLE_LONG_PRUNE
+    GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_long_prune_replay.rpt"
+    STEP=TIE1_PG_LONG_PRUNE_REPLAY
+    ;;
 esac
 export MPTDC_PG_DANGLING_REQUIRE_ALL_ELIGIBLE=1
 export MPTDC_PG_DANGLING_ALLOW_LONG_DELETE=0
+export MPTDC_PG_RO_AUTORUN=1
+export MPTDC_PG_RO_MATCH_EPS_UM=0.002
+export MPTDC_PG_RO_EXPECTED_MIN_LENGTH_UM=10.0
+export MPTDC_PG_RO_RING_MAX_TAIL_UM=20.0
+export MPTDC_PG_RO_VIA_AREA_HALF_UM=0.400
+export MPTDC_RO_BLOCK_RING_WIDTH_UM=2.0
+export MPTDC_RO_BLOCK_RING_SPACING_UM=1.0
+export MPTDC_RO_BLOCK_RING_OFFSET_UM=2.0
 
 set +e
 bash "$LAUNCHER" --run-id "$RUN_ID" --checkpoint "$SOURCE_CHECKPOINT" \
@@ -423,6 +669,12 @@ if [[ "$FINAL_UNROUTED" == UNKNOWN && "$FINAL_REGULAR" == 0 &&
       "$FINAL_REPORT_ROUTE_ZERO_STATUS" == PASS ]]; then
   FINAL_UNROUTED=0
   FINAL_UNROUTED_SOURCE=tie1_closure_exact_special_debt_report_route_fallback
+elif [[ "$FINAL_UNROUTED" == UNKNOWN && "$FINAL_REGULAR" == 0 &&
+        "$FINAL_SPECIAL" == 0 && "$FINAL_SPECIAL_RAW" == 0 &&
+        "$FINAL_SPECIAL_NON_RO" == 0 && "$FINAL_DANGLING" == 0 &&
+        "$FINAL_REPORT_ROUTE_ZERO_STATUS" == PASS ]]; then
+  FINAL_UNROUTED=0
+  FINAL_UNROUTED_SOURCE=tie1_closure_clean_connectivity_report_route_fallback
 fi
 FINAL_CHECKPOINT="$(report_value "$STATUS_REPORT" FINAL_CHECKPOINT_DAT)"
 FINAL_CHECKPOINT_EXISTS="$(report_value "$STATUS_REPORT" FINAL_CHECKPOINT_DAT_EXISTS)"
@@ -599,6 +851,178 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "DECISION=$DECISION"
     echo "NEXT_STAGE=$NEXT_STAGE"
   } | tee "$GATE_REPORT"
+elif [[ "$STAGE" == tie1-pg-ro-* || "$STAGE" == tie1-pg-long-prune-* ]]; then
+  PG_RO_REPORT="$RUN_DIR/reports/pg_ro_ring_repair_status.rpt"
+  PG_RO_MODE="$(report_value "$PG_RO_REPORT" PG_RO_REPAIR_MODE)"
+  PG_RO_STATUS="$(report_value "$PG_RO_REPORT" PG_RO_REPAIR_STATUS)"
+  PG_RO_TOPOLOGY="$(report_value "$PG_RO_REPORT" SOURCE_TOPOLOGY_STATUS)"
+  PG_RO_INITIAL_MARKERS="$(report_value "$PG_RO_REPORT" INITIAL_DANGLING_MARKER_COUNT)"
+  PG_RO_UNIQUE_HANDLES="$(report_value "$PG_RO_REPORT" SOURCE_UNIQUE_HANDLE_COUNT)"
+  PG_RO_SHARED_HANDLES="$(report_value "$PG_RO_REPORT" SOURCE_SHARED_HANDLE_COUNT)"
+  PG_RO_INSTANCES="$(report_value "$PG_RO_REPORT" RO_INSTANCE_COUNT)"
+  PG_RO_INSTANCE_SET="$(report_value "$PG_RO_REPORT" RO_INSTANCE_SET)"
+  PG_RO_MATCH_EPS="$(report_value "$PG_RO_REPORT" MATCH_EPS_UM)"
+  PG_RO_MIN_LENGTH="$(report_value "$PG_RO_REPORT" EXPECTED_MIN_SOURCE_LENGTH_UM)"
+  PG_RO_MAX_TAIL="$(report_value "$PG_RO_REPORT" RING_MAX_TAIL_UM)"
+  PG_RO_VIA_HALF="$(report_value "$PG_RO_REPORT" VIA_AREA_HALF_UM)"
+  PG_RO_RING_WIDTH="$(report_value "$PG_RO_REPORT" RO_BLOCK_RING_WIDTH_UM)"
+  PG_RO_RING_SPACING="$(report_value "$PG_RO_REPORT" RO_BLOCK_RING_SPACING_UM)"
+  PG_RO_RING_OFFSET="$(report_value "$PG_RO_REPORT" RO_BLOCK_RING_OFFSET_UM)"
+  PG_RO_RINGS="$(report_value "$PG_RO_REPORT" RO_RING_CREATED_COUNT)"
+  PG_RO_VDD_DELTA="$(report_value "$PG_RO_REPORT" RO_RING_SWIRE_DELTA_VDD)"
+  PG_RO_VSS_DELTA="$(report_value "$PG_RO_REPORT" RO_RING_SWIRE_DELTA_VSS)"
+  PG_RO_RING_GEOMETRY="$(report_value "$PG_RO_REPORT" RING_GEOMETRY_STATUS)"
+  PG_RO_RING_POST_CLEAN="$(report_value "$PG_RO_REPORT" RING_POST_GEOMETRY_REGULAR_STATUS)"
+  PG_RO_MAPPING="$(report_value "$PG_RO_REPORT" MARKER_RING_MAPPING_STATUS)"
+  PG_RO_MAPPED="$(report_value "$PG_RO_REPORT" MAPPED_MARKER_COUNT)"
+  PG_RO_REPLACE_ATTEMPTS="$(report_value "$PG_RO_REPORT" REPLACEMENT_ATTEMPTS)"
+  PG_RO_REPLACE_SUCCESSES="$(report_value "$PG_RO_REPORT" REPLACEMENT_SUCCESSES)"
+  PG_RO_VIA_ATTEMPTS="$(report_value "$PG_RO_REPORT" VIA_ATTEMPTS)"
+  PG_RO_VIA_SUCCESSES="$(report_value "$PG_RO_REPORT" VIA_SUCCESSES)"
+  PG_RO_PRUNE_ATTEMPTS="$(report_value "$PG_RO_REPORT" PRUNE_ATTEMPTS)"
+  PG_RO_PRUNE_SUCCESSES="$(report_value "$PG_RO_REPORT" PRUNE_SUCCESSES)"
+  PG_RO_HELPER_FINAL="$(report_value "$PG_RO_REPORT" FINAL_DANGLING_MARKER_COUNT)"
+  PG_RO_AUTH="$(report_value "$PG_RO_REPORT" LONG_PRUNE_AUTHORIZATION)"
+  PG_RO_COMMON=FAIL
+  if [[ "$TOOL_RC" -eq 0 && "$COMMAND_STATUS" == PASS &&
+        "$INITIAL_DRC" == 0 && "$PG_RO_TOPOLOGY" == PASS &&
+        "$PG_RO_INITIAL_MARKERS" == 15 && "$PG_RO_UNIQUE_HANDLES" == 13 &&
+        "$PG_RO_SHARED_HANDLES" == 2 &&
+        "$PG_RO_INSTANCES" == 2 &&
+        "$PG_RO_INSTANCE_SET" == u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4 &&
+        "$PG_RO_MATCH_EPS" == 0.002 && "$PG_RO_MIN_LENGTH" == 10.0 &&
+        "$PG_RO_MAX_TAIL" == 20.0 && "$PG_RO_VIA_HALF" == 0.400 &&
+        "$PG_RO_RING_WIDTH" == 2.0 && "$PG_RO_RING_SPACING" == 1.0 &&
+        "$PG_RO_RING_OFFSET" == 2.0 && "$FINAL_CHECKPOINT_EXISTS" == 1 &&
+        "$FINAL_CHECKPOINT_HASH" =~ ^[0-9a-f]{64}$ ]]; then
+    PG_RO_COMMON=PASS
+  fi
+
+  if [[ "$PG_RO_COMMON" == PASS && "$STAGE" == tie1-pg-ro-ring-probe ]]; then
+    if [[ "$PG_RO_STATUS" == PASS_PROBE_READY && "$PG_RO_MODE" == ring_probe &&
+          "$PG_RO_INSTANCES" == 2 && "$PG_RO_RINGS" == 2 &&
+          "$PG_RO_VDD_DELTA" == 8 && "$PG_RO_VSS_DELTA" == 8 &&
+          "$PG_RO_RING_GEOMETRY" == PASS && "$PG_RO_RING_POST_CLEAN" == PASS &&
+          "$PG_RO_MAPPING" == PASS && "$PG_RO_MAPPED" == 15 &&
+          "$PG_RO_REPLACE_ATTEMPTS" == 0 && "$PG_RO_VIA_ATTEMPTS" == 0 &&
+          "$PG_RO_PRUNE_ATTEMPTS" == 0 && "$FINAL_DRC" == 0 &&
+          "$FINAL_SHORTS" == 0 && "$FINAL_REGULAR" == 0 &&
+          "$FINAL_SPECIAL" == 1 && "$FINAL_SPECIAL_RAW" == 1 &&
+          "$FINAL_SPECIAL_NON_RO" == 0 && "$FINAL_DANGLING" == 15 ]]; then
+      DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE
+      OUTCOME=RING_PROBE_READY
+      NEXT_STAGE=TIE1_PG_RO_RING_STITCH_TRIAL
+    elif [[ "$PG_RO_STATUS" =~ ^REVIEW_RING_(GEOMETRY_DIRTY|MAPPING_BLOCKED|CREATION_BLOCKED)$ &&
+            "$PG_RO_MODE" == ring_probe && "$PG_RO_REPLACE_ATTEMPTS" == 0 &&
+            "$PG_RO_VIA_ATTEMPTS" == 0 && "$PG_RO_PRUNE_ATTEMPTS" == 0 ]]; then
+      DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE
+      OUTCOME=RING_PROBE_REJECTED_NO_SOURCE_MUTATION
+      NEXT_STAGE=TIE1_PG_LONG_PRUNE_TRIAL
+    fi
+  elif [[ "$PG_RO_COMMON" == PASS && "$PG_RO_STATUS" == PASS_DANGLING_CLEARED &&
+          "$FINAL_DRC" == 0 && "$FINAL_SHORTS" == 0 && "$FINAL_REGULAR" == 0 &&
+          "$FINAL_SPECIAL" == 0 && "$FINAL_SPECIAL_RAW" == 0 &&
+          "$FINAL_SPECIAL_NON_RO" == 0 && "$FINAL_DANGLING" == 0 &&
+          "$PG_RO_HELPER_FINAL" == 0 && "$FINAL_UNROUTED" == 0 &&
+          "$FINAL_ROUTE_GATE" == 1 ]]; then
+    if [[ "$STAGE" == tie1-pg-ro-ring-stitch-trial ||
+          "$STAGE" == tie1-pg-ro-ring-stitch-replay ]]; then
+      if [[ "$PG_RO_MODE" == ring_stitch && "$PG_RO_INSTANCES" == 2 &&
+            "$PG_RO_RINGS" == 2 && "$PG_RO_VDD_DELTA" == 8 &&
+            "$PG_RO_VSS_DELTA" == 8 && "$PG_RO_RING_GEOMETRY" == PASS &&
+            "$PG_RO_RING_POST_CLEAN" == PASS && "$PG_RO_MAPPING" == PASS &&
+            "$PG_RO_MAPPED" == 15 && "$PG_RO_REPLACE_ATTEMPTS" == "$PG_RO_REPLACE_SUCCESSES" &&
+            "$PG_RO_VIA_ATTEMPTS" == 15 && "$PG_RO_VIA_SUCCESSES" == 15 &&
+            "$PG_RO_PRUNE_ATTEMPTS" == 0 ]]; then
+        DECISION=PASS_CONTINUE
+        OUTCOME=PASS_CLEARED
+        [[ "$STAGE" == tie1-pg-ro-ring-stitch-trial ]] &&
+          NEXT_STAGE=TIE1_PG_RO_RING_STITCH_REPLAY ||
+          NEXT_STAGE=PVS_BASE_DRC_AND_COMPOSITIONAL_LVS
+      fi
+    elif [[ "$STAGE" == tie1-pg-long-prune-trial ||
+            "$STAGE" == tie1-pg-long-prune-replay ]]; then
+      if [[ "$PG_RO_MODE" == long_prune && "$PG_RO_RINGS" == 0 &&
+            "$PG_RO_RING_GEOMETRY" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+            "$PG_RO_MAPPING" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+            "$PG_RO_REPLACE_ATTEMPTS" == 0 && "$PG_RO_VIA_ATTEMPTS" == 0 &&
+            "$PG_RO_PRUNE_ATTEMPTS" == 13 && "$PG_RO_PRUNE_SUCCESSES" == 13 &&
+            "$PG_RO_AUTH" == EXACT_V13_PG15_13_HANDLE_LONG_PRUNE ]]; then
+        DECISION=PASS_CONTINUE
+        OUTCOME=PASS_CLEARED
+        [[ "$STAGE" == tie1-pg-long-prune-trial ]] &&
+          NEXT_STAGE=TIE1_PG_LONG_PRUNE_REPLAY ||
+          NEXT_STAGE=PVS_BASE_DRC_AND_COMPOSITIONAL_LVS
+      fi
+    fi
+  fi
+  {
+    echo "STEP=$STEP"
+    echo "SOURCE_TIE1_RUN_ID=$SOURCE_TIE1_RUN_ID"
+    echo "SOURCE_MINAREA_REPLAY_RUN_ID=$SOURCE_MINAREA_REPLAY_RUN_ID"
+    echo "SOURCE_PG_PROBE_RUN_ID=${SOURCE_PG_PROBE_RUN_ID:-NONE}"
+    echo "SOURCE_PG_TRIAL_RUN_ID=${SOURCE_PG_TRIAL_RUN_ID:-NONE}"
+    echo "SOURCE_CHECKPOINT=$SOURCE_CHECKPOINT"
+    echo "SOURCE_CHECKPOINT_SHA256=$(tree_hash "$SOURCE_CHECKPOINT")"
+    echo "TOOL_RC=$TOOL_RC"
+    echo "COMMAND_1_STATUS=$COMMAND_STATUS"
+    echo "PG_RO_REPAIR_MODE=$PG_RO_MODE"
+    echo "PG_RO_REPAIR_STATUS=$PG_RO_STATUS"
+    echo "SOURCE_TOPOLOGY_STATUS=$PG_RO_TOPOLOGY"
+    echo "INITIAL_DANGLING_MARKER_COUNT=$PG_RO_INITIAL_MARKERS"
+    echo "SOURCE_UNIQUE_HANDLE_COUNT=$PG_RO_UNIQUE_HANDLES"
+    echo "SOURCE_SHARED_HANDLE_COUNT=$PG_RO_SHARED_HANDLES"
+    echo "RO_INSTANCE_COUNT=$PG_RO_INSTANCES"
+    echo "RO_INSTANCE_SET=$PG_RO_INSTANCE_SET"
+    echo "MATCH_EPS_UM=$PG_RO_MATCH_EPS"
+    echo "EXPECTED_MIN_SOURCE_LENGTH_UM=$PG_RO_MIN_LENGTH"
+    echo "RING_MAX_TAIL_UM=$PG_RO_MAX_TAIL"
+    echo "VIA_AREA_HALF_UM=$PG_RO_VIA_HALF"
+    echo "RO_BLOCK_RING_WIDTH_UM=$PG_RO_RING_WIDTH"
+    echo "RO_BLOCK_RING_SPACING_UM=$PG_RO_RING_SPACING"
+    echo "RO_BLOCK_RING_OFFSET_UM=$PG_RO_RING_OFFSET"
+    echo "RO_RING_CREATED_COUNT=$PG_RO_RINGS"
+    echo "RO_RING_SWIRE_DELTA_VDD=$PG_RO_VDD_DELTA"
+    echo "RO_RING_SWIRE_DELTA_VSS=$PG_RO_VSS_DELTA"
+    echo "RING_GEOMETRY_STATUS=$PG_RO_RING_GEOMETRY"
+    echo "RING_POST_GEOMETRY_REGULAR_STATUS=$PG_RO_RING_POST_CLEAN"
+    echo "MARKER_RING_MAPPING_STATUS=$PG_RO_MAPPING"
+    echo "MAPPED_MARKER_COUNT=$PG_RO_MAPPED"
+    echo "REPLACEMENT_ATTEMPTS=$PG_RO_REPLACE_ATTEMPTS"
+    echo "REPLACEMENT_SUCCESSES=$PG_RO_REPLACE_SUCCESSES"
+    echo "VIA_ATTEMPTS=$PG_RO_VIA_ATTEMPTS"
+    echo "VIA_SUCCESSES=$PG_RO_VIA_SUCCESSES"
+    echo "PRUNE_ATTEMPTS=$PG_RO_PRUNE_ATTEMPTS"
+    echo "PRUNE_SUCCESSES=$PG_RO_PRUNE_SUCCESSES"
+    echo "LONG_PRUNE_AUTHORIZATION=$PG_RO_AUTH"
+    echo "FINAL_DRC=$FINAL_DRC"
+    echo "FINAL_SHORTS=$FINAL_SHORTS"
+    echo "FINAL_REGULAR_CONNECTIVITY_BAD=$FINAL_REGULAR"
+    echo "FINAL_SPECIAL_CONNECTIVITY_BAD=$FINAL_SPECIAL"
+    echo "FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=$FINAL_SPECIAL_RAW"
+    echo "FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=$FINAL_SPECIAL_NON_RO"
+    echo "FINAL_SPECIAL_DANGLING_COUNT=$FINAL_DANGLING"
+    echo "FINAL_UNROUTED_NETS_RAW=$FINAL_UNROUTED_RAW"
+    echo "FINAL_UNROUTED_NETS=$FINAL_UNROUTED"
+    echo "FINAL_UNROUTED_NETS_SOURCE=$FINAL_UNROUTED_SOURCE"
+    echo "FINAL_REPORT_ROUTE_ZERO_STATUS=$FINAL_REPORT_ROUTE_ZERO_STATUS"
+    echo "FINAL_ROUTE_GATE_PASS=$FINAL_ROUTE_GATE"
+    echo "PG_REPAIR_TRIAL_OUTCOME=$OUTCOME"
+    echo "TIE_TARGET_COUNT=91"
+    echo "TIE_NET_COUNT=85"
+    echo "FILLER_COUNT=24856"
+    echo "PLACEMENT_SITE_OCCUPIED=907533"
+    echo "PLACEMENT_SITE_CAPACITY=907533"
+    echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
+    echo "ANTENNA_REPAIR_ATTEMPTED=NO"
+    echo "TIMING_STATUS=NOT_RUN_BY_DRC_LVS_SCOPE"
+    echo "CANDIDATE_CHECKPOINT=$FINAL_CHECKPOINT"
+    echo "CANDIDATE_CHECKPOINT_SHA256=$FINAL_CHECKPOINT_HASH"
+    echo "CANDIDATE_CHECKPOINT_STATUS=$( [[ "$DECISION" == PASS_CONTINUE ]] && echo PASS || echo NOT_SELECTED )"
+    echo "SIGNOFF_ELIGIBLE=NO"
+    echo "DECISION=$DECISION"
+    echo "NEXT_STAGE=$NEXT_STAGE"
+  } | tee "$GATE_REPORT"
 else
   PG_REPORT="$RUN_DIR/reports/pg_dangling_analysis_status.rpt"
   PG_STATUS="$(report_value "$PG_REPORT" PG_DANGLING_STATUS)"
@@ -625,7 +1049,7 @@ else
       else
         DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE
         OUTCOME=ANALYSIS_PREFLIGHT_BLOCKED_NO_MUTATION
-        NEXT_STAGE=PVS_BASE_DRC_AND_RAW_LVS
+        NEXT_STAGE=TIE1_PG_RO_RING_PROBE
       fi
     elif [[ "$PG_STATUS" == PASS_DANGLING_CLEARED && "$PG_ALL_ELIGIBLE" == PASS &&
             "$PG_ELIGIBLE" == 15 && "$PG_UNSAFE" == 0 && "$PG_DUPLICATE" == 0 &&
@@ -633,12 +1057,12 @@ else
             "$FINAL_SPECIAL" == 0 && "$FINAL_SPECIAL_RAW" == 0 && "$FINAL_ROUTE_GATE" == 1 ]]; then
       DECISION=PASS_CONTINUE
       OUTCOME=PASS_CLEARED
-      [[ "$STAGE" == tie1-pg-delete-trial ]] && NEXT_STAGE=TIE1_PG_DANGLING_DELETE_REPLAY || NEXT_STAGE=PVS_BASE_DRC_AND_RAW_LVS
+      [[ "$STAGE" == tie1-pg-delete-trial ]] && NEXT_STAGE=TIE1_PG_DANGLING_DELETE_REPLAY || NEXT_STAGE=PVS_BASE_DRC_AND_COMPOSITIONAL_LVS
     elif [[ "$PG_STATUS" == REVIEW_REQUIRED_PREFLIGHT_BLOCKED && "$PG_MUTATION_ALLOWED" == 0 &&
             "$PG_ATTEMPTS" == 0 && "$FINAL_DANGLING" == 15 && "$FINAL_SPECIAL" == 1 ]]; then
       DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE
       OUTCOME=PREFLIGHT_BLOCKED_NO_MUTATION
-      NEXT_STAGE=PVS_BASE_DRC_AND_RAW_LVS
+      NEXT_STAGE=TIE1_PG_RO_RING_PROBE
     fi
   fi
   {

@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PNR_SCRIPT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DRIVER="$PNR_SCRIPT_DIR/server_run_mptdc_tie1_closure_stage.sh"
 PG_HELPER_SOURCE="$PNR_SCRIPT_DIR/innovus_mptdc_pg_dangling_checkpoint_tools.tcl"
+PG_RO_HELPER_SOURCE="$PNR_SCRIPT_DIR/innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl"
 TMP_ROOT="$(mktemp -d /tmp/mptdc_tie1_closure_driver.XXXXXX)"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
@@ -15,6 +16,7 @@ TIE1_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_RUN/reports"
 TIE1_CHECKPOINT="$WORK/$TIE1_RUN/checkpoints/repaired_route.enc.dat"
 mkdir -p "$TIE1_REPORTS" "$TIE1_CHECKPOINT" "$REPO/MPTDC/pnr/scripts"
 cp "$PG_HELPER_SOURCE" "$REPO/MPTDC/pnr/scripts/innovus_mptdc_pg_dangling_checkpoint_tools.tcl"
+cp "$PG_RO_HELPER_SOURCE" "$REPO/MPTDC/pnr/scripts/innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl"
 printf 'accepted tie checkpoint\n' > "$TIE1_CHECKPOINT/design.bin"
 
 tree_hash() {
@@ -144,6 +146,99 @@ TARGET_VIA_FINGERPRINT_STATUS=UNCHANGED
 POST_MINAREA_MARKER_COUNT=0
 VIA_OVERLAP_SHELF_LENGTH_UM=0.385
 VIA_OVERLAP_SHELF_WIDTH_UM=0.23
+RPT
+elif grep -q 'pg_ro_ring_checkpoint_tools' "$commands"; then
+  pg_ro="$run_dir/reports/pg_ro_ring_repair_status.rpt"
+  mode="${MPTDC_PG_RO_MODE:-missing}"
+  ro_status=FAIL_FIXTURE
+  rings=0
+  vdd_delta=0
+  vss_delta=0
+  ring_geometry=NOT_RUN_BY_LONG_PRUNE_SCOPE
+  ring_post=MISSING
+  mapping=NOT_RUN_BY_LONG_PRUNE_SCOPE
+  mapped=0
+  replacement_attempts=0
+  replacement_successes=0
+  via_attempts=0
+  via_successes=0
+  prune_attempts=0
+  prune_successes=0
+  long_prune_auth=MISSING
+  if [[ "$mode" == ring_probe ]]; then
+    rings=2
+    vdd_delta=8
+    vss_delta=8
+    ring_geometry=PASS
+    ring_post=PASS
+    mapping=PASS
+    mapped=15
+    ro_status=PASS_PROBE_READY
+    if [[ "${FAKE_PG_RO_RESULT:-probe_ready}" == probe_rejected ]]; then
+      final_drc=1
+      ring_post=FAIL
+      ro_status=REVIEW_RING_GEOMETRY_DIRTY
+    fi
+  elif [[ "$mode" == ring_stitch ]]; then
+    rings=2
+    vdd_delta=8
+    vss_delta=8
+    ring_geometry=PASS
+    ring_post=PASS
+    mapping=PASS
+    mapped=15
+    replacement_attempts=4
+    replacement_successes=4
+    via_attempts=15
+    via_successes=15
+    dangling=0
+    final_special=0
+    final_special_raw=0
+    final_route_gate=1
+    final_unrouted=0
+    ro_status=PASS_DANGLING_CLEARED
+  elif [[ "$mode" == long_prune ]]; then
+    prune_attempts=13
+    prune_successes=13
+    long_prune_auth=EXACT_V13_PG15_13_HANDLE_LONG_PRUNE
+    dangling=0
+    final_special=0
+    final_special_raw=0
+    final_route_gate=1
+    final_unrouted=0
+    ro_status=PASS_DANGLING_CLEARED
+  fi
+  cat > "$pg_ro" <<RPT
+PG_RO_REPAIR_MODE=$mode
+PG_RO_REPAIR_STATUS=$ro_status
+SOURCE_TOPOLOGY_STATUS=PASS
+INITIAL_DANGLING_MARKER_COUNT=15
+SOURCE_UNIQUE_HANDLE_COUNT=13
+SOURCE_SHARED_HANDLE_COUNT=2
+RO_INSTANCE_COUNT=2
+RO_INSTANCE_SET=u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4
+MATCH_EPS_UM=0.002
+EXPECTED_MIN_SOURCE_LENGTH_UM=10.0
+RING_MAX_TAIL_UM=20.0
+VIA_AREA_HALF_UM=0.400
+RO_BLOCK_RING_WIDTH_UM=2.0
+RO_BLOCK_RING_SPACING_UM=1.0
+RO_BLOCK_RING_OFFSET_UM=2.0
+RO_RING_CREATED_COUNT=$rings
+RO_RING_SWIRE_DELTA_VDD=$vdd_delta
+RO_RING_SWIRE_DELTA_VSS=$vss_delta
+RING_GEOMETRY_STATUS=$ring_geometry
+RING_POST_GEOMETRY_REGULAR_STATUS=$ring_post
+MARKER_RING_MAPPING_STATUS=$mapping
+MAPPED_MARKER_COUNT=$mapped
+REPLACEMENT_ATTEMPTS=$replacement_attempts
+REPLACEMENT_SUCCESSES=$replacement_successes
+VIA_ATTEMPTS=$via_attempts
+VIA_SUCCESSES=$via_successes
+PRUNE_ATTEMPTS=$prune_attempts
+PRUNE_SUCCESSES=$prune_successes
+LONG_PRUNE_AUTHORIZATION=$long_prune_auth
+FINAL_DANGLING_MARKER_COUNT=$dangling
 RPT
 else
   pg="$run_dir/reports/pg_dangling_analysis_status.rpt"
@@ -346,7 +441,7 @@ grep -qx 'PG_DELETE_TRIAL_OUTCOME=ANALYSIS_PREFLIGHT_BLOCKED_NO_MUTATION' \
   "$WORK/$ANALYZE_BLOCKED_RUN/reports/operator_gate_tie1_pg_dangling_analysis.rpt"
 grep -qx 'PG_DANGLING_DELETE_ATTEMPTS=0' \
   "$WORK/$ANALYZE_BLOCKED_RUN/reports/operator_gate_tie1_pg_dangling_analysis.rpt"
-grep -qx 'NEXT_STAGE=PVS_BASE_DRC_AND_RAW_LVS' "$TMP_ROOT/pg_analyze_blocked.stdout"
+grep -qx 'NEXT_STAGE=TIE1_PG_RO_RING_PROBE' "$TMP_ROOT/pg_analyze_blocked.stdout"
 
 BLOCKED_RUN=pg_delete_blocked
 run_stage tie1-pg-delete-trial "$BLOCKED_RUN" \
@@ -360,6 +455,7 @@ grep -qx 'PG_DANGLING_DELETE_ATTEMPTS=0' \
   "$WORK/$BLOCKED_RUN/reports/operator_gate_tie1_pg_dangling_delete_trial.rpt"
 grep -qx 'CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED' \
   "$WORK/$BLOCKED_RUN/reports/operator_gate_tie1_pg_dangling_delete_trial.rpt"
+grep -qx 'NEXT_STAGE=TIE1_PG_RO_RING_PROBE' "$TMP_ROOT/pg_delete_blocked.stdout"
 
 CLEARED_TRIAL_RUN=pg_delete_trial
 run_stage tie1-pg-delete-trial "$CLEARED_TRIAL_RUN" \
@@ -377,9 +473,90 @@ run_stage tie1-pg-delete-replay "$CLEARED_REPLAY_RUN" \
   --source-pg-trial-run-id "$CLEARED_TRIAL_RUN" FAKE_PG_RESULT=cleared \
   > "$TMP_ROOT/pg_delete_replay.stdout"
 grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_delete_replay.stdout"
-grep -qx 'NEXT_STAGE=PVS_BASE_DRC_AND_RAW_LVS' "$TMP_ROOT/pg_delete_replay.stdout"
+grep -qx 'NEXT_STAGE=PVS_BASE_DRC_AND_COMPOSITIONAL_LVS' "$TMP_ROOT/pg_delete_replay.stdout"
 grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' \
   "$WORK/$CLEARED_REPLAY_RUN/reports/operator_gate_tie1_pg_dangling_delete_replay.rpt"
+
+RING_PROBE_RUN=pg_ro_ring_probe
+run_stage tie1-pg-ro-ring-probe "$RING_PROBE_RUN" \
+  --source-minarea-replay-run-id "$REPLAY_RUN" \
+  > "$TMP_ROOT/pg_ro_ring_probe.stdout"
+grep -qx 'DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE' \
+  "$TMP_ROOT/pg_ro_ring_probe.stdout"
+grep -qx 'NEXT_STAGE=TIE1_PG_RO_RING_STITCH_TRIAL' \
+  "$TMP_ROOT/pg_ro_ring_probe.stdout"
+grep -qx 'PG_REPAIR_TRIAL_OUTCOME=RING_PROBE_READY' \
+  "$WORK/$RING_PROBE_RUN/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
+grep -qx 'CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED' \
+  "$WORK/$RING_PROBE_RUN/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
+
+RING_TRIAL_RUN=pg_ro_ring_stitch_trial
+run_stage tie1-pg-ro-ring-stitch-trial "$RING_TRIAL_RUN" \
+  --source-minarea-replay-run-id "$REPLAY_RUN" \
+  --source-pg-probe-run-id "$RING_PROBE_RUN" \
+  > "$TMP_ROOT/pg_ro_ring_stitch_trial.stdout"
+grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_ro_ring_stitch_trial.stdout"
+grep -qx 'NEXT_STAGE=TIE1_PG_RO_RING_STITCH_REPLAY' \
+  "$TMP_ROOT/pg_ro_ring_stitch_trial.stdout"
+grep -qx 'VIA_ATTEMPTS=15' \
+  "$WORK/$RING_TRIAL_RUN/reports/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt"
+
+RING_REPLAY_RUN=pg_ro_ring_stitch_replay
+run_stage tie1-pg-ro-ring-stitch-replay "$RING_REPLAY_RUN" \
+  --source-minarea-replay-run-id "$REPLAY_RUN" \
+  --source-pg-trial-run-id "$RING_TRIAL_RUN" \
+  > "$TMP_ROOT/pg_ro_ring_stitch_replay.stdout"
+grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_ro_ring_stitch_replay.stdout"
+grep -qx 'NEXT_STAGE=PVS_BASE_DRC_AND_COMPOSITIONAL_LVS' \
+  "$TMP_ROOT/pg_ro_ring_stitch_replay.stdout"
+grep -qx 'FINAL_SPECIAL_DANGLING_COUNT=0' \
+  "$WORK/$RING_REPLAY_RUN/reports/operator_gate_tie1_pg_ro_ring_stitch_replay.rpt"
+
+RING_REJECTED_RUN=pg_ro_ring_probe_rejected
+run_stage tie1-pg-ro-ring-probe "$RING_REJECTED_RUN" \
+  --source-minarea-replay-run-id "$REPLAY_RUN" FAKE_PG_RO_RESULT=probe_rejected \
+  > "$TMP_ROOT/pg_ro_ring_probe_rejected.stdout"
+grep -qx 'DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE' \
+  "$TMP_ROOT/pg_ro_ring_probe_rejected.stdout"
+grep -qx 'NEXT_STAGE=TIE1_PG_LONG_PRUNE_TRIAL' \
+  "$TMP_ROOT/pg_ro_ring_probe_rejected.stdout"
+grep -qx 'PG_REPAIR_TRIAL_OUTCOME=RING_PROBE_REJECTED_NO_SOURCE_MUTATION' \
+  "$WORK/$RING_REJECTED_RUN/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
+
+WRONG_PROBE_CALLS_BEFORE="$(wc -l < "$TMP_ROOT/publish.calls")"
+set +e
+run_stage tie1-pg-ro-ring-stitch-trial pg_ro_ring_stitch_wrong_probe \
+  --source-minarea-replay-run-id "$REPLAY_RUN" \
+  --source-pg-probe-run-id "$RING_REJECTED_RUN" \
+  > "$TMP_ROOT/pg_ro_ring_stitch_wrong_probe.stdout"
+WRONG_PROBE_RC=$?
+set -e
+test "$WRONG_PROBE_RC" -eq 4
+grep -qx 'TIE1_CLOSURE_PREFLIGHT=FAIL' \
+  "$TMP_ROOT/pg_ro_ring_stitch_wrong_probe.stdout"
+test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq "$WRONG_PROBE_CALLS_BEFORE"
+
+PRUNE_TRIAL_RUN=pg_long_prune_trial
+run_stage tie1-pg-long-prune-trial "$PRUNE_TRIAL_RUN" \
+  --source-minarea-replay-run-id "$REPLAY_RUN" \
+  --source-pg-probe-run-id "$RING_REJECTED_RUN" \
+  > "$TMP_ROOT/pg_long_prune_trial.stdout"
+grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_long_prune_trial.stdout"
+grep -qx 'NEXT_STAGE=TIE1_PG_LONG_PRUNE_REPLAY' \
+  "$TMP_ROOT/pg_long_prune_trial.stdout"
+grep -qx 'PRUNE_SUCCESSES=13' \
+  "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
+
+PRUNE_REPLAY_RUN=pg_long_prune_replay
+run_stage tie1-pg-long-prune-replay "$PRUNE_REPLAY_RUN" \
+  --source-minarea-replay-run-id "$REPLAY_RUN" \
+  --source-pg-trial-run-id "$PRUNE_TRIAL_RUN" \
+  > "$TMP_ROOT/pg_long_prune_replay.stdout"
+grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_long_prune_replay.stdout"
+grep -qx 'NEXT_STAGE=PVS_BASE_DRC_AND_COMPOSITIONAL_LVS' \
+  "$TMP_ROOT/pg_long_prune_replay.stdout"
+grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' \
+  "$WORK/$PRUNE_REPLAY_RUN/reports/operator_gate_tie1_pg_long_prune_replay.rpt"
 
 sed -i 's/^FINAL_DRC=0$/FINAL_DRC=1/' \
   "$REPO/MPTDC/docs/server_snapshots/innovus/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
@@ -396,5 +573,5 @@ test "$BROKEN_RC" -eq 4
 grep -qx 'TIE1_CLOSURE_PREFLIGHT=FAIL' "$TMP_ROOT/pg_broken_ancestry.stdout"
 test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq "$BROKEN_CALLS_BEFORE"
 
-test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq 7
+test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq 13
 echo 'MPTDC_TIE1_CLOSURE_STAGE_DRIVER_TEST=PASS'

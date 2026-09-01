@@ -1020,16 +1020,42 @@ write_tie1_minarea_gate \
 
 TIE1_PG_TRIAL_RUN=tie1_pg_trial_fixture
 TIE1_PG_REPLAY_RUN=tie1_pg_replay_fixture
+TIE1_PG_RING_PROBE_RUN=tie1_pg_ring_probe_fixture
+TIE1_PG_RING_TRIAL_RUN=tie1_pg_ring_trial_fixture
+TIE1_PG_RING_REPLAY_RUN=tie1_pg_ring_replay_fixture
+TIE1_PG_PRUNE_PROBE_RUN=tie1_pg_prune_probe_fixture
+TIE1_PG_PRUNE_TRIAL_RUN=tie1_pg_prune_trial_fixture
+TIE1_PG_PRUNE_REPLAY_RUN=tie1_pg_prune_replay_fixture
 TIE1_PG_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_TRIAL_RUN/reports"
 TIE1_PG_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_REPLAY_RUN/reports"
+TIE1_PG_RING_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_RING_TRIAL_RUN/reports"
+TIE1_PG_RING_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_RING_REPLAY_RUN/reports"
+TIE1_PG_PRUNE_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_TRIAL_RUN/reports"
+TIE1_PG_PRUNE_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_REPLAY_RUN/reports"
 TIE1_PG_TRIAL_CKPT="$WORK/$TIE1_PG_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_REPLAY_CKPT="$WORK/$TIE1_PG_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_PG_RING_TRIAL_CKPT="$WORK/$TIE1_PG_RING_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_PG_RING_REPLAY_CKPT="$WORK/$TIE1_PG_RING_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_PG_PRUNE_TRIAL_CKPT="$WORK/$TIE1_PG_PRUNE_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_PG_PRUNE_REPLAY_CKPT="$WORK/$TIE1_PG_PRUNE_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
 mkdir -p "$TIE1_PG_TRIAL_REPORTS" "$TIE1_PG_REPLAY_REPORTS" \
-  "$TIE1_PG_TRIAL_CKPT" "$TIE1_PG_REPLAY_CKPT"
+  "$TIE1_PG_RING_TRIAL_REPORTS" "$TIE1_PG_RING_REPLAY_REPORTS" \
+  "$TIE1_PG_PRUNE_TRIAL_REPORTS" "$TIE1_PG_PRUNE_REPLAY_REPORTS" \
+  "$TIE1_PG_TRIAL_CKPT" "$TIE1_PG_REPLAY_CKPT" \
+  "$TIE1_PG_RING_TRIAL_CKPT" "$TIE1_PG_RING_REPLAY_CKPT" \
+  "$TIE1_PG_PRUNE_TRIAL_CKPT" "$TIE1_PG_PRUNE_REPLAY_CKPT"
 printf 'tie1 PG dangling delete trial\n' > "$TIE1_PG_TRIAL_CKPT/design.bin"
 printf 'tie1 PG dangling canonical replay\n' > "$TIE1_PG_REPLAY_CKPT/design.bin"
+printf 'tie1 PG RO ring stitch trial\n' > "$TIE1_PG_RING_TRIAL_CKPT/design.bin"
+printf 'tie1 PG RO ring stitch replay\n' > "$TIE1_PG_RING_REPLAY_CKPT/design.bin"
+printf 'tie1 PG long prune trial\n' > "$TIE1_PG_PRUNE_TRIAL_CKPT/design.bin"
+printf 'tie1 PG long prune replay\n' > "$TIE1_PG_PRUNE_REPLAY_CKPT/design.bin"
 TIE1_PG_TRIAL_SHA="$(tree_hash "$TIE1_PG_TRIAL_CKPT")"
 TIE1_PG_REPLAY_SHA="$(tree_hash "$TIE1_PG_REPLAY_CKPT")"
+TIE1_PG_RING_TRIAL_SHA="$(tree_hash "$TIE1_PG_RING_TRIAL_CKPT")"
+TIE1_PG_RING_REPLAY_SHA="$(tree_hash "$TIE1_PG_RING_REPLAY_CKPT")"
+TIE1_PG_PRUNE_TRIAL_SHA="$(tree_hash "$TIE1_PG_PRUNE_TRIAL_CKPT")"
+TIE1_PG_PRUNE_REPLAY_SHA="$(tree_hash "$TIE1_PG_PRUNE_REPLAY_CKPT")"
 
 write_tie1_pg_gate() {
   local path="$1" step="$2" source_pg_trial="$3" candidate="$4" candidate_sha="$5"
@@ -1083,6 +1109,97 @@ write_tie1_pg_gate \
   "$TIE1_PG_REPLAY_REPORTS/operator_gate_tie1_pg_dangling_delete_replay.rpt" \
   TIE1_PG_DANGLING_DELETE_REPLAY "$TIE1_PG_TRIAL_RUN" \
   "$TIE1_PG_REPLAY_CKPT" "$TIE1_PG_REPLAY_SHA"
+
+write_tie1_pg_ro_gate() {
+  local path="$1" step="$2" source_pg_trial="$3" candidate="$4"
+  local candidate_sha="$5" mode="$6" source_pg_probe="$7"
+  cat > "$path" <<EOF
+STEP=$step
+SOURCE_TIE1_RUN_ID=$TIE1_CANDIDATE_RUN
+SOURCE_MINAREA_REPLAY_RUN_ID=$TIE1_MINAREA_REPLAY_RUN
+SOURCE_PG_PROBE_RUN_ID=$source_pg_probe
+SOURCE_PG_TRIAL_RUN_ID=$source_pg_trial
+SOURCE_CHECKPOINT=$TIE1_MINAREA_REPLAY_CKPT
+SOURCE_CHECKPOINT_SHA256=$TIE1_MINAREA_REPLAY_SHA
+TOOL_RC=0
+COMMAND_1_STATUS=PASS
+PG_RO_REPAIR_MODE=$mode
+PG_RO_REPAIR_STATUS=PASS_DANGLING_CLEARED
+SOURCE_TOPOLOGY_STATUS=PASS
+INITIAL_DANGLING_MARKER_COUNT=15
+SOURCE_UNIQUE_HANDLE_COUNT=13
+SOURCE_SHARED_HANDLE_COUNT=2
+RO_INSTANCE_COUNT=2
+RO_INSTANCE_SET=u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4
+MATCH_EPS_UM=0.002
+EXPECTED_MIN_SOURCE_LENGTH_UM=10.0
+RING_MAX_TAIL_UM=20.0
+VIA_AREA_HALF_UM=0.400
+RO_BLOCK_RING_WIDTH_UM=2.0
+RO_BLOCK_RING_SPACING_UM=1.0
+RO_BLOCK_RING_OFFSET_UM=2.0
+RO_RING_CREATED_COUNT=$([[ "$mode" == ring_stitch ]] && echo 2 || echo 0)
+RO_RING_SWIRE_DELTA_VDD=$([[ "$mode" == ring_stitch ]] && echo 8 || echo 0)
+RO_RING_SWIRE_DELTA_VSS=$([[ "$mode" == ring_stitch ]] && echo 8 || echo 0)
+RING_GEOMETRY_STATUS=$([[ "$mode" == ring_stitch ]] && echo PASS || echo NOT_RUN_BY_LONG_PRUNE_SCOPE)
+RING_POST_GEOMETRY_REGULAR_STATUS=$([[ "$mode" == ring_stitch ]] && echo PASS || echo MISSING)
+MARKER_RING_MAPPING_STATUS=$([[ "$mode" == ring_stitch ]] && echo PASS || echo NOT_RUN_BY_LONG_PRUNE_SCOPE)
+MAPPED_MARKER_COUNT=$([[ "$mode" == ring_stitch ]] && echo 15 || echo 0)
+REPLACEMENT_ATTEMPTS=4
+REPLACEMENT_SUCCESSES=4
+VIA_ATTEMPTS=$([[ "$mode" == ring_stitch ]] && echo 15 || echo 0)
+VIA_SUCCESSES=$([[ "$mode" == ring_stitch ]] && echo 15 || echo 0)
+PRUNE_ATTEMPTS=$([[ "$mode" == long_prune ]] && echo 13 || echo 0)
+PRUNE_SUCCESSES=$([[ "$mode" == long_prune ]] && echo 13 || echo 0)
+LONG_PRUNE_AUTHORIZATION=$([[ "$mode" == long_prune ]] && echo EXACT_V13_PG15_13_HANDLE_LONG_PRUNE || echo MISSING)
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_DANGLING_COUNT=0
+FINAL_UNROUTED_NETS=0
+FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
+FINAL_ROUTE_GATE_PASS=1
+PG_REPAIR_TRIAL_OUTCOME=PASS_CLEARED
+TIE_TARGET_COUNT=91
+TIE_NET_COUNT=85
+FILLER_COUNT=24856
+PLACEMENT_SITE_OCCUPIED=907533
+PLACEMENT_SITE_CAPACITY=907533
+PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED
+ANTENNA_REPAIR_ATTEMPTED=NO
+TIMING_STATUS=NOT_RUN_BY_DRC_LVS_SCOPE
+CANDIDATE_CHECKPOINT=$candidate
+CANDIDATE_CHECKPOINT_SHA256=$candidate_sha
+CANDIDATE_CHECKPOINT_STATUS=PASS
+SIGNOFF_ELIGIBLE=NO
+DECISION=PASS_CONTINUE
+NEXT_STAGE=TEST_NEXT
+EOF
+  if [[ "$mode" == long_prune ]]; then
+    sed -i 's/^REPLACEMENT_ATTEMPTS=4$/REPLACEMENT_ATTEMPTS=0/; s/^REPLACEMENT_SUCCESSES=4$/REPLACEMENT_SUCCESSES=0/' "$path"
+  fi
+}
+write_tie1_pg_ro_gate \
+  "$TIE1_PG_RING_TRIAL_REPORTS/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt" \
+  TIE1_PG_RO_RING_STITCH_TRIAL NONE "$TIE1_PG_RING_TRIAL_CKPT" \
+  "$TIE1_PG_RING_TRIAL_SHA" ring_stitch "$TIE1_PG_RING_PROBE_RUN"
+write_tie1_pg_ro_gate \
+  "$TIE1_PG_RING_REPLAY_REPORTS/operator_gate_tie1_pg_ro_ring_stitch_replay.rpt" \
+  TIE1_PG_RO_RING_STITCH_REPLAY "$TIE1_PG_RING_TRIAL_RUN" \
+  "$TIE1_PG_RING_REPLAY_CKPT" "$TIE1_PG_RING_REPLAY_SHA" ring_stitch \
+  "$TIE1_PG_RING_PROBE_RUN"
+write_tie1_pg_ro_gate \
+  "$TIE1_PG_PRUNE_TRIAL_REPORTS/operator_gate_tie1_pg_long_prune_trial.rpt" \
+  TIE1_PG_LONG_PRUNE_TRIAL NONE "$TIE1_PG_PRUNE_TRIAL_CKPT" \
+  "$TIE1_PG_PRUNE_TRIAL_SHA" long_prune "$TIE1_PG_PRUNE_PROBE_RUN"
+write_tie1_pg_ro_gate \
+  "$TIE1_PG_PRUNE_REPLAY_REPORTS/operator_gate_tie1_pg_long_prune_replay.rpt" \
+  TIE1_PG_LONG_PRUNE_REPLAY "$TIE1_PG_PRUNE_TRIAL_RUN" \
+  "$TIE1_PG_PRUNE_REPLAY_CKPT" "$TIE1_PG_PRUNE_REPLAY_SHA" long_prune \
+  "$TIE1_PG_PRUNE_PROBE_RUN"
 
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m minarea-replay-fixtures
@@ -1175,6 +1292,46 @@ grep -qx 'NEXT_STAGE=RO6_BOUNDARY_LVS' "$TMP_ROOT/tie1_pg_compositional.stdout"
 test "$(wc -l < "$PG_COMPOSITIONAL_CALLS")" -eq 4
 test "$(cat "$PG_COMPOSITIONAL_DRC_CALLS")" = base
 test "$(cat "$PG_COMPOSITIONAL_LVS_CALLS")" = 1
+
+for replay_kind in ring prune; do
+  if [[ "$replay_kind" == ring ]]; then
+    replay_run="$TIE1_PG_RING_REPLAY_RUN"
+    replay_ckpt="$TIE1_PG_RING_REPLAY_CKPT"
+    replay_sha="$TIE1_PG_RING_REPLAY_SHA"
+  else
+    replay_run="$TIE1_PG_PRUNE_REPLAY_RUN"
+    replay_ckpt="$TIE1_PG_PRUNE_REPLAY_CKPT"
+    replay_sha="$TIE1_PG_PRUNE_REPLAY_SHA"
+  fi
+  replay_calls="$TMP_ROOT/tie1_pg_${replay_kind}_compositional.calls"
+  replay_drc_calls="$TMP_ROOT/tie1_pg_${replay_kind}_compositional.drc_calls"
+  replay_lvs_calls="$TMP_ROOT/tie1_pg_${replay_kind}_compositional.lvs_calls"
+  run_driver "pvs_tie1_pg_${replay_kind}_compositional" "$replay_calls" \
+    --test-pnr-run "$replay_run" EXPECTED_PREP_CHECKPOINT="$replay_ckpt" \
+    FAKE_DRC_NONZERO_VARIANT=base EXPECT_COMPOSITIONAL_LVS=1 \
+    FAKE_LVS_MISMATCH=1 DRC_CALLS="$replay_drc_calls" \
+    LVS_CALLS="$replay_lvs_calls" \
+    --diagnostic-antenna-exception --diagnostic-ro-compositional \
+    > "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
+  grep -qx 'PNR_CANDIDATE_KIND=TIE1_MINAREA_PG_CLEAN_COMPOSITIONAL' \
+    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
+  grep -qx 'CANDIDATE_GATE_STATUS=PASS' \
+    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
+  if [[ "$replay_kind" == ring ]]; then
+    expected_gate_kind=RING_STITCH
+  else
+    expected_gate_kind=LONG_PRUNE
+  fi
+  grep -qx 'TIE1_PG_REPLAY_GATE_COUNT=1' \
+    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
+  grep -qx "TIE1_PG_REPLAY_GATE_KIND=$expected_gate_kind" \
+    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
+  grep -Fxqx "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$replay_sha" \
+    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
+  grep -qx 'NEXT_STAGE=RO6_BOUNDARY_LVS' \
+    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
+  test "$(wc -l < "$replay_calls")" -eq 4
+done
 
 UNEXPECTED_MATCH_CALLS="$TMP_ROOT/tie1_compositional_match.calls"
 set +e

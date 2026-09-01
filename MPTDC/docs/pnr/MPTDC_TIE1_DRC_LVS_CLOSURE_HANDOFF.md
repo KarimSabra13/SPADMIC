@@ -4,7 +4,7 @@ Author: Karim Sabra
 
 Status: active execution checkpoint for `mptdc_axis_core`
 
-Last evidence review: 2026-08-31
+Last evidence review: 2026-09-01
 
 ## Decision
 
@@ -12,6 +12,12 @@ The V13 minimum-area repair is accepted for continued closure. It passed once
 as an isolated trial and passed again as a canonical replay from the immutable
 pre-repair Tie1 checkpoint. The replay is the only accepted continuation
 checkpoint.
+
+The PG closure implementation is now present locally and unit-tested, but it
+has not yet been run in Cadence against the V13 checkpoint. Consequently, no
+PG candidate has been accepted and the state label below is unchanged. The
+first server action is a disposable RO block-ring probe; its saved checkpoint
+is evidence only and must never become the canonical source.
 
 The current state label is:
 
@@ -37,6 +43,9 @@ visible as deferred debt; they are not deleted, waived, or relabelled clean.
 | V13 isolated trial | `20260831_174738_mptdc_tie1_minarea_clearance_v13_trial` | evidence commit `072d059645438fff54afbd81bd8f7cbd859e5497`; candidate SHA-256 `aebd16c6dd07605cb41329d3f3f3464b98e8a82f35b8b7fe747131f88e9a39d0` |
 | V13 canonical replay | `20260831_175532_mptdc_tie1_minarea_clearance_v13_replay` | evidence commit `b61dfd1a6c476aa41cab43735a28199fa164bc05`; candidate SHA-256 `35fec60377b4fc7c08b83bf550ef457f7bdb3aa69580d8a749feb7a66fa4a7bf` |
 | Prior PVS diagnostic | `20260831_mptdc_tie1_lvs_density_131326` | base DRC `136`, antenna-only classification, LVS `MISMATCH`; predates V13 |
+| Historical PG topology witness | `20260825_mptdc_bufftap0_halo10_physical_130313` | identifies the 15 endpoints as 13 exact long MET3/METTP stripe handles |
+| Proven RO ring primitive | `20260828_mptdc_free_pnr_stripevaluefix_151756_u50` | two RO rings, 16 new `blockRing` sWires, VDD delta `+8`, VSS delta `+8` |
+| Standalone RO LVS proof | `20260827_mptdc_ro6_standalone_lvs_vddfix_150520` | explicit `MATCH`, zero blackboxes, immutable RO GDS/CDL hashes |
 
 The replay restored the original Tie1 source checkpoint, not the trial output,
 then reapplied the exact V13 operation in one fresh Innovus process. This is why
@@ -119,7 +128,9 @@ the V13 trial checkpoint as the source of another canonical stage.
 | Special PG connectivity | 15 raw VDD/VSS dangling endpoints | `FAIL_OPEN` |
 | Antenna repair | not attempted by policy | `DEFERRED` |
 | PVS base DRC | prior run: 136, all classified antenna-only | `FAIL_DEFERRED_ANTENNA` |
-| PVS LVS | prior attributable run: explicit `MISMATCH` | `FAIL` |
+| PVS raw full-top LVS | prior attributable run: explicit `MISMATCH` | `FAIL` |
+| Standalone `RO_tune6` LVS | explicit non-blackbox `MATCH`, exact GDS/CDL hashes | `PASS_DIAGNOSTIC` |
+| Digital-top RO-boundary LVS | not rerun from a PG-clean V13 descendant | `NOT_RUN` |
 | PVS density DRC | not run after LVS mismatch | `NOT_RUN` |
 | Timing | not run in this DRC/LVS recovery scope | `NOT_RUN` |
 | Final signoff eligibility | outstanding PG, LVS, density, timing, and export gates | `NO` |
@@ -156,33 +167,91 @@ antenna-rule debt that is explicitly excluded from repair.
 The detailed source is the [replay special-connectivity
 report](../server_snapshots/innovus/20260831_175532_mptdc_tie1_minarea_clearance_v13_replay/reports/01_after_command_verify_connectivity_special_detailed.rpt).
 
-The next stage is read-only. For each marker it requires exactly one special
-wire on the same net and layer whose first or last point matches within
-`0.002 um`. It rejects missing or ambiguous matches, duplicate handles, and
-segments longer than `10.0 um`. `MPTDC_PG_DANGLING_REQUIRE_ALL_ELIGIBLE=1` and
-`MPTDC_PG_DANGLING_ALLOW_LONG_DELETE=0` prevent any partial or long-segment
-deletion.
+### Proven Topology
 
-Only this exact analysis result authorizes a deletion trial:
+The old short-segment deletion plan is intentionally retired. Historical
+post-`sroute` topology proves that these markers are cuts in the original
+2.0-um PG mesh around the two RO obstructions, not 15 independent stubs. The
+same-net, same-layer endpoint matcher resolves all 15 markers to 13 unique
+axis-aligned handles:
 
-```text
-PG_DANGLING_STATUS=ANALYSIS_ONLY
-PG_DANGLING_ELIGIBLE_COUNT=15
-PG_DANGLING_ALL_ELIGIBLE_STATUS=PASS
-PG_DANGLING_UNSAFE_LENGTH_COUNT=0
-PG_DANGLING_DUPLICATE_HANDLE_COUNT=0
-PG_DANGLING_MUTATION_ALLOWED=0
-PG_DANGLING_DELETE_ATTEMPTS=0
-PG_DANGLING_DELETE_SUCCESSES=0
-FINAL_DANGLING_MARKER_COUNT=15
-PG_DELETE_TRIAL_OUTCOME=ANALYSIS_ALL_ELIGIBLE
-DECISION=PASS_CONTINUE
-NEXT_STAGE=TIE1_PG_DANGLING_DELETE_TRIAL
-```
+- 8 MET3 endpoint markers and 7 METTP endpoint markers;
+- 6 VDD markers and 9 VSS markers;
+- 13 unique handles, all longer than `10.0 um`;
+- exactly two handles referenced at both ends: VDD METTP
+  `(121.160,233.620)` to `(121.160,648.320)` and VSS METTP
+  `(125.160,233.620)` to `(125.160,648.320)`;
+- representative MET3 cuts are VDD `(16.160,201.160)` to
+  `(48.000,201.160)` and `(221.750,201.160)` to
+  `(1152.560,201.160)`, with analogous rows at `y=681.160` and on VSS.
 
-Any other result keeps the accepted V13 replay checkpoint and forbids PG
-mutation. Do not set `ALLOW_LONG_DELETE=1`, bypass the all-eligible gate, or
-delete by area without a unique exact handle.
+This is why the previous guard correctly rejected both duplicate handles and
+long deletion. Treating 15 markers as 15 objects would double-delete two
+handles, while enabling a generic long-delete switch would authorize a much
+broader mutation than the evidence supports.
+
+The accepted V13 lineage has no RO block rings. A separate proven Innovus run
+created one VDD/VSS block ring around each of the two exact RO instances using
+MET3 top/bottom and METTP left/right sides. Its audited effect was exactly two
+rings, 16 new `blockRing` sWires, VDD `+8`, and VSS `+8`. The new probe reuses
+that command contract but derives all ring coordinates and all endpoint
+intersections from the live V13 database. It does not copy historical
+coordinates.
+
+Evidence:
+
+- [original post-sroute PG topology](../server_snapshots/innovus/20260825_mptdc_bufftap0_halo10_physical_130313/reports/postplace_pre_route_pg_topology_after_sroute.rpt)
+- [proven two-ring effect](../server_snapshots/innovus/20260828_mptdc_free_pnr_stripevaluefix_151756_u50/reports/ro_block_ring_status.rpt)
+- [proven ring topology](../server_snapshots/innovus/20260828_mptdc_free_pnr_stripevaluefix_151756_u50/reports/postplace_pre_route_pg_topology_after_sroute.rpt)
+
+### Implemented Repair Ladder
+
+The implementation is in
+`MPTDC/pnr/scripts/innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl` and is
+orchestrated by `server_run_mptdc_tie1_closure_stage.sh`. Every candidate starts
+from the accepted V13 replay in a fresh Innovus process.
+
+All stages require the exact RO instance set
+`u_core_u_osc_fast_u_ro_tune4,u_core_u_osc_slow_u_ro_tune4`, source-marker
+match tolerance `0.002 um`, minimum source-handle length `10.0 um`, maximum
+ring-tail distance `20.0 um`, via readback half-area `0.400 um`, and ring
+width/spacing/offset `2.0/1.0/2.0 um`. These values are written into every
+trial and replay gate and are rechecked by the PVS intake.
+
+1. `tie1-pg-ro-ring-probe` performs the exact 15-marker/13-handle/2-shared
+   preflight, creates the two disposable rings, requires the exact `+8/+8`
+   sWire effect, maps all 15 endpoints to perpendicular same-net ring sides
+   within `20.0 um`, and reruns fresh DRC and regular connectivity. It performs
+   no source-handle replacement, via insertion, or pruning. Its candidate is
+   always `NOT_SELECTED`.
+2. If the probe is clean and maps all 15 endpoints, run
+   `tie1-pg-ro-ring-stitch-trial` with `--source-pg-probe-run-id` naming that
+   tracked clean probe. It extends only endpoint handles that do not already
+   cross a mapped ring side, preserves all other source handles, and invokes
+   bounded `editPowerVia` candidates only at the 15 exact intersections.
+   Every new handle and via effect is read back before the final gate.
+3. Accept ring stitching only with two rings, VDD/VSS deltas `+8/+8`, all 15
+   mappings and via effects proven, special dangling count `0`, DRC `0`,
+   shorts `0`, regular connectivity `0`, unroutes `0`, and unchanged Tie1,
+   filler, and placement invariants. Then replay it from V13 in another fresh
+   process.
+4. If ring creation, mapping, or post-ring geometry is rejected, use
+   `tie1-pg-long-prune-trial` with `--source-pg-probe-run-id` naming that
+   tracked rejected probe. It requires the literal authorization
+   `EXACT_V13_PG15_13_HANDLE_LONG_PRUNE`, deletes only the 13 preflight handles
+   by exact object handle, and reruns fresh DRC, regular connectivity, and
+   dangling-marker accounting after every deletion. It has no area-delete
+   fallback and does not create rings or vias. A passing prune is also replayed
+   from V13 in a fresh process.
+
+The ring probe is preferred because it restores an explicit local PG boundary
+around each RO. Long prune is acceptable only as the documented closure-first
+fallback: it removes the cut mesh branches and may reduce redundant PG
+coverage, so the subsequent PVS and final PG evidence remain mandatory.
+
+Never set `MPTDC_PG_DANGLING_ALLOW_LONG_DELETE=1`, delete by area, use a broad
+`sroute`, or invoke `ecoRoute`, `routeDesign`, or any global optimizer in this
+ladder. No stage repairs or suppresses antenna results.
 
 ## Prior PVS Result
 
@@ -219,13 +288,40 @@ The dominant exact mismatch signature is:
 - no pin-count mismatch (`59:59`), parameter mismatch, or instance-subtype
   mismatch.
 
-This strongly points to an RO hierarchy/hcell abstraction mismatch: the source
-retained two abstract `RO_tune6` instances while PVS compared their device
-content on the layout side. It is a triage hypothesis, not yet a proven root
-cause. Do not change the Tie1 insertion or top pin contract based only on this
-signature. After PG disposition and fresh streamout, first prove whether the
-same signature remains, then audit the exact GDS cell name/hierarchy, hcell
-mapping, and source abstraction as one attributable experiment.
+This is an RO hierarchy/hcell abstraction mismatch signature: the source
+retained two abstract `RO_tune6` instances while raw full-top reduction exposed
+their device content on the layout side. Independent standalone evidence now
+proves that the RO itself is not an unresolved leaf. Run
+`20260827_mptdc_ro6_standalone_lvs_vddfix_150520` has explicit report-level
+`MATCH`, `BLACKBOXED_CELL_COUNT=0`, GDS SHA-256
+`9d6f269541d51db0c30c5e7cc81334d70578ca8723558b32f34f9803469ea36a`,
+and CDL SHA-256
+`b925af01b36b1bcc80557c3c584aaf02fdb7b75df268ee6dd3c50dce7810039b`.
+
+The implemented post-PG proof is deliberately compositional:
+
+1. `server_run_mptdc_ro6_recovery_pvs.sh` accepts exactly one tracked passing
+   PG replay gate: legacy short-delete, RO ring-stitch, or exact long-prune.
+   It verifies replay ancestry, checkpoint content hash, DRC/connectivity
+   tuple, and physical invariants before preparing GDS/source/CDL inputs.
+2. Run it with `--diagnostic-antenna-exception` and
+   `--diagnostic-ro-compositional`. Base DRC may continue only when all nonzero
+   rules classify as the already authorized antenna-only debt. Antenna remains
+   reported and is never repaired or waived.
+3. Preserve the attributable raw full-top mismatch evidence. Then run
+   `server_run_mptdc_ro6_boundary_lvs.sh` using that exact PVS run and the
+   standalone RO run above. The boundary run must apply the RO hcell/blackbox
+   contract, prove zero Tie1 mismatch residue, and end with explicit boundary
+   `MATCH`, `BOUNDARY_REMAINDER_CLASS=NONE_MATCH`, and
+   `DECISION=PASS_COMPOSITIONAL_LVS`.
+4. The pair of an exact standalone non-blackbox RO `MATCH` and an exact
+   digital-top RO-boundary `MATCH` is the accepted compositional LVS proof.
+   It is diagnostic closure, not a claim that raw monolithic LVS or final
+   signoff is clean. Density remains blocked until this pair passes.
+
+Do not alter Tie1 insertion, top pins, or the RO schematic merely to make the
+raw reducer flattening agree. A zero PVS process return code, empty error file,
+or stale `matched` marker is never an LVS pass.
 
 Relevant reports:
 
@@ -234,6 +330,8 @@ Relevant reports:
 - [LVS source filter](../server_snapshots/pvs/20260831_mptdc_tie1_lvs_density_131326_04_lvs/reports/lvs_source_filter.rpt)
 - [LVS comparison gate](../server_snapshots/pvs/20260831_mptdc_tie1_lvs_density_131326_04_lvs/reports/operator_gate_pvs_lvs.rpt)
 - [LVS comparison summary](../server_snapshots/pvs/20260831_mptdc_tie1_lvs_density_131326_04_lvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core_lvs.sum.cls)
+- [standalone RO LVS gate](../server_snapshots/pvs/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/reports/operator_gate_pvs_ro6_standalone_lvs.rpt)
+- [standalone RO input hashes](../server_snapshots/pvs/20260827_mptdc_ro6_standalone_lvs_vddfix_150520/manifests/ro6_standalone_lvs_inputs.rpt)
 
 The reported `PHYSICAL_TIE_INSTANCE_COUNT=8` in the source-filter inventory is
 not by itself proof that 77 Tie1 cells were dropped. Innovus separately proves
@@ -241,9 +339,37 @@ not by itself proof that 77 Tie1 cells were dropped. Innovus separately proves
 unmatched model. Treat that count as a hierarchy/accounting item to explain,
 not as the current mismatch root cause.
 
+## Implementation State
+
+The following repository changes implement this handoff:
+
+- `innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl`: exact topology preflight,
+  disposable ring probe, bounded ring stitching, and authorized long-prune;
+- `server_run_mptdc_tie1_closure_stage.sh`: isolated probe/trial/replay stages,
+  immutable V13 ancestry checks, and independent physical gates;
+- `server_run_mptdc_ro6_recovery_pvs.sh`: exactly-one replay-gate selection and
+  hash-guarded compositional PVS intake for legacy delete, ring-stitch, or
+  long-prune replay;
+- `test_pg_ro_ring_checkpoint_tools.tcl`, the Tie1 closure-driver test, and the
+  PVS recovery-driver test: exact 15/13/2 topology, both repair branches,
+  canonical ancestry, negative authorization, and PVS candidate attribution.
+
+Local validation on 2026-09-01 passed:
+
+```text
+MPTDC_PG_RO_RING_CHECKPOINT_TOOLS_TEST=PASS
+MPTDC_PG_DANGLING_CHECKPOINT_TOOLS_TEST=PASS
+MPTDC_RO_PG_BLOCK_RING_CONTRACT_TEST=PASS
+MPTDC_TIE1_CLOSURE_STAGE_DRIVER_TEST=PASS
+MPTDC_RO6_RECOVERY_PVS_DRIVER_TEST=PASS
+```
+
+These are static and fixture proofs. They do not substitute for the next
+foreground Innovus probe, and they do not change the accepted V13 evidence.
+
 ## Exact Next Command
 
-Run only the read-only PG analysis next. Use this foreground block on
+Run only the disposable RO ring probe next. Use this foreground block on
 `lyoelectrosrv01`; it does not close the login shell on a failed guard.
 
 ```bash
@@ -260,51 +386,58 @@ echo "ORIGIN_HEAD=$ORIGIN_HEAD"
 echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
 
 if [[ "$CURRENT_HEAD" == "$ORIGIN_HEAD" && -z "$TRACKED_STATUS" ]]; then
-  PG_ANALYZE_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_tie1_pg_dangling_analysis"
-  echo "PG_ANALYZE_RUN=$PG_ANALYZE_RUN"
+  PG_RING_PROBE_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_tie1_pg_ro_ring_probe"
+  echo "PG_RING_PROBE_RUN=$PG_RING_PROBE_RUN"
 
   bash MPTDC/pnr/scripts/server_run_mptdc_tie1_closure_stage.sh \
-    --stage tie1-pg-analyze \
+    --stage tie1-pg-ro-ring-probe \
     --source-tie1-run-id 20260831_mptdc_tie1_filler_ecoroute_reconciled_131006 \
     --source-minarea-replay-run-id 20260831_175532_mptdc_tie1_minarea_clearance_v13_replay \
-    --run-id "$PG_ANALYZE_RUN" \
+    --run-id "$PG_RING_PROBE_RUN" \
     --expected-head "$CURRENT_HEAD"
 
-  PG_ANALYZE_RC=$?
-  echo "PG_ANALYZE_RC=$PG_ANALYZE_RC"
-  echo "PG_ANALYZE_RUN=$PG_ANALYZE_RUN"
+  PG_RING_PROBE_RC=$?
+  echo "PG_RING_PROBE_RC=$PG_RING_PROBE_RC"
+  echo "PG_RING_PROBE_RUN=$PG_RING_PROBE_RUN"
 
-  PG_ANALYZE_DIR="/sim/ksabra/SPADMIC_work/innovus/$PG_ANALYZE_RUN"
-  cat "$PG_ANALYZE_DIR/reports/operator_gate_tie1_pg_dangling_analysis.rpt" 2>/dev/null
-  cat "$PG_ANALYZE_DIR/reports/pg_dangling_analysis_status.rpt" 2>/dev/null
+  PG_RING_PROBE_DIR="/sim/ksabra/SPADMIC_work/innovus/$PG_RING_PROBE_RUN"
+  cat "$PG_RING_PROBE_DIR/reports/operator_gate_tie1_pg_ro_ring_probe.rpt" 2>/dev/null
+  cat "$PG_RING_PROBE_DIR/reports/pg_ro_ring_repair_status.rpt" 2>/dev/null
   echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 else
   echo "STOP: checkout must be tracked-clean and equal to origin/SPADMIC_test"
 fi
 ```
 
-Return both reports in full. Do not launch the delete trial from a partial
-console summary.
+Return both reports in full. The probe is expected to retain 15 dangling
+markers because it intentionally does not stitch them. Do not launch either
+mutating trial from a partial console summary.
 
 ## Continuation Order
 
-1. Run the read-only `tie1-pg-analyze` stage above.
-2. If and only if all 15 candidates pass the exact preflight, run one isolated
-   `tie1-pg-delete-trial` from the accepted V13 replay checkpoint.
-3. Accept the deletion trial only with 15 successful exact-handle deletions,
-   final special connectivity `0`, fresh DRC `0`, shorts `0`, regular
-   connectivity `0`, unroutes `0`, and all Tie1/filler/placement invariants
-   preserved.
-4. Replay a passing deletion in a fresh process from the V13 replay checkpoint.
-   Do not use the delete-trial checkpoint as canonical input.
-5. Stream out and run attributable PVS base DRC and raw LVS from the selected
-   replay checkpoint. Keep all antenna counts visible and do not attempt
-   antenna repair.
-6. If LVS repeats the RO signature, isolate the RO hcell/hierarchy contract in
-   one fresh PVS experiment. Require explicit `MATCH`; a zero PVS process return
-   code is insufficient.
-7. Run density DRC only under the PVS stage policy after the LVS gate is
-   resolved. Keep base DRC, density DRC, and LVS as separate decisions.
+1. Run `tie1-pg-ro-ring-probe` above. Require exact source topology `15/13/2`,
+   two RO instances, two rings, 16 new ring sWires, VDD/VSS `+8/+8`, all 15
+   mappings, post-ring DRC/regular clean, zero mutation attempts, and
+   `CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED`.
+2. On `RING_PROBE_READY`, run `tie1-pg-ro-ring-stitch-trial` from V13. On the
+   explicit rejected-probe outcome, run `tie1-pg-long-prune-trial` instead.
+   Pass the published probe ID through `--source-pg-probe-run-id`; the driver
+   rejects a missing, untracked, swapped, or wrong-outcome probe gate. Never
+   run both branches as competing accepted candidates.
+3. Accept a mutating trial only with final special connectivity `0`, DRC `0`,
+   shorts `0`, regular connectivity `0`, unroutes `0`, route gate `1`, and all
+   Tie1/filler/placement invariants preserved.
+4. Replay only the passing branch in a fresh process from V13. The trial
+   checkpoint is ancestry evidence, never canonical replay input.
+5. Run attributable PVS base DRC and raw LVS from the selected PG replay using
+   `--diagnostic-antenna-exception --diagnostic-ro-compositional` and the exact
+   standalone-proven RO GDS. Keep all antenna counts visible.
+6. Run boundary LVS against that exact raw PVS run and standalone run
+   `20260827_mptdc_ro6_standalone_lvs_vddfix_150520`. Require explicit
+   compositional `MATCH`; process RC `0` is insufficient.
+7. Run density DRC through `server_run_mptdc_ro6_density_after_boundary.sh`
+   only after `PASS_COMPOSITIONAL_LVS`. Keep base DRC, density DRC, raw LVS,
+   boundary LVS, and standalone LVS as separate evidence.
 8. Requalify timing and final export separately before any signoff claim.
 
 ## Stop Conditions
@@ -313,11 +446,17 @@ Stop and preserve the accepted V13 replay checkpoint if any of these occurs:
 
 - source checkpoint path or SHA-256 differs;
 - tracked checkout is dirty or HEAD differs from the expected remote head;
-- the analysis sees other than 15 markers;
+- the preflight sees anything other than 15 markers, 13 unique handles, and
+  exactly two double-referenced handles;
 - any marker has zero or multiple exact special-wire matches;
-- any candidate handle is referenced more than once;
-- any candidate length exceeds `10.0 um`;
-- a deletion attempt is made during analysis;
+- a handle has any reference count other than one or two, or the number of
+  double-referenced handles is not exactly two;
+- any source handle is non-axis-aligned or is not longer than `10.0 um`;
+- the probe creates other than two rings or exact VDD/VSS `+8/+8` sWire deltas;
+- the probe performs source replacement, via insertion, or pruning;
+- a ring trial uses broad PG routing instead of exact mapped intersections;
+- long prune lacks the literal authorization or attempts any non-handle or
+  area-based deletion;
 - geometry DRC, shorts, regular connectivity, or route completeness regresses;
 - Tie1 target/net counts, filler count, placement occupancy, or via fingerprint
   changes unexpectedly;
