@@ -1,0 +1,45 @@
+##############################################################################################################
+#####  
+#####                                         PVS LVS COMPARISON
+#####  
+#####  Version                       :   22.22-s005
+#####  NVN Run Start                 :   Tue Sep  1 17:42:07 2026
+#####  ERC Summary File              :   result.sum
+#####  Extraction Report File        :   mptdc_axis_core_lvs.sum
+#####  Comparison Report File        :   mptdc_axis_core_lvs.sum.cls
+#####  Top Cell                      :   mptdc_axis_core  <vs>  mptdc_axis_core
+#####  
+#####                                :      @     @
+#####                                :       @   @ 
+#####                                :        @ @  
+#####  Run Result                    :     MISMATCH
+#####                                :        @ @  
+#####                                :       @   @ 
+#####                                :      @     @
+#####  
+#####  Run Summary                   :   [ERROR] Connectivity Mismatches
+#####                                :   [INFO]  ERC Results: Empty
+#####                                :   [INFO]  Extraction Clean
+#####  
+#####  Layout Design                 :   /sim/ksabra/SPADMIC_work/innovus/20260901_173744_mptdc_v13_pg15_compositional_pvs/outputs/mptdc_axis_core_merged_stdcell_ro6.gds (gdsii)
+#####  Layout File                   :   /sim/ksabra/SPADMIC_work/innovus/20260901_173744_mptdc_v13_pg15_compositional_pvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/mptdc_axis_core.spi (cdl)
+#####  Schematic File                :   /sim/ksabra/SPADMIC_work/innovus/20260901_173744_mptdc_v13_pg15_compositional_pvs/outputs/mptdc_axis_core_pnr_lvs_with_pg_NO_DCELL_MODULES_RO6_PINFIX_NOATTR_CLEAN.v (verilog)
+#####  Schematic File                :   /data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/cdl/xh018_D_CELLS_JIHD.cdl (cdl)
+#####  Rules File                    :   /sim/ksabra/SPADMIC_work/innovus/20260901_173744_mptdc_v13_pg15_compositional_pvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.config.rul
+#####                                :   /sim/ksabra/SPADMIC_work/innovus/20260901_173744_mptdc_v13_pg15_compositional_pvs/pvs_lvs/mptdc_axis_core_merged_pg_nonphys_dcells_cdl_ro6_pinfix_noattr_clean_findshorts_script/.technology.rul
+#####  HCell File                    :   /sim/ksabra/SPADMIC_work/innovus/20260901_173744_mptdc_v13_pg15_compositional_pvs/outputs/pvs_hcell_ro6.txt
+#####  Pin Swap File                 :   mptdc_axis_core_lvs.sum.cps
+#####  
+#####  Extraction CPU Time           :   0h 0m 17s - (17s)
+#####  Extraction Exec Time          :   0h 0m 18s - (18s)
+#####  Extraction Peak Memory Usage  :   85.00MB
+#####  NVN CPU Time                  :   0h 0m 9s - (9s)                 
+#####  NVN Exec Time                 :   0h 0m 7s - (7s)                 
+#####  NVN Peak Memory Usage         :   857.88MB
+#####  LVS Total CPU Time            :   0h 0m 26s - (26s)               
+#####  LVS Total Exec Time           :   0h 0m 25s - (25s)               
+#####  LVS Total Peak Memory Usage   :   857.88MB
+#####  
+##############################################################################################################
+
+
