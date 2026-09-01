@@ -9,6 +9,23 @@ set ::env(MPTDC_PG_DANGLING_REQUIRE_ALL_ELIGIBLE) 1
 set ::env(MPTDC_PG_DANGLING_ALLOW_LONG_DELETE) 0
 source $helper
 
+foreach {label raw expected} [list \
+    flat {1 2 3 4} {1.0 2.0 3.0 4.0} \
+    wrapped_once [list [list 1 2 3 4]] {1.0 2.0 3.0 4.0} \
+    wrapped_twice [list [list [list 1 2 3 4]]] {1.0 2.0 3.0 4.0} \
+    reversed [list [list 4 3 2 1]] {2.0 1.0 4.0 3.0} \
+    nonnumeric [list [list 1 2 BAD 4]] {} \
+    wrong_arity [list [list 1 2 3]] {}] {
+    set actual [mptdc_pg_dangling_rect $raw]
+    if {$actual ne $expected} {
+        error "$label rectangle normalization: expected '$expected', got '$actual'"
+    }
+}
+set malformed "\{1 2"
+if {[mptdc_pg_dangling_rect $malformed] ne {}} {
+    error "malformed rectangle was accepted"
+}
+
 set ::pg_test_scenario blocked
 set ::pg_test_capture_count 0
 set ::pg_test_delete_count 0

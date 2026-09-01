@@ -1094,6 +1094,7 @@ tracked_tie1_pg_ro_clean_gate_passes() {
   local expected_pg_trial_id="$6" expected_mode="$7" expected_pg_probe_id="$8"
   local expected_checkpoint expected_source source_minarea_gate source_sha candidate_sha
   local replacement_attempts replacement_successes source_pg_prior_trial_run_id
+  [[ "$expected_mode" == ring_stitch ]] || return 1
   expected_checkpoint="$INNOVUS_WORK/$run_id/checkpoints/repaired_route.enc.dat"
   expected_source="$INNOVUS_WORK/$source_minarea_run_id/checkpoints/repaired_route.enc.dat"
   source_minarea_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_minarea_run_id/reports/operator_gate_tie1_minarea_endext_replay.rpt"
@@ -1217,11 +1218,6 @@ tracked_tie1_pg_ro_replay_gate_passes() {
       trial_step=TIE1_PG_RO_RING_STITCH_TRIAL
       source_pg_trial_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_pg_trial_run_id/reports/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt"
       ;;
-    TIE1_PG_LONG_PRUNE_REPLAY)
-      mode=long_prune
-      trial_step=TIE1_PG_LONG_PRUNE_TRIAL
-      source_pg_trial_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$source_pg_trial_run_id/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-      ;;
     *) return 1 ;;
   esac
   tracked_tie1_pg_ro_clean_gate_passes "$report" "$step" "$run_id" \
@@ -1325,8 +1321,11 @@ TIE1_MINAREA_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RU
 TIE1_PG_DELETE_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_dangling_delete_replay.rpt"
 TIE1_PG_RING_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_stitch_replay.rpt"
 TIE1_PG_PRUNE_REPLAY_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_long_prune_replay.rpt"
+TIE1_PG_ANCHOR_ANALYSIS_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$PNR_RUN_ID/reports/operator_gate_tie1_pg_endpoint_anchor_probe.rpt"
 TIE1_PG_REPLAY_GATE=""
 TIE1_PG_REPLAY_GATE_KIND=NONE
+TIE1_PG_ANALYSIS_GATE_PRESENT=0
+TIE1_PG_RETIRED_PRUNE_GATE_PRESENT=0
 SOURCE_CKPT=UNKNOWN
 SOURCE_PNR_RUN_ID=UNKNOWN
 PNR_CANDIDATE_KIND=UNKNOWN
@@ -1349,8 +1348,7 @@ TIE1_TRIAL_GATE_REL="${TIE1_TRIAL_GATE#"$REPO_ROOT"/}"
 TIE1_PG_REPLAY_GATE_COUNT=0
 for pg_gate_spec in \
   "DELETE|$TIE1_PG_DELETE_REPLAY_GATE" \
-  "RING_STITCH|$TIE1_PG_RING_REPLAY_GATE" \
-  "LONG_PRUNE|$TIE1_PG_PRUNE_REPLAY_GATE"; do
+  "RING_STITCH|$TIE1_PG_RING_REPLAY_GATE"; do
   pg_gate_kind="${pg_gate_spec%%|*}"
   pg_gate_path="${pg_gate_spec#*|}"
   pg_gate_rel="${pg_gate_path#"$REPO_ROOT"/}"
@@ -1365,6 +1363,21 @@ if [[ "$TIE1_PG_REPLAY_GATE_COUNT" -ne 1 ]]; then
   TIE1_PG_REPLAY_GATE=""
   TIE1_PG_REPLAY_GATE_KIND=NONE
 fi
+for analysis_gate_spec in \
+  "ANCHOR|$TIE1_PG_ANCHOR_ANALYSIS_GATE" \
+  "RETIRED_PRUNE|$TIE1_PG_PRUNE_REPLAY_GATE"; do
+  analysis_gate_kind="${analysis_gate_spec%%|*}"
+  analysis_gate_path="${analysis_gate_spec#*|}"
+  analysis_gate_rel="${analysis_gate_path#"$REPO_ROOT"/}"
+  if git -C "$REPO_ROOT" ls-files --error-unmatch "$analysis_gate_rel" >/dev/null 2>&1 &&
+     [[ -s "$analysis_gate_path" ]]; then
+    if [[ "$analysis_gate_kind" == ANCHOR ]]; then
+      TIE1_PG_ANALYSIS_GATE_PRESENT=1
+    else
+      TIE1_PG_RETIRED_PRUNE_GATE_PRESENT=1
+    fi
+  fi
+done
 if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
   PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF
   SOURCE_CKPT="$PNR_DIR/checkpoints/repaired_route.enc.dat"
@@ -1382,7 +1395,7 @@ if [[ "$DIAGNOSTIC_RO_COMPOSITIONAL" == 1 ]]; then
     if [[ "$CANDIDATE_CHECKPOINT_HASH_STATUS" == PASS ]] &&
        { { [[ "$TIE1_PG_REPLAY_GATE_KIND" == DELETE ]] &&
            tracked_tie1_pg_replay_gate_passes "$TIE1_PG_REPLAY_GATE" "$PNR_RUN_ID"; } ||
-         { [[ "$TIE1_PG_REPLAY_GATE_KIND" =~ ^(RING_STITCH|LONG_PRUNE)$ ]] &&
+         { [[ "$TIE1_PG_REPLAY_GATE_KIND" == RING_STITCH ]] &&
            tracked_tie1_pg_ro_replay_gate_passes "$TIE1_PG_REPLAY_GATE" "$PNR_RUN_ID"; }; }; then
       CANDIDATE_GATE_STATUS=PASS
     fi
@@ -1455,6 +1468,26 @@ else
   fi
 fi
 
+if [[ "$TIE1_PG_ANALYSIS_GATE_PRESENT" == 1 ]]; then
+  PNR_CANDIDATE_KIND=TIE1_PG_ENDPOINT_ANCHOR_ANALYSIS_ONLY
+  CANDIDATE_GATE_PATH="$TIE1_PG_ANCHOR_ANALYSIS_GATE"
+  SOURCE_CKPT="$PNR_DIR/checkpoints/repaired_route.enc.dat"
+  SOURCE_PNR_RUN_ID="$(report_value "$TIE1_PG_ANCHOR_ANALYSIS_GATE" SOURCE_TIE1_RUN_ID)"
+  CANDIDATE_CHECKPOINT_EXPECTED_SHA256="$(report_value "$TIE1_PG_ANCHOR_ANALYSIS_GATE" CANDIDATE_CHECKPOINT_SHA256)"
+  CANDIDATE_CHECKPOINT_ACTUAL_SHA256="$(tree_content_hash "$SOURCE_CKPT")"
+  CANDIDATE_CHECKPOINT_HASH_STATUS=NOT_APPLICABLE_ANALYSIS_ONLY
+  CANDIDATE_GATE_STATUS=FAIL
+elif [[ "$TIE1_PG_RETIRED_PRUNE_GATE_PRESENT" == 1 ]]; then
+  PNR_CANDIDATE_KIND=TIE1_PG_LONG_PRUNE_REPLAY_RETIRED
+  CANDIDATE_GATE_PATH="$TIE1_PG_PRUNE_REPLAY_GATE"
+  SOURCE_CKPT="$PNR_DIR/checkpoints/repaired_route.enc.dat"
+  SOURCE_PNR_RUN_ID="$(report_value "$TIE1_PG_PRUNE_REPLAY_GATE" SOURCE_TIE1_RUN_ID)"
+  CANDIDATE_CHECKPOINT_EXPECTED_SHA256="$(report_value "$TIE1_PG_PRUNE_REPLAY_GATE" CANDIDATE_CHECKPOINT_SHA256)"
+  CANDIDATE_CHECKPOINT_ACTUAL_SHA256="$(tree_content_hash "$SOURCE_CKPT")"
+  CANDIDATE_CHECKPOINT_HASH_STATUS=NOT_APPLICABLE_RETIRED
+  CANDIDATE_GATE_STATUS=FAIL
+fi
+
 FILLER_REPORT="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PNR_RUN_ID/reports/filler_status.rpt"
 ROW_INFRA_REPORT="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PNR_RUN_ID/reports/row_infra_insertion.rpt"
 
@@ -1463,6 +1496,8 @@ echo "PNR_DIR=$PNR_DIR"
 echo "PNR_CANDIDATE_KIND=$PNR_CANDIDATE_KIND"
 echo "TIE1_PG_REPLAY_GATE_COUNT=$TIE1_PG_REPLAY_GATE_COUNT"
 echo "TIE1_PG_REPLAY_GATE_KIND=$TIE1_PG_REPLAY_GATE_KIND"
+echo "TIE1_PG_ANALYSIS_GATE_PRESENT=$TIE1_PG_ANALYSIS_GATE_PRESENT"
+echo "TIE1_PG_RETIRED_PRUNE_GATE_PRESENT=$TIE1_PG_RETIRED_PRUNE_GATE_PRESENT"
 echo "CANDIDATE_GATE_STATUS=$CANDIDATE_GATE_STATUS"
 echo "CANDIDATE_GATE_PATH=$CANDIDATE_GATE_PATH"
 echo "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$CANDIDATE_CHECKPOINT_EXPECTED_SHA256"

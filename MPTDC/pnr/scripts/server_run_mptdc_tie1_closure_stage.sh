@@ -38,22 +38,21 @@ Stages:
                            Stitch exact source handles to clean probe rings.
   tie1-pg-ro-ring-stitch-replay
                            Replay a passing ring-stitch trial from V13.
-  tie1-pg-long-prune-trial
-                           Delete the exact 13 long source handles as fallback.
-  tie1-pg-long-prune-replay
-                           Replay a passing long-prune trial from V13.
+  tie1-pg-endpoint-anchor-probe
+                           Analyze retained anchors from V13 without PG edits.
 
 Options:
   --source-minarea-trial-run-id <id>  Required by minarea replay.
   --source-minarea-replay-run-id <id> Required by all PG stages.
-  --source-pg-probe-run-id <id>       Required by RO stitch/prune trials.
-  --source-pg-prior-trial-run-id <id> Required by the evidence-gated V3 long-prune trial.
+  --source-pg-probe-run-id <id>       Required by RO stitch and anchor ancestry.
+  --source-pg-prior-trial-run-id <id> Required by the V3-gated anchor probe.
   --source-pg-trial-run-id <id>       Required by every mutating PG replay.
   --run-id <id>                       Explicit result directory name.
   --expected-head <sha>               Require repository HEAD.
   --innovus-work <path>               Innovus result root.
 
-Every mutating stage restores a private copy in one fresh Innovus process.
+Every stage restores a private copy in one fresh Innovus process.
+Full-handle long-prune trial/replay stages are retired and unsupported.
 No antenna command is present in this driver.
 USAGE
 }
@@ -320,7 +319,7 @@ pg_ro_probe_gate_passes() {
   else
     [[ "$status" =~ ^REVIEW_RING_(GEOMETRY_DIRTY|MAPPING_BLOCKED|CREATION_BLOCKED)$ &&
        "$(report_value "$gate" PG_REPAIR_TRIAL_OUTCOME)" == RING_PROBE_REJECTED_NO_SOURCE_MUTATION &&
-       "$(report_value "$gate" NEXT_STAGE)" == TIE1_PG_LONG_PRUNE_TRIAL ]]
+       "$(report_value "$gate" NEXT_STAGE)" =~ ^TIE1_PG_(LONG_PRUNE_TRIAL|ENDPOINT_ANCHOR_PROBE)$ ]]
   fi
 }
 
@@ -471,6 +470,111 @@ pg_ro_failed_long_prune_v2_gate_passes() {
      "$(report_value "$helper" PRUNE_13_EXPECTED_MARKER_FINGERPRINT)" == 'VSS|MET1|124.160|723.520' &&
      "$(report_value "$helper" PRUNE_13_OBSERVED_MARKER_FINGERPRINT)" == 'VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080' &&
      "$(report_value "$helper" PRUNE_13_STATUS)" == FAIL_INCREMENTAL_GATE &&
+     "$(report_value "$helper" FINAL_DANGLING_MARKER_COUNT)" == 2 ]] || return 1
+  marker_lines="$(grep -c '^Net ' "$detailed" 2>/dev/null || true)"
+  [[ "$marker_lines" == 2 ]] || return 1
+  grep -Fqx 'Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1' \
+    "$detailed" || return 1
+  grep -Fqx 'Net VSS: dangling Wire at (204.160, 150.080) (204.160, 150.080) on layer: MET1' \
+    "$detailed"
+}
+
+pg_ro_failed_long_prune_v3_gate_passes() {
+  local gate="$1" prior_run_id="$2"
+  local snapshot helper detailed expected_checkpoint expected_source
+  local candidate_sha source_sha marker_lines prior_v2_run prior_v2_gate
+  snapshot="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$prior_run_id"
+  helper="$snapshot/reports/pg_ro_ring_repair_status.rpt"
+  detailed="$snapshot/reports/pg_ro_final_verify_special_detailed.rpt"
+  expected_checkpoint="$INNOVUS_WORK/$prior_run_id/checkpoints/repaired_route.enc.dat"
+  expected_source="$INNOVUS_WORK/$SOURCE_MINAREA_REPLAY_RUN_ID/checkpoints/repaired_route.enc.dat"
+  candidate_sha="$(report_value "$gate" CANDIDATE_CHECKPOINT_SHA256)"
+  source_sha="$(report_value "$SOURCE_PROOF_GATE" CANDIDATE_CHECKPOINT_SHA256)"
+  tracked_report "$gate" && tracked_report "$helper" &&
+    tracked_report "$detailed" || return 1
+
+  prior_v2_run="$(report_value "$gate" SOURCE_PG_PRIOR_TRIAL_RUN_ID)"
+  [[ "$prior_v2_run" =~ ^[A-Za-z0-9._-]+$ ]] || return 1
+  prior_v2_gate="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$prior_v2_run/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
+  pg_ro_failed_long_prune_v2_gate_passes "$prior_v2_gate" "$prior_v2_run" || return 1
+
+  [[ "$(report_value "$gate" STEP)" == TIE1_PG_LONG_PRUNE_TRIAL &&
+     "$(report_value "$gate" SOURCE_TIE1_RUN_ID)" == "$SOURCE_TIE1_RUN_ID" &&
+     "$(report_value "$gate" SOURCE_MINAREA_REPLAY_RUN_ID)" == "$SOURCE_MINAREA_REPLAY_RUN_ID" &&
+     "$(report_value "$gate" SOURCE_PG_PROBE_RUN_ID)" == "$SOURCE_PG_PROBE_RUN_ID" &&
+     "$(report_value "$gate" SOURCE_PG_PRIOR_TRIAL_RUN_ID)" == "$prior_v2_run" &&
+     "$(report_value "$gate" SOURCE_PG_TRIAL_RUN_ID)" == NONE &&
+     "$(report_value "$gate" SOURCE_CHECKPOINT)" == "$expected_source" &&
+     "$(report_value "$gate" SOURCE_CHECKPOINT_SHA256)" == "$source_sha" &&
+     "$(report_value "$gate" TOOL_RC)" == 0 &&
+     "$(report_value "$gate" COMMAND_1_STATUS)" == PASS &&
+     "$(report_value "$gate" PG_RO_REPAIR_MODE)" == long_prune &&
+     "$(report_value "$gate" PG_RO_REPAIR_STATUS)" == FAIL_LONG_PRUNE_GATE &&
+     "$(report_value "$gate" SOURCE_TOPOLOGY_STATUS)" == PASS &&
+     "$(report_value "$gate" INITIAL_DANGLING_MARKER_COUNT)" == 15 &&
+     "$(report_value "$gate" SOURCE_UNIQUE_HANDLE_COUNT)" == 13 &&
+     "$(report_value "$gate" SOURCE_SHARED_HANDLE_COUNT)" == 2 &&
+     "$(report_value "$gate" RO_RING_CREATED_COUNT)" == 0 &&
+     "$(report_value "$gate" RO_RING_SWIRE_DELTA_VDD)" == 0 &&
+     "$(report_value "$gate" RO_RING_SWIRE_DELTA_VSS)" == 0 &&
+     "$(report_value "$gate" RING_GEOMETRY_STATUS)" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+     "$(report_value "$gate" MARKER_RING_MAPPING_STATUS)" == NOT_RUN_BY_LONG_PRUNE_SCOPE &&
+     "$(report_value "$gate" REPLACEMENT_ATTEMPTS)" == 0 &&
+     "$(report_value "$gate" VIA_ATTEMPTS)" == 0 &&
+     "$(report_value "$gate" PRUNE_ATTEMPTS)" == 13 &&
+     "$(report_value "$gate" PRUNE_SUCCESSES)" == 13 &&
+     "$(report_value "$gate" SOURCE_PRUNE_TRANSITION_STATUS)" == PASS &&
+     "$(report_value "$gate" SOURCE_PRUNE_EXPOSED_RESIDUAL_COUNT)" == 2 &&
+     "$(report_value "$gate" SOURCE_PRUNE_EXPOSED_RESIDUAL_SET)" == 'NORTH SOUTH' &&
+     "$(report_value "$gate" RESIDUAL_PRUNE_POLICY)" == EXACT_TWO_EXPOSED_VSS_MET1_COREWIRES_V3 &&
+     "$(report_value "$gate" RESIDUAL_EXPECTED_COUNT)" == 2 &&
+     "$(report_value "$gate" RESIDUAL_EXPECTED_MARKER_FINGERPRINT)" == 'VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080' &&
+     "$(report_value "$gate" RESIDUAL_PRUNE_CANDIDATE_COUNT)" == 0 &&
+     "$(report_value "$gate" RESIDUAL_PRUNE_ATTEMPTS)" == 0 &&
+     "$(report_value "$gate" RESIDUAL_PRUNE_SUCCESSES)" == 0 &&
+     "$(report_value "$gate" TOTAL_PRUNE_ATTEMPTS)" == 13 &&
+     "$(report_value "$gate" TOTAL_PRUNE_SUCCESSES)" == 13 &&
+     "$(report_value "$gate" FINAL_VDD_SWIRE_INVENTORY_COUNT)" == 445 &&
+     "$(report_value "$gate" FINAL_VSS_SWIRE_INVENTORY_COUNT)" == 411 &&
+     "$(report_value "$gate" FINAL_VDD_SWIRE_INVENTORY_DELTA)" == -5 &&
+     "$(report_value "$gate" FINAL_VSS_SWIRE_INVENTORY_DELTA)" == -8 &&
+     "$(report_value "$gate" SWIRE_INVENTORY_STATUS)" == FAIL &&
+     "$(report_value "$gate" PG_VIA_HANDLE_STATUS)" == FAIL_CHANGED &&
+     "$(report_value "$gate" LONG_PRUNE_AUTHORIZATION)" == EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3 &&
+     "$(report_value "$gate" FINAL_DRC)" == 0 &&
+     "$(report_value "$gate" FINAL_SHORTS)" == 0 &&
+     "$(report_value "$gate" FINAL_REGULAR_CONNECTIVITY_BAD)" == 0 &&
+     "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_BAD)" == 1 &&
+     "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_RAW_BAD)" == 1 &&
+     "$(report_value "$gate" FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES)" == 0 &&
+     "$(report_value "$gate" FINAL_SPECIAL_DANGLING_COUNT)" == 2 &&
+     "$(report_value "$gate" FINAL_REPORT_ROUTE_ZERO_STATUS)" == PASS &&
+     "$(report_value "$gate" FINAL_ROUTE_GATE_PASS)" == 0 &&
+     "$(report_value "$gate" PG_REPAIR_TRIAL_OUTCOME)" == FAIL &&
+     "$(report_value "$gate" CANDIDATE_CHECKPOINT)" == "$expected_checkpoint" &&
+     "$candidate_sha" =~ ^[0-9a-f]{64}$ && -d "$expected_checkpoint" &&
+     "$(tree_hash "$expected_checkpoint")" == "$candidate_sha" &&
+     "$(report_value "$gate" CANDIDATE_CHECKPOINT_STATUS)" == NOT_SELECTED &&
+     "$(report_value "$gate" SIGNOFF_ELIGIBLE)" == NO &&
+     "$(report_value "$gate" DECISION)" == FAIL_STOP &&
+     "$(report_value "$gate" NEXT_STAGE)" == STOP_AND_REVIEW_PUBLISHED_EVIDENCE ]] || return 1
+
+  [[ "$(report_value "$helper" PRUNE_12_STATUS)" == PASS &&
+     "$(report_value "$helper" PRUNE_12_RESIDUAL_TRANSITION)" == NORTH &&
+     "$(report_value "$helper" PRUNE_13_STATUS)" == PASS &&
+     "$(report_value "$helper" PRUNE_13_RESIDUAL_TRANSITION)" == SOUTH &&
+     "$(report_value "$helper" SOURCE_PRUNE_TRANSITION_STATUS)" == PASS &&
+     "$(report_value "$helper" RESIDUAL_PRUNE_1_RAW_EXACT_COUNT)" == 1 &&
+     "$(report_value "$helper" RESIDUAL_PRUNE_1_RAW_NEARBY_COUNT)" == 0 &&
+     "$(report_value "$helper" RESIDUAL_PRUNE_1_CONTRACT_CANDIDATE_COUNT)" == 0 &&
+     "$(report_value "$helper" RESIDUAL_PRUNE_2_RAW_EXACT_COUNT)" == 1 &&
+     "$(report_value "$helper" RESIDUAL_PRUNE_2_RAW_NEARBY_COUNT)" == 0 &&
+     "$(report_value "$helper" RESIDUAL_PRUNE_2_CONTRACT_CANDIDATE_COUNT)" == 0 &&
+     "$(report_value "$helper" VDD_VIA_HANDLE_COUNT_PRE)" == 4575 &&
+     "$(report_value "$helper" VDD_VIA_HANDLE_COUNT_POST)" == 4412 &&
+     "$(report_value "$helper" VSS_VIA_HANDLE_COUNT_PRE)" == 4524 &&
+     "$(report_value "$helper" VSS_VIA_HANDLE_COUNT_POST)" == 4197 &&
+     "$(report_value "$helper" PG_VIA_HANDLE_STATUS)" == FAIL_CHANGED &&
      "$(report_value "$helper" FINAL_DANGLING_MARKER_COUNT)" == 2 ]] || return 1
   marker_lines="$(grep -c '^Net ' "$detailed" 2>/dev/null || true)"
   [[ "$marker_lines" == 2 ]] || return 1
@@ -647,7 +751,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$STAGE" in
-  tie1-minarea-trial|tie1-minarea-replay|tie1-pg-analyze|tie1-pg-delete-trial|tie1-pg-delete-replay|tie1-pg-ro-ring-probe|tie1-pg-ro-ring-stitch-trial|tie1-pg-ro-ring-stitch-replay|tie1-pg-long-prune-trial|tie1-pg-long-prune-replay) ;;
+  tie1-minarea-trial|tie1-minarea-replay|tie1-pg-analyze|tie1-pg-delete-trial|tie1-pg-delete-replay|tie1-pg-ro-ring-probe|tie1-pg-ro-ring-stitch-trial|tie1-pg-ro-ring-stitch-replay|tie1-pg-endpoint-anchor-probe) ;;
   *) echo "ERROR: unsupported --stage: $STAGE" >&2; usage >&2; exit 2 ;;
 esac
 for id in "$SOURCE_TIE1_RUN_ID" "$RUN_ID" "$SOURCE_MINAREA_TRIAL_RUN_ID" \
@@ -666,19 +770,18 @@ case "$STAGE" in
     ;;
 esac
 if [[ "$STAGE" == tie1-pg-delete-replay ||
-      "$STAGE" == tie1-pg-ro-ring-stitch-replay ||
-      "$STAGE" == tie1-pg-long-prune-replay ]] &&
+      "$STAGE" == tie1-pg-ro-ring-stitch-replay ]] &&
    [[ -z "$SOURCE_PG_TRIAL_RUN_ID" ]]; then
   echo "ERROR: --source-pg-trial-run-id is required" >&2
   exit 2
 fi
 if [[ "$STAGE" == tie1-pg-ro-ring-stitch-trial ||
-      "$STAGE" == tie1-pg-long-prune-trial ]] &&
+      "$STAGE" == tie1-pg-endpoint-anchor-probe ]] &&
    [[ -z "$SOURCE_PG_PROBE_RUN_ID" ]]; then
   echo "ERROR: --source-pg-probe-run-id is required" >&2
   exit 2
 fi
-if [[ "$STAGE" == tie1-pg-long-prune-trial &&
+if [[ "$STAGE" == tie1-pg-endpoint-anchor-probe &&
       -z "$SOURCE_PG_PRIOR_TRIAL_RUN_ID" ]]; then
   echo "ERROR: --source-pg-prior-trial-run-id is required" >&2
   exit 2
@@ -718,7 +821,7 @@ elif [[ "$STAGE" == tie1-pg-* ]]; then
     "$SOURCE_MINAREA_REPLAY_RUN_ID" || PREFLIGHT=FAIL
   [[ -d "$SOURCE_CHECKPOINT" && "$(tree_hash "$SOURCE_CHECKPOINT")" == "$(report_value "$SOURCE_PROOF_GATE" CANDIDATE_CHECKPOINT_SHA256)" ]] || PREFLIGHT=FAIL
   [[ -s "$PG_HELPER" ]] || PREFLIGHT=FAIL
-  if [[ "$STAGE" == tie1-pg-ro-* || "$STAGE" == tie1-pg-long-prune-* ]]; then
+  if [[ "$STAGE" == tie1-pg-ro-* || "$STAGE" == tie1-pg-endpoint-anchor-probe ]]; then
     [[ -s "$PG_RO_HELPER" ]] || PREFLIGHT=FAIL
   fi
 fi
@@ -729,12 +832,12 @@ elif [[ "$STAGE" == tie1-pg-ro-ring-stitch-trial ]]; then
   PG_PROBE_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_PROBE_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
   pg_ro_probe_gate_passes "$PG_PROBE_GATE" "$SOURCE_PG_PROBE_RUN_ID" \
     RING_PROBE_READY || PREFLIGHT=FAIL
-elif [[ "$STAGE" == tie1-pg-long-prune-trial ]]; then
+elif [[ "$STAGE" == tie1-pg-endpoint-anchor-probe ]]; then
   PG_PROBE_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_PROBE_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
   pg_ro_probe_gate_passes "$PG_PROBE_GATE" "$SOURCE_PG_PROBE_RUN_ID" \
     RING_PROBE_REJECTED_NO_SOURCE_MUTATION || PREFLIGHT=FAIL
   PG_PRIOR_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_PRIOR_TRIAL_RUN_ID/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-  pg_ro_failed_long_prune_v2_gate_passes "$PG_PRIOR_TRIAL_GATE" \
+  pg_ro_failed_long_prune_v3_gate_passes "$PG_PRIOR_TRIAL_GATE" \
     "$SOURCE_PG_PRIOR_TRIAL_RUN_ID" || PREFLIGHT=FAIL
 elif [[ "$STAGE" == tie1-pg-ro-ring-stitch-replay ]]; then
   PG_TRIAL_GATE="$REPO_ROOT/MPTDC/docs/server_snapshots/innovus/$SOURCE_PG_TRIAL_RUN_ID/reports/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt"
@@ -759,6 +862,7 @@ if [[ "$PREFLIGHT" != PASS ]]; then
   exit 4
 fi
 
+SOURCE_CHECKPOINT_SHA256_PRE="$(tree_hash "$SOURCE_CHECKPOINT")"
 mkdir -p "$RUN_DIR/manifests" "$RUN_DIR/logs" "$RUN_DIR/reports"
 COMMANDS_FILE="$RUN_DIR/manifests/tie1_closure.commands.tcl"
 case "$STAGE" in
@@ -813,6 +917,13 @@ case "$STAGE" in
     GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_ro_ring_stitch_replay.rpt"
     STEP=TIE1_PG_RO_RING_STITCH_REPLAY
     ;;
+  tie1-pg-endpoint-anchor-probe)
+    printf 'mptdc_ckpt_source_tcl {%s}\n' "$PG_RO_HELPER" > "$COMMANDS_FILE"
+    export MPTDC_PG_RO_MODE=anchor_probe
+    export MPTDC_ENABLE_RO_BLOCK_RINGS=0
+    GATE_REPORT="$RUN_DIR/reports/operator_gate_tie1_pg_endpoint_anchor_probe.rpt"
+    STEP=TIE1_PG_ENDPOINT_ANCHOR_PROBE
+    ;;
   tie1-pg-long-prune-trial)
     printf 'mptdc_ckpt_source_tcl {%s}\n' "$PG_RO_HELPER" > "$COMMANDS_FILE"
     export MPTDC_PG_RO_MODE=long_prune
@@ -847,6 +958,12 @@ bash "$LAUNCHER" --run-id "$RUN_ID" --checkpoint "$SOURCE_CHECKPOINT" \
   --innovus-work "$INNOVUS_WORK" 2>&1 | tee "$RUN_DIR/logs/tie1_closure_driver.log"
 TOOL_RC=${PIPESTATUS[0]}
 set +e
+SOURCE_CHECKPOINT_SHA256_POST="$(tree_hash "$SOURCE_CHECKPOINT")"
+SOURCE_CHECKPOINT_HASH_STATUS=FAIL_CHANGED
+if [[ "$SOURCE_CHECKPOINT_SHA256_PRE" =~ ^[0-9a-f]{64}$ &&
+      "$SOURCE_CHECKPOINT_SHA256_POST" == "$SOURCE_CHECKPOINT_SHA256_PRE" ]]; then
+  SOURCE_CHECKPOINT_HASH_STATUS=UNCHANGED
+fi
 
 STATUS_REPORT="$RUN_DIR/reports/checkpoint_repair_status.rpt"
 INITIAL_DRC="$(report_value "$STATUS_REPORT" INITIAL_DRC)"
@@ -1055,6 +1172,115 @@ if [[ "$STAGE" == tie1-minarea-* ]]; then
     echo "DECISION=$DECISION"
     echo "NEXT_STAGE=$NEXT_STAGE"
   } | tee "$GATE_REPORT"
+elif [[ "$STAGE" == tie1-pg-endpoint-anchor-probe ]]; then
+  PG_RO_REPORT="$RUN_DIR/reports/pg_ro_endpoint_anchor_probe_status.rpt"
+  PG_RO_MODE="$(report_value "$PG_RO_REPORT" PG_RO_REPAIR_MODE)"
+  PG_RO_STATUS="$(report_value "$PG_RO_REPORT" PG_RO_REPAIR_STATUS)"
+  PG_RO_TOPOLOGY="$(report_value "$PG_RO_REPORT" SOURCE_TOPOLOGY_STATUS)"
+  PG_RO_INITIAL_MARKERS="$(report_value "$PG_RO_REPORT" INITIAL_DANGLING_MARKER_COUNT)"
+  PG_RO_UNIQUE_HANDLES="$(report_value "$PG_RO_REPORT" SOURCE_UNIQUE_HANDLE_COUNT)"
+  PG_RO_SHARED_HANDLES="$(report_value "$PG_RO_REPORT" SOURCE_SHARED_HANDLE_COUNT)"
+  ANCHOR_STATUS="$(report_value "$PG_RO_REPORT" ANCHOR_PROBE_STATUS)"
+  ANCHOR_QUERY_STATUS="$(report_value "$PG_RO_REPORT" ANCHOR_QUERY_COMPLETENESS_STATUS)"
+  ANCHOR_TARGET_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_TARGET_COUNT)"
+  ANCHOR_MARKER_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_MARKER_COUNT)"
+  ANCHOR_MARKER_TRIM_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_MARKER_TRIM_FEASIBLE_COUNT)"
+  ANCHOR_MARKER_STITCH_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_MARKER_STITCH_FEASIBLE_COUNT)"
+  ANCHOR_MARKER_BLOCKED_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_MARKER_BLOCKED_COUNT)"
+  ANCHOR_MARKER_CLASSIFICATION_STATUS="$(report_value "$PG_RO_REPORT" ANCHOR_MARKER_CLASSIFICATION_STATUS)"
+  ANCHOR_TRIM_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_TRIM_FEASIBLE_COUNT)"
+  ANCHOR_STITCH_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_STITCH_FEASIBLE_COUNT)"
+  ANCHOR_BLOCKED_COUNT="$(report_value "$PG_RO_REPORT" ANCHOR_BLOCKED_COUNT)"
+  ANCHOR_RESIDUAL_COUNT="$(report_value "$PG_RO_REPORT" RESIDUAL_SUPPORT_OBJECT_COUNT)"
+  ANCHOR_RESIDUAL_STATUS="$(report_value "$PG_RO_REPORT" RESIDUAL_SUPPORT_STATUS)"
+  PG_MUTATION_COUNT="$(report_value "$PG_RO_REPORT" PG_MUTATION_COMMAND_COUNT)"
+  SOURCE_SWIRE_STATUS="$(report_value "$PG_RO_REPORT" SOURCE_SWIRE_STATUS)"
+  SOURCE_VIA_STATUS="$(report_value "$PG_RO_REPORT" SOURCE_VIA_STATUS)"
+  PG_RO_HELPER_FINAL="$(report_value "$PG_RO_REPORT" FINAL_DANGLING_MARKER_COUNT)"
+  if [[ "$TOOL_RC" -eq 0 && "$COMMAND_STATUS" == PASS &&
+        "$PG_RO_MODE" == anchor_probe && "$PG_RO_STATUS" == PASS_ANALYSIS_NO_MUTATION &&
+        "$PG_RO_TOPOLOGY" == PASS && "$PG_RO_INITIAL_MARKERS" == 15 &&
+        "$PG_RO_UNIQUE_HANDLES" == 13 && "$PG_RO_SHARED_HANDLES" == 2 &&
+        "$ANCHOR_STATUS" == PASS_ANALYSIS && "$ANCHOR_TARGET_COUNT" == 13 &&
+        "$ANCHOR_MARKER_COUNT" == 15 &&
+        "$ANCHOR_MARKER_CLASSIFICATION_STATUS" == PASS &&
+        "$ANCHOR_RESIDUAL_COUNT" == 2 &&
+        "$ANCHOR_RESIDUAL_STATUS" == PASS && "$PG_MUTATION_COUNT" == 0 &&
+        "$SOURCE_SWIRE_STATUS" == UNCHANGED && "$SOURCE_VIA_STATUS" == UNCHANGED &&
+        "$SOURCE_CHECKPOINT_HASH_STATUS" == UNCHANGED && "$PG_RO_HELPER_FINAL" == 15 &&
+        "$FINAL_DRC" == 0 && "$FINAL_SHORTS" == 0 && "$FINAL_REGULAR" == 0 &&
+        "$FINAL_SPECIAL" == 1 && "$FINAL_SPECIAL_RAW" == 1 &&
+        "$FINAL_SPECIAL_NON_RO" == 0 && "$FINAL_DANGLING" == 15 &&
+        "$FINAL_REPORT_ROUTE_ZERO_STATUS" == PASS && "$FINAL_CHECKPOINT_EXISTS" == 1 &&
+        "$FINAL_CHECKPOINT_HASH" =~ ^[0-9a-f]{64}$ ]]; then
+    DECISION=PASS_ANALYSIS_KEEP_V13
+    OUTCOME=ENDPOINT_ANCHOR_PROBE_COMPLETE_NO_MUTATION
+    NEXT_STAGE=STOP_AND_REVIEW_ENDPOINT_ANCHORS
+  fi
+  {
+    echo "STEP=$STEP"
+    echo "SOURCE_TIE1_RUN_ID=$SOURCE_TIE1_RUN_ID"
+    echo "SOURCE_MINAREA_REPLAY_RUN_ID=$SOURCE_MINAREA_REPLAY_RUN_ID"
+    echo "SOURCE_PG_PROBE_RUN_ID=$SOURCE_PG_PROBE_RUN_ID"
+    echo "SOURCE_PG_PRIOR_TRIAL_RUN_ID=$SOURCE_PG_PRIOR_TRIAL_RUN_ID"
+    echo "SOURCE_PG_TRIAL_RUN_ID=NONE"
+    echo "SOURCE_CHECKPOINT=$SOURCE_CHECKPOINT"
+    echo "SOURCE_CHECKPOINT_SHA256=$SOURCE_CHECKPOINT_SHA256_PRE"
+    echo "SOURCE_CHECKPOINT_SHA256_PRE=$SOURCE_CHECKPOINT_SHA256_PRE"
+    echo "SOURCE_CHECKPOINT_SHA256_POST=$SOURCE_CHECKPOINT_SHA256_POST"
+    echo "SOURCE_CHECKPOINT_HASH_STATUS=$SOURCE_CHECKPOINT_HASH_STATUS"
+    echo "TOOL_RC=$TOOL_RC"
+    echo "COMMAND_1_STATUS=$COMMAND_STATUS"
+    echo "PG_RO_REPAIR_MODE=$PG_RO_MODE"
+    echo "PG_RO_REPAIR_STATUS=$PG_RO_STATUS"
+    echo "SOURCE_TOPOLOGY_STATUS=$PG_RO_TOPOLOGY"
+    echo "INITIAL_DANGLING_MARKER_COUNT=$PG_RO_INITIAL_MARKERS"
+    echo "SOURCE_UNIQUE_HANDLE_COUNT=$PG_RO_UNIQUE_HANDLES"
+    echo "SOURCE_SHARED_HANDLE_COUNT=$PG_RO_SHARED_HANDLES"
+    echo "ANCHOR_PROBE_STATUS=$ANCHOR_STATUS"
+    echo "ANCHOR_QUERY_COMPLETENESS_STATUS=$ANCHOR_QUERY_STATUS"
+    echo "ANCHOR_TARGET_COUNT=$ANCHOR_TARGET_COUNT"
+    echo "ANCHOR_MARKER_COUNT=$ANCHOR_MARKER_COUNT"
+    echo "ANCHOR_MARKER_TRIM_FEASIBLE_COUNT=$ANCHOR_MARKER_TRIM_COUNT"
+    echo "ANCHOR_MARKER_STITCH_FEASIBLE_COUNT=$ANCHOR_MARKER_STITCH_COUNT"
+    echo "ANCHOR_MARKER_BLOCKED_COUNT=$ANCHOR_MARKER_BLOCKED_COUNT"
+    echo "ANCHOR_MARKER_CLASSIFICATION_STATUS=$ANCHOR_MARKER_CLASSIFICATION_STATUS"
+    echo "ANCHOR_TRIM_FEASIBLE_COUNT=$ANCHOR_TRIM_COUNT"
+    echo "ANCHOR_STITCH_FEASIBLE_COUNT=$ANCHOR_STITCH_COUNT"
+    echo "ANCHOR_BLOCKED_COUNT=$ANCHOR_BLOCKED_COUNT"
+    echo "RESIDUAL_SUPPORT_OBJECT_COUNT=$ANCHOR_RESIDUAL_COUNT"
+    echo "RESIDUAL_SUPPORT_STATUS=$ANCHOR_RESIDUAL_STATUS"
+    echo "PG_MUTATION_COMMAND_COUNT=$PG_MUTATION_COUNT"
+    echo "SOURCE_SWIRE_STATUS=$SOURCE_SWIRE_STATUS"
+    echo "SOURCE_VIA_STATUS=$SOURCE_VIA_STATUS"
+    echo "FINAL_DRC=$FINAL_DRC"
+    echo "FINAL_SHORTS=$FINAL_SHORTS"
+    echo "FINAL_REGULAR_CONNECTIVITY_BAD=$FINAL_REGULAR"
+    echo "FINAL_SPECIAL_CONNECTIVITY_BAD=$FINAL_SPECIAL"
+    echo "FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=$FINAL_SPECIAL_RAW"
+    echo "FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=$FINAL_SPECIAL_NON_RO"
+    echo "FINAL_SPECIAL_DANGLING_COUNT=$FINAL_DANGLING"
+    echo "FINAL_UNROUTED_NETS_RAW=$FINAL_UNROUTED_RAW"
+    echo "FINAL_UNROUTED_NETS=$FINAL_UNROUTED"
+    echo "FINAL_UNROUTED_NETS_SOURCE=$FINAL_UNROUTED_SOURCE"
+    echo "FINAL_REPORT_ROUTE_ZERO_STATUS=$FINAL_REPORT_ROUTE_ZERO_STATUS"
+    echo "FINAL_ROUTE_GATE_PASS=$FINAL_ROUTE_GATE"
+    echo "PG_REPAIR_TRIAL_OUTCOME=$OUTCOME"
+    echo "TIE_TARGET_COUNT=91"
+    echo "TIE_NET_COUNT=85"
+    echo "FILLER_COUNT=24856"
+    echo "PLACEMENT_SITE_OCCUPIED=907533"
+    echo "PLACEMENT_SITE_CAPACITY=907533"
+    echo "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
+    echo "ANTENNA_REPAIR_ATTEMPTED=NO"
+    echo "TIMING_STATUS=NOT_RUN_BY_DRC_LVS_SCOPE"
+    echo "CANDIDATE_CHECKPOINT=$FINAL_CHECKPOINT"
+    echo "CANDIDATE_CHECKPOINT_SHA256=$FINAL_CHECKPOINT_HASH"
+    echo "CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED"
+    echo "SIGNOFF_ELIGIBLE=NO"
+    echo "DECISION=$DECISION"
+    echo "NEXT_STAGE=$NEXT_STAGE"
+  } | tee "$GATE_REPORT"
 elif [[ "$STAGE" == tie1-pg-ro-* || "$STAGE" == tie1-pg-long-prune-* ]]; then
   PG_RO_REPORT="$RUN_DIR/reports/pg_ro_ring_repair_status.rpt"
   PG_RO_MODE="$(report_value "$PG_RO_REPORT" PG_RO_REPAIR_MODE)"
@@ -1150,7 +1376,7 @@ elif [[ "$STAGE" == tie1-pg-ro-* || "$STAGE" == tie1-pg-long-prune-* ]]; then
             "$PG_RO_VIA_ATTEMPTS" == 0 && "$PG_RO_PRUNE_ATTEMPTS" == 0 ]]; then
       DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE
       OUTCOME=RING_PROBE_REJECTED_NO_SOURCE_MUTATION
-      NEXT_STAGE=TIE1_PG_LONG_PRUNE_TRIAL
+      NEXT_STAGE=TIE1_PG_ENDPOINT_ANCHOR_PROBE
     fi
   elif [[ "$PG_RO_COMMON" == PASS && "$PG_RO_STATUS" == PASS_DANGLING_CLEARED &&
           "$FINAL_DRC" == 0 && "$FINAL_SHORTS" == 0 && "$FINAL_REGULAR" == 0 &&
@@ -1412,7 +1638,9 @@ echo "DECISION=$DECISION"
 echo "PUBLISH_RC=$PUBLISH_RC"
 echo "NEXT_EXPECTED_HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null)"
 echo "NEXT_STAGE=$NEXT_STAGE"
-if [[ ( "$DECISION" == PASS_CONTINUE || "$DECISION" == PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE ) && "$PUBLISH_RC" -eq 0 ]]; then
+if [[ ( "$DECISION" == PASS_CONTINUE ||
+        "$DECISION" == PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE ||
+        "$DECISION" == PASS_ANALYSIS_KEEP_V13 ) && "$PUBLISH_RC" -eq 0 ]]; then
   exit 0
 fi
 exit 1

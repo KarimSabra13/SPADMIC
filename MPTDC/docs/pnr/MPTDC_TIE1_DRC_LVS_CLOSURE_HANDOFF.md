@@ -13,7 +13,7 @@ as an isolated trial and passed again as a canonical replay from the immutable
 pre-repair Tie1 checkpoint. The replay is the only accepted continuation
 checkpoint.
 
-PG analysis has now produced four published diagnostics against that exact
+PG analysis has now produced five published diagnostics against that exact
 replay:
 
 - the first RO ring probe failed topology preflight because its point parser did
@@ -27,13 +27,25 @@ replay:
 - long-prune V2 accepted that exact first transition and completed all 13 source
   deletions, but deletion 13 exposed a second historical VSS/MET1 corewire.
   Its final two markers are both MET1 while DRC, shorts, and regular
-  connectivity remain `0`, so the one-residual V2 checkpoint is rejected.
+  connectivity remain `0`, so the candidate is rejected;
+- long-prune V3 accepted both exact marker transitions and proved all 13 source
+  deletions, but the source sWire inventory changed from `450/419` to `445/411`
+  and the PG via-handle inventory changed from `4575/4524` to `4412/4197`.
+  Deleting the 13 full sWire objects therefore removed 490 associated via
+  handles. The two residual MET1 endpoints remained, and no residual object
+  was deleted. V3 is rejected.
 
 No PG-mutated candidate has therefore been accepted. The accepted continuation
-source remains the V13 replay, never a rejected diagnostic checkpoint. The next
-action is one V3 long-prune trial from V13. V3 recognizes both proven marker
-transitions and permits deletion of exactly two residual MET1 corewires only
-when both live objects match their complete historical database fingerprints.
+source remains the V13 replay, never a rejected diagnostic checkpoint. Full
+sWire-handle long-prune trial and replay are retired. A long-prune report or
+checkpoint is not PVS-eligible even if DRC and regular connectivity are zero.
+
+The next action is one read-only endpoint-anchor probe from V13. It inventories
+the retained same-net anchors, opposite-net conflicts, PG vias, and PG terminal
+shapes at both ends of every source object. It classifies each of the 15
+markers as `TRIM_FEASIBLE`, `STITCH_FEASIBLE`, or `BLOCKED`, records every
+predicate and ambiguity, and issues zero PG mutation commands. Its saved
+checkpoint is analysis-only, must remain `NOT_SELECTED`, and must not feed PVS.
 
 The current state label is:
 
@@ -63,6 +75,7 @@ visible as deferred debt; they are not deleted, waived, or relabelled clean.
 | Corrected ring probe, physical rejection | `20260901_122444_mptdc_tie1_pg_ro_ring_probe_v2` | evidence commit `d39c8f8b036f92994dea7b7494187ae864c89bf1`; candidate SHA-256 `13b98185ecd7237485762693a82c2ce38188e937a13eebf05f8bf6c4a81fd1a8`; `NOT_SELECTED` |
 | Long-prune V1 diagnostic | `20260901_124659_mptdc_tie1_pg_long_prune_trial` | evidence commit `a0647b4f9666ead66fb10f89369144490b397c25`; candidate SHA-256 `0ac03ded6be501c21f5e26885d98e3c5f90a0408c8ca652fdcd832875ad766f8`; `NOT_SELECTED` |
 | Long-prune V2 diagnostic | `20260901_131741_mptdc_tie1_pg_long_prune_v2_trial` | evidence commit `2d7cd791ea723b4a215e8422dfb62d7ebf4d0ec3`; candidate SHA-256 `4d2c2b9f19882bae2bec90e92fd6b3bdc4b4d4d2cba17c71797687c90e1daa3f`; `NOT_SELECTED` |
+| Long-prune V3 diagnostic | `20260901_141910_mptdc_tie1_pg_long_prune_v3_trial` | evidence commit `d142b547df8df454476dbd3409d6b72010752783`; candidate SHA-256 `1297f79a2f3e19294074256fb92182aec7c1ad2bce2109b9ec5cd4c885ab97a4`; source prune `13/13`; PG via inventory changed by `-490`; `NOT_SELECTED` |
 | Prior PVS diagnostic | `20260831_mptdc_tie1_lvs_density_131326` | base DRC `136`, antenna-only classification, LVS `MISMATCH`; predates V13 |
 | Historical PG topology witness | `20260825_mptdc_bufftap0_halo10_physical_130313` | identifies the 13 source handles and both exact exposed VSS/MET1 corewires |
 | Proven RO ring primitive | `20260828_mptdc_free_pnr_stripevaluefix_151756_u50` | two RO rings, 16 new `blockRing` sWires, VDD delta `+8`, VSS delta `+8` |
@@ -72,8 +85,9 @@ The replay restored the original Tie1 source checkpoint, not the trial output,
 then reapplied the exact V13 operation in one fresh Innovus process. This is why
 the different trial and replay candidate hashes are expected: each saved
 database is a separate run product, while the source hash, edit contract, object
-delta, and verification tuple agree. V1 and V2 are ancestry evidence only and
-are never legal inputs to V3.
+delta, and verification tuple agree. V1, V2, and V3 are rejected ancestry
+evidence only. None is a legal source checkpoint for a later Innovus or PVS
+stage.
 
 Primary evidence:
 
@@ -92,6 +106,9 @@ Primary evidence:
 - [V2 source deletion 12 endpoints](../server_snapshots/innovus/20260901_131741_mptdc_tie1_pg_long_prune_v2_trial/reports/pg_ro_after_prune_12_special_detailed.rpt)
 - [V2 source deletion 13 endpoints](../server_snapshots/innovus/20260901_131741_mptdc_tie1_pg_long_prune_v2_trial/reports/pg_ro_after_prune_13_special_detailed.rpt)
 - [failed V2 final endpoints](../server_snapshots/innovus/20260901_131741_mptdc_tie1_pg_long_prune_v2_trial/reports/pg_ro_final_verify_special_detailed.rpt)
+- [failed V3 long-prune gate](../server_snapshots/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial/reports/operator_gate_tie1_pg_long_prune_trial.rpt)
+- [failed V3 object and inventory audit](../server_snapshots/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial/reports/pg_ro_ring_repair_status.rpt)
+- [failed V3 final endpoints](../server_snapshots/innovus/20260901_141910_mptdc_tie1_pg_long_prune_v3_trial/reports/pg_ro_final_verify_special_detailed.rpt)
 - [prior PVS diagnostic summary](../server_snapshots/pvs/20260831_mptdc_tie1_lvs_density_131326_04_lvs/reports/operator_gate_pvs_diagnostic_summary.rpt)
 
 ## Accepted V13 Geometry
@@ -161,7 +178,9 @@ the V13 trial checkpoint as the source of another canonical stage.
 | Ring-probe candidate | 97 DRC, 67 shorts, 13 dangling endpoints | `REJECTED` |
 | Long-prune V1 candidate | DRC `0`, shorts `0`, regular `0`, but 2 dangling endpoints | `REJECTED_DIAGNOSTIC` |
 | Long-prune V2 candidate | DRC `0`, shorts `0`, regular `0`; second residual transition exposed | `REJECTED_DIAGNOSTIC` |
-| Long-prune V3 | dual-residual contract implemented and locally tested; no Cadence result yet | `NOT_RUN` |
+| Long-prune V3 candidate | source prune `13/13`, two residual MET1 endpoints; VDD/VSS vias `4575/4524 -> 4412/4197` | `REJECTED_TOPOLOGY_DESTRUCTIVE` |
+| Full-handle long-prune stages | trial/replay entry points retired; PVS intake explicitly rejects legacy replay gates | `RETIRED` |
+| Endpoint-anchor probe | read-only helper and V3 ancestry gate locally tested; no Cadence result yet | `NOT_RUN` |
 | Antenna repair | not attempted by policy | `DEFERRED` |
 | PVS base DRC | prior run: 136, all classified antenna-only | `FAIL_DEFERRED_ANTENNA` |
 | PVS raw full-top LVS | prior attributable run: explicit `MISMATCH` | `FAIL` |
@@ -250,9 +269,12 @@ geomType=pathSeg box={204.16 149.68 240.8 150.48}
 points={{204.16 150.08} {240.8 150.08}} length=36.64
 ```
 
-The V2 final report contains exactly these north and south MET1 markers. The
-complete deterministic sequence is therefore 13 source-handle deletions
-followed by two exact exposed-corewire deletions.
+The V2 final report contains exactly these north and south MET1 markers. V3
+confirmed that both transitions are deterministic and that all 13 source
+handles can be removed while preserving geometry DRC `0`, shorts `0`, and
+regular connectivity `0`. It also proved why that sequence cannot be promoted:
+full-object deletion removed associated vias throughout the affected PG
+objects. Zero DRC is not evidence that the retained PG topology is equivalent.
 
 The accepted V13 lineage has no RO block rings. A separate proven Innovus run
 created one VDD/VSS block ring around each of the two exact RO instances using
@@ -277,62 +299,62 @@ from the accepted V13 replay in a fresh Innovus process.
 
 The ring branch remains available for other attributable sources, but it is
 closed for this V13 source because the corrected probe physically failed. The
-only authorized next branch is long-prune V3.
+full-handle long-prune branch is also closed: V3 demonstrated a nonlocal PG-via
+loss even though geometry and regular-connectivity checks stayed clean.
 
-V3 requires all of the following before mutation:
+The only authorized next stage is
+`tie1-pg-endpoint-anchor-probe`. Its preflight recursively validates:
 
-- accepted V13 source path and SHA-256;
+- the accepted V13 source path and SHA-256;
 - corrected rejected ring probe
   `20260901_122444_mptdc_tie1_pg_ro_ring_probe_v2`;
-- failed V1 prune `20260901_124659_mptdc_tie1_pg_long_prune_trial` with exact
-  `12 attempts / 11 successes`, final DRC `0`, and exactly the two observed
-  residual markers;
-- failed V2 prune `20260901_131741_mptdc_tie1_pg_long_prune_v2_trial`, whose
-  recursively validated ancestry names that exact V1 run, whose source is the
-  same immutable V13 checkpoint, and whose final detailed report contains only
-  `VSS|MET1|124.160|723.520` and `VSS|MET1|204.160|150.080`;
-- exact V2 result `13 attempts / 12 gate successes`, DRC `0`, shorts `0`,
-  regular connectivity `0`, source-transition status `FAIL`, no residual
-  deletion, and candidate `NOT_SELECTED`;
-- exact source preflight `15 markers / 13 handles / 2 shared`;
-- literal authorization
-  `EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3`.
+- rejected V1, V2, and V3 prune evidence, including exact run ancestry;
+- V3 source prune `13/13`, exact NORTH and SOUTH marker transitions, final
+  VDD/VSS sWire inventories `445/411`, and failed via inventories
+  `4575/4524 -> 4412/4197`;
+- exact V3 candidate status `NOT_SELECTED`, decision `FAIL_STOP`, and the two
+  final MET1 endpoints;
+- exact live V13 source preflight `15 markers / 13 handles / 2 shared`.
 
-The mutation contract is:
+The endpoint-anchor probe contract is:
 
-1. Delete the same 13 source sWire handles by exact live handle. After every
-   delete, run DRC, short, regular-connectivity, and detailed special checks.
-2. Compare the full sorted marker fingerprint, not only the marker count.
-   Deletions 1 through 11 must remove their exact source keys. Deletion 12 may
-   replace only `VSS|METTP|125.160|721.750` with
-   `VSS|MET1|124.160|723.520`. Deletion 13 must replace only
-   `VSS|METTP|205.160|158.320` with
-   `VSS|MET1|204.160|150.080`.
-3. Before either residual mutation, require exactly one north candidate and one
-   south candidate. Each must match net `VSS`, layer `MET1`, shape `corewire`,
-   status `routed`, width `0.8`, geometry type `pathSeg`, and its exact points,
-   box, and length within `0.002 um`. The two live handles must be distinct.
-4. Delete the north and then south live handles with `dbDeleteObj`; there is no
-   area fallback. Each step must remove exactly one pre-existing handle, add no
-   sWire or via handle, preserve DRC `0`, shorts `0`, and regular connectivity
-   `0`, and produce the exact next marker fingerprint.
-5. Require final VDD/VSS sWire inventories `445/409`, exact deltas `-5/-10`
-   from source inventories `450/419`, and an unchanged via-handle fingerprint.
-6. A passing gate must report source prune `13/13`, residual prune `2/2`, total
-   prune `15/15`, source transition `PASS`, residual policy
-   `EXACT_TWO_EXPOSED_VSS_MET1_COREWIRES_V3`, route gate `1`, unchanged
-   Tie1/filler/placement invariants, `CANDIDATE_CHECKPOINT_STATUS=PASS`, and
-   `DECISION=PASS_CONTINUE`.
-7. Replay the same operation from V13 in a separate Innovus process. The trial
-   checkpoint remains ancestry evidence and is never the replay input.
+1. Restore V13 in one fresh Innovus process. Do not restore V1, V2, V3, or a
+   ring-probe candidate.
+2. Parse flat and recursively wrapped `.box` values into canonical numeric
+   rectangles. A malformed or nonnumeric rectangle fails its predicate; it is
+   never treated as an empty match or silently accepted.
+3. Inventory same-net and opposite-net sWires, PG via locations, and PG terminal
+   shapes around both endpoints of all 13 source objects. Keep candidate
+   identity, geometry, retained-side distance, conflicts, and query failures in
+   the report.
+4. Classify all 15 markers conservatively. `TRIM_FEASIBLE` requires one unique
+   retained same-net anchor, no opposite-net conflict, and complete queries.
+   Ambiguity, conflict, missing geometry, or incomplete query data is
+   `BLOCKED`. The current probe makes no stitch-feasibility claim without an
+   independently proven bounded stitch primitive.
+5. Re-identify the exact north and south residual support objects and report
+   every contract predicate: net, layer, shape, status, geometry type, width,
+   orientation, points, rectangle, marker containment, and length.
+6. Require `PG_MUTATION_COMMAND_COUNT=0`, unchanged VDD/VSS sWire inventories,
+   unchanged PG via inventories, unchanged source checkpoint SHA-256, final
+   DRC/shorts/regular tuple `0/0/0`, and the original 15 special endpoints.
+7. Publish `PASS_ANALYSIS_KEEP_V13` only. The generated checkpoint is
+   `NOT_SELECTED`, `SIGNOFF_ELIGIBLE=NO`, and the next stage is
+   `STOP_AND_REVIEW_ENDPOINT_ANCHORS`.
 
-This is a closure-first removal of disconnected PG branches and may reduce PG
-redundancy. Passing Innovus connectivity does not prove LVS or power integrity;
-attributable PVS and subsequent PG review remain mandatory.
+`ANCHOR_QUERY_COMPLETENESS_STATUS=FAIL` does not authorize a repair. It forces
+affected markers to `BLOCKED`; the analysis snapshot may still be published so
+the missing database attributes are attributable and can be reviewed.
+
+Both `tie1-pg-long-prune-trial` and `tie1-pg-long-prune-replay` are unsupported
+driver stages. The PVS driver excludes long-prune gates from its replay
+selector and explicitly rejects tracked long-prune replay gates as
+`TIE1_PG_LONG_PRUNE_REPLAY_RETIRED`. It also rejects endpoint-anchor gates as
+`TIE1_PG_ENDPOINT_ANCHOR_ANALYSIS_ONLY`. Neither class may launch PVS.
 
 Never set `MPTDC_PG_DANGLING_ALLOW_LONG_DELETE=1`, delete by area, use a broad
-`sroute`, or invoke `ecoRoute`, `routeDesign`, or any global optimizer in this
-ladder. No stage repairs or suppresses antenna results.
+`sroute`, invoke `ecoRoute`, `routeDesign`, or a global optimizer, or manually
+promote an analysis checkpoint. No stage repairs or suppresses antenna results.
 
 ### Executed PG Results and Lessons
 
@@ -393,9 +415,37 @@ and leaves its checkpoint `NOT_SELECTED`. Its
 `SOURCE_PRUNE_FINAL_OBSERVED_MARKER_FINGERPRINT` field retained the pre-delete
 13 set after the incremental failure; the delete-13 detailed report, final
 detailed report, and marker TSV independently prove the actual two-MET1 state.
-V3 fixes that bookkeeping by recording the observed marker set before deciding
-step status, contracts the second transition explicitly, and still relaxes no
-physical gate.
+
+V3, `20260901_141910_mptdc_tie1_pg_long_prune_v3_trial`, fixed that bookkeeping
+and accepted both exact transitions. It completed source prune `13/13` with
+exact final marker set:
+
+```text
+VSS|MET1|124.160|723.520
+VSS|MET1|204.160|150.080
+geometry DRC / shorts / regular bad: 0 / 0 / 0
+```
+
+The residual lookup saw one raw exact object at each location, but its
+contracted candidate count was zero because Innovus returned recursively
+wrapped `.box` values that the old rectangle helper did not normalize. No
+residual delete was attempted. More importantly, the source sequence itself
+changed the physical inventory as follows:
+
+```text
+VDD sWires: 450 -> 445  (delta -5)
+VSS sWires: 419 -> 411  (delta -8)
+VDD vias:   4575 -> 4412 (delta -163)
+VSS vias:   4524 -> 4197 (delta -327)
+```
+
+The sWire deltas match the 13 deleted source handles, but the 490-via loss does
+not satisfy topology preservation. V3 therefore reports
+`SWIRE_INVENTORY_STATUS=FAIL`, `PG_VIA_HANDLE_STATUS=FAIL_CHANGED`, retains two
+special endpoints, and leaves its checkpoint `NOT_SELECTED`. The recursive
+rectangle parser has since been fixed and unit-tested, but that parser fix does
+not rehabilitate full-handle deletion. It is used only by the read-only anchor
+probe.
 
 ## Prior PVS Result
 
@@ -445,9 +495,11 @@ and CDL SHA-256
 The implemented post-PG proof is deliberately compositional:
 
 1. `server_run_mptdc_ro6_recovery_pvs.sh` accepts exactly one tracked passing
-   PG replay gate: legacy short-delete, RO ring-stitch, or exact long-prune.
-   It verifies replay ancestry, checkpoint content hash, DRC/connectivity
-   tuple, and physical invariants before preparing GDS/source/CDL inputs.
+   PG replay gate: legacy bounded short-delete or RO ring-stitch. It verifies
+   replay ancestry, checkpoint content hash, DRC/connectivity tuple, and
+   physical invariants before preparing GDS/source/CDL inputs. Long-prune replay
+   gates are retired, and endpoint-anchor gates are analysis-only; either one
+   forces PVS preflight failure before source preparation.
 2. Run it with `--diagnostic-antenna-exception` and
    `--diagnostic-ro-compositional`. Base DRC may continue only when all nonzero
    rules classify as the already authorized antenna-only debt. Antenna remains
@@ -488,20 +540,21 @@ not as the current mismatch root cause.
 The following repository changes implement this handoff:
 
 - `innovus_mptdc_pg_ro_ring_checkpoint_tools.tcl`: exact topology preflight,
-  both exact source-marker transitions, two contracted exposed-corewire
-  lookups, exact-handle V3 deletion, and sWire/via handle-delta auditing;
+  recursive rectangle normalization, per-predicate residual diagnostics, and a
+  read-only endpoint-anchor inventory/classifier with zero mutation commands;
+- `innovus_mptdc_pg_dangling_checkpoint_tools.tcl`: canonical flat or wrapped
+  rectangle parsing with fail-closed malformed/nonnumeric handling;
 - `server_run_mptdc_tie1_closure_stage.sh`: isolated probe/trial/replay stages,
-  immutable V13/probe/failed-V1/failed-V2 ancestry checks, V3 authorization,
-  dual-residual report parsing, and independent physical gates;
-- `server_run_mptdc_ro6_recovery_pvs.sh`: exactly-one replay-gate selection and
-  hash-guarded compositional PVS intake that recursively revalidates V1 and V2
-  failure evidence and requires matching V3 trial/replay ancestry and object
-  invariants;
+  immutable V13/probe/failed-V1/V2/V3 ancestry checks, a zero-mutation anchor
+  gate, source-hash preservation, and unsupported long-prune entry points;
+- `server_run_mptdc_ro6_recovery_pvs.sh`: exactly-one eligible replay-gate
+  selection, explicit retired-prune rejection, and explicit anchor-analysis
+  rejection before any PVS invocation;
 - `test_pg_ro_ring_checkpoint_tools.tcl`, the Tie1 closure-driver test, and the
-  PVS recovery-driver test: exact 15/13/2 topology, both source-marker
-  transitions, both exact residual objects, 15/15 completion, sWire/via
-  invariants, missing-prior and wrong-generation rejection, rejected-checkpoint
-  hash-drift rejection, canonical replay, and PVS candidate attribution.
+  PVS recovery-driver test: wrapped rectangle fixtures, anchor ambiguity and
+  conflict classification, exact V1/V2/V3 rejected ancestry, retired-stage
+  rejection, source-hash preservation, zero-mutation publication, and PVS
+  candidate exclusion.
 
 Local validation on 2026-09-01 passed:
 
@@ -513,12 +566,12 @@ MPTDC_TIE1_CLOSURE_STAGE_DRIVER_TEST=PASS
 MPTDC_RO6_RECOVERY_PVS_DRIVER_TEST=PASS
 ```
 
-These are static and fixture proofs. They do not substitute for a foreground
-Innovus V3 trial and do not change the accepted V13 evidence.
+These are static and fixture proofs. They do not substitute for the foreground
+Innovus endpoint-anchor probe and do not change the accepted V13 evidence.
 
 ## Exact Next Command
 
-Run only the V3 long-prune trial next. Use this foreground block on
+Run only the endpoint-anchor probe next. Use this foreground block on
 `lyoelectrosrv01`; it does not close the login shell on a failed guard.
 
 ```bash
@@ -537,67 +590,88 @@ echo "ORIGIN_HEAD=$ORIGIN_HEAD"
 echo "TRACKED_STATUS=${TRACKED_STATUS:-CLEAN}"
 
 if [[ "$PULL_RC" -eq 0 && "$CURRENT_HEAD" == "$ORIGIN_HEAD" && -z "$TRACKED_STATUS" ]]; then
-  LONG_PRUNE_V3_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_tie1_pg_long_prune_v3_trial"
-  echo "LONG_PRUNE_V3_RUN=$LONG_PRUNE_V3_RUN"
+  ANCHOR_RUN="$(date +%Y%m%d_%H%M%S)_mptdc_tie1_pg_endpoint_anchor_probe"
+  echo "ANCHOR_RUN=$ANCHOR_RUN"
 
   bash MPTDC/pnr/scripts/server_run_mptdc_tie1_closure_stage.sh \
-    --stage tie1-pg-long-prune-trial \
+    --stage tie1-pg-endpoint-anchor-probe \
     --source-tie1-run-id 20260831_mptdc_tie1_filler_ecoroute_reconciled_131006 \
     --source-minarea-replay-run-id 20260831_175532_mptdc_tie1_minarea_clearance_v13_replay \
     --source-pg-probe-run-id 20260901_122444_mptdc_tie1_pg_ro_ring_probe_v2 \
-    --source-pg-prior-trial-run-id 20260901_131741_mptdc_tie1_pg_long_prune_v2_trial \
-    --run-id "$LONG_PRUNE_V3_RUN" \
+    --source-pg-prior-trial-run-id 20260901_141910_mptdc_tie1_pg_long_prune_v3_trial \
+    --run-id "$ANCHOR_RUN" \
     --expected-head "$CURRENT_HEAD"
 
-  LONG_PRUNE_V3_RC=$?
-  echo "LONG_PRUNE_V3_RC=$LONG_PRUNE_V3_RC"
-  echo "LONG_PRUNE_V3_RUN=$LONG_PRUNE_V3_RUN"
+  ANCHOR_RC=$?
+  ANCHOR_DIR="/sim/ksabra/SPADMIC_work/innovus/$ANCHOR_RUN"
+  echo "ANCHOR_RC=$ANCHOR_RC"
+  echo "ANCHOR_RUN=$ANCHOR_RUN"
+  echo "ANCHOR_DIR=$ANCHOR_DIR"
 
-  LONG_PRUNE_V3_DIR="/sim/ksabra/SPADMIC_work/innovus/$LONG_PRUNE_V3_RUN"
-  cat "$LONG_PRUNE_V3_DIR/reports/operator_gate_tie1_pg_long_prune_trial.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_ring_repair_status.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_after_prune_12_special_detailed.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_after_prune_13_special_detailed.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_after_source_prune_special_detailed.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_after_residual_prune_01_special_detailed.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_after_residual_prune_02_special_detailed.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_final_verify_special_detailed.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/pg_ro_after_long_prune_verify_drc.rpt" 2>/dev/null
-  cat "$LONG_PRUNE_V3_DIR/reports/checkpoint_repair_status.rpt" 2>/dev/null
-  echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
+  for report in \
+    operator_gate_tie1_pg_endpoint_anchor_probe.rpt \
+    pg_ro_endpoint_anchor_probe_status.rpt \
+    pg_ro_initial_verify_special_detailed.rpt \
+    pg_ro_final_verify_special_detailed.rpt \
+    01_after_command_verify_drc.rpt \
+    01_after_command_verify_connectivity_regular.rpt \
+    01_after_command_verify_connectivity_special.rpt \
+    01_after_command_report_route.rpt \
+    checkpoint_repair_status.rpt; do
+    echo "===== $report ====="
+    if [[ -s "$ANCHOR_DIR/reports/$report" ]]; then
+      cat "$ANCHOR_DIR/reports/$report"
+    else
+      echo "MISSING=$ANCHOR_DIR/reports/$report"
+    fi
+  done
+
+  for log in tie1_closure_driver.log checkpoint_repair_wrapper.log innovus_route_checkpoint_repair.log; do
+    echo "===== LOG TAIL: $log ====="
+    if [[ -s "$ANCHOR_DIR/logs/$log" ]]; then
+      tail -n 200 "$ANCHOR_DIR/logs/$log"
+    else
+      echo "MISSING=$ANCHOR_DIR/logs/$log"
+    fi
+  done
 else
   echo "STOP: pull must pass and checkout must be tracked-clean and equal to origin/SPADMIC_test"
 fi
+
+echo "FINAL_HEAD=$(git rev-parse HEAD 2>/dev/null)"
 ```
 
 Return the printed reports in full, including the driver summary above them.
-Do not source the V1 or V2 candidate and do not manually edit the V3 output. A
-nonzero wrapper return or `INNOVUS_RC=0` alone does not decide acceptance; the
-operator gate and report-level checks do.
+Do not source a ring or long-prune candidate, do not manually edit the output,
+and do not launch PVS from this run. A zero wrapper return or `INNOVUS_RC=0`
+alone does not decide acceptance; the operator gate and report-level checks do.
 
 ## Continuation Order
 
-1. Run the V3 trial above from the accepted V13 replay. Require source prune
-   `13/13`, exposed residual set `NORTH SOUTH`, residual prune `2/2`, total
-   prune `15/15`, exact transition status `PASS`, final special connectivity
-   `0`, DRC `0`, shorts `0`, regular connectivity `0`, unroutes `0`, route gate
-   `1`, VDD/VSS sWire inventories `445/409`, deltas `-5/-10`, unchanged via
-   handles, and unchanged Tie1/filler/placement invariants.
-2. If and only if the trial publishes `DECISION=PASS_CONTINUE`, run
-   `tie1-pg-long-prune-replay` in a fresh process, naming that trial with
-   `--source-pg-trial-run-id`. Replay must restore V13, inherit the exact probe
-   and failed-V2 ID from the trial, recursively recover the failed-V1 ancestry,
-   and reproduce every V3 gate. Never use the trial checkpoint as replay input.
-3. Run attributable PVS base DRC and raw LVS from the selected PG replay using
-   `--diagnostic-antenna-exception --diagnostic-ro-compositional` and the exact
-   standalone-proven RO GDS. Keep all antenna counts visible.
-4. Run boundary LVS against that exact raw PVS run and standalone run
+1. Run the endpoint-anchor probe above from the accepted V13 replay. Require
+   zero mutation commands, unchanged source checkpoint hash, unchanged sWire
+   and via inventories, exact source topology `15/13/2`, two exact residual
+   support objects, and final DRC/shorts/regular tuple `0/0/0` with the original
+   15 special endpoints still present.
+2. Review every per-marker candidate set and predicate failure. Do not infer a
+   trim or stitch from marker count alone. A future repair trial must have one
+   bounded, reviewable operation per approved endpoint class and must preserve
+   all retained PG vias.
+3. Implement and locally test that bounded operation only after the probe
+   evidence is reviewed. Run its trial and canonical replay in separate fresh
+   Innovus processes from V13. Neither the anchor checkpoint nor a failed trial
+   is a replay source.
+4. Run attributable PVS base DRC and raw LVS only from a selected PG-clean
+   canonical replay using `--diagnostic-antenna-exception
+   --diagnostic-ro-compositional` and the exact standalone-proven RO GDS. Keep
+   all antenna counts visible.
+5. Run boundary LVS against that exact raw PVS run and standalone run
    `20260827_mptdc_ro6_standalone_lvs_vddfix_150520`. Require explicit
    compositional `MATCH`; process RC `0` is insufficient.
-5. Run density DRC through `server_run_mptdc_ro6_density_after_boundary.sh`
+6. Run density DRC through `server_run_mptdc_ro6_density_after_boundary.sh`
    only after `PASS_COMPOSITIONAL_LVS`. Keep base DRC, density DRC, raw LVS,
    boundary LVS, and standalone LVS as separate evidence.
-6. Requalify timing, power integrity, and final export separately before any
+7. Requalify timing, power integrity, and final export separately before any
    signoff claim.
 
 ## Stop Conditions
@@ -612,23 +686,25 @@ Stop and preserve the accepted V13 replay checkpoint if any of these occurs:
 - a handle has any reference count other than one or two, or the number of
   double-referenced handles is not exactly two;
 - any source handle is non-axis-aligned or is not longer than `10.0 um`;
-- the corrected ring probe, failed V1 evidence, or failed V2 evidence is
+- the corrected ring probe or failed V1/V2/V3 evidence is
   missing, untracked, swapped, recursively inconsistent, or has a different
   source/checkpoint/result fingerprint;
-- V3 lacks the literal authorization or attempts a ring, via, replacement,
+- the anchor stage attempts any PG mutation, ring, via, replacement, prune,
   area deletion, broad PG route, or optimizer;
-- an incremental marker set differs, including either deletion-12 or
-  deletion-13 transition differing from its exact METTP-to-MET1 replacement;
-- either residual query returns other than one object, the two candidates share
-  a handle, or any net/layer/shape/status/width/type/box/points/length field
-  differs from its contract;
-- the source sequence is not `13/13`, residual sequence not `2/2`, or total not
-  `15/15`;
-- final VDD/VSS sWire inventories are not `445/409`, their deltas are not
-  `-5/-10`, or the PG via-handle fingerprint changes;
+- the recursively wrapped rectangle parser cannot produce one numeric
+  canonical box for either residual support object;
+- either residual support query returns other than one exact object, the two
+  objects share a handle, or any net/layer/shape/status/width/type/box/points/
+  length predicate differs from its contract;
+- source checkpoint SHA-256, VDD/VSS sWire inventory, or PG via inventory
+  changes during the read-only probe;
+- the final special marker set differs from the original exact 15-marker set;
 - geometry DRC, shorts, regular connectivity, or route completeness regresses;
 - Tie1 target/net counts, filler count, placement occupancy, or via fingerprint
   changes unexpectedly;
+- any anchor candidate is ambiguous, has an opposite-net conflict, or depends
+  on an incomplete query but is classified as feasible;
+- an endpoint-anchor or long-prune checkpoint is offered to PVS;
 - PVS evidence is missing exact GDS/source/control hashes;
 - LVS lacks an explicit `MATCH` statement.
 

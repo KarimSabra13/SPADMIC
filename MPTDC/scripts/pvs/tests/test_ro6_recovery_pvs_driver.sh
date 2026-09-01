@@ -1415,6 +1415,31 @@ write_tie1_pg_ro_gate \
   "$TIE1_PG_PRUNE_REPLAY_CKPT" "$TIE1_PG_PRUNE_REPLAY_SHA" long_prune \
   "$TIE1_PG_PRUNE_PROBE_RUN" "$TIE1_PG_PRUNE_PRIOR_V2_RUN"
 
+TIE1_PG_ANCHOR_RUN=tie1_pg_endpoint_anchor_fixture
+TIE1_PG_ANCHOR_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_ANCHOR_RUN/reports"
+TIE1_PG_ANCHOR_CKPT="$WORK/$TIE1_PG_ANCHOR_RUN/checkpoints/repaired_route.enc.dat"
+mkdir -p "$TIE1_PG_ANCHOR_REPORTS" "$TIE1_PG_ANCHOR_CKPT"
+printf 'tie1 PG endpoint anchor analysis only\n' > "$TIE1_PG_ANCHOR_CKPT/design.bin"
+TIE1_PG_ANCHOR_SHA="$(tree_hash "$TIE1_PG_ANCHOR_CKPT")"
+cat > "$TIE1_PG_ANCHOR_REPORTS/operator_gate_tie1_pg_endpoint_anchor_probe.rpt" <<EOF
+STEP=TIE1_PG_ENDPOINT_ANCHOR_PROBE
+SOURCE_TIE1_RUN_ID=$TIE1_CANDIDATE_RUN
+SOURCE_MINAREA_REPLAY_RUN_ID=$TIE1_MINAREA_REPLAY_RUN
+SOURCE_PG_PROBE_RUN_ID=$TIE1_PG_PRUNE_PROBE_RUN
+SOURCE_PG_PRIOR_TRIAL_RUN_ID=$TIE1_PG_PRUNE_TRIAL_RUN
+SOURCE_CHECKPOINT=$TIE1_MINAREA_REPLAY_CKPT
+SOURCE_CHECKPOINT_SHA256=$TIE1_MINAREA_REPLAY_SHA
+SOURCE_CHECKPOINT_HASH_STATUS=UNCHANGED
+ANCHOR_PROBE_STATUS=PASS_ANALYSIS
+PG_MUTATION_COMMAND_COUNT=0
+CANDIDATE_CHECKPOINT=$TIE1_PG_ANCHOR_CKPT
+CANDIDATE_CHECKPOINT_SHA256=$TIE1_PG_ANCHOR_SHA
+CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED
+SIGNOFF_ELIGIBLE=NO
+DECISION=PASS_ANALYSIS_KEEP_V13
+NEXT_STAGE=STOP_AND_REVIEW_ENDPOINT_ANCHORS
+EOF
+
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m minarea-replay-fixtures
 HEAD_SHA="$(git -C "$REPO" rev-parse HEAD)"
@@ -1507,69 +1532,76 @@ test "$(wc -l < "$PG_COMPOSITIONAL_CALLS")" -eq 4
 test "$(cat "$PG_COMPOSITIONAL_DRC_CALLS")" = base
 test "$(cat "$PG_COMPOSITIONAL_LVS_CALLS")" = 1
 
-for replay_kind in ring prune; do
-  if [[ "$replay_kind" == ring ]]; then
-    replay_run="$TIE1_PG_RING_REPLAY_RUN"
-    replay_ckpt="$TIE1_PG_RING_REPLAY_CKPT"
-    replay_sha="$TIE1_PG_RING_REPLAY_SHA"
-  else
-    replay_run="$TIE1_PG_PRUNE_REPLAY_RUN"
-    replay_ckpt="$TIE1_PG_PRUNE_REPLAY_CKPT"
-    replay_sha="$TIE1_PG_PRUNE_REPLAY_SHA"
-  fi
-  replay_calls="$TMP_ROOT/tie1_pg_${replay_kind}_compositional.calls"
-  replay_drc_calls="$TMP_ROOT/tie1_pg_${replay_kind}_compositional.drc_calls"
-  replay_lvs_calls="$TMP_ROOT/tie1_pg_${replay_kind}_compositional.lvs_calls"
-  run_driver "pvs_tie1_pg_${replay_kind}_compositional" "$replay_calls" \
-    --test-pnr-run "$replay_run" EXPECTED_PREP_CHECKPOINT="$replay_ckpt" \
-    FAKE_DRC_NONZERO_VARIANT=base EXPECT_COMPOSITIONAL_LVS=1 \
-    FAKE_LVS_MISMATCH=1 DRC_CALLS="$replay_drc_calls" \
-    LVS_CALLS="$replay_lvs_calls" \
-    --diagnostic-antenna-exception --diagnostic-ro-compositional \
-    > "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
-  grep -qx 'PNR_CANDIDATE_KIND=TIE1_MINAREA_PG_CLEAN_COMPOSITIONAL' \
-    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
-  grep -qx 'CANDIDATE_GATE_STATUS=PASS' \
-    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
-  if [[ "$replay_kind" == ring ]]; then
-    expected_gate_kind=RING_STITCH
-  else
-    expected_gate_kind=LONG_PRUNE
-  fi
-  grep -qx 'TIE1_PG_REPLAY_GATE_COUNT=1' \
-    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
-  grep -qx "TIE1_PG_REPLAY_GATE_KIND=$expected_gate_kind" \
-    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
-  grep -Fxqx "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$replay_sha" \
-    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
-  grep -qx 'NEXT_STAGE=RO6_BOUNDARY_LVS' \
-    "$TMP_ROOT/tie1_pg_${replay_kind}_compositional.stdout"
-  test "$(wc -l < "$replay_calls")" -eq 4
-done
+RING_REPLAY_CALLS="$TMP_ROOT/tie1_pg_ring_compositional.calls"
+RING_REPLAY_DRC_CALLS="$TMP_ROOT/tie1_pg_ring_compositional.drc_calls"
+RING_REPLAY_LVS_CALLS="$TMP_ROOT/tie1_pg_ring_compositional.lvs_calls"
+run_driver pvs_tie1_pg_ring_compositional "$RING_REPLAY_CALLS" \
+  --test-pnr-run "$TIE1_PG_RING_REPLAY_RUN" \
+  EXPECTED_PREP_CHECKPOINT="$TIE1_PG_RING_REPLAY_CKPT" \
+  FAKE_DRC_NONZERO_VARIANT=base EXPECT_COMPOSITIONAL_LVS=1 \
+  FAKE_LVS_MISMATCH=1 DRC_CALLS="$RING_REPLAY_DRC_CALLS" \
+  LVS_CALLS="$RING_REPLAY_LVS_CALLS" \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/tie1_pg_ring_compositional.stdout"
+grep -qx 'PNR_CANDIDATE_KIND=TIE1_MINAREA_PG_CLEAN_COMPOSITIONAL' \
+  "$TMP_ROOT/tie1_pg_ring_compositional.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=PASS' \
+  "$TMP_ROOT/tie1_pg_ring_compositional.stdout"
+grep -qx 'TIE1_PG_REPLAY_GATE_COUNT=1' \
+  "$TMP_ROOT/tie1_pg_ring_compositional.stdout"
+grep -qx 'TIE1_PG_REPLAY_GATE_KIND=RING_STITCH' \
+  "$TMP_ROOT/tie1_pg_ring_compositional.stdout"
+grep -Fxqx "CANDIDATE_CHECKPOINT_EXPECTED_SHA256=$TIE1_PG_RING_REPLAY_SHA" \
+  "$TMP_ROOT/tie1_pg_ring_compositional.stdout"
+grep -qx 'NEXT_STAGE=RO6_BOUNDARY_LVS' \
+  "$TMP_ROOT/tie1_pg_ring_compositional.stdout"
+test "$(wc -l < "$RING_REPLAY_CALLS")" -eq 4
 
-cp -p "$TIE1_PG_PRUNE_PRIOR_V2_CKPT/design.bin" \
-  "$TMP_ROOT/tie1_pg_prune_prior_v2.good.bin"
-printf 'rejected V2 checkpoint drift\n' >> \
-  "$TIE1_PG_PRUNE_PRIOR_V2_CKPT/design.bin"
-PRUNE_V2_HASH_DRIFT_CALLS="$TMP_ROOT/tie1_pg_prune_v2_hash_drift.calls"
+PRUNE_RETIRED_CALLS="$TMP_ROOT/tie1_pg_prune_retired.calls"
 set +e
-run_driver pvs_tie1_pg_prune_v2_hash_drift "$PRUNE_V2_HASH_DRIFT_CALLS" \
+run_driver pvs_tie1_pg_prune_retired "$PRUNE_RETIRED_CALLS" \
   --test-pnr-run "$TIE1_PG_PRUNE_REPLAY_RUN" \
   --diagnostic-antenna-exception --diagnostic-ro-compositional \
-  > "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
-PRUNE_V2_HASH_DRIFT_RC=$?
+  > "$TMP_ROOT/tie1_pg_prune_retired.stdout"
+PRUNE_RETIRED_RC=$?
 set -e
-test "$PRUNE_V2_HASH_DRIFT_RC" -eq 4
-grep -qx 'TIE1_PG_REPLAY_GATE_KIND=LONG_PRUNE' \
-  "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
+test "$PRUNE_RETIRED_RC" -eq 4
+grep -qx 'PNR_CANDIDATE_KIND=TIE1_PG_LONG_PRUNE_REPLAY_RETIRED' \
+  "$TMP_ROOT/tie1_pg_prune_retired.stdout"
+grep -qx 'TIE1_PG_REPLAY_GATE_COUNT=0' \
+  "$TMP_ROOT/tie1_pg_prune_retired.stdout"
+grep -qx 'TIE1_PG_REPLAY_GATE_KIND=NONE' \
+  "$TMP_ROOT/tie1_pg_prune_retired.stdout"
+grep -qx 'TIE1_PG_RETIRED_PRUNE_GATE_PRESENT=1' \
+  "$TMP_ROOT/tie1_pg_prune_retired.stdout"
 grep -qx 'CANDIDATE_GATE_STATUS=FAIL' \
-  "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
+  "$TMP_ROOT/tie1_pg_prune_retired.stdout"
 grep -qx 'PVS_RECOVERY_PREFLIGHT=FAIL' \
-  "$TMP_ROOT/tie1_pg_prune_v2_hash_drift.stdout"
-test ! -e "$PRUNE_V2_HASH_DRIFT_CALLS"
-test ! -e "$WORK/pvs_tie1_pg_prune_v2_hash_drift"
-cp -p "$TMP_ROOT/tie1_pg_prune_prior_v2.good.bin" \
-  "$TIE1_PG_PRUNE_PRIOR_V2_CKPT/design.bin"
+  "$TMP_ROOT/tie1_pg_prune_retired.stdout"
+test ! -e "$PRUNE_RETIRED_CALLS"
+test ! -e "$WORK/pvs_tie1_pg_prune_retired"
+
+ANCHOR_ANALYSIS_CALLS="$TMP_ROOT/tie1_pg_anchor_analysis.calls"
+set +e
+run_driver pvs_tie1_pg_anchor_analysis "$ANCHOR_ANALYSIS_CALLS" \
+  --test-pnr-run "$TIE1_PG_ANCHOR_RUN" \
+  --diagnostic-antenna-exception --diagnostic-ro-compositional \
+  > "$TMP_ROOT/tie1_pg_anchor_analysis.stdout"
+ANCHOR_ANALYSIS_RC=$?
+set -e
+test "$ANCHOR_ANALYSIS_RC" -eq 4
+grep -qx 'PNR_CANDIDATE_KIND=TIE1_PG_ENDPOINT_ANCHOR_ANALYSIS_ONLY' \
+  "$TMP_ROOT/tie1_pg_anchor_analysis.stdout"
+grep -qx 'TIE1_PG_ANALYSIS_GATE_PRESENT=1' \
+  "$TMP_ROOT/tie1_pg_anchor_analysis.stdout"
+grep -qx 'CANDIDATE_CHECKPOINT_HASH_STATUS=NOT_APPLICABLE_ANALYSIS_ONLY' \
+  "$TMP_ROOT/tie1_pg_anchor_analysis.stdout"
+grep -qx 'CANDIDATE_GATE_STATUS=FAIL' \
+  "$TMP_ROOT/tie1_pg_anchor_analysis.stdout"
+grep -qx 'PVS_RECOVERY_PREFLIGHT=FAIL' \
+  "$TMP_ROOT/tie1_pg_anchor_analysis.stdout"
+test ! -e "$ANCHOR_ANALYSIS_CALLS"
+test ! -e "$WORK/pvs_tie1_pg_anchor_analysis"
 
 UNEXPECTED_MATCH_CALLS="$TMP_ROOT/tie1_compositional_match.calls"
 set +e

@@ -148,8 +148,12 @@ VIA_OVERLAP_SHELF_LENGTH_UM=0.385
 VIA_OVERLAP_SHELF_WIDTH_UM=0.23
 RPT
 elif grep -q 'pg_ro_ring_checkpoint_tools' "$commands"; then
-  pg_ro="$run_dir/reports/pg_ro_ring_repair_status.rpt"
   mode="${MPTDC_PG_RO_MODE:-missing}"
+  if [[ "$mode" == anchor_probe ]]; then
+    pg_ro="$run_dir/reports/pg_ro_endpoint_anchor_probe_status.rpt"
+  else
+    pg_ro="$run_dir/reports/pg_ro_ring_repair_status.rpt"
+  fi
   ro_status=FAIL_FIXTURE
   rings=0
   vdd_delta=0
@@ -194,6 +198,22 @@ elif grep -q 'pg_ro_ring_checkpoint_tools' "$commands"; then
   swire_inventory_status=MISSING
   via_handle_status=MISSING
   long_prune_auth=MISSING
+  anchor_status=NOT_RUN
+  anchor_query_status=NOT_RUN
+  anchor_target_count=0
+  anchor_marker_count=0
+  anchor_marker_trim_count=0
+  anchor_marker_stitch_count=0
+  anchor_marker_blocked_count=0
+  anchor_marker_classification_status=NOT_RUN
+  anchor_trim_count=0
+  anchor_stitch_count=0
+  anchor_blocked_count=0
+  residual_support_count=0
+  residual_support_status=NOT_RUN
+  pg_mutation_count=0
+  source_swire_status=UNKNOWN
+  source_via_status=UNKNOWN
   if [[ "$mode" == ring_probe ]]; then
     rings=2
     vdd_delta=8
@@ -265,6 +285,23 @@ elif grep -q 'pg_ro_ring_checkpoint_tools' "$commands"; then
     final_route_gate=1
     final_unrouted=0
     ro_status=PASS_DANGLING_CLEARED
+  elif [[ "$mode" == anchor_probe ]]; then
+    anchor_status=PASS_ANALYSIS
+    anchor_query_status=PASS
+    anchor_target_count=13
+    anchor_marker_count=15
+    anchor_marker_trim_count=10
+    anchor_marker_stitch_count=0
+    anchor_marker_blocked_count=5
+    anchor_marker_classification_status=PASS
+    anchor_trim_count=10
+    anchor_stitch_count=0
+    anchor_blocked_count=3
+    residual_support_count=2
+    residual_support_status=PASS
+    source_swire_status=UNCHANGED
+    source_via_status=UNCHANGED
+    ro_status=PASS_ANALYSIS_NO_MUTATION
   fi
   cat > "$pg_ro" <<RPT
 PG_RO_REPAIR_MODE=$mode
@@ -325,6 +362,22 @@ FINAL_VSS_SWIRE_INVENTORY_DELTA=$final_vss_swire_delta
 SWIRE_INVENTORY_STATUS=$swire_inventory_status
 PG_VIA_HANDLE_STATUS=$via_handle_status
 LONG_PRUNE_AUTHORIZATION=$long_prune_auth
+ANCHOR_PROBE_STATUS=$anchor_status
+ANCHOR_QUERY_COMPLETENESS_STATUS=$anchor_query_status
+ANCHOR_TARGET_COUNT=$anchor_target_count
+ANCHOR_MARKER_COUNT=$anchor_marker_count
+ANCHOR_MARKER_TRIM_FEASIBLE_COUNT=$anchor_marker_trim_count
+ANCHOR_MARKER_STITCH_FEASIBLE_COUNT=$anchor_marker_stitch_count
+ANCHOR_MARKER_BLOCKED_COUNT=$anchor_marker_blocked_count
+ANCHOR_MARKER_CLASSIFICATION_STATUS=$anchor_marker_classification_status
+ANCHOR_TRIM_FEASIBLE_COUNT=$anchor_trim_count
+ANCHOR_STITCH_FEASIBLE_COUNT=$anchor_stitch_count
+ANCHOR_BLOCKED_COUNT=$anchor_blocked_count
+RESIDUAL_SUPPORT_OBJECT_COUNT=$residual_support_count
+RESIDUAL_SUPPORT_STATUS=$residual_support_status
+PG_MUTATION_COMMAND_COUNT=$pg_mutation_count
+SOURCE_SWIRE_STATUS=$source_swire_status
+SOURCE_VIA_STATUS=$source_via_status
 FINAL_DANGLING_MARKER_COUNT=$dangling
 RPT
 else
@@ -605,7 +658,7 @@ run_stage tie1-pg-ro-ring-probe "$RING_REJECTED_RUN" \
   > "$TMP_ROOT/pg_ro_ring_probe_rejected.stdout"
 grep -qx 'DECISION=PASS_ANALYSIS_KEEP_MINAREA_CANDIDATE' \
   "$TMP_ROOT/pg_ro_ring_probe_rejected.stdout"
-grep -qx 'NEXT_STAGE=TIE1_PG_LONG_PRUNE_TRIAL' \
+grep -qx 'NEXT_STAGE=TIE1_PG_ENDPOINT_ANCHOR_PROBE' \
   "$TMP_ROOT/pg_ro_ring_probe_rejected.stdout"
 grep -qx 'PG_REPAIR_TRIAL_OUTCOME=RING_PROBE_REJECTED_NO_SOURCE_MUTATION' \
   "$WORK/$RING_REJECTED_RUN/reports/operator_gate_tie1_pg_ro_ring_probe.rpt"
@@ -763,60 +816,139 @@ EOF
 git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$PRIOR_PRUNE_V2_RUN"
 git -C "$REPO" commit -q -m failed-long-prune-v2-evidence
 
-MISSING_PRIOR_CALLS_BEFORE="$(wc -l < "$TMP_ROOT/publish.calls")"
-set +e
-run_stage tie1-pg-long-prune-trial pg_long_prune_missing_prior \
+PRIOR_PRUNE_V3_RUN=pg_long_prune_v3_failed
+PRIOR_PRUNE_V3_CHECKPOINT="$WORK/$PRIOR_PRUNE_V3_RUN/checkpoints/repaired_route.enc.dat"
+PRIOR_PRUNE_V3_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$PRIOR_PRUNE_V3_RUN/reports"
+mkdir -p "$PRIOR_PRUNE_V3_CHECKPOINT" "$PRIOR_PRUNE_V3_REPORTS"
+printf 'failed prune v3 diagnostic\n' > "$PRIOR_PRUNE_V3_CHECKPOINT/design.bin"
+PRIOR_PRUNE_V3_SHA="$(tree_hash "$PRIOR_PRUNE_V3_CHECKPOINT")"
+cat > "$PRIOR_PRUNE_V3_REPORTS/operator_gate_tie1_pg_long_prune_trial.rpt" <<EOF
+STEP=TIE1_PG_LONG_PRUNE_TRIAL
+SOURCE_TIE1_RUN_ID=$TIE1_RUN
+SOURCE_MINAREA_REPLAY_RUN_ID=$REPLAY_RUN
+SOURCE_PG_PROBE_RUN_ID=$RING_REJECTED_RUN
+SOURCE_PG_PRIOR_TRIAL_RUN_ID=$PRIOR_PRUNE_V2_RUN
+SOURCE_PG_TRIAL_RUN_ID=NONE
+SOURCE_CHECKPOINT=$WORK/$REPLAY_RUN/checkpoints/repaired_route.enc.dat
+SOURCE_CHECKPOINT_SHA256=$REPLAY_SHA
+TOOL_RC=0
+COMMAND_1_STATUS=PASS
+PG_RO_REPAIR_MODE=long_prune
+PG_RO_REPAIR_STATUS=FAIL_LONG_PRUNE_GATE
+SOURCE_TOPOLOGY_STATUS=PASS
+INITIAL_DANGLING_MARKER_COUNT=15
+SOURCE_UNIQUE_HANDLE_COUNT=13
+SOURCE_SHARED_HANDLE_COUNT=2
+RO_RING_CREATED_COUNT=0
+RO_RING_SWIRE_DELTA_VDD=0
+RO_RING_SWIRE_DELTA_VSS=0
+RING_GEOMETRY_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+MARKER_RING_MAPPING_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+REPLACEMENT_ATTEMPTS=0
+VIA_ATTEMPTS=0
+PRUNE_ATTEMPTS=13
+PRUNE_SUCCESSES=13
+SOURCE_PRUNE_TRANSITION_STATUS=PASS
+SOURCE_PRUNE_EXPOSED_RESIDUAL_COUNT=2
+SOURCE_PRUNE_EXPOSED_RESIDUAL_SET=NORTH SOUTH
+RESIDUAL_PRUNE_POLICY=EXACT_TWO_EXPOSED_VSS_MET1_COREWIRES_V3
+RESIDUAL_EXPECTED_COUNT=2
+RESIDUAL_EXPECTED_MARKER_FINGERPRINT=VSS|MET1|124.160|723.520,VSS|MET1|204.160|150.080
+RESIDUAL_PRUNE_CANDIDATE_COUNT=0
+RESIDUAL_PRUNE_ATTEMPTS=0
+RESIDUAL_PRUNE_SUCCESSES=0
+TOTAL_PRUNE_ATTEMPTS=13
+TOTAL_PRUNE_SUCCESSES=13
+FINAL_VDD_SWIRE_INVENTORY_COUNT=445
+FINAL_VSS_SWIRE_INVENTORY_COUNT=411
+FINAL_VDD_SWIRE_INVENTORY_DELTA=-5
+FINAL_VSS_SWIRE_INVENTORY_DELTA=-8
+SWIRE_INVENTORY_STATUS=FAIL
+PG_VIA_HANDLE_STATUS=FAIL_CHANGED
+LONG_PRUNE_AUTHORIZATION=EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_DANGLING_COUNT=2
+FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
+FINAL_ROUTE_GATE_PASS=0
+PG_REPAIR_TRIAL_OUTCOME=FAIL
+CANDIDATE_CHECKPOINT=$PRIOR_PRUNE_V3_CHECKPOINT
+CANDIDATE_CHECKPOINT_SHA256=$PRIOR_PRUNE_V3_SHA
+CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED
+SIGNOFF_ELIGIBLE=NO
+DECISION=FAIL_STOP
+NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE
+EOF
+cat > "$PRIOR_PRUNE_V3_REPORTS/pg_ro_ring_repair_status.rpt" <<'EOF'
+PRUNE_12_STATUS=PASS
+PRUNE_12_RESIDUAL_TRANSITION=NORTH
+PRUNE_13_STATUS=PASS
+PRUNE_13_RESIDUAL_TRANSITION=SOUTH
+SOURCE_PRUNE_TRANSITION_STATUS=PASS
+RESIDUAL_PRUNE_1_RAW_EXACT_COUNT=1
+RESIDUAL_PRUNE_1_RAW_NEARBY_COUNT=0
+RESIDUAL_PRUNE_1_CONTRACT_CANDIDATE_COUNT=0
+RESIDUAL_PRUNE_2_RAW_EXACT_COUNT=1
+RESIDUAL_PRUNE_2_RAW_NEARBY_COUNT=0
+RESIDUAL_PRUNE_2_CONTRACT_CANDIDATE_COUNT=0
+VDD_VIA_HANDLE_COUNT_PRE=4575
+VDD_VIA_HANDLE_COUNT_POST=4412
+VSS_VIA_HANDLE_COUNT_PRE=4524
+VSS_VIA_HANDLE_COUNT_POST=4197
+PG_VIA_HANDLE_STATUS=FAIL_CHANGED
+FINAL_DANGLING_MARKER_COUNT=2
+EOF
+cat > "$PRIOR_PRUNE_V3_REPORTS/pg_ro_final_verify_special_detailed.rpt" <<'EOF'
+Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1
+Net VSS: dangling Wire at (204.160, 150.080) (204.160, 150.080) on layer: MET1
+EOF
+git -C "$REPO" add "MPTDC/docs/server_snapshots/innovus/$PRIOR_PRUNE_V3_RUN"
+git -C "$REPO" commit -q -m failed-long-prune-v3-evidence
+
+RETIRED_PRUNE_CALLS_BEFORE="$(wc -l < "$TMP_ROOT/publish.calls")"
+for retired_stage in tie1-pg-long-prune-trial tie1-pg-long-prune-replay; do
+  set +e
+  run_stage "$retired_stage" "${retired_stage//-/_}_retired" \
+    --source-minarea-replay-run-id "$REPLAY_RUN" \
+    --source-pg-probe-run-id "$RING_REJECTED_RUN" \
+    --source-pg-prior-trial-run-id "$PRIOR_PRUNE_V3_RUN" \
+    --source-pg-trial-run-id "$PRIOR_PRUNE_V3_RUN" \
+    > "$TMP_ROOT/${retired_stage//-/_}_retired.stdout" 2>&1
+  RETIRED_PRUNE_RC=$?
+  set -e
+  test "$RETIRED_PRUNE_RC" -eq 2
+  grep -q "ERROR: unsupported --stage: $retired_stage" \
+    "$TMP_ROOT/${retired_stage//-/_}_retired.stdout"
+done
+test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq "$RETIRED_PRUNE_CALLS_BEFORE"
+
+ANCHOR_RUN=pg_endpoint_anchor_probe
+run_stage tie1-pg-endpoint-anchor-probe "$ANCHOR_RUN" \
   --source-minarea-replay-run-id "$REPLAY_RUN" \
   --source-pg-probe-run-id "$RING_REJECTED_RUN" \
-  > "$TMP_ROOT/pg_long_prune_missing_prior.stdout" 2>&1
-MISSING_PRIOR_RC=$?
-set -e
-test "$MISSING_PRIOR_RC" -eq 2
-test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq "$MISSING_PRIOR_CALLS_BEFORE"
-
-WRONG_GENERATION_CALLS_BEFORE="$(wc -l < "$TMP_ROOT/publish.calls")"
-set +e
-run_stage tie1-pg-long-prune-trial pg_long_prune_wrong_prior_generation \
-  --source-minarea-replay-run-id "$REPLAY_RUN" \
-  --source-pg-probe-run-id "$RING_REJECTED_RUN" \
-  --source-pg-prior-trial-run-id "$PRIOR_PRUNE_RUN" \
-  > "$TMP_ROOT/pg_long_prune_wrong_prior_generation.stdout" 2>&1
-WRONG_GENERATION_RC=$?
-set -e
-test "$WRONG_GENERATION_RC" -eq 4
-grep -qx 'TIE1_CLOSURE_PREFLIGHT=FAIL' \
-  "$TMP_ROOT/pg_long_prune_wrong_prior_generation.stdout"
-test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq \
-  "$WRONG_GENERATION_CALLS_BEFORE"
-
-PRUNE_TRIAL_RUN=pg_long_prune_trial
-run_stage tie1-pg-long-prune-trial "$PRUNE_TRIAL_RUN" \
-  --source-minarea-replay-run-id "$REPLAY_RUN" \
-  --source-pg-probe-run-id "$RING_REJECTED_RUN" \
-  --source-pg-prior-trial-run-id "$PRIOR_PRUNE_V2_RUN" \
-  > "$TMP_ROOT/pg_long_prune_trial.stdout"
-grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_long_prune_trial.stdout"
-grep -qx 'NEXT_STAGE=TIE1_PG_LONG_PRUNE_REPLAY' \
-  "$TMP_ROOT/pg_long_prune_trial.stdout"
-grep -qx 'PRUNE_SUCCESSES=13' \
-  "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-grep -qx 'RESIDUAL_PRUNE_SUCCESSES=2' \
-  "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-grep -qx 'TOTAL_PRUNE_SUCCESSES=15' \
-  "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-grep -qx 'PG_VIA_HANDLE_STATUS=UNCHANGED' \
-  "$WORK/$PRUNE_TRIAL_RUN/reports/operator_gate_tie1_pg_long_prune_trial.rpt"
-
-PRUNE_REPLAY_RUN=pg_long_prune_replay
-run_stage tie1-pg-long-prune-replay "$PRUNE_REPLAY_RUN" \
-  --source-minarea-replay-run-id "$REPLAY_RUN" \
-  --source-pg-trial-run-id "$PRUNE_TRIAL_RUN" \
-  > "$TMP_ROOT/pg_long_prune_replay.stdout"
-grep -qx 'DECISION=PASS_CONTINUE' "$TMP_ROOT/pg_long_prune_replay.stdout"
-grep -qx 'NEXT_STAGE=PVS_BASE_DRC_AND_COMPOSITIONAL_LVS' \
-  "$TMP_ROOT/pg_long_prune_replay.stdout"
-grep -qx 'ANTENNA_REPAIR_ATTEMPTED=NO' \
-  "$WORK/$PRUNE_REPLAY_RUN/reports/operator_gate_tie1_pg_long_prune_replay.rpt"
+  --source-pg-prior-trial-run-id "$PRIOR_PRUNE_V3_RUN" \
+  > "$TMP_ROOT/pg_endpoint_anchor_probe.stdout"
+grep -qx 'DECISION=PASS_ANALYSIS_KEEP_V13' \
+  "$TMP_ROOT/pg_endpoint_anchor_probe.stdout"
+grep -qx 'NEXT_STAGE=STOP_AND_REVIEW_ENDPOINT_ANCHORS' \
+  "$TMP_ROOT/pg_endpoint_anchor_probe.stdout"
+ANCHOR_GATE="$WORK/$ANCHOR_RUN/reports/operator_gate_tie1_pg_endpoint_anchor_probe.rpt"
+grep -qx 'SOURCE_CHECKPOINT_HASH_STATUS=UNCHANGED' "$ANCHOR_GATE"
+grep -qx 'ANCHOR_PROBE_STATUS=PASS_ANALYSIS' "$ANCHOR_GATE"
+grep -qx 'ANCHOR_TARGET_COUNT=13' "$ANCHOR_GATE"
+grep -qx 'ANCHOR_MARKER_COUNT=15' "$ANCHOR_GATE"
+grep -qx 'ANCHOR_MARKER_CLASSIFICATION_STATUS=PASS' "$ANCHOR_GATE"
+grep -qx 'RESIDUAL_SUPPORT_OBJECT_COUNT=2' "$ANCHOR_GATE"
+grep -qx 'PG_MUTATION_COMMAND_COUNT=0' "$ANCHOR_GATE"
+grep -qx 'SOURCE_SWIRE_STATUS=UNCHANGED' "$ANCHOR_GATE"
+grep -qx 'SOURCE_VIA_STATUS=UNCHANGED' "$ANCHOR_GATE"
+grep -qx 'FINAL_SPECIAL_DANGLING_COUNT=15' "$ANCHOR_GATE"
+grep -qx 'CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED' "$ANCHOR_GATE"
+grep -qx 'SIGNOFF_ELIGIBLE=NO' "$ANCHOR_GATE"
 
 sed -i 's/^FINAL_DRC=0$/FINAL_DRC=1/' \
   "$REPO/MPTDC/docs/server_snapshots/innovus/$TRIAL_RUN/reports/operator_gate_tie1_minarea_endext_trial.rpt"
@@ -833,5 +965,5 @@ test "$BROKEN_RC" -eq 4
 grep -qx 'TIE1_CLOSURE_PREFLIGHT=FAIL' "$TMP_ROOT/pg_broken_ancestry.stdout"
 test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq "$BROKEN_CALLS_BEFORE"
 
-test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq 13
+test "$(wc -l < "$TMP_ROOT/publish.calls")" -eq 12
 echo 'MPTDC_TIE1_CLOSURE_STAGE_DRIVER_TEST=PASS'

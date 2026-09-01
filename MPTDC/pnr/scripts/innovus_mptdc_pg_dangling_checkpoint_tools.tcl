@@ -90,12 +90,22 @@ proc mptdc_pg_dangling_dbget {expr {default UNKNOWN}} {
     return $value
 }
 
-proc mptdc_pg_dangling_rect {raw} {
+proc mptdc_pg_dangling_rect {raw {depth 0}} {
     set raw [string trim $raw]
     if {$raw eq "" || $raw eq "UNKNOWN" || $raw eq "0x0" || $raw eq "NULL"} {
         return {}
     }
-    if {[llength $raw] != 4} {
+    if {$depth > 8 || [catch {set count [llength $raw]}]} {
+        return {}
+    }
+    if {$count == 1} {
+        set inner [lindex $raw 0]
+        if {$inner eq $raw} {
+            return {}
+        }
+        return [mptdc_pg_dangling_rect $inner [expr {$depth + 1}]]
+    }
+    if {$count != 4} {
         return {}
     }
     foreach value $raw {
@@ -103,7 +113,12 @@ proc mptdc_pg_dangling_rect {raw} {
             return {}
         }
     }
-    return $raw
+    lassign $raw x1 y1 x2 y2
+    return [list \
+        [expr {min(double($x1), double($x2))}] \
+        [expr {min(double($y1), double($y2))}] \
+        [expr {max(double($x1), double($x2))}] \
+        [expr {max(double($y1), double($y2))}]]
 }
 
 proc mptdc_pg_dangling_point_distance_to_rect {x y rect} {

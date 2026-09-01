@@ -923,29 +923,43 @@ proc mptdc_pg_ro_rect_match {lhs rhs eps} {
     return 1
 }
 
+proc mptdc_pg_ro_residual_contract_checks {rec contract eps} {
+    set points [dict get $rec points]
+    set length [dict get $rec length_um]
+    set checks [dict create \
+        NET [expr {[dict get $rec net] eq "VSS"}] \
+        LAYER [expr {[string toupper [dict get $rec layer]] eq "MET1"}] \
+        SHAPE [expr {[string tolower [dict get $rec shape]] eq "corewire"}] \
+        STATUS [expr {[string tolower [dict get $rec status]] eq "routed"}] \
+        GEOMTYPE [expr {[string tolower [dict get $rec geomType]] eq "pathseg"}] \
+        WIDTH [mptdc_pg_ro_close [dict get $rec width] 0.8 $eps] \
+        ORIENTATION [expr {[mptdc_pg_ro_orientation $points $eps] eq "HORIZONTAL"}] \
+        POINTS [mptdc_pg_ro_points_match $points [dict get $contract points] $eps] \
+        RECT [mptdc_pg_ro_rect_match [dict get $rec rect] [dict get $contract rect] $eps] \
+        MARKER_IN_BOX [dict get $rec box_match] \
+        LENGTH_NUMERIC [string is double -strict $length] \
+        LENGTH_POSITIVE [expr {[string is double -strict $length] && $length > $eps}] \
+        LENGTH [expr {[string is double -strict $length] && \
+            [mptdc_pg_ro_close $length [dict get $contract length_um] $eps]}]]
+    set failures {}
+    dict for {name passed} $checks {
+        if {!$passed} { lappend failures $name }
+    }
+    return [dict create status [expr {[llength $failures] == 0 ? {PASS} : {FAIL}}] \
+        checks $checks failures $failures]
+}
+
 proc mptdc_pg_ro_residual_contract_candidates {marker contract eps near} {
     set found [mptdc_pg_ro_marker_candidates $marker $eps $near]
     set by_handle [dict create]
-    set expected_points [dict get $contract points]
-    set expected_rect [dict get $contract rect]
-    set expected_length [dict get $contract length_um]
+    set diagnostics {}
     foreach rec [concat [dict get $found exact] [dict get $found nearby]] {
         set handle [dict get $rec handle]
         if {[dict exists $by_handle $handle]} { continue }
-        set points [dict get $rec points]
-        set length [dict get $rec length_um]
-        if {[dict get $rec net] ne "VSS" ||
-            [string toupper [dict get $rec layer]] ne "MET1" ||
-            [string tolower [dict get $rec shape]] ne "corewire" ||
-            [string tolower [dict get $rec status]] ne "routed" ||
-            [string tolower [dict get $rec geomType]] ne "pathseg" ||
-            ![mptdc_pg_ro_close [dict get $rec width] 0.8 $eps] ||
-            [mptdc_pg_ro_orientation $points $eps] ne "HORIZONTAL" ||
-            ![mptdc_pg_ro_points_match $points $expected_points $eps] ||
-            ![mptdc_pg_ro_rect_match [dict get $rec rect] $expected_rect $eps] ||
-            ![dict get $rec box_match] ||
-            ![string is double -strict $length] || $length <= $eps ||
-            ![mptdc_pg_ro_close $length $expected_length $eps]} {
+        set diagnostic [mptdc_pg_ro_residual_contract_checks $rec $contract $eps]
+        dict set diagnostic handle $handle
+        lappend diagnostics $diagnostic
+        if {[dict get $diagnostic status] ne "PASS"} {
             continue
         }
         dict set rec orientation HORIZONTAL
@@ -957,7 +971,506 @@ proc mptdc_pg_ro_residual_contract_candidates {marker contract eps near} {
     }
     return [dict create candidates $candidates exact_count \
         [llength [dict get $found exact]] nearby_count \
-        [llength [dict get $found nearby]]]
+        [llength [dict get $found nearby]] diagnostics $diagnostics]
+}
+
+proc mptdc_pg_ro_point {raw {depth 0}} {
+    set raw [string trim $raw]
+    if {$raw eq "" || $raw in {UNKNOWN 0x0 NULL} || $depth > 8 ||
+        [catch {set count [llength $raw]}]} {
+        return {}
+    }
+    if {$count == 1} {
+        set inner [lindex $raw 0]
+        if {$inner eq $raw} { return {} }
+        return [mptdc_pg_ro_point $inner [expr {$depth + 1}]]
+    }
+    if {$count != 2} { return {} }
+    lassign $raw x y
+    if {![string is double -strict $x] || ![string is double -strict $y]} {
+        return {}
+    }
+    return [list [expr {double($x)}] [expr {double($y)}]]
+}
+
+proc mptdc_pg_ro_point_on_segment {point points eps} {
+    set point [mptdc_pg_ro_point $point]
+    set points [mptdc_pg_ro_two_points $points]
+    if {[llength $point] != 2 || [llength $points] != 2} { return 0 }
+    lassign $point x y
+    lassign [lindex $points 0] x0 y0
+    lassign [lindex $points 1] x1 y1
+    if {[mptdc_pg_ro_orientation $points $eps] eq "HORIZONTAL"} {
+        return [expr {[mptdc_pg_ro_close $y $y0 $eps] &&
+            $x >= min($x0, $x1) - $eps && $x <= max($x0, $x1) + $eps}]
+    }
+    if {[mptdc_pg_ro_orientation $points $eps] eq "VERTICAL"} {
+        return [expr {[mptdc_pg_ro_close $x $x0 $eps] &&
+            $y >= min($y0, $y1) - $eps && $y <= max($y0, $y1) + $eps}]
+    }
+    return 0
+}
+
+proc mptdc_pg_ro_distance_along_segment {origin point points eps} {
+    if {![mptdc_pg_ro_point_on_segment $origin $points $eps] ||
+        ![mptdc_pg_ro_point_on_segment $point $points $eps]} {
+        return 1.0e30
+    }
+    lassign [mptdc_pg_ro_point $origin] x0 y0
+    lassign [mptdc_pg_ro_point $point] x1 y1
+    return [expr {abs($x1 - $x0) + abs($y1 - $y0)}]
+}
+
+proc mptdc_pg_ro_segment_intersections {lhs rhs eps} {
+    set lhs [mptdc_pg_ro_two_points $lhs]
+    set rhs [mptdc_pg_ro_two_points $rhs]
+    set lhs_orientation [mptdc_pg_ro_orientation $lhs $eps]
+    set rhs_orientation [mptdc_pg_ro_orientation $rhs $eps]
+    if {$lhs_orientation eq "INVALID" || $rhs_orientation eq "INVALID"} {
+        return {}
+    }
+    lassign [lindex $lhs 0] ax0 ay0
+    lassign [lindex $lhs 1] ax1 ay1
+    lassign [lindex $rhs 0] bx0 by0
+    lassign [lindex $rhs 1] bx1 by1
+    set points {}
+    if {$lhs_orientation eq "HORIZONTAL" && $rhs_orientation eq "VERTICAL"} {
+        set point [list $bx0 $ay0]
+        if {[mptdc_pg_ro_point_on_segment $point $lhs $eps] &&
+            [mptdc_pg_ro_point_on_segment $point $rhs $eps]} {
+            lappend points $point
+        }
+    } elseif {$lhs_orientation eq "VERTICAL" && $rhs_orientation eq "HORIZONTAL"} {
+        return [mptdc_pg_ro_segment_intersections $rhs $lhs $eps]
+    } elseif {$lhs_orientation eq "HORIZONTAL" &&
+        [mptdc_pg_ro_close $ay0 $by0 $eps]} {
+        set low [expr {max(min($ax0, $ax1), min($bx0, $bx1))}]
+        set high [expr {min(max($ax0, $ax1), max($bx0, $bx1))}]
+        if {$low <= $high + $eps} {
+            lappend points [list $low $ay0]
+            if {![mptdc_pg_ro_close $low $high $eps]} {
+                lappend points [list $high $ay0]
+            }
+        }
+    } elseif {$lhs_orientation eq "VERTICAL" &&
+        [mptdc_pg_ro_close $ax0 $bx0 $eps]} {
+        set low [expr {max(min($ay0, $ay1), min($by0, $by1))}]
+        set high [expr {min(max($ay0, $ay1), max($by0, $by1))}]
+        if {$low <= $high + $eps} {
+            lappend points [list $ax0 $low]
+            if {![mptdc_pg_ro_close $low $high $eps]} {
+                lappend points [list $ax0 $high]
+            }
+        }
+    }
+    return $points
+}
+
+proc mptdc_pg_ro_segment_rect_points {points rect eps} {
+    set points [mptdc_pg_ro_two_points $points]
+    set rect [mptdc_pg_dangling_rect $rect]
+    if {[llength $points] != 2 || [llength $rect] != 4} { return {} }
+    lassign [lindex $points 0] x0 y0
+    lassign [lindex $points 1] x1 y1
+    lassign $rect rx0 ry0 rx1 ry1
+    set out {}
+    if {[mptdc_pg_ro_orientation $points $eps] eq "HORIZONTAL" &&
+        $y0 >= $ry0 - $eps && $y0 <= $ry1 + $eps} {
+        set low [expr {max(min($x0, $x1), $rx0)}]
+        set high [expr {min(max($x0, $x1), $rx1)}]
+        if {$low <= $high + $eps} {
+            lappend out [list $low $y0]
+            if {![mptdc_pg_ro_close $low $high $eps]} { lappend out [list $high $y0] }
+        }
+    } elseif {[mptdc_pg_ro_orientation $points $eps] eq "VERTICAL" &&
+        $x0 >= $rx0 - $eps && $x0 <= $rx1 + $eps} {
+        set low [expr {max(min($y0, $y1), $ry0)}]
+        set high [expr {min(max($y0, $y1), $ry1)}]
+        if {$low <= $high + $eps} {
+            lappend out [list $x0 $low]
+            if {![mptdc_pg_ro_close $low $high $eps]} { lappend out [list $x0 $high] }
+        }
+    }
+    return $out
+}
+
+proc mptdc_pg_ro_normalize_swire_record {rec} {
+    set points [mptdc_pg_ro_two_points [dict get $rec pts]]
+    dict set rec points $points
+    dict set rec orientation [mptdc_pg_ro_orientation $points]
+    dict set rec rect [mptdc_pg_dangling_rect [dict get $rec box]]
+    dict set rec length_um [mptdc_pg_dangling_path_length $points [dict get $rec rect]]
+    return $rec
+}
+
+proc mptdc_pg_ro_via_records {net} {
+    set handles [mptdc_pg_ro_via_handle_set $net]
+    set records {}
+    set invalid_handles {}
+    foreach handle $handles {
+        set point [mptdc_pg_ro_point [mptdc_pg_dangling_dbget "$handle.pt" ""]]
+        if {[llength $point] != 2} {
+            lappend invalid_handles $handle
+            continue
+        }
+        lappend records [dict create handle $handle net $net point $point \
+            name [mptdc_pg_dangling_dbget "$handle.via.name" UNKNOWN]]
+    }
+    set status [expr {[llength $handles] > 0 && \
+        [llength $invalid_handles] == 0 ? {PASS} : {FAIL}}]
+    return [dict create status $status handle_count [llength $handles] \
+        records $records invalid_handles $invalid_handles]
+}
+
+proc mptdc_pg_ro_pg_term_shape_records {net} {
+    set term_handles [mptdc_pg_ro_valid_handles \
+        [mptdc_pg_dangling_dbget "top.pgTerms.net.name $net -p2" ""]]
+    if {[llength $term_handles] == 0} {
+        set term_handles [mptdc_pg_ro_valid_handles \
+            [mptdc_pg_dangling_dbget "top.pgTerms.name ${net}* -p" ""]]
+    }
+    set records {}
+    foreach term $term_handles {
+        set term_name [mptdc_pg_dangling_dbget "$term.name" UNKNOWN]
+        set shape_handles {}
+        foreach expression [list "$term.pins.allShapes" "$term.pin.allShapes" \
+            "$term.allShapes"] {
+            foreach shape [mptdc_pg_ro_valid_handles \
+                [mptdc_pg_dangling_dbget $expression ""]] {
+                if {[lsearch -exact $shape_handles $shape] < 0} { lappend shape_handles $shape }
+            }
+        }
+        foreach shape $shape_handles {
+            set layer [mptdc_pg_dangling_dbget "$shape.layer.name" UNKNOWN]
+            set rect {}
+            foreach attr {box rect shapes.box shapes.rect} {
+                if {[llength $rect] == 4} { break }
+                set rect [mptdc_pg_dangling_rect \
+                    [mptdc_pg_dangling_dbget "$shape.$attr" ""]]
+            }
+            if {[llength $rect] != 4} { continue }
+            lappend records [dict create handle $shape term $term_name net $net \
+                layer [string toupper [lindex $layer 0]] rect $rect]
+        }
+    }
+    set status [expr {[llength $term_handles] > 0 && [llength $records] > 0 ? \
+        {PASS} : {UNAVAILABLE}}]
+    return [dict create status $status term_count [llength $term_handles] \
+        records $records]
+}
+
+proc mptdc_pg_ro_sorted_anchor_candidates {candidates} {
+    set keyed {}
+    foreach candidate $candidates {
+        lassign [dict get $candidate point] x y
+        set key [format "%d|%s|%012.6f|%012.6f|%s" \
+            [expr {[dict get $candidate anchor] ? 0 : 1}] \
+            [dict get $candidate kind] $x $y [dict get $candidate handle]]
+        lappend keyed [list $key $candidate]
+    }
+    set out {}
+    foreach item [lsort -dictionary -index 0 $keyed] {
+        lappend out [lindex $item 1]
+    }
+    return $out
+}
+
+proc mptdc_pg_ro_anchor_classify_marker {marker target candidates query_status eps} {
+    set origin [list [dict get $marker x] [dict get $marker y]]
+    set points [dict get $target points]
+    set anchors {}
+    set conflicts {}
+    foreach candidate $candidates {
+        set point [dict get $candidate point]
+        set distance [mptdc_pg_ro_distance_along_segment $origin $point $points $eps]
+        if {$distance >= 1.0e29 || $distance <= $eps} { continue }
+        dict set candidate distance_um $distance
+        if {[dict get $candidate anchor]} {
+            lappend anchors $candidate
+        } else {
+            lappend conflicts $candidate
+        }
+    }
+    if {$query_status ne "PASS"} {
+        return [dict create status BLOCKED reason INCOMPLETE_QUERY \
+            candidate_count [llength $anchors] nearest_distance_um UNKNOWN \
+            nearest_point UNKNOWN conflict_count [llength $conflicts]]
+    }
+    if {[llength $anchors] == 0} {
+        return [dict create status BLOCKED reason NO_RETAINED_ANCHOR \
+            candidate_count 0 nearest_distance_um UNKNOWN nearest_point UNKNOWN \
+            conflict_count [llength $conflicts]]
+    }
+    set ordered {}
+    foreach candidate $anchors {
+        lappend ordered [list [dict get $candidate distance_um] $candidate]
+    }
+    set ordered [lsort -real -index 0 $ordered]
+    set nearest_distance [lindex [lindex $ordered 0] 0]
+    set nearest_by_point [dict create]
+    foreach item $ordered {
+        if {![mptdc_pg_ro_close [lindex $item 0] $nearest_distance $eps]} { break }
+        set candidate [lindex $item 1]
+        lassign [dict get $candidate point] x y
+        dict set nearest_by_point [format "%.3f|%.3f" $x $y] $candidate
+    }
+    if {[dict size $nearest_by_point] != 1} {
+        return [dict create status BLOCKED reason AMBIGUOUS_NEAREST_ANCHOR \
+            candidate_count [llength $anchors] nearest_distance_um $nearest_distance \
+            nearest_point UNKNOWN conflict_count [llength $conflicts]]
+    }
+    set nearest [dict get $nearest_by_point [lindex [dict keys $nearest_by_point] 0]]
+    if {[llength $conflicts] > 0} {
+        return [dict create status BLOCKED reason OPPOSITE_NET_CONFLICT \
+            candidate_count [llength $anchors] nearest_distance_um $nearest_distance \
+            nearest_point [dict get $nearest point] \
+            conflict_count [llength $conflicts]]
+    }
+    return [dict create status TRIM_FEASIBLE reason UNIQUE_RETAINED_ANCHOR \
+        candidate_count [llength $anchors] nearest_distance_um $nearest_distance \
+        nearest_point [dict get $nearest point] conflict_count 0]
+}
+
+proc mptdc_pg_ro_anchor_candidates {marker target records_by_net vias_by_net \
+    pg_shapes_by_net eps} {
+    set candidates {}
+    set target_handle [dict get $target handle]
+    set target_net [dict get $target net]
+    set target_layer [string toupper [dict get $target layer]]
+    set target_points [dict get $target points]
+    foreach rec [dict get $records_by_net $target_net] {
+        set rec [mptdc_pg_ro_normalize_swire_record $rec]
+        if {[dict get $rec handle] eq $target_handle ||
+            [string toupper [dict get $rec layer]] ne $target_layer} { continue }
+        foreach point [mptdc_pg_ro_segment_intersections $target_points \
+            [dict get $rec points] $eps] {
+            lappend candidates [dict create anchor 1 kind SAME_NET_SWIRE \
+                handle [dict get $rec handle] point $point]
+        }
+    }
+    foreach via [dict get $vias_by_net $target_net] {
+        if {[mptdc_pg_ro_point_on_segment [dict get $via point] $target_points $eps]} {
+            lappend candidates [dict create anchor 1 kind SAME_NET_VIA \
+                handle [dict get $via handle] point [dict get $via point]]
+        }
+    }
+    foreach shape [dict get [dict get $pg_shapes_by_net $target_net] records] {
+        if {[dict get $shape layer] ne $target_layer} { continue }
+        foreach point [mptdc_pg_ro_segment_rect_points $target_points \
+            [dict get $shape rect] $eps] {
+            lappend candidates [dict create anchor 1 kind SAME_NET_PG_TERM \
+                handle [dict get $shape handle] point $point]
+        }
+    }
+    set other_net [expr {$target_net eq "VDD" ? {VSS} : {VDD}}]
+    foreach rec [dict get $records_by_net $other_net] {
+        set rec [mptdc_pg_ro_normalize_swire_record $rec]
+        if {[string toupper [dict get $rec layer]] ne $target_layer} { continue }
+        foreach point [mptdc_pg_ro_segment_intersections $target_points \
+            [dict get $rec points] $eps] {
+            lappend candidates [dict create anchor 0 kind OPPOSITE_NET_SWIRE \
+                handle [dict get $rec handle] point $point]
+        }
+    }
+    foreach via [dict get $vias_by_net $other_net] {
+        if {[mptdc_pg_ro_point_on_segment [dict get $via point] $target_points $eps]} {
+            lappend candidates [dict create anchor 0 kind OPPOSITE_NET_VIA \
+                handle [dict get $via handle] point [dict get $via point]]
+        }
+    }
+    foreach shape [dict get [dict get $pg_shapes_by_net $other_net] records] {
+        if {[dict get $shape layer] ne $target_layer} { continue }
+        foreach point [mptdc_pg_ro_segment_rect_points $target_points \
+            [dict get $shape rect] $eps] {
+            lappend candidates [dict create anchor 0 kind OPPOSITE_NET_PG_TERM \
+                handle [dict get $shape handle] point $point]
+        }
+    }
+    return $candidates
+}
+
+proc mptdc_pg_ro_anchor_probe {fh preflight} {
+    set eps [mptdc_pg_ro_env_double MPTDC_PG_RO_MATCH_EPS_UM 0.002]
+    set near [mptdc_pg_ro_env_double MPTDC_PG_RO_NEAR_RADIUS_UM 6.0]
+    set swire_before [dict create VDD [mptdc_pg_ro_handle_set VDD] \
+        VSS [mptdc_pg_ro_handle_set VSS]]
+    set via_before [dict create VDD [mptdc_pg_ro_via_handle_set VDD] \
+        VSS [mptdc_pg_ro_via_handle_set VSS]]
+    set records_by_net [dict create VDD [mptdc_pg_ro_swire_records VDD] \
+        VSS [mptdc_pg_ro_swire_records VSS]]
+    set via_query_by_net [dict create VDD [mptdc_pg_ro_via_records VDD] \
+        VSS [mptdc_pg_ro_via_records VSS]]
+    set vias_by_net [dict create \
+        VDD [dict get [dict get $via_query_by_net VDD] records] \
+        VSS [dict get [dict get $via_query_by_net VSS] records]]
+    set pg_shapes_by_net [dict create VDD [mptdc_pg_ro_pg_term_shape_records VDD] \
+        VSS [mptdc_pg_ro_pg_term_shape_records VSS]]
+    set query_status PASS
+    foreach net {VDD VSS} {
+        set invalid_swire_count 0
+        foreach rec [dict get $records_by_net $net] {
+            set rec [mptdc_pg_ro_normalize_swire_record $rec]
+            if {[llength [dict get $rec points]] != 2 ||
+                [dict get $rec orientation] eq "INVALID" ||
+                [llength [dict get $rec rect]] != 4 ||
+                [dict get $rec layer] in {UNKNOWN ""}} {
+                incr invalid_swire_count
+            }
+        }
+        puts $fh "ANCHOR_${net}_SWIRE_QUERY_COUNT=[llength [dict get $records_by_net $net]]"
+        puts $fh "ANCHOR_${net}_SWIRE_INVALID_COUNT=$invalid_swire_count"
+        puts $fh "ANCHOR_${net}_VIA_HANDLE_COUNT=[dict get [dict get $via_query_by_net $net] handle_count]"
+        puts $fh "ANCHOR_${net}_VIA_QUERY_COUNT=[llength [dict get $vias_by_net $net]]"
+        puts $fh "ANCHOR_${net}_VIA_QUERY_STATUS=[dict get [dict get $via_query_by_net $net] status]"
+        puts $fh "ANCHOR_${net}_VIA_INVALID_HANDLES=[mptdc_pg_ro_report_value [dict get [dict get $via_query_by_net $net] invalid_handles]]"
+        puts $fh "ANCHOR_${net}_PG_TERM_QUERY_STATUS=[dict get [dict get $pg_shapes_by_net $net] status]"
+        puts $fh "ANCHOR_${net}_PG_TERM_COUNT=[dict get [dict get $pg_shapes_by_net $net] term_count]"
+        puts $fh "ANCHOR_${net}_PG_TERM_SHAPE_COUNT=[llength [dict get [dict get $pg_shapes_by_net $net] records]]"
+        if {[llength [dict get $records_by_net $net]] == 0 ||
+            $invalid_swire_count != 0 ||
+            [dict get [dict get $via_query_by_net $net] status] ne "PASS" ||
+            [dict get [dict get $pg_shapes_by_net $net] status] ne "PASS"} {
+            set query_status FAIL
+        }
+    }
+    puts $fh "ANCHOR_QUERY_COMPLETENESS_STATUS=$query_status"
+
+    set residual_support_count 0
+    set residual_index 0
+    foreach contract [mptdc_pg_ro_expected_residual_contracts] {
+        incr residual_index
+        lassign [split [dict get $contract fingerprint] |] net layer x y
+        set marker [dict create idx [expr {100 + $residual_index}] net $net layer $layer \
+            x $x y $y x2 $x y2 $y]
+        set data [mptdc_pg_ro_residual_contract_candidates $marker $contract $eps $near]
+        set candidates [dict get $data candidates]
+        puts $fh "RESIDUAL_SUPPORT_${residual_index}_ID=[dict get $contract id]"
+        puts $fh "RESIDUAL_SUPPORT_${residual_index}_RAW_EXACT_COUNT=[dict get $data exact_count]"
+        puts $fh "RESIDUAL_SUPPORT_${residual_index}_RAW_NEARBY_COUNT=[dict get $data nearby_count]"
+        puts $fh "RESIDUAL_SUPPORT_${residual_index}_CONTRACT_CANDIDATE_COUNT=[llength $candidates]"
+        set diagnostic_index 0
+        foreach diagnostic [dict get $data diagnostics] {
+            incr diagnostic_index
+            set prefix "RESIDUAL_SUPPORT_${residual_index}_RAW_${diagnostic_index}"
+            puts $fh "${prefix}_HANDLE=[mptdc_pg_ro_report_value [dict get $diagnostic handle]]"
+            puts $fh "${prefix}_STATUS=[dict get $diagnostic status]"
+            puts $fh "${prefix}_FAILED_PREDICATES=[mptdc_pg_ro_report_value [dict get $diagnostic failures]]"
+            dict for {name passed} [dict get $diagnostic checks] {
+                puts $fh "${prefix}_CHECK_${name}=$passed"
+            }
+        }
+        if {[llength $candidates] == 1} { incr residual_support_count }
+    }
+    set residual_status [expr {$residual_support_count == 2 ? {PASS} : {FAIL}}]
+    puts $fh "RESIDUAL_SUPPORT_OBJECT_COUNT=$residual_support_count"
+    puts $fh "RESIDUAL_SUPPORT_STATUS=$residual_status"
+
+    set target_count 0
+    set marker_count 0
+    set marker_trim_count 0
+    set marker_stitch_count 0
+    set marker_blocked_count 0
+    set trim_count 0
+    set stitch_count 0
+    set blocked_count 0
+    foreach target [mptdc_pg_ro_sorted_unique_records $preflight] {
+        incr target_count
+        set handle [dict get $target handle]
+        set entries {}
+        foreach entry [dict get $preflight entries] {
+            if {[dict get [dict get $entry rec] handle] eq $handle} { lappend entries $entry }
+        }
+        set target_status TRIM_FEASIBLE
+        set target_marker_index 0
+        set prefix "ANCHOR_TARGET_$target_count"
+        puts $fh "${prefix}_HANDLE=[mptdc_pg_ro_report_value $handle]"
+        puts $fh "${prefix}_NET=[dict get $target net]"
+        puts $fh "${prefix}_LAYER=[dict get $target layer]"
+        puts $fh "${prefix}_POINTS=[mptdc_pg_ro_report_value [dict get $target points]]"
+        puts $fh "${prefix}_MARKER_REFERENCE_COUNT=[llength $entries]"
+        foreach entry $entries {
+            incr target_marker_index
+            incr marker_count
+            set marker [dict get $entry marker]
+            set candidates [mptdc_pg_ro_anchor_candidates $marker $target \
+                $records_by_net $vias_by_net $pg_shapes_by_net $eps]
+            set result [mptdc_pg_ro_anchor_classify_marker $marker $target \
+                $candidates $query_status $eps]
+            set marker_prefix "${prefix}_MARKER_$target_marker_index"
+            puts $fh "${marker_prefix}_FINGERPRINT=[mptdc_pg_ro_fingerprint_value [mptdc_pg_ro_marker_fingerprint [list $marker]]]"
+            puts $fh "${marker_prefix}_RAW_CANDIDATE_COUNT=[llength $candidates]"
+            set candidate_index 0
+            set origin [list [dict get $marker x] [dict get $marker y]]
+            foreach candidate [mptdc_pg_ro_sorted_anchor_candidates $candidates] {
+                incr candidate_index
+                set candidate_prefix "${marker_prefix}_CANDIDATE_$candidate_index"
+                set distance [mptdc_pg_ro_distance_along_segment $origin \
+                    [dict get $candidate point] [dict get $target points] $eps]
+                puts $fh "${candidate_prefix}_ROLE=[expr {[dict get $candidate anchor] ? {ANCHOR} : {CONFLICT}}]"
+                puts $fh "${candidate_prefix}_KIND=[dict get $candidate kind]"
+                puts $fh "${candidate_prefix}_HANDLE=[mptdc_pg_ro_report_value [dict get $candidate handle]]"
+                puts $fh "${candidate_prefix}_POINT=[mptdc_pg_ro_report_value [dict get $candidate point]]"
+                puts $fh "${candidate_prefix}_DISTANCE_UM=$distance"
+            }
+            puts $fh "${marker_prefix}_CANDIDATE_COUNT=[dict get $result candidate_count]"
+            puts $fh "${marker_prefix}_NEAREST_DISTANCE_UM=[dict get $result nearest_distance_um]"
+            puts $fh "${marker_prefix}_NEAREST_POINT=[mptdc_pg_ro_report_value [dict get $result nearest_point]]"
+            puts $fh "${marker_prefix}_CONFLICT_COUNT=[dict get $result conflict_count]"
+            puts $fh "${marker_prefix}_STATUS=[dict get $result status]"
+            puts $fh "${marker_prefix}_REASON=[dict get $result reason]"
+            if {[dict get $result status] eq "TRIM_FEASIBLE"} {
+                incr marker_trim_count
+            } elseif {[dict get $result status] eq "STITCH_FEASIBLE"} {
+                incr marker_stitch_count
+            } else {
+                incr marker_blocked_count
+            }
+            if {[dict get $result status] ne "TRIM_FEASIBLE"} { set target_status BLOCKED }
+        }
+        puts $fh "${prefix}_STATUS=$target_status"
+        if {$target_status eq "TRIM_FEASIBLE"} {
+            incr trim_count
+        } elseif {$target_status eq "STITCH_FEASIBLE"} {
+            incr stitch_count
+        } else {
+            incr blocked_count
+        }
+    }
+
+    set swire_after [dict create VDD [mptdc_pg_ro_handle_set VDD] \
+        VSS [mptdc_pg_ro_handle_set VSS]]
+    set via_after [dict create VDD [mptdc_pg_ro_via_handle_set VDD] \
+        VSS [mptdc_pg_ro_via_handle_set VSS]]
+    set swire_unchanged [expr {$swire_before eq $swire_after}]
+    set via_unchanged [expr {$via_before eq $via_after}]
+    puts $fh "ANCHOR_TARGET_COUNT=$target_count"
+    puts $fh "ANCHOR_MARKER_COUNT=$marker_count"
+    puts $fh "ANCHOR_MARKER_TRIM_FEASIBLE_COUNT=$marker_trim_count"
+    puts $fh "ANCHOR_MARKER_STITCH_FEASIBLE_COUNT=$marker_stitch_count"
+    puts $fh "ANCHOR_MARKER_BLOCKED_COUNT=$marker_blocked_count"
+    puts $fh "ANCHOR_MARKER_CLASSIFICATION_STATUS=[expr {$marker_trim_count + \
+        $marker_stitch_count + $marker_blocked_count == $marker_count ? {PASS} : {FAIL}}]"
+    puts $fh "ANCHOR_TRIM_FEASIBLE_COUNT=$trim_count"
+    puts $fh "ANCHOR_STITCH_FEASIBLE_COUNT=$stitch_count"
+    puts $fh "ANCHOR_BLOCKED_COUNT=$blocked_count"
+    puts $fh "PG_MUTATION_COMMAND_COUNT=0"
+    puts $fh "SOURCE_SWIRE_STATUS=[expr {$swire_unchanged ? {UNCHANGED} : {FAIL_CHANGED}}]"
+    puts $fh "SOURCE_VIA_STATUS=[expr {$via_unchanged ? {UNCHANGED} : {FAIL_CHANGED}}]"
+    foreach net {VDD VSS} {
+        puts $fh "SOURCE_${net}_SWIRE_HANDLE_COUNT_PRE=[llength [dict get $swire_before $net]]"
+        puts $fh "SOURCE_${net}_SWIRE_HANDLE_COUNT_POST=[llength [dict get $swire_after $net]]"
+        puts $fh "SOURCE_${net}_VIA_HANDLE_COUNT_PRE=[llength [dict get $via_before $net]]"
+        puts $fh "SOURCE_${net}_VIA_HANDLE_COUNT_POST=[llength [dict get $via_after $net]]"
+    }
+    set pass [expr {$target_count == 13 && $marker_count == 15 &&
+        $marker_trim_count + $marker_stitch_count + $marker_blocked_count == 15 &&
+        $residual_status eq "PASS" && $swire_unchanged && $via_unchanged}]
+    puts $fh "ANCHOR_PROBE_STATUS=[expr {$pass ? {PASS_ANALYSIS} : {FAIL_ANALYSIS}}]"
+    return [dict create status [expr {$pass ? {PASS} : {FAIL}}] \
+        query_status $query_status target_count $target_count marker_count $marker_count \
+        marker_trim_count $marker_trim_count marker_stitch_count $marker_stitch_count \
+        marker_blocked_count $marker_blocked_count \
+        trim_count $trim_count stitch_count $stitch_count blocked_count $blocked_count]
 }
 
 proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
@@ -1129,6 +1642,17 @@ proc mptdc_pg_ro_long_prune {fh preflight report_dir} {
                 puts $fh "RESIDUAL_PRUNE_${plan_index}_RAW_EXACT_COUNT=[dict get $candidate_data exact_count]"
                 puts $fh "RESIDUAL_PRUNE_${plan_index}_RAW_NEARBY_COUNT=[dict get $candidate_data nearby_count]"
                 puts $fh "RESIDUAL_PRUNE_${plan_index}_CONTRACT_CANDIDATE_COUNT=[llength $candidates]"
+                set raw_index 0
+                foreach diagnostic [dict get $candidate_data diagnostics] {
+                    incr raw_index
+                    set diagnostic_prefix "RESIDUAL_PRUNE_${plan_index}_RAW_${raw_index}"
+                    puts $fh "${diagnostic_prefix}_HANDLE=[mptdc_pg_ro_report_value [dict get $diagnostic handle]]"
+                    puts $fh "${diagnostic_prefix}_STATUS=[dict get $diagnostic status]"
+                    puts $fh "${diagnostic_prefix}_FAILED_PREDICATES=[mptdc_pg_ro_report_value [dict get $diagnostic failures]]"
+                    dict for {name passed} [dict get $diagnostic checks] {
+                        puts $fh "${diagnostic_prefix}_CHECK_${name}=$passed"
+                    }
+                }
                 if {[llength $candidates] != 1} {
                     lappend residual_failures \
                         "residual_${plan_index}_candidate_count:[llength $candidates]"
@@ -1265,9 +1789,13 @@ proc mptdc_pg_ro_run {{mode ""}} {
     }
     set report_dir [mptdc_pg_dangling_report_dir]
     file mkdir $report_dir
-    set report [file join $report_dir pg_ro_ring_repair_status.rpt]
+    if {$mode eq "anchor_probe"} {
+        set report [file join $report_dir pg_ro_endpoint_anchor_probe_status.rpt]
+    } else {
+        set report [file join $report_dir pg_ro_ring_repair_status.rpt]
+    }
     set fh [open $report w]
-    puts $fh "# MPTDC V13 RO Ring / Long-Prune PG Repair"
+    puts $fh "# MPTDC V13 RO PG Analysis / Repair"
     puts $fh "PG_RO_REPAIR_MODE=$mode"
     puts $fh "PROCESS_ISOLATION=ONE_INNOVUS_PROCESS_PER_CANDIDATE"
     puts $fh "SOURCE_CONTRACT=V13_DRC0_SPECIAL15_EXACT13_LONG_HANDLES"
@@ -1282,7 +1810,13 @@ proc mptdc_pg_ro_run {{mode ""}} {
     puts $fh "ANTENNA_REPAIR_ATTEMPTED=NO"
     puts $fh "ROUTE_OPTIMIZER_POLICY=NO_ECOROUTE_NO_ROUTEDESIGN_NO_GLOBAL_OPTIMIZER"
     puts $fh "PLACEMENT_EDIT_POLICY=NO_INSTANCES_MOVED"
-    puts $fh "PG_MUTATION_SCOPE=[expr {$mode eq {long_prune} ? {EXACT_13_SOURCE_SWIRE_HANDLES_PLUS_TWO_CONTRACTED_EXPOSED_MET1_COREWIRES} : {TWO_RO_BLOCK_RINGS_EXACT_SOURCE_ENDPOINTS_BOUNDED_VIAS}}]"
+    if {$mode eq "anchor_probe"} {
+        puts $fh "PG_MUTATION_SCOPE=NONE_READ_ONLY_ENDPOINT_ANCHOR_ANALYSIS"
+    } elseif {$mode eq "long_prune"} {
+        puts $fh "PG_MUTATION_SCOPE=EXACT_13_SOURCE_SWIRE_HANDLES_PLUS_TWO_CONTRACTED_EXPOSED_MET1_COREWIRES"
+    } else {
+        puts $fh "PG_MUTATION_SCOPE=TWO_RO_BLOCK_RINGS_EXACT_SOURCE_ENDPOINTS_BOUNDED_VIAS"
+    }
 
     set preflight [mptdc_pg_ro_preflight]
     mptdc_pg_ro_write_preflight $fh $preflight
@@ -1293,10 +1827,30 @@ proc mptdc_pg_ro_run {{mode ""}} {
     set via_data [dict create status NOT_RUN attempts 0 successes 0]
     set prune_data [dict create status NOT_RUN attempts 0 successes 0 \
         residual_attempts 0 residual_successes 0 total_attempts 0 total_successes 0]
+    set anchor_data [dict create status NOT_RUN query_status NOT_RUN target_count 0 \
+        marker_count 0 marker_trim_count 0 marker_stitch_count 0 \
+        marker_blocked_count 0 trim_count 0 stitch_count 0 blocked_count 0]
     set post_snapshot {}
 
     if {[dict get $preflight status] eq "PASS"} {
-        if {$mode in {ring_probe ring_stitch}} {
+        if {$mode eq "anchor_probe"} {
+            set ro_instances [mptdc_pg_ro_instance_set]
+            puts $fh "RO_INSTANCE_COUNT=[llength $ro_instances]"
+            puts $fh "RO_INSTANCE_SET=[join $ro_instances ,]"
+            puts $fh "RO_RING_CREATED_COUNT=0"
+            puts $fh "RO_RING_SWIRE_DELTA_VDD=0"
+            puts $fh "RO_RING_SWIRE_DELTA_VSS=0"
+            puts $fh "RING_GEOMETRY_STATUS=NOT_RUN_BY_ANALYSIS_SCOPE"
+            puts $fh "RING_POST_GEOMETRY_REGULAR_STATUS=NOT_RUN_BY_ANALYSIS_SCOPE"
+            puts $fh "MAPPED_MARKER_COUNT=0"
+            puts $fh "MARKER_RING_MAPPING_STATUS=NOT_RUN_BY_ANALYSIS_SCOPE"
+            set anchor_data [mptdc_pg_ro_anchor_probe $fh $preflight]
+            if {[dict get $anchor_data status] eq "PASS"} {
+                set final_status PASS_ANALYSIS_NO_MUTATION
+            } else {
+                set final_status FAIL_ANCHOR_ANALYSIS
+            }
+        } elseif {$mode in {ring_probe ring_stitch}} {
             set ring_data [mptdc_pg_ro_create_rings $fh]
             if {[dict get $ring_data status] eq "PASS"} {
                 set mapping_data [mptdc_pg_ro_build_mappings $preflight \
@@ -1399,10 +1953,17 @@ proc mptdc_pg_ro_run {{mode ""}} {
         } else {
             set final_status FAIL_DANGLING_REMAINS
         }
+    } elseif {$mode eq "anchor_probe" &&
+        ([dict get $final status] ne "PASS" || [dict get $final count] != 15)} {
+        set final_status FAIL_ANCHOR_SOURCE_CHANGED
     }
     puts $fh "PG_RO_REPAIR_STATUS=$final_status"
     close $fh
-    puts "MPTDC_PG_RO_RING_REPAIR_REPORT=$report"
+    if {$mode eq "anchor_probe"} {
+        puts "MPTDC_PG_ENDPOINT_ANCHOR_PROBE_REPORT=$report"
+    } else {
+        puts "MPTDC_PG_RO_RING_REPAIR_REPORT=$report"
+    }
     return $report
 }
 

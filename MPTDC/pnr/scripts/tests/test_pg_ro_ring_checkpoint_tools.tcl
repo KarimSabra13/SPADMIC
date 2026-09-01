@@ -42,6 +42,40 @@ assert_equal invalid_scalar_encoding [mptdc_pg_ro_point_encoding UNKNOWN] INVALI
 assert_equal wrapped_handle_flattening \
     [mptdc_pg_ro_valid_handles [list [list 0xa 0xb] 0xa 0x0]] {0xa 0xb}
 
+set anchor_target [dict create handle target net VDD layer MET3 \
+    points {{0.0 0.0} {100.0 0.0}}]
+set anchor_marker [dict create idx 1 net VDD layer MET3 x 0.0 y 0.0]
+set trim_result [mptdc_pg_ro_anchor_classify_marker $anchor_marker $anchor_target \
+    [list [dict create anchor 1 kind SAME_NET_VIA handle via_1 point {10.0 0.0}]] \
+    PASS 0.002]
+assert_equal anchor_unique_trim [dict get $trim_result status] TRIM_FEASIBLE
+assert_equal anchor_unique_distance [dict get $trim_result nearest_distance_um] 10.0
+set conflict_result [mptdc_pg_ro_anchor_classify_marker $anchor_marker $anchor_target \
+    [list \
+        [dict create anchor 1 kind SAME_NET_VIA handle via_1 point {10.0 0.0}] \
+        [dict create anchor 0 kind OPPOSITE_NET_SWIRE handle vss_1 point {5.0 0.0}]] \
+    PASS 0.002]
+assert_equal anchor_conflict_blocks [dict get $conflict_result status] BLOCKED
+assert_equal anchor_conflict_reason [dict get $conflict_result reason] OPPOSITE_NET_CONFLICT
+set opposite_via_candidates [mptdc_pg_ro_anchor_candidates $anchor_marker \
+    $anchor_target [dict create VDD {} VSS {}] \
+    [dict create VDD {} VSS [list [dict create handle vss_via net VSS \
+        point {25.0 0.0} name VIA_TEST]]] \
+    [dict create VDD [dict create records {}] VSS [dict create records {}]] 0.002]
+assert_equal anchor_opposite_via_is_conflict \
+    [dict get [lindex $opposite_via_candidates 0] kind] OPPOSITE_NET_VIA
+set incomplete_result [mptdc_pg_ro_anchor_classify_marker $anchor_marker $anchor_target \
+    [list [dict create anchor 1 kind SAME_NET_VIA handle via_1 point {10.0 0.0}]] \
+    FAIL 0.002]
+assert_equal anchor_incomplete_query_blocks [dict get $incomplete_result reason] INCOMPLETE_QUERY
+set midpoint_marker [dict create idx 2 net VDD layer MET3 x 50.0 y 0.0]
+set ambiguous_result [mptdc_pg_ro_anchor_classify_marker $midpoint_marker $anchor_target \
+    [list \
+        [dict create anchor 1 kind SAME_NET_SWIRE handle left point {40.0 0.0}] \
+        [dict create anchor 1 kind SAME_NET_SWIRE handle right point {60.0 0.0}]] \
+    PASS 0.002]
+assert_equal anchor_ambiguity_blocks [dict get $ambiguous_result reason] AMBIGUOUS_NEAREST_ANCHOR
+
 set source_rec [dict create handle source_1 net VDD layer MET3 \
     points {{0.0 0.0} {100.0 0.0}} orientation HORIZONTAL]
 set marker [dict create idx 1 net VDD layer MET3 x 0.0 y 0.0]
@@ -108,11 +142,13 @@ set ::pg_ro_south_residual_marker [dict create idx 17 net VSS layer MET1 \
     line "fixture exposed south MET1 marker"]
 set ::pg_ro_north_residual_handle vss_met1_north_exposed_corewire
 set ::pg_ro_south_residual_handle vss_met1_south_exposed_corewire
+set north_wrapped_box [list [list 124.16 723.12 240.8 723.92]]
+set south_wrapped_box [list [list [list 204.16 149.68 240.8 150.48]]]
 dict set ::pg_ro_fixture_records 16 [dict create \
     handle $::pg_ro_north_residual_handle net VSS layer MET1 shape corewire \
     status routed width 0.8 geomType pathSeg \
-    box {124.16 723.12 240.8 723.92} \
-    rect {124.16 723.12 240.8 723.92} \
+    box $north_wrapped_box \
+    rect [mptdc_pg_dangling_rect $north_wrapped_box] \
     pts {{124.16 723.52} {240.8 723.52}} \
     points {{124.16 723.52} {240.8 723.52}} orientation HORIZONTAL \
     point_encoding NESTED_TWO_POINT length_um 116.64 \
@@ -120,8 +156,8 @@ dict set ::pg_ro_fixture_records 16 [dict create \
 dict set ::pg_ro_fixture_records 17 [dict create \
     handle $::pg_ro_south_residual_handle net VSS layer MET1 shape corewire \
     status routed width 0.8 geomType pathSeg \
-    box {204.16 149.68 240.8 150.48} \
-    rect {204.16 149.68 240.8 150.48} \
+    box $south_wrapped_box \
+    rect [mptdc_pg_dangling_rect $south_wrapped_box] \
     pts {{204.16 150.08} {240.8 150.08}} \
     points {{204.16 150.08} {240.8 150.08}} orientation HORIZONTAL \
     point_encoding NESTED_TWO_POINT length_um 36.64 \
@@ -174,12 +210,18 @@ set north_candidates [mptdc_pg_ro_residual_contract_candidates \
     $::pg_ro_north_residual_marker [lindex $residual_contracts 0] 0.002 6.0]
 assert_equal north_residual_exact_candidate \
     [llength [dict get $north_candidates candidates]] 1
+assert_equal north_residual_predicates \
+    [dict get [lindex [dict get $north_candidates diagnostics] 0] status] PASS
 set saved_south_residual [dict get $::pg_ro_fixture_records 17]
 dict set ::pg_ro_fixture_records 17 rect {204.15 149.68 240.8 150.48}
 set wrong_south_candidates [mptdc_pg_ro_residual_contract_candidates \
     $::pg_ro_south_residual_marker [lindex $residual_contracts 1] 0.002 6.0]
 assert_equal south_residual_rejects_wrong_box \
     [llength [dict get $wrong_south_candidates candidates]] 0
+assert_true south_residual_reports_rect_failure \
+    [expr {[lsearch -exact \
+        [dict get [lindex [dict get $wrong_south_candidates diagnostics] 0] failures] \
+        RECT] >= 0}]
 dict set ::pg_ro_fixture_records 17 $saved_south_residual
 
 set preflight [mptdc_pg_ro_preflight]
@@ -258,33 +300,8 @@ close $auth_fh
 assert_equal prune_requires_authorization [dict get $missing_auth status] FAIL
 assert_equal prune_missing_auth_attempts [dict get $missing_auth attempts] 0
 
-set ::env(MPTDC_PG_LONG_PRUNE_AUTHORIZATION) \
-    EXACT_V13_PG15_13_HANDLE_PLUS_TWO_EXPOSED_MET1_COREWIRES_PRUNE_V3
-set prune_report [file join $fixture_dir reports authorized.rpt]
-set prune_fh [open $prune_report w]
-set prune [mptdc_pg_ro_long_prune $prune_fh $preflight \
-    [file join $fixture_dir reports]]
-close $prune_fh
-assert_equal prune_status [dict get $prune status] PASS
-assert_equal prune_attempts [dict get $prune attempts] 13
-assert_equal prune_successes [dict get $prune successes] 13
-assert_equal residual_prune_attempts [dict get $prune residual_attempts] 2
-assert_equal residual_prune_successes [dict get $prune residual_successes] 2
-assert_equal total_prune_attempts [dict get $prune total_attempts] 15
-assert_equal total_prune_successes [dict get $prune total_successes] 15
-assert_equal prune_final_marker_count [llength $::pg_ro_fixture_markers] 0
-
-set authorized_text [read [set report_fh [open $prune_report r]]]
-close $report_fh
-assert_true source_transition_reports_both_residuals \
-    [expr {[string first "SOURCE_PRUNE_EXPOSED_RESIDUAL_SET=NORTH SOUTH" \
-        $authorized_text] >= 0}]
-assert_true residual_prune_reports_15_of_15 \
-    [expr {[string first "TOTAL_PRUNE_SUCCESSES=15" $authorized_text] >= 0}]
-assert_true swire_inventory_gate_passes \
-    [expr {[string first "SWIRE_INVENTORY_STATUS=PASS" $authorized_text] >= 0}]
-assert_true via_inventory_gate_passes \
-    [expr {[string first "PG_VIA_HANDLE_STATUS=UNCHANGED" $authorized_text] >= 0}]
+assert_equal retired_prune_did_not_mutate_fixture \
+    [llength $::pg_ro_fixture_markers] 15
 
 file delete -force $fixture_dir
 puts "MPTDC_PG_RO_RING_CHECKPOINT_TOOLS_TEST=PASS"
