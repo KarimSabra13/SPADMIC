@@ -151,6 +151,18 @@ report_value() {
   sed -n "s/^${key}=//p" "$report" 2>/dev/null | tail -1
 }
 
+run_pvs_control_paths() {
+  local run_file="$1"
+  awk '
+    $1 == "-control" {
+      path = $2
+      gsub(/["{}]/, "", path)
+      sub(/[;\\]+$/, "", path)
+      print path
+    }
+  ' "$run_file"
+}
+
 require_diagnostic_scope() {
   local scope="$NEW_BASE/manifests/pvs_diagnostic_scope.rpt"
   local run_class diagnostic_scope density_status run_density_after_lvs
@@ -475,6 +487,21 @@ if grep -q -- '-cell_tree' "$OLD_LVS_RUN/run.pvs"; then
   mptdc_pvs_require_existing_file "$OLD_LVS_RUN/cell_tree.txt"
 fi
 
+mapfile -t OLD_LVS_CONTROL_PATHS < <(run_pvs_control_paths "$OLD_LVS_RUN/run.pvs")
+[[ "${#OLD_LVS_CONTROL_PATHS[@]}" -le 1 ]] || \
+  mptdc_pvs_die "template run.pvs contains multiple LVS control references: ${OLD_LVS_CONTROL_PATHS[*]}"
+OLD_LVS_EMBEDDED_RUN=""
+if [[ "${#OLD_LVS_CONTROL_PATHS[@]}" == 1 ]]; then
+  old_lvs_control="${OLD_LVS_CONTROL_PATHS[0]}"
+  if [[ "$old_lvs_control" == /* ]]; then
+    [[ "$(basename "$old_lvs_control")" == pvslvsctl ]] || \
+      mptdc_pvs_die "template absolute -control is not pvslvsctl: $old_lvs_control"
+    OLD_LVS_EMBEDDED_RUN="$(dirname "$old_lvs_control")"
+  elif [[ "$old_lvs_control" != pvslvsctl && "$old_lvs_control" != ./pvslvsctl ]]; then
+    mptdc_pvs_die "template relative -control is unsupported: $old_lvs_control"
+  fi
+fi
+
 if [[ "$DIAGNOSTIC_ALLOW_BASE_DRC_DEBT" == 1 ]]; then
   require_diagnostic_scope
   require_attributable_base_drc
@@ -506,14 +533,22 @@ PATCH_FILES=("$NEW_LVS_RUN/run.pvs" "$NEW_LVS_RUN/pvslvsctl" "$NEW_LVS_RUN/.conf
 [[ -f "$NEW_LVS_RUN/cell_tree.txt" ]] && PATCH_FILES+=("$NEW_LVS_RUN/cell_tree.txt")
 [[ -f "$NEW_LVS_RUN/.preset.autosave" ]] && PATCH_FILES+=("$NEW_LVS_RUN/.preset.autosave")
 
+PATCH_PATH_PAIRS=(
+  "$OLD_GDS=$NEW_GDS"
+  "$OLD_SRC=$NEW_SRC"
+  "$OLD_HCELL=$NEW_HCELL"
+)
+if [[ -n "$OLD_LVS_EMBEDDED_RUN" && "$OLD_LVS_EMBEDDED_RUN" != "$OLD_LVS_RUN" ]]; then
+  PATCH_PATH_PAIRS+=("$OLD_LVS_EMBEDDED_RUN=$NEW_LVS_RUN")
+fi
+PATCH_PATH_PAIRS+=(
+  "$OLD_LVS_RUN=$NEW_LVS_RUN"
+  "$OLD_BASE=$NEW_BASE"
+  "$DEFAULT_DCELL_CDL=$DCELL_CDL"
+)
+
 for f in "${PATCH_FILES[@]}"; do
-  mptdc_pvs_patch_file_paths "$f" \
-    "$OLD_GDS=$NEW_GDS" \
-    "$OLD_SRC=$NEW_SRC" \
-    "$OLD_HCELL=$NEW_HCELL" \
-    "$OLD_LVS_RUN=$NEW_LVS_RUN" \
-    "$OLD_BASE=$NEW_BASE" \
-    "$DEFAULT_DCELL_CDL=$DCELL_CDL"
+  mptdc_pvs_patch_file_paths "$f" "${PATCH_PATH_PAIRS[@]}"
 done
 
 if [[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
@@ -531,16 +566,29 @@ if [[ "$DIAGNOSTIC_RO6_BOUNDARY_BLACKBOX" == 1 ]]; then
 fi
 
 mptdc_pvs_fail_if_contains_old_path "LVS template run" "$OLD_LVS_RUN" "${PATCH_FILES[@]}"
+if [[ -n "$OLD_LVS_EMBEDDED_RUN" && "$OLD_LVS_EMBEDDED_RUN" != "$OLD_LVS_RUN" ]]; then
+  mptdc_pvs_fail_if_contains_old_path \
+    "LVS embedded template run" "$OLD_LVS_EMBEDDED_RUN" "${PATCH_FILES[@]}"
+fi
 mptdc_pvs_fail_if_contains_old_path "LVS old base" "$OLD_BASE" "${PATCH_FILES[@]}"
 mptdc_pvs_fail_if_contains_old_path "LVS old GDS" "$OLD_GDS" "${PATCH_FILES[@]}"
 mptdc_pvs_fail_if_contains_old_path "LVS old source" "$OLD_SRC" "${PATCH_FILES[@]}"
 mptdc_pvs_fail_if_contains_old_path "LVS old HCell" "$OLD_HCELL" "${PATCH_FILES[@]}"
+
+if [[ -n "$OLD_LVS_EMBEDDED_RUN" ]]; then
+  mapfile -t PATCHED_LVS_CONTROL_PATHS < <(run_pvs_control_paths "$NEW_LVS_RUN/run.pvs")
+  [[ "${#PATCHED_LVS_CONTROL_PATHS[@]}" == 1 && \
+     "${PATCHED_LVS_CONTROL_PATHS[0]}" == "$NEW_LVS_RUN/pvslvsctl" ]] || \
+    mptdc_pvs_die \
+      "patched run.pvs does not reference the run-local LVS control exactly once: ${PATCHED_LVS_CONTROL_PATHS[*]:-MISSING}"
+fi
 chmod +x "$NEW_LVS_RUN/run.pvs"
 
 {
   echo "# MPTDC PVS LVS Replay Manifest"
   echo "date: $(date -Iseconds)"
   echo "old_lvs_run: $OLD_LVS_RUN"
+  echo "old_lvs_embedded_run: ${OLD_LVS_EMBEDDED_RUN:-NONE}"
   echo "new_lvs_run: $NEW_LVS_RUN"
   echo "old_base: $OLD_BASE"
   echo "new_base: $NEW_BASE"

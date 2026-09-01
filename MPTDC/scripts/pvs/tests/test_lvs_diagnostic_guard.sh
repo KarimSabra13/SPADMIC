@@ -214,6 +214,31 @@ run_boundary() {
 run_dry "$TMP_ROOT/lvs_valid" > "$TMP_ROOT/valid.stdout"
 grep -qx 'PVS_LVS_REPLAY_STATUS=DRY_RUN_READY' "$PREPARED/reports/pvs_lvs_status.rpt"
 
+cp -p "$TEMPLATE/run.pvs" "$TEMPLATE/run.pvs.saved"
+EMBEDDED_TEMPLATE_RUN="$OLD_BASE/pvs_lvs/source_template_script"
+cat > "$TEMPLATE/run.pvs" <<EOF
+#!/bin/sh
+pwd_d=\`pwd\`
+cd $EMBEDDED_TEMPLATE_RUN ;\\
+pvs \\
+  -control $EMBEDDED_TEMPLATE_RUN/pvslvsctl \\
+  -spice $EMBEDDED_TEMPLATE_RUN/mptdc_axis_core.spi \\
+  $EMBEDDED_TEMPLATE_RUN/.config.rul \\
+  $EMBEDDED_TEMPLATE_RUN/.technology.rul
+cd \$pwd_d
+EOF
+EMBEDDED_PATCHED_RUN="$TMP_ROOT/lvs_embedded_template_path"
+run_dry "$EMBEDDED_PATCHED_RUN" > "$TMP_ROOT/embedded_template_path.stdout"
+grep -Fq "cd $EMBEDDED_PATCHED_RUN ;\\" "$EMBEDDED_PATCHED_RUN/run.pvs"
+grep -Fq -- "-control $EMBEDDED_PATCHED_RUN/pvslvsctl" "$EMBEDDED_PATCHED_RUN/run.pvs"
+grep -Fq -- "-spice $EMBEDDED_PATCHED_RUN/mptdc_axis_core.spi" "$EMBEDDED_PATCHED_RUN/run.pvs"
+grep -Fq -- "$EMBEDDED_PATCHED_RUN/.config.rul" "$EMBEDDED_PATCHED_RUN/run.pvs"
+grep -Fq -- "$EMBEDDED_PATCHED_RUN/.technology.rul" "$EMBEDDED_PATCHED_RUN/run.pvs"
+! grep -Fq "$EMBEDDED_TEMPLATE_RUN" "$EMBEDDED_PATCHED_RUN/run.pvs"
+grep -Fqx "old_lvs_embedded_run: $EMBEDDED_TEMPLATE_RUN" \
+  "$PREPARED/manifests/pvs_lvs_replay_manifest.txt"
+mv "$TEMPLATE/run.pvs.saved" "$TEMPLATE/run.pvs"
+
 cp "$SCOPE" "${SCOPE}.legacy"
 cat > "$SCOPE" <<'EOF'
 PVS_RUN_CLASS=DIAGNOSTIC_COMPOSITIONAL_NOT_SIGNOFF
