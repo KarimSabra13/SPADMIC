@@ -1024,36 +1024,43 @@ TIE1_PG_RING_PROBE_RUN=tie1_pg_ring_probe_fixture
 TIE1_PG_RING_TRIAL_RUN=tie1_pg_ring_trial_fixture
 TIE1_PG_RING_REPLAY_RUN=tie1_pg_ring_replay_fixture
 TIE1_PG_PRUNE_PROBE_RUN=tie1_pg_prune_probe_fixture
+TIE1_PG_PRUNE_PRIOR_RUN=tie1_pg_prune_v1_failed_fixture
 TIE1_PG_PRUNE_TRIAL_RUN=tie1_pg_prune_trial_fixture
 TIE1_PG_PRUNE_REPLAY_RUN=tie1_pg_prune_replay_fixture
 TIE1_PG_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_TRIAL_RUN/reports"
 TIE1_PG_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_REPLAY_RUN/reports"
 TIE1_PG_RING_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_RING_TRIAL_RUN/reports"
 TIE1_PG_RING_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_RING_REPLAY_RUN/reports"
+TIE1_PG_PRUNE_PRIOR_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_PRIOR_RUN/reports"
 TIE1_PG_PRUNE_TRIAL_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_TRIAL_RUN/reports"
 TIE1_PG_PRUNE_REPLAY_REPORTS="$REPO/MPTDC/docs/server_snapshots/innovus/$TIE1_PG_PRUNE_REPLAY_RUN/reports"
 TIE1_PG_TRIAL_CKPT="$WORK/$TIE1_PG_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_REPLAY_CKPT="$WORK/$TIE1_PG_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_RING_TRIAL_CKPT="$WORK/$TIE1_PG_RING_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_RING_REPLAY_CKPT="$WORK/$TIE1_PG_RING_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
+TIE1_PG_PRUNE_PRIOR_CKPT="$WORK/$TIE1_PG_PRUNE_PRIOR_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_PRUNE_TRIAL_CKPT="$WORK/$TIE1_PG_PRUNE_TRIAL_RUN/checkpoints/repaired_route.enc.dat"
 TIE1_PG_PRUNE_REPLAY_CKPT="$WORK/$TIE1_PG_PRUNE_REPLAY_RUN/checkpoints/repaired_route.enc.dat"
 mkdir -p "$TIE1_PG_TRIAL_REPORTS" "$TIE1_PG_REPLAY_REPORTS" \
   "$TIE1_PG_RING_TRIAL_REPORTS" "$TIE1_PG_RING_REPLAY_REPORTS" \
+  "$TIE1_PG_PRUNE_PRIOR_REPORTS" \
   "$TIE1_PG_PRUNE_TRIAL_REPORTS" "$TIE1_PG_PRUNE_REPLAY_REPORTS" \
   "$TIE1_PG_TRIAL_CKPT" "$TIE1_PG_REPLAY_CKPT" \
   "$TIE1_PG_RING_TRIAL_CKPT" "$TIE1_PG_RING_REPLAY_CKPT" \
+  "$TIE1_PG_PRUNE_PRIOR_CKPT" \
   "$TIE1_PG_PRUNE_TRIAL_CKPT" "$TIE1_PG_PRUNE_REPLAY_CKPT"
 printf 'tie1 PG dangling delete trial\n' > "$TIE1_PG_TRIAL_CKPT/design.bin"
 printf 'tie1 PG dangling canonical replay\n' > "$TIE1_PG_REPLAY_CKPT/design.bin"
 printf 'tie1 PG RO ring stitch trial\n' > "$TIE1_PG_RING_TRIAL_CKPT/design.bin"
 printf 'tie1 PG RO ring stitch replay\n' > "$TIE1_PG_RING_REPLAY_CKPT/design.bin"
+printf 'tie1 PG long prune V1 rejected evidence\n' > "$TIE1_PG_PRUNE_PRIOR_CKPT/design.bin"
 printf 'tie1 PG long prune trial\n' > "$TIE1_PG_PRUNE_TRIAL_CKPT/design.bin"
 printf 'tie1 PG long prune replay\n' > "$TIE1_PG_PRUNE_REPLAY_CKPT/design.bin"
 TIE1_PG_TRIAL_SHA="$(tree_hash "$TIE1_PG_TRIAL_CKPT")"
 TIE1_PG_REPLAY_SHA="$(tree_hash "$TIE1_PG_REPLAY_CKPT")"
 TIE1_PG_RING_TRIAL_SHA="$(tree_hash "$TIE1_PG_RING_TRIAL_CKPT")"
 TIE1_PG_RING_REPLAY_SHA="$(tree_hash "$TIE1_PG_RING_REPLAY_CKPT")"
+TIE1_PG_PRUNE_PRIOR_SHA="$(tree_hash "$TIE1_PG_PRUNE_PRIOR_CKPT")"
 TIE1_PG_PRUNE_TRIAL_SHA="$(tree_hash "$TIE1_PG_PRUNE_TRIAL_CKPT")"
 TIE1_PG_PRUNE_REPLAY_SHA="$(tree_hash "$TIE1_PG_PRUNE_REPLAY_CKPT")"
 
@@ -1110,14 +1117,94 @@ write_tie1_pg_gate \
   TIE1_PG_DANGLING_DELETE_REPLAY "$TIE1_PG_TRIAL_RUN" \
   "$TIE1_PG_REPLAY_CKPT" "$TIE1_PG_REPLAY_SHA"
 
+cat > "$TIE1_PG_PRUNE_PRIOR_REPORTS/operator_gate_tie1_pg_long_prune_trial.rpt" <<EOF
+STEP=TIE1_PG_LONG_PRUNE_TRIAL
+SOURCE_TIE1_RUN_ID=$TIE1_CANDIDATE_RUN
+SOURCE_MINAREA_REPLAY_RUN_ID=$TIE1_MINAREA_REPLAY_RUN
+SOURCE_PG_PROBE_RUN_ID=$TIE1_PG_PRUNE_PROBE_RUN
+SOURCE_PG_TRIAL_RUN_ID=NONE
+SOURCE_CHECKPOINT=$TIE1_MINAREA_REPLAY_CKPT
+SOURCE_CHECKPOINT_SHA256=$TIE1_MINAREA_REPLAY_SHA
+TOOL_RC=0
+COMMAND_1_STATUS=PASS
+PG_RO_REPAIR_MODE=long_prune
+PG_RO_REPAIR_STATUS=FAIL_LONG_PRUNE_GATE
+SOURCE_TOPOLOGY_STATUS=PASS
+INITIAL_DANGLING_MARKER_COUNT=15
+SOURCE_UNIQUE_HANDLE_COUNT=13
+SOURCE_SHARED_HANDLE_COUNT=2
+RO_RING_CREATED_COUNT=0
+RING_GEOMETRY_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+MARKER_RING_MAPPING_STATUS=NOT_RUN_BY_LONG_PRUNE_SCOPE
+REPLACEMENT_ATTEMPTS=0
+VIA_ATTEMPTS=0
+PRUNE_ATTEMPTS=12
+PRUNE_SUCCESSES=11
+LONG_PRUNE_AUTHORIZATION=EXACT_V13_PG15_13_HANDLE_LONG_PRUNE
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_RAW_BAD=1
+FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+FINAL_SPECIAL_DANGLING_COUNT=2
+FINAL_REPORT_ROUTE_ZERO_STATUS=PASS
+FINAL_ROUTE_GATE_PASS=0
+PG_REPAIR_TRIAL_OUTCOME=FAIL
+CANDIDATE_CHECKPOINT=$TIE1_PG_PRUNE_PRIOR_CKPT
+CANDIDATE_CHECKPOINT_SHA256=$TIE1_PG_PRUNE_PRIOR_SHA
+CANDIDATE_CHECKPOINT_STATUS=NOT_SELECTED
+SIGNOFF_ELIGIBLE=NO
+DECISION=FAIL_STOP
+NEXT_STAGE=STOP_AND_REVIEW_PUBLISHED_EVIDENCE
+EOF
+cat > "$TIE1_PG_PRUNE_PRIOR_REPORTS/pg_ro_ring_repair_status.rpt" <<'EOF'
+PRUNE_12_NET=VSS
+PRUNE_12_LAYER=METTP
+PRUNE_12_POINTS={125.16 721.75} {125.16 869.4}
+PRUNE_12_EXPECTED_DANGLING_COUNT=1
+PRUNE_12_OBSERVED_DANGLING_COUNT=2
+PRUNE_12_STATUS=FAIL_INCREMENTAL_GATE
+FINAL_DANGLING_MARKER_COUNT=2
+EOF
+cat > "$TIE1_PG_PRUNE_PRIOR_REPORTS/pg_ro_final_verify_special_detailed.rpt" <<'EOF'
+Net VSS: dangling Wire at (124.160, 723.520) (124.160, 723.520) on layer: MET1
+Net VSS: dangling Wire at (205.160, 158.320) (205.160, 158.320) on layer: METTP
+EOF
+
 write_tie1_pg_ro_gate() {
   local path="$1" step="$2" source_pg_trial="$3" candidate="$4"
   local candidate_sha="$5" mode="$6" source_pg_probe="$7"
+  local source_pg_prior="$8" replacement_attempts=4 replacement_successes=4
+  local prune_attempts=0 prune_successes=0 long_prune_authorization=MISSING
+  local source_prune_transition=MISSING residual_policy=MISSING
+  local residual_fingerprint=MISSING residual_points=MISSING residual_box=MISSING
+  local residual_length=MISSING residual_candidates=0 residual_attempts=0
+  local residual_successes=0 total_prune_attempts=0 total_prune_successes=0
+  if [[ "$mode" == long_prune ]]; then
+    replacement_attempts=0
+    replacement_successes=0
+    prune_attempts=13
+    prune_successes=13
+    long_prune_authorization=EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
+    source_prune_transition=PASS
+    residual_policy=EXACT_EXPOSED_VSS_MET1_COREWIRE_V2
+    residual_fingerprint='VSS|MET1|124.160|723.520'
+    residual_points='{124.16 723.52} {240.8 723.52}'
+    residual_box='124.16 723.12 240.8 723.92'
+    residual_length=116.64
+    residual_candidates=1
+    residual_attempts=1
+    residual_successes=1
+    total_prune_attempts=14
+    total_prune_successes=14
+  fi
   cat > "$path" <<EOF
 STEP=$step
 SOURCE_TIE1_RUN_ID=$TIE1_CANDIDATE_RUN
 SOURCE_MINAREA_REPLAY_RUN_ID=$TIE1_MINAREA_REPLAY_RUN
 SOURCE_PG_PROBE_RUN_ID=$source_pg_probe
+SOURCE_PG_PRIOR_TRIAL_RUN_ID=$source_pg_prior
 SOURCE_PG_TRIAL_RUN_ID=$source_pg_trial
 SOURCE_CHECKPOINT=$TIE1_MINAREA_REPLAY_CKPT
 SOURCE_CHECKPOINT_SHA256=$TIE1_MINAREA_REPLAY_SHA
@@ -1145,13 +1232,24 @@ RING_GEOMETRY_STATUS=$([[ "$mode" == ring_stitch ]] && echo PASS || echo NOT_RUN
 RING_POST_GEOMETRY_REGULAR_STATUS=$([[ "$mode" == ring_stitch ]] && echo PASS || echo MISSING)
 MARKER_RING_MAPPING_STATUS=$([[ "$mode" == ring_stitch ]] && echo PASS || echo NOT_RUN_BY_LONG_PRUNE_SCOPE)
 MAPPED_MARKER_COUNT=$([[ "$mode" == ring_stitch ]] && echo 15 || echo 0)
-REPLACEMENT_ATTEMPTS=4
-REPLACEMENT_SUCCESSES=4
+REPLACEMENT_ATTEMPTS=$replacement_attempts
+REPLACEMENT_SUCCESSES=$replacement_successes
 VIA_ATTEMPTS=$([[ "$mode" == ring_stitch ]] && echo 15 || echo 0)
 VIA_SUCCESSES=$([[ "$mode" == ring_stitch ]] && echo 15 || echo 0)
-PRUNE_ATTEMPTS=$([[ "$mode" == long_prune ]] && echo 13 || echo 0)
-PRUNE_SUCCESSES=$([[ "$mode" == long_prune ]] && echo 13 || echo 0)
-LONG_PRUNE_AUTHORIZATION=$([[ "$mode" == long_prune ]] && echo EXACT_V13_PG15_13_HANDLE_LONG_PRUNE || echo MISSING)
+PRUNE_ATTEMPTS=$prune_attempts
+PRUNE_SUCCESSES=$prune_successes
+SOURCE_PRUNE_TRANSITION_STATUS=$source_prune_transition
+RESIDUAL_PRUNE_POLICY=$residual_policy
+RESIDUAL_EXPECTED_MARKER_FINGERPRINT=$residual_fingerprint
+RESIDUAL_EXPECTED_POINTS=$residual_points
+RESIDUAL_EXPECTED_BOX=$residual_box
+RESIDUAL_EXPECTED_LENGTH_UM=$residual_length
+RESIDUAL_PRUNE_CANDIDATE_COUNT=$residual_candidates
+RESIDUAL_PRUNE_ATTEMPTS=$residual_attempts
+RESIDUAL_PRUNE_SUCCESSES=$residual_successes
+TOTAL_PRUNE_ATTEMPTS=$total_prune_attempts
+TOTAL_PRUNE_SUCCESSES=$total_prune_successes
+LONG_PRUNE_AUTHORIZATION=$long_prune_authorization
 FINAL_DRC=0
 FINAL_SHORTS=0
 FINAL_REGULAR_CONNECTIVITY_BAD=0
@@ -1178,28 +1276,26 @@ SIGNOFF_ELIGIBLE=NO
 DECISION=PASS_CONTINUE
 NEXT_STAGE=TEST_NEXT
 EOF
-  if [[ "$mode" == long_prune ]]; then
-    sed -i 's/^REPLACEMENT_ATTEMPTS=4$/REPLACEMENT_ATTEMPTS=0/; s/^REPLACEMENT_SUCCESSES=4$/REPLACEMENT_SUCCESSES=0/' "$path"
-  fi
 }
 write_tie1_pg_ro_gate \
   "$TIE1_PG_RING_TRIAL_REPORTS/operator_gate_tie1_pg_ro_ring_stitch_trial.rpt" \
   TIE1_PG_RO_RING_STITCH_TRIAL NONE "$TIE1_PG_RING_TRIAL_CKPT" \
-  "$TIE1_PG_RING_TRIAL_SHA" ring_stitch "$TIE1_PG_RING_PROBE_RUN"
+  "$TIE1_PG_RING_TRIAL_SHA" ring_stitch "$TIE1_PG_RING_PROBE_RUN" NONE
 write_tie1_pg_ro_gate \
   "$TIE1_PG_RING_REPLAY_REPORTS/operator_gate_tie1_pg_ro_ring_stitch_replay.rpt" \
   TIE1_PG_RO_RING_STITCH_REPLAY "$TIE1_PG_RING_TRIAL_RUN" \
   "$TIE1_PG_RING_REPLAY_CKPT" "$TIE1_PG_RING_REPLAY_SHA" ring_stitch \
-  "$TIE1_PG_RING_PROBE_RUN"
+  "$TIE1_PG_RING_PROBE_RUN" NONE
 write_tie1_pg_ro_gate \
   "$TIE1_PG_PRUNE_TRIAL_REPORTS/operator_gate_tie1_pg_long_prune_trial.rpt" \
   TIE1_PG_LONG_PRUNE_TRIAL NONE "$TIE1_PG_PRUNE_TRIAL_CKPT" \
-  "$TIE1_PG_PRUNE_TRIAL_SHA" long_prune "$TIE1_PG_PRUNE_PROBE_RUN"
+  "$TIE1_PG_PRUNE_TRIAL_SHA" long_prune "$TIE1_PG_PRUNE_PROBE_RUN" \
+  "$TIE1_PG_PRUNE_PRIOR_RUN"
 write_tie1_pg_ro_gate \
   "$TIE1_PG_PRUNE_REPLAY_REPORTS/operator_gate_tie1_pg_long_prune_replay.rpt" \
   TIE1_PG_LONG_PRUNE_REPLAY "$TIE1_PG_PRUNE_TRIAL_RUN" \
   "$TIE1_PG_PRUNE_REPLAY_CKPT" "$TIE1_PG_PRUNE_REPLAY_SHA" long_prune \
-  "$TIE1_PG_PRUNE_PROBE_RUN"
+  "$TIE1_PG_PRUNE_PROBE_RUN" "$TIE1_PG_PRUNE_PRIOR_RUN"
 
 git -C "$REPO" add MPTDC
 git -C "$REPO" commit -q -m minarea-replay-fixtures

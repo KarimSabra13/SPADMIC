@@ -100,6 +100,19 @@ foreach row $fixture_rows {
         dict lappend ::pg_ro_fixture_handles $net $handle
     }
 }
+set ::pg_ro_residual_marker [dict create idx 16 net VSS layer MET1 \
+    x 124.160 y 723.520 x2 124.160 y2 723.520 \
+    line "fixture exposed MET1 marker"]
+set ::pg_ro_residual_handle vss_met1_exposed_corewire
+dict set ::pg_ro_fixture_records 16 [dict create \
+    handle $::pg_ro_residual_handle net VSS layer MET1 shape corewire \
+    status routed width 0.8 geomType pathSeg \
+    box {124.16 723.12 240.8 723.92} \
+    rect {124.16 723.12 240.8 723.92} \
+    pts {{124.16 723.52} {240.8 723.52}} \
+    points {{124.16 723.52} {240.8 723.52}} orientation HORIZONTAL \
+    point_encoding NESTED_TWO_POINT length_um 116.64 \
+    distance_um 0.0 endpoint_match 1 box_match 1]
 
 rename mptdc_pg_dangling_capture_verify_special mptdc_pg_dangling_capture_verify_special_real
 proc mptdc_pg_dangling_capture_verify_special {path} {
@@ -185,6 +198,10 @@ proc dbDeleteObj {handle} {
         }
     }
     set ::pg_ro_fixture_markers $kept_markers
+    if {$handle eq "vss_mettp_125_top"} {
+        lappend ::pg_ro_fixture_markers $::pg_ro_residual_marker
+        dict lappend ::pg_ro_fixture_handles VSS $::pg_ro_residual_handle
+    }
 }
 rename mptdc_pg_ro_snapshot mptdc_pg_ro_snapshot_real
 proc mptdc_pg_ro_snapshot {fh tag} {
@@ -202,7 +219,7 @@ assert_equal prune_requires_authorization [dict get $missing_auth status] FAIL
 assert_equal prune_missing_auth_attempts [dict get $missing_auth attempts] 0
 
 set ::env(MPTDC_PG_LONG_PRUNE_AUTHORIZATION) \
-    EXACT_V13_PG15_13_HANDLE_LONG_PRUNE
+    EXACT_V13_PG15_13_HANDLE_PLUS_EXPOSED_MET1_COREWIRE_PRUNE_V2
 set prune_report [file join $fixture_dir reports authorized.rpt]
 set prune_fh [open $prune_report w]
 set prune [mptdc_pg_ro_long_prune $prune_fh $preflight \
@@ -211,6 +228,10 @@ close $prune_fh
 assert_equal prune_status [dict get $prune status] PASS
 assert_equal prune_attempts [dict get $prune attempts] 13
 assert_equal prune_successes [dict get $prune successes] 13
+assert_equal residual_prune_attempts [dict get $prune residual_attempts] 1
+assert_equal residual_prune_successes [dict get $prune residual_successes] 1
+assert_equal total_prune_attempts [dict get $prune total_attempts] 14
+assert_equal total_prune_successes [dict get $prune total_successes] 14
 assert_equal prune_final_marker_count [llength $::pg_ro_fixture_markers] 0
 
 file delete -force $fixture_dir
