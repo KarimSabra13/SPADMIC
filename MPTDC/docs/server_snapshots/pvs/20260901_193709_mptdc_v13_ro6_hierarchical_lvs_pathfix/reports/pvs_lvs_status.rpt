@@ -1,0 +1,6 @@
+LABEL=MPTDC_PVS_LVS_GATE
+STATUS=FAIL
+PVS_LVS_STATUS=MISMATCH
+PVS_RC=0
+ERROR=explicit LVS mismatch evidence found in /sim/ksabra/SPADMIC_work/innovus/20260901_193709_mptdc_v13_ro6_hierarchical_lvs_pathfix/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script/mptdc_axis_core_lvs.sum.cls
+FINAL_PHYSICAL_SIGNOFF_READY=NO

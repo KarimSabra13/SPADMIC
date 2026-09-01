@@ -1,0 +1,3 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260901_193709_mptdc_v13_ro6_hierarchical_lvs_pathfix/pvs_lvs/mptdc_axis_core_ro6_boundary_blackbox_script/edbToEcdb.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT|match|MATCH|mismatch|MISMATCH)\b)
+# Last 500 matching lines
